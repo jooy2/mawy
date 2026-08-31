@@ -290,6 +290,17 @@ export interface MawyParseOptions {
    * @default false
    */
   breaks?: boolean;
+  /**
+   * Whether a line opening with `: ` under a line of text is a term and what it
+   * means.
+   *
+   * On, and it is the one thing Mawy reads that GitHub does not: the syntax is
+   * PHP Markdown Extra's, and it is the one everybody who writes these uses.
+   * Turn it off for a document that has to mean exactly what it would mean
+   * there.
+   * @default true
+   */
+  definitionLists?: boolean;
 }
 
 /**

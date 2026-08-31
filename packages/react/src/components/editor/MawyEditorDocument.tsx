@@ -5,7 +5,11 @@ import type { MawyHtmlPolicy, MawyParseOptions } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock } from '../../internal/markdown/ast.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
-import { renderBlocks, type RenderContext } from '../../internal/markdown/render.js';
+import {
+  renderBlocks,
+  renderFootnotes,
+  type RenderContext
+} from '../../internal/markdown/render.js';
 import {
   blockAt,
   documentAt,
@@ -99,15 +103,23 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     const [generation, setGeneration] = React.useState(0);
     const gfm = parse?.gfm ?? true;
     const breaks = parse?.breaks ?? false;
+    const definitionLists = parse?.definitionLists ?? true;
 
     React.useImperativeHandle(ref, () => root.current as HTMLElement);
 
     const document_ = React.useMemo(
-      () => parseMarkdown(value, { gfm, breaks }),
-      [value, gfm, breaks]
+      () => parseMarkdown(value, { gfm, breaks, definitionLists }),
+      [value, gfm, breaks, definitionLists]
     );
     const blocks = React.useMemo(() => withRoom(document_.root.children, room), [document_, room]);
-    const context: RenderContext = React.useMemo(() => ({ html, strings }), [html, strings]);
+    const footnotes = React.useMemo(
+      () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
+      [document_]
+    );
+    const context: RenderContext = React.useMemo(
+      () => ({ html, strings, footnotes }),
+      [html, strings, footnotes]
+    );
 
     /**
      * `beforeinput` rather than React's `onBeforeInput`, and a listener of our
@@ -353,7 +365,10 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           onKeyDown={onKeyDown}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
-          <React.Fragment key={generation}>{renderBlocks(blocks, context)}</React.Fragment>
+          <React.Fragment key={generation}>
+            {renderBlocks(blocks, context)}
+            {renderFootnotes(document_.footnotes, context)}
+          </React.Fragment>
         </article>
       </div>
     );

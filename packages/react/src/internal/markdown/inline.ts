@@ -25,6 +25,12 @@ export interface InlineOptions {
   breaks: boolean;
   /** The document's link reference definitions, already collected. */
   definitions: Map<string, MdDefinition>;
+  /**
+   * The labels of the footnotes the document actually defines. A `[^a]` with
+   * nothing to point at is the four characters it was written with — the same
+   * answer an unresolved `[a][b]` gets.
+   */
+  footnotes: Set<string>;
 }
 
 /* -------------------------------------------------------------------------
@@ -653,6 +659,10 @@ export function toPlainText(nodes: MdInline[]): string {
       case 'break':
         out += ' ';
         break;
+      // A footnote's number is not part of what the sentence says, and a
+      // heading with one in it should slug and outline without it.
+      case 'footnoteReference':
+        break;
       case 'inlineHtml':
         break;
       default:
@@ -828,6 +838,21 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
       hold(character, at);
       at += 1;
       continue;
+    }
+
+    /* A footnote, which is a label that points at a block written elsewhere. */
+    if (character === '[' && source[at + 1] === '^') {
+      const close = source.indexOf(']', at + 2);
+      const label = close === -1 ? '' : normalizeLabel(source.slice(at + 2, close));
+
+      if (label && options.footnotes.has(label)) {
+        flush();
+        chunks.push(
+          nodeChunk({ type: 'footnoteReference', range: span(at, close + 1), label, index: 0 })
+        );
+        at = close + 1;
+        continue;
+      }
     }
 
     if (character === '[' || (character === '!' && source[at + 1] === '[')) {

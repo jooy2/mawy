@@ -157,6 +157,13 @@ describe('Enter, inside a list', () => {
     return next && show(next);
   };
 
+  it('carries a definition marker down, and gives it up on an empty one', () => {
+    // The `:` behaves exactly as a bullet does, which is why it is on the same
+    // list rather than beside it.
+    expect(enter('Apple\n: A fruit.|')).toBe('Apple\n: A fruit.\n: |');
+    expect(enter('Apple\n: A fruit.\n: |')).toBe('Apple\n: A fruit.\n|');
+  });
+
   it('carries a bullet down to the next line', () => {
     expect(enter('- one|')).toBe('- one\n- |');
   });

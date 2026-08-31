@@ -1020,6 +1020,102 @@
   color: var(--mawy-tip);
 }
 
+/* Definition lists --------------------------------------------------------- */
+
+.mawy-root .mawy-md-definitions {
+  margin: 0 0 1.2em;
+}
+
+.mawy-root .mawy-md-definitions dt {
+  margin-top: 0.9em;
+  font-weight: 650;
+}
+
+.mawy-root .mawy-md-definitions dt:first-child {
+  margin-top: 0;
+}
+
+/* Two terms in a row are one term written twice, so they sit together. */
+.mawy-root .mawy-md-definitions dt + dt {
+  margin-top: 0;
+}
+
+.mawy-root .mawy-md-definitions dd {
+  margin: 0.2em 0 0;
+  padding-inline-start: 1.4em;
+  border-inline-start: 2px solid var(--mawy-border);
+}
+
+.mawy-root .mawy-md-definitions dd > :last-child {
+  margin-bottom: 0;
+}
+
+/* Footnotes ---------------------------------------------------------------- */
+
+.mawy-root .mawy-md-footnote-ref {
+  font-size: 0.78em;
+  line-height: 0;
+}
+
+.mawy-root .mawy-md-footnote-ref a {
+  padding: 0 0.15em;
+  color: var(--mawy-accent);
+  text-decoration: none;
+}
+
+.mawy-root .mawy-md-footnote-ref a:hover,
+.mawy-root .mawy-md-footnote-ref a:focus-visible {
+  text-decoration: underline;
+}
+
+/* The one thing on the page the document did not ask for, so it says so with a
+ * rule above it rather than by pretending to be another section. */
+.mawy-root .mawy-md-footnotes {
+  margin-top: 2.6em;
+  padding-top: 1.2em;
+  border-top: 1px solid var(--mawy-border);
+  font-size: 0.92em;
+}
+
+.mawy-root .mawy-md-footnotes-title {
+  margin: 0 0 0.6em;
+  color: var(--mawy-fg-muted);
+  font-size: 0.95em;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.mawy-root .mawy-md-footnotes ol {
+  margin: 0;
+  padding-inline-start: 1.4em;
+}
+
+.mawy-root .mawy-md-footnotes li {
+  margin: 0.35em 0;
+}
+
+.mawy-root .mawy-md-footnotes li > :last-of-type {
+  display: inline;
+}
+
+.mawy-root .mawy-md-footnote-back {
+  margin-inline-start: 0.4em;
+  color: var(--mawy-accent);
+  text-decoration: none;
+}
+
+.mawy-root .mawy-md-footnote-back:hover,
+.mawy-root .mawy-md-footnote-back:focus-visible {
+  text-decoration: underline;
+}
+
+/* A footnote just jumped to, so a reader can see which one they landed on. */
+.mawy-root .mawy-md-footnotes li:target {
+  border-radius: var(--mawy-radius-sm);
+  background: var(--mawy-accent-soft);
+}
+
 /* Tables ------------------------------------------------------------------ */
 
 .mawy-root .mawy-md-table-scroll {

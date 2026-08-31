@@ -23,6 +23,9 @@ import type {
   MdAlign,
   MdBlock,
   MdDefinition,
+  MdDefinitionDescription,
+  MdDefinitionTerm,
+  MdFootnoteDefinition,
   MdHeading,
   MdInline,
   MdListItem,
@@ -54,7 +57,11 @@ export interface PendingInline {
 
 export interface BlockContext {
   gfm: boolean;
+  /** Whether `Term` over `: what it means` is a definition list. */
+  definitionLists: boolean;
   definitions: Map<string, MdDefinition>;
+  /** Footnotes, lifted out of the flow wherever in the document they were written. */
+  footnotes: Map<string, MdFootnoteDefinition>;
   pending: PendingInline[];
 }
 
@@ -72,6 +79,19 @@ const SETEXT = /^ {0,3}(=+|-+)[ \t]*$/;
 const BULLET = /^( {0,3})([-+*])([ \t]+|$)/;
 const ORDERED = /^( {0,3})(\d{1,9})([.)])([ \t]+|$)/;
 const ALERT = /^\[!(note|tip|important|warning|caution)\][ \t]*$/i;
+const FOOTNOTE = /^ {0,3}\[\^([^\]\n]+)\]:[ \t]*/;
+/**
+ * What opens a definition's meaning.
+ *
+ * The space after the colon is not decoration. `:warning:` at the start of a
+ * line under a sentence is an emoji shortcode in half the documents on the
+ * internet, and without the space every one of them would become a definition
+ * list with the sentence above as its term.
+ */
+const DESCRIBES = /^ {0,3}:[ \t]+/;
+
+/** How far a block that opened on one line has to be indented to carry on. */
+const CONTINUATION = 4;
 
 /** How far in a line's first non-space character sits, counting a tab as four. */
 function indentOf(line: string): number {
@@ -345,6 +365,100 @@ function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): S
   }
 
   return taken === 0 ? paragraph : slice(paragraph, taken, paragraph.text.length);
+}
+
+/* -------------------------------------------------------------------------
+ * Blocks that open on one line and carry on indented
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The lines belonging to something that opened on this one.
+ *
+ * A footnote's second paragraph and a definition's second block are both this
+ * shape: indented far enough to be inside, blank lines kept because they
+ * separate the blocks in there, and a line that is neither taken anyway if the
+ * paragraph above it is still open — which is the lazy continuation every
+ * container in Markdown allows and every reader relies on without knowing.
+ */
+function takeIndented(
+  lines: Line[],
+  from: number,
+  width: number,
+  opened: boolean
+): { body: Line[]; at: number } {
+  const body: Line[] = [];
+  let at = from;
+  let blankInside = false;
+  let running = opened;
+
+  while (at < lines.length) {
+    const next = lines[at];
+
+    if (BLANK.test(next.text)) {
+      body.push({ text: '', start: next.start });
+      blankInside = true;
+      running = false;
+      at += 1;
+      continue;
+    }
+
+    if (indentOf(next.text) >= width) {
+      body.push(unindent(next, width));
+      blankInside = false;
+      running = true;
+      at += 1;
+      continue;
+    }
+
+    if (!running || blankInside || interrupts(next.text) || DESCRIBES.test(next.text)) {
+      break;
+    }
+
+    body.push(advance(next, next.text.length - next.text.trimStart().length));
+    at += 1;
+  }
+
+  while (body.length && BLANK.test(body[body.length - 1].text)) {
+    body.pop();
+    at -= 1;
+  }
+
+  return { body, at };
+}
+
+/**
+ * Whether a definition list starts here.
+ *
+ * A term looks exactly like a paragraph until the line under it opens with a
+ * colon, so the only way to know is to read ahead — over as many terms as were
+ * written, and over the one blank line that is allowed between the last of them
+ * and the first meaning.
+ */
+function describesAhead(lines: Line[], from: number): boolean {
+  let at = from;
+  let terms = 0;
+
+  while (at < lines.length && terms < 8) {
+    const text = lines[at].text;
+
+    if (DESCRIBES.test(text)) {
+      return terms > 0;
+    }
+
+    if (BLANK.test(text)) {
+      // One blank line, and only after a term: two is the end of the paragraph.
+      return terms > 0 && at + 1 < lines.length && DESCRIBES.test(lines[at + 1].text);
+    }
+
+    if (terms > 0 && interrupts(text)) {
+      return false;
+    }
+
+    terms += 1;
+    at += 1;
+  }
+
+  return false;
 }
 
 /* -------------------------------------------------------------------------
@@ -702,6 +816,166 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
       blocks.push({ type: 'table', range: across(opened, at - 1), align, children: rows });
       continue;
+    }
+
+    /* A footnote, which is written here and read at the bottom. */
+    const footnote = FOOTNOTE.exec(line.text);
+
+    if (footnote) {
+      const opened = at;
+      const first = advance(line, footnote[0].length);
+      const body: Line[] = first.text.trim() ? [first] : [];
+
+      at += 1;
+
+      const rest = takeIndented(lines, at, CONTINUATION, body.length > 0);
+
+      body.push(...rest.body);
+      at = rest.at;
+
+      const label = normalizeLabel(footnote[1]);
+      const last = body[body.length - 1];
+
+      // First definition wins, as it does for a link reference: two footnotes
+      // with the same name are one footnote and a mistake.
+      if (label && !context.footnotes.has(label)) {
+        context.footnotes.set(label, {
+          type: 'footnoteDefinition',
+          range: { start: line.start, end: last ? lineEnd(last) : lineEnd(line) },
+          label,
+          slug: '',
+          number: 0,
+          children: parseBlocks(body, context)
+        });
+      }
+
+      // Nothing is pushed: a footnote is not where it was written. If the label
+      // was unreadable the lines are gone with it, which is the same thing that
+      // happens to a link reference definition nobody can use.
+      if (at === opened) {
+        at += 1;
+      }
+
+      continue;
+    }
+
+    /* A term and what it means, if the line under this one opens with a colon. */
+    if (context.definitionLists && !DESCRIBES.test(line.text) && describesAhead(lines, at)) {
+      const opened = at;
+      const children: (MdDefinitionTerm | MdDefinitionDescription)[] = [];
+      let loose = false;
+      let last = line;
+
+      while (at < lines.length) {
+        const round = at;
+        const terms: Line[] = [];
+
+        while (
+          at < lines.length &&
+          !BLANK.test(lines[at].text) &&
+          !DESCRIBES.test(lines[at].text)
+        ) {
+          if (terms.length && interrupts(lines[at].text)) {
+            break;
+          }
+
+          terms.push(lines[at]);
+          at += 1;
+        }
+
+        // A blank line between a term and its meaning is what makes the whole
+        // list loose, exactly as it is in a bullet list.
+        if (
+          at < lines.length &&
+          BLANK.test(lines[at].text) &&
+          DESCRIBES.test(lines[at + 1]?.text ?? '')
+        ) {
+          loose = true;
+          at += 1;
+        }
+
+        if (!DESCRIBES.test(lines[at]?.text ?? '')) {
+          at = round;
+          break;
+        }
+
+        for (const term of terms) {
+          children.push(
+            withInline<MdDefinitionTerm>(
+              {
+                type: 'definitionTerm',
+                range: { start: term.start, end: lineEnd(term) },
+                children: []
+              },
+              fromText(
+                term.text.trim(),
+                term.start + (term.text.length - term.text.trimStart().length)
+              )
+            )
+          );
+          last = term;
+        }
+
+        while (at < lines.length) {
+          const marker = DESCRIBES.exec(lines[at].text);
+
+          if (!marker) {
+            break;
+          }
+
+          const from = lines[at];
+          const head = advance(from, marker[0].length);
+          const body: Line[] = head.text.trim() ? [head] : [];
+
+          at += 1;
+
+          const rest = takeIndented(lines, at, CONTINUATION, body.length > 0);
+
+          body.push(...rest.body);
+          at = rest.at;
+          last = body[body.length - 1] ?? from;
+
+          children.push({
+            type: 'definitionDescription',
+            range: { start: from.start, end: lineEnd(last) },
+            children: parseBlocks(body, context)
+          });
+
+          if (at < lines.length && BLANK.test(lines[at].text)) {
+            if (DESCRIBES.test(lines[at + 1]?.text ?? '')) {
+              loose = true;
+              at += 1;
+            } else {
+              break;
+            }
+          }
+        }
+
+        // A blank line and then another term is the same list, spaced out —
+        // and spaced out is what a loose list is, exactly as it is for bullets.
+        if (at < lines.length && BLANK.test(lines[at].text) && describesAhead(lines, at + 1)) {
+          loose = true;
+          at += 1;
+          continue;
+        }
+
+        if (!(at < lines.length && !BLANK.test(lines[at].text) && describesAhead(lines, at))) {
+          break;
+        }
+      }
+
+      if (children.length) {
+        blocks.push({
+          type: 'definitionList',
+          range: { start: lines[opened].start, end: lineEnd(last) },
+          loose,
+          children
+        });
+
+        continue;
+      }
+
+      at = opened;
     }
 
     /* Everything else is a paragraph, up to the first line that is not. */

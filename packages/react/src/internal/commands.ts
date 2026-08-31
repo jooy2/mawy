@@ -339,7 +339,15 @@ export function commandActive(command: MawyCommand, state: EditState): boolean {
  * Enter, inside a list
  * ---------------------------------------------------------------------- */
 
-const ITEM = /^([ \t]*)([-*+]|(\d{1,9})[.)])([ \t]+)(\[[ xX]\][ \t]+)?(.*)$/;
+/**
+ * A line that carries a marker down when `Enter` is pressed on it.
+ *
+ * The `:` is a definition's, and it is on this list rather than beside it
+ * because it behaves identically: the next line takes the same marker, and an
+ * item still empty gives it up. `:` needs the space after it to be one at all,
+ * which is what keeps `:warning:` from being a definition of the line above.
+ */
+const ITEM = /^([ \t]*)([-*+]|:|(\d{1,9})[.)])([ \t]+)(\[[ xX]\][ \t]+)?(.*)$/;
 
 /**
  * What Enter should do, when the line it was pressed on is a list item.

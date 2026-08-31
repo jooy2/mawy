@@ -147,6 +147,170 @@ describe('block structure', () => {
   });
 });
 
+/**
+ * A term and what it means, which is the one thing Mawy reads that GitHub does
+ * not. The syntax is PHP Markdown Extra's, which is the one everybody who
+ * writes these uses.
+ */
+describe('definition lists', () => {
+  it('reads a term and its meaning', () => {
+    expect(bare(first('Markdown\n: A way of writing.'))).toEqual({
+      type: 'definitionList',
+      loose: false,
+      children: [
+        { type: 'definitionTerm', children: [{ type: 'text', value: 'Markdown' }] },
+        {
+          type: 'definitionDescription',
+          children: [
+            { type: 'paragraph', children: [{ type: 'text', value: 'A way of writing.' }] }
+          ]
+        }
+      ]
+    });
+  });
+
+  it('takes as many terms and as many meanings as were written', () => {
+    const list = first('Apple\nOrange\n: A fruit.\n: Also a colour.');
+
+    expect('children' in list && list.children.map((child) => child.type)).toEqual([
+      'definitionTerm',
+      'definitionTerm',
+      'definitionDescription',
+      'definitionDescription'
+    ]);
+  });
+
+  it('is loose when a blank line separates a term from its meaning', () => {
+    expect(first('Markdown\n\n: A way of writing.')).toMatchObject({ loose: true });
+    expect(first('Markdown\n: A way of writing.')).toMatchObject({ loose: false });
+  });
+
+  it('is one list where a blank line separates one term from the next', () => {
+    const list = first('Apple\n: A fruit.\n\nPear\n: Another.');
+
+    expect(list).toMatchObject({ type: 'definitionList', loose: true });
+    expect('children' in list && list.children).toHaveLength(4);
+  });
+
+  it('takes a whole block, or several, as one meaning', () => {
+    const list = first('Term\n: First block.\n\n    Second block.');
+    const description = 'children' in list ? list.children[1] : null;
+
+    expect(bare(description)).toMatchObject({
+      type: 'definitionDescription',
+      children: [{ type: 'paragraph' }, { type: 'paragraph' }]
+    });
+  });
+
+  it('is not a definition list without the space after the colon', () => {
+    // `:warning:` under a sentence is an emoji shortcode in half the documents
+    // on the internet, and without the space every one of them would be a term.
+    expect(first('See below\n:warning: careful').type).toBe('paragraph');
+  });
+
+  it('is not one when the option is off', () => {
+    expect(
+      parseMarkdown('Markdown\n: A way of writing.', { definitionLists: false }).root.children[0]
+        .type
+    ).toBe('paragraph');
+  });
+
+  it('points at the lines each piece was written on', () => {
+    const source = 'Apple\n: A fruit.\n';
+    const list = first(source);
+    const at = (node: { range: MdRange }) => source.slice(node.range.start, node.range.end);
+
+    expect(at(list)).toBe('Apple\n: A fruit.');
+    expect('children' in list && list.children.map(at)).toEqual(['Apple', ': A fruit.']);
+  });
+});
+
+/**
+ * Footnotes, which are not where they were written.
+ *
+ * A footnote is put wherever it suits the author and read at the bottom, so the
+ * parser lifts them out of the flow and hands them back in the order something
+ * first pointed at them — which is the order they are numbered in.
+ */
+describe('footnotes', () => {
+  const source = [
+    'A sentence.[^one] Another.[^two] The first again.[^one]',
+    '',
+    '[^two]: The second note.',
+    '',
+    '[^one]: The first, which has',
+    '    a second line.',
+    '',
+    '    And a second paragraph.',
+    '',
+    '[^unused]: Nobody said this.'
+  ].join('\n');
+
+  it('numbers them by the order they were first pointed at', () => {
+    const { footnotes } = parseMarkdown(source);
+
+    expect(footnotes.map((each) => [each.label, each.number])).toEqual([
+      ['one', 1],
+      ['two', 2]
+    ]);
+  });
+
+  it('leaves out a footnote nobody pointed at', () => {
+    // The same answer a link reference definition nobody used gets: it is a
+    // note to the author rather than part of what the document says.
+    expect(parseMarkdown(source).footnotes.map((each) => each.label)).not.toContain('unused');
+  });
+
+  it('takes the definition out of the flow entirely', () => {
+    expect(parseMarkdown(source).root.children.map((block) => block.type)).toEqual(['paragraph']);
+  });
+
+  it('reads a definition as blocks, over as many lines as it was given', () => {
+    const [one] = parseMarkdown(source).footnotes;
+
+    expect(one.children.map((block) => block.type)).toEqual(['paragraph', 'paragraph']);
+    expect(source.slice(one.range.start, one.range.end)).toBe(
+      '[^one]: The first, which has\n    a second line.\n\n    And a second paragraph.'
+    );
+  });
+
+  it('counts each mention, so only the first is a place to come back to', () => {
+    const paragraph = parseMarkdown(source).root.children[0];
+    const references = ('children' in paragraph ? paragraph.children : [])
+      .filter((node) => node.type === 'footnoteReference')
+      .map((node) => [node.label, node.index]);
+
+    expect(references).toEqual([
+      ['one', 0],
+      ['two', 0],
+      ['one', 1]
+    ]);
+  });
+
+  it('leaves a reference with nothing to point at as the text it is', () => {
+    const document = parseMarkdown('See [^nope] here.');
+
+    expect(document.footnotes).toEqual([]);
+    expect(bare(inline(document.root.children[0]))).toEqual([
+      { type: 'text', value: 'See [^nope] here.' }
+    ]);
+  });
+
+  it('finds a footnote written inside something else', () => {
+    const quoted = '> Quoted.[^b]\n>\n> [^b]: In a quote.';
+
+    expect(parseMarkdown(quoted).footnotes.map((each) => each.label)).toEqual(['b']);
+  });
+
+  it('says nothing in a heading it is written in', () => {
+    // A footnote's number is not part of what the heading says, so the slug and
+    // the outline are what they would have been without it.
+    expect(parseMarkdown('# Title[^a]\n\n[^a]: A note.').outline).toEqual([
+      { depth: 1, slug: 'title', text: 'Title', range: { start: 0, end: 11 } }
+    ]);
+  });
+});
+
 describe('inline structure', () => {
   it('pairs emphasis and strong the way the specification does', () => {
     expect(bare(inline(first('*foo**bar**baz*')))).toEqual([

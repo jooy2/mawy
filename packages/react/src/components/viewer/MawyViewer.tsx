@@ -18,7 +18,7 @@ import { useCopy } from '../../internal/clipboard.js';
 import { useControlled } from '../../internal/controlled.js';
 import { stringsFor } from '../../internal/i18n.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
-import { renderBlocks } from '../../internal/markdown/render.js';
+import { renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
 import { useHighlighter } from '../../internal/highlighter.js';
 import { DEFAULT_TYPOGRAPHY, typographyStyle } from '../../internal/typography.js';
 import { DEFAULT_TOOLBAR, MawyViewerToolbar } from './MawyViewerToolbar.js';
@@ -94,7 +94,7 @@ export interface MawyViewerProps extends Omit<
    */
   toolbar?: MawyViewerToolbarOption;
 
-  /** How the Markdown is read. @default `{ gfm: true, breaks: false }` */
+  /** How the Markdown is read. @default `{ gfm: true, breaks: false, definitionLists: true }` */
   parse?: MawyParseOptions;
 
   /**
@@ -179,6 +179,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const strings = stringsFor(locale);
   const gfm = parse?.gfm ?? true;
   const breaks = parse?.breaks ?? false;
+  const definitionLists = parse?.definitionLists ?? true;
   const droppable = fileDrop ?? value === undefined;
 
   const controlled = value !== undefined;
@@ -227,14 +228,26 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
    * The document
    * ------------------------------------------------------------------ */
 
-  const document_ = React.useMemo(() => parseMarkdown(text, { gfm, breaks }), [text, gfm, breaks]);
+  const document_ = React.useMemo(
+    () => parseMarkdown(text, { gfm, breaks, definitionLists }),
+    [text, gfm, breaks, definitionLists]
+  );
   const highlighter = useHighlighter(highlight, document_);
+  const footnotes = React.useMemo(
+    () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
+    [document_]
+  );
   const context = React.useMemo(
-    () => ({ html, strings, highlighter }),
-    [html, strings, highlighter]
+    () => ({ html, strings, highlighter, footnotes }),
+    [html, strings, highlighter, footnotes]
   );
   const content = React.useMemo(
-    () => renderBlocks(document_.root.children, context),
+    () => (
+      <>
+        {renderBlocks(document_.root.children, context)}
+        {renderFootnotes(document_.footnotes, context)}
+      </>
+    ),
     [document_, context]
   );
 

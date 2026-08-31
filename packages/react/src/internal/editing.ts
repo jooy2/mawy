@@ -65,7 +65,8 @@ export interface MawyEdit {
  * same run of text", and backspace at the start of the second of them is a
  * question about the boundary rather than about a character.
  */
-const BLOCKS = 'p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, pre, .mawy-md-html-source';
+const BLOCKS =
+  'p, h1, h2, h3, h4, h5, h6, li, dt, dd, td, th, blockquote, pre, .mawy-md-html-source';
 
 /**
  * Where an edit cannot go, whatever it is.

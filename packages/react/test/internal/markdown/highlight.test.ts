@@ -102,6 +102,16 @@ describe('blocks', () => {
     expect(spans(one('1. first'))).toEqual(['1.']);
   });
 
+  it('marks the colon a definition opens with, and needs the space to do it', () => {
+    expect(spans(one(': a fruit'))).toEqual([':']);
+    // `:warning:` is an emoji shortcode in half the documents on the internet.
+    expect(kinds(one(':warning: careful'))).toEqual([]);
+  });
+
+  it('marks a footnote where it is written', () => {
+    expect(spans(one('[^one]: the note'))[0]).toBe('[^one]:');
+  });
+
   it('marks a quotation, and reads the line inside it at the right offset', () => {
     const line = one('> a **bold** word');
 

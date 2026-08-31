@@ -149,6 +149,63 @@ export interface MdThematicBreak {
   range: MdRange;
 }
 
+/**
+ * A term and what it means, which Markdown proper has no way of writing.
+ *
+ * PHP Markdown Extra's syntax, and the one everybody who writes these uses: a
+ * line of text, then a line opening with a colon.
+ *
+ *     Markdown
+ *     : A way of writing that reads as what it says.
+ */
+export interface MdDefinitionList {
+  type: 'definitionList';
+  range: MdRange;
+  /**
+   * Whether the terms and their meanings are separated by blank lines. A loose
+   * list wraps each meaning's content in paragraphs and spaces it out; a tight
+   * one does not — the same distinction a bullet list makes, for the same
+   * reason.
+   */
+  loose: boolean;
+  children: (MdDefinitionTerm | MdDefinitionDescription)[];
+}
+
+/** The word being defined. One line, and inline content like a heading's. */
+export interface MdDefinitionTerm {
+  type: 'definitionTerm';
+  range: MdRange;
+  children: MdInline[];
+}
+
+/** What it means. Blocks, because a definition can be a whole paragraph. */
+export interface MdDefinitionDescription {
+  type: 'definitionDescription';
+  range: MdRange;
+  children: MdBlock[];
+}
+
+/**
+ * A footnote, where it was written.
+ *
+ * These do not stay in the block flow. Like a link reference definition, a
+ * footnote is written wherever it suits the author and read wherever it is
+ * referred to — so the parser lifts them out and `MdDocument.footnotes` holds
+ * the ones something actually pointed at, in the order they were first pointed
+ * at, which is the order they are numbered in.
+ */
+export interface MdFootnoteDefinition {
+  type: 'footnoteDefinition';
+  range: MdRange;
+  /** The normalised label, which is what a reference is matched against. */
+  label: string;
+  /** What the reference and the definition are given as `id`s on the page. */
+  slug: string;
+  /** Which footnote this is, counting from one, in reference order. */
+  number: number;
+  children: MdBlock[];
+}
+
 export interface MdHtmlBlock {
   type: 'html';
   range: MdRange;
@@ -162,6 +219,7 @@ export type MdBlock =
   | MdBlockquote
   | MdList
   | MdTable
+  | MdDefinitionList
   | MdThematicBreak
   | MdHtmlBlock;
 
@@ -223,6 +281,20 @@ export interface MdInlineHtml {
   value: string;
 }
 
+/** A `[^label]` in a sentence, pointing at a footnote written elsewhere. */
+export interface MdFootnoteReference {
+  type: 'footnoteReference';
+  range: MdRange;
+  label: string;
+  /**
+   * Which mention of this footnote it is, counting from zero. Only the first
+   * one is the place the footnote comes back to, and the rest need `id`s that
+   * are not that one — two elements with the same `id` is a link that lands on
+   * whichever the browser met first.
+   */
+  index: number;
+}
+
 export type MdInline =
   | MdText
   | MdEmphasis
@@ -231,10 +303,20 @@ export type MdInline =
   | MdInlineCode
   | MdLink
   | MdImage
+  | MdFootnoteReference
   | MdBreak
   | MdInlineHtml;
 
-export type MdNode = MdRoot | MdBlock | MdListItem | MdTableRow | MdTableCell | MdInline;
+export type MdNode =
+  | MdRoot
+  | MdBlock
+  | MdListItem
+  | MdTableRow
+  | MdTableCell
+  | MdDefinitionTerm
+  | MdDefinitionDescription
+  | MdFootnoteDefinition
+  | MdInline;
 
 /** A link reference definition, keyed by its normalised label. */
 export interface MdDefinition {
@@ -261,4 +343,15 @@ export interface MdOutlineEntry {
 export interface MdDocument {
   root: MdRoot;
   outline: MdOutlineEntry[];
+  /**
+   * The footnotes something in the document pointed at, in the order they were
+   * first pointed at. They are not in `root` — a footnote is written wherever
+   * it suits the author and read at the bottom — so whatever draws a document
+   * draws these after it.
+   *
+   * A footnote nobody referred to is not here, the same way a link reference
+   * definition nobody used is nowhere in the tree either: it is a note to the
+   * author rather than a part of what the document says.
+   */
+  footnotes: MdFootnoteDefinition[];
 }

@@ -47,6 +47,8 @@ export interface MawyStrings {
   readFailed: string;
   fileTooLarge: string;
   reset: string;
+  footnotes: string;
+  footnoteBack: string;
   alertNote: string;
   alertTip: string;
   alertImportant: string;
@@ -122,6 +124,8 @@ const en: MawyStrings = {
   readFailed: 'That file could not be read.',
   fileTooLarge: 'That file is too large to open here.',
   reset: 'Back to the defaults',
+  footnotes: 'Footnotes',
+  footnoteBack: 'Back to where this was mentioned',
   alertNote: 'Note',
   alertTip: 'Tip',
   alertImportant: 'Important',
@@ -197,6 +201,8 @@ const ko: MawyStrings = {
   readFailed: '파일을 읽지 못했습니다.',
   fileTooLarge: '여기서 열기에는 너무 큰 파일입니다.',
   reset: '기본값으로',
+  footnotes: '각주',
+  footnoteBack: '언급된 자리로 돌아가기',
   alertNote: '참고',
   alertTip: '도움말',
   alertImportant: '중요',

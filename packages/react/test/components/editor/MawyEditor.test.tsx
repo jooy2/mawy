@@ -966,6 +966,45 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('One');
   });
 
+  it('edits a footnote where it is drawn, which is not where it was written', async () => {
+    const onChange = vi.fn();
+    const source = 'A sentence.[^one]\n\n[^one]: The note.';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+    );
+
+    // The note is drawn at the bottom and the caret still finds its way back to
+    // the line it was written on.
+    put(bodyOf(screen), 'The note.', 9);
+    type(bodyOf(screen), 'insertText', ' Longer.');
+
+    expect(onChange).toHaveBeenLastCalledWith('A sentence.[^one]\n\n[^one]: The note. Longer.');
+  });
+
+  it('edits a term and what it means', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'Apple\n: A fruit.'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'A fruit.', 8);
+    type(bodyOf(screen), 'insertText', ' Red.');
+
+    expect(onChange).toHaveBeenLastCalledWith('Apple\n: A fruit. Red.');
+  });
+
+  it('carries a definition marker down the way a bullet is carried down', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'Apple\n: A fruit.'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'A fruit.', 8);
+    type(bodyOf(screen), 'insertParagraph');
+
+    expect(onChange).toHaveBeenLastCalledWith('Apple\n: A fruit.\n: ');
+  });
+
   it('does not change a read-only document', async () => {
     const onChange = vi.fn();
     const screen = await render(

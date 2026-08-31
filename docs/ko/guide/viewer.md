@@ -59,17 +59,51 @@ CommonMark, 그리고 그 위에 GitHub이 더한 것들입니다.
 | --- | --- |
 | **블록** | ATX·setext 제목, 문단, 펜스·들여쓰기 코드 블록, 인용, 순서 있는·없는 목록(깊이 제한 없음), 구분선, HTML 블록 |
 | **인라인** | 강조, 굵게, `코드`, 링크, 이미지, 자동 링크, 강제 줄바꿈, 문자 참조, 백슬래시 이스케이프 |
-| **GitHub** | 열별 정렬이 있는 표, 체크박스 목록, `~~취소선~~`, 맨 URL과 이메일 주소, 그리고 다섯 종류의 [알림 블록](https://docs.github.com/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts) |
+| **GitHub** | 열별 정렬이 있는 표, 체크박스 목록, `~~취소선~~`, 맨 URL과 이메일 주소, 각주, 그리고 다섯 종류의 [알림 블록](https://docs.github.com/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts) |
 | **참조** | `[label]: url "title"` 정의. 파일 어디에 쓰여 있든 해석합니다 |
+| **하나 더** | 정의 목록. GitHub은 읽지 않는 것입니다 |
 
-옵션은 `parse`에 둘뿐입니다.
+옵션은 `parse`에 있습니다.
 
 ```tsx
-<MawyViewer value={document} parse={{ gfm: true, breaks: false }} />
+<MawyViewer value={document} parse={{ gfm: true, breaks: false, definitionLists: true }} />
 ```
 
 - **`gfm`** (기본값 `true`) — GitHub의 확장. 끄면 `|`는 그냥 세로줄이고 `~~`는 물결 넷입니다.
 - **`breaks`** (기본값 `false`) — 문단 안의 줄바꿈 하나를 줄바꿈으로 볼지. 마크다운은 아니라고 합니다. 채팅 클라이언트와 이슈 트래커는 맞다고 합니다. 마크다운을 써 본 적 없는 독자가 기대하는 쪽이 후자이고, 이것이 이 항목이 결정이 아니라 옵션인 이유입니다.
+- **`definitionLists`** (기본값 `true`) — 글줄 아래의 `: `을 용어와 그 뜻으로 읽을지. 아래를 보세요.
+
+### 각주
+
+문장 속의 `[^label]`은 번호가 되고, 그것이 가리키는 주석은 문서 아래에 그려집니다. 언급된 자리로 돌아가는 링크와 함께.
+
+```md
+Mawy는 자기 마크다운을 직접 파싱합니다.[^why]
+
+[^why]: 문서의 한 조각이 어디서 왔는지 말할 수 있는 것은 파서뿐이고, 여기 있는 나머지 전부가 그 위에 서 있습니다.
+```
+
+알아둘 것 셋, 그리고 셋 다 GitHub이 하는 그대로입니다.
+
+- **번호는 처음 언급된 순서**이지 쓰인 순서가 아닙니다. 파일이 어떻게 생겼든 독자는 `1`을 `2`보다 먼저 만납니다.
+- **아무도 언급하지 않은 주석은 아예 그려지지 않습니다.** 아무도 걸지 않은 `[label]: url`과 같은 뜻에서, 문서가 아니라 글쓴이에게 남긴 메모입니다.
+- **가리킬 것이 없는 `[^label]`은 쓰인 그 글자 그대로** 남습니다. 아무 데도 가지 않는 링크가 되지 않습니다.
+
+주석 하나가 여러 블록일 수 있습니다. 두 번째 문단, 목록, 코드 블록 — 첫 줄 이후를 네 칸 들여쓰기만 하면 됩니다. 어디에 썼는지는 상관없습니다. 파서가 흐름에서 들어내므로, 문서 한가운데에 쓴 주석도 아래에서 읽힙니다.
+
+### 정의 목록
+
+여기서 GitHub이 읽지 않는 유일한 것입니다. 문법은 [PHP Markdown Extra](https://michelf.ca/projects/php-markdown/extra/#def-list)의 것이고, 이런 걸 쓰는 사람들이 쓰는 바로 그 문법입니다.
+
+```md
+마크다운 : 쓰인 대로 읽히는 글쓰기 방식.
+
+Mawy : 이것. : 그리고 그 옆의 에디터.
+```
+
+용어는 글줄 하나이고, 그 뜻은 콜론 **하나와 공백**으로 시작하는 줄입니다. 그 공백이 없으면 문장 아래의 `:warning:`이 그 문장을 용어로 만들어 버립니다. 아주 많은 문서에서요. 여러 용어가 한 뜻을 나눠 가질 수도, 한 용어가 여러 뜻을 가질 수도 있고, 첫 줄 이후를 들여쓰면 뜻 하나가 여러 블록일 수도 있습니다. 뜻 앞의 빈 줄은 목록 전체를 성기게 만듭니다. 글머리 기호 목록에서와 똑같이.
+
+`parse`에 `definitionLists: false`를 넘기면 꺼집니다. GitHub에서와 정확히 같은 뜻이어야 하는 문서를 위해서.
 
 ## 코드 블록에 색 입히기
 
@@ -259,5 +293,4 @@ import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
 
 ## 아직 남은 것
 
-- 각주와 정의 목록 문법.
 - 확장 지점. 이 패키지가 모르는 구성을 문서가 실어 나를 수 있도록.

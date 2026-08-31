@@ -8,7 +8,15 @@
  * as inline content.
  */
 
-import type { MdBlock, MdDefinition, MdDocument, MdNode, MdOutlineEntry, MdRoot } from './ast.js';
+import type {
+  MdBlock,
+  MdDefinition,
+  MdDocument,
+  MdFootnoteDefinition,
+  MdNode,
+  MdOutlineEntry,
+  MdRoot
+} from './ast.js';
 import { parseBlocks, type PendingInline } from './block.js';
 import { parseInline, toPlainText } from './inline.js';
 import type { Line } from './source.js';
@@ -30,6 +38,16 @@ export interface MarkdownOptions {
    * @default false
    */
   breaks?: boolean;
+  /**
+   * Whether a line opening with `: ` under a line of text is a definition list.
+   *
+   * On, and it is the one thing Mawy reads that GitHub does not — the syntax is
+   * PHP Markdown Extra's and it is the one everybody who writes these uses.
+   * Turn it off for a document that has to mean exactly what it would mean
+   * there.
+   * @default true
+   */
+  definitionLists?: boolean;
 }
 
 /* -------------------------------------------------------------------------
@@ -217,29 +235,98 @@ function collectOutline(
   }
 }
 
+/**
+ * The footnotes something pointed at, in the order they were first pointed at.
+ *
+ * Reference order rather than the order they were written in, because that is
+ * the order they are numbered in and a reader meets `1` before `2`. A footnote
+ * nobody referred to is left out entirely, the way a link reference definition
+ * nobody used is: it is a note to the author rather than part of what the
+ * document says.
+ */
+function collectFootnotes(
+  nodes: MdNode[],
+  defined: Map<string, MdFootnoteDefinition>,
+  into: MdFootnoteDefinition[],
+  /** How many times each label has been met so far. */
+  taken: Map<string, number>
+): void {
+  for (const node of nodes) {
+    if (node.type === 'footnoteReference') {
+      const footnote = defined.get(node.label);
+
+      if (!footnote) {
+        continue;
+      }
+
+      const mentions = taken.get(node.label) ?? 0;
+
+      node.index = mentions;
+      taken.set(node.label, mentions + 1);
+
+      if (mentions === 0) {
+        const base = slugify(node.label) || 'footnote';
+        const clash = into.filter((each) => each.slug === base || each.slug.startsWith(`${base}-`));
+
+        footnote.number = into.length + 1;
+        // Two labels can slug to the same word, and two elements with the same
+        // `id` is a link that lands on whichever the browser met first.
+        footnote.slug = clash.length === 0 ? base : `${base}-${footnote.number}`;
+        into.push(footnote);
+        // The footnote's own text may point at another one, and that one is
+        // numbered here rather than after whatever mentions it further down.
+        collectFootnotes(footnote.children as MdNode[], defined, into, taken);
+      }
+
+      continue;
+    }
+
+    if ('children' in node) {
+      collectFootnotes(node.children as MdNode[], defined, into, taken);
+    }
+  }
+}
+
 export function parseMarkdown(source: string, options: MarkdownOptions = {}): MdDocument {
   const gfm = options.gfm ?? true;
   const breaks = options.breaks ?? false;
+  const definitionLists = options.definitionLists ?? true;
 
   const definitions = new Map<string, MdDefinition>();
+  const footnotes = new Map<string, MdFootnoteDefinition>();
   const pending: PendingInline[] = [];
   const reading = read(source);
 
-  const children = parseBlocks(reading.lines, { gfm, definitions, pending });
+  const children = parseBlocks(reading.lines, {
+    gfm,
+    definitionLists,
+    definitions,
+    footnotes,
+    pending
+  });
+
+  const labels = new Set(footnotes.keys());
 
   for (const { raw, target } of pending) {
-    target.children = parseInline(raw, { gfm, breaks, definitions });
+    target.children = parseInline(raw, { gfm, breaks, definitions, footnotes: labels });
   }
 
   const root: MdRoot = { type: 'root', range: { start: 0, end: reading.length }, children };
+  const used: MdFootnoteDefinition[] = [];
+
+  collectFootnotes(children as MdNode[], footnotes, used, new Map<string, number>());
 
   if (reading.breaks.length > 0) {
     relocate(root, reading);
+
+    for (const footnote of used) {
+      relocate(footnote as MdNode, reading);
+    }
   }
 
   const outline: MdOutlineEntry[] = [];
 
   collectOutline(children, new Map(), outline);
 
-  return { root, outline };
+  return { root, outline, footnotes: used };
 }

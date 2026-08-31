@@ -49,7 +49,8 @@ const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 const ATX = /^( {0,3}#{1,6})(\s.*)?$/;
 const RULE = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 const QUOTE = /^ {0,3}>[ \t]?/;
-const BULLET = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/;
+/** A bullet, a number, or the colon a definition's meaning opens with. */
+const BULLET = /^([ \t]*)([-*+]|:|\d{1,9}[.)])([ \t]+)/;
 const TASK = /^\[([ xX])\](?=[ \t]|$)/;
 const DELIMITER_ROW = /^ {0,3}\|?(?:[ \t]*:?-+:?[ \t]*\|)*[ \t]*:?-+:?[ \t]*\|?[ \t]*$/;
 const DEFINITION = /^ {0,3}(\[[^\]\n]+\]:)/;

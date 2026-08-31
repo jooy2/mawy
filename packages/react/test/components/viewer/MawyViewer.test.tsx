@@ -433,6 +433,107 @@ describe('copying', () => {
 });
 
 /**
+ * Footnotes, which are the one thing on the page whose place is the renderer's
+ * decision rather than the document's: a footnote is written wherever it suited
+ * the author and read at the bottom.
+ */
+describe('footnotes', () => {
+  const NOTED = [
+    'A sentence.[^one] Another.[^two] The first again.[^one]',
+    '',
+    '[^one]: The first note.',
+    '',
+    '[^two]: The second note.'
+  ].join('\n');
+
+  it('draws the mentions as numbers and the notes underneath', async () => {
+    const screen = await render(<MawyViewer value={NOTED} toolbar={false} />);
+    const marks = [...screen.container.querySelectorAll('.mawy-md-footnote-ref')];
+
+    expect(marks.map((mark) => mark.textContent)).toEqual(['1', '2', '1']);
+    expect(
+      [...screen.container.querySelectorAll('.mawy-md-footnotes li p')].map(
+        (note) => note.textContent
+      )
+    ).toEqual(['The first note.', 'The second note.']);
+  });
+
+  it('points the mention and the note at each other', async () => {
+    const screen = await render(<MawyViewer value={NOTED} toolbar={false} />);
+    const [first] = [...screen.container.querySelectorAll('.mawy-md-footnote-ref a')];
+    const note = screen.container.querySelector(first.getAttribute('href') as string);
+
+    expect(note).toBeTruthy();
+    expect(note?.querySelector('.mawy-md-footnote-back')?.getAttribute('href')?.slice(1)).toBe(
+      first.id
+    );
+  });
+
+  it('gives the second mention of one note an id of its own', async () => {
+    // Two elements with the same `id` is a link that lands on whichever the
+    // browser met first.
+    const screen = await render(<MawyViewer value={NOTED} toolbar={false} />);
+    const ids = [...screen.container.querySelectorAll('.mawy-md-footnote-ref a')].map(
+      (mark) => mark.id
+    );
+
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('draws nothing at all for a document with no footnotes in it', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={false} />);
+
+    expect(screen.container.querySelector('.mawy-md-footnotes')).toBe(null);
+  });
+
+  it('says where every part of a note came from', async () => {
+    const screen = await render(<MawyViewer value={NOTED} toolbar={false} />);
+    const note = screen.container.querySelector('.mawy-md-footnotes li') as HTMLElement;
+    const [start, end] = (note.dataset.mawyRange ?? '').split(',').map(Number);
+
+    expect(NOTED.slice(start, end)).toBe('[^one]: The first note.');
+  });
+});
+
+/**
+ * A term and what it means.
+ */
+describe('definition lists', () => {
+  it('draws a term and its meaning as one', async () => {
+    const screen = await render(
+      <MawyViewer value={'Markdown\n: A way of writing.'} toolbar={false} />
+    );
+
+    expect(screen.container.querySelector('dl')?.className).toBe('mawy-md-definitions');
+    expect(screen.container.querySelector('dt')?.textContent).toBe('Markdown');
+    expect(screen.container.querySelector('dd')?.textContent).toBe('A way of writing.');
+    // Tight, so the meaning is the words rather than a paragraph around them.
+    expect(screen.container.querySelector('dd p')).toBe(null);
+  });
+
+  it('wraps a loose one in paragraphs, the way a loose bullet list is wrapped', async () => {
+    const screen = await render(
+      <MawyViewer value={'Markdown\n\n: A way of writing.'} toolbar={false} />
+    );
+
+    expect(screen.container.querySelector('dd p')?.textContent).toBe('A way of writing.');
+  });
+
+  it('is a paragraph when the option is off', async () => {
+    const screen = await render(
+      <MawyViewer
+        value={'Markdown\n: A way of writing.'}
+        toolbar={false}
+        parse={{ definitionLists: false }}
+      />
+    );
+
+    expect(screen.container.querySelector('dl')).toBe(null);
+    expect(screen.container.querySelector('p')?.textContent).toBe('Markdown\n: A way of writing.');
+  });
+});
+
+/**
  * Colouring a code block, which the viewer does not do on its own.
  *
  * A highlighter is the largest thing a Markdown renderer can be made to carry

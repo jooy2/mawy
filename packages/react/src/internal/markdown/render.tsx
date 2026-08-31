@@ -22,7 +22,15 @@ import type {
   MawyHighlighter,
   MawyHtmlPolicy
 } from '../../types.js';
-import type { MdBlock, MdCode, MdInline, MdListItem, MdRange, MdTableRow } from './ast.js';
+import type {
+  MdBlock,
+  MdCode,
+  MdFootnoteDefinition,
+  MdInline,
+  MdListItem,
+  MdRange,
+  MdTableRow
+} from './ast.js';
 import { sanitizeHtml } from './html.js';
 import type { MawyStrings } from '../i18n.js';
 import {
@@ -45,7 +53,22 @@ export interface RenderContext {
    * of which the code is drawn as the text it is.
    */
   highlighter?: MawyHighlighter | null;
+  /**
+   * The document's footnotes, by label, so a `[^a]` in the middle of a sentence
+   * knows which number it is and where its note ended up.
+   */
+  footnotes?: Map<string, MdFootnoteDefinition>;
 }
+
+/**
+ * Where a footnote and the sentence that mentions it point at each other.
+ *
+ * Prefixed, because these are `id`s on somebody else's page: a document with a
+ * footnote called `1` should not be claiming `#1` for it.
+ */
+const footnoteId = (slug: string) => `mawy-fn-${slug}`;
+const referenceId = (slug: string, index: number) =>
+  index === 0 ? `mawy-fnref-${slug}` : `mawy-fnref-${slug}-${index + 1}`;
 
 /**
  * Which characters of the source an element was drawn from.
@@ -115,6 +138,28 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
             {renderInline(node.children, context)}
           </a>
         );
+
+      case 'footnoteReference': {
+        const footnote = context.footnotes?.get(node.label);
+
+        // A reference with nothing to point at should not have reached here:
+        // the inline parser only makes one for a label the document defines.
+        if (!footnote) {
+          return null;
+        }
+
+        return (
+          <sup key={index} className="mawy-md-footnote-ref" {...origin(node)}>
+            <a
+              href={`#${footnoteId(footnote.slug)}`}
+              id={referenceId(footnote.slug, node.index)}
+              aria-describedby={footnoteId(footnote.slug)}
+            >
+              {footnote.number}
+            </a>
+          </sup>
+        );
+      }
 
       case 'image':
         return (
@@ -474,6 +519,47 @@ function renderRow(
  *   above its own label — and it applies to this level only: a list nested
  *   inside decides its own looseness.
  */
+/**
+ * The footnotes, drawn under the document.
+ *
+ * Not part of `renderBlocks`, because they are not part of the block flow: a
+ * footnote is written wherever it suited the author and read at the bottom, so
+ * this is the one thing on the page whose place is the renderer's decision
+ * rather than the document's. Everything inside it still says where it came
+ * from; the section around them says nothing, because it came from nowhere.
+ */
+export function renderFootnotes(
+  footnotes: readonly MdFootnoteDefinition[],
+  context: RenderContext
+): React.ReactNode {
+  if (!footnotes.length) {
+    return null;
+  }
+
+  return (
+    // Named with a label rather than by pointing at the heading: two viewers on
+    // one page would be two elements claiming the same `id`, and a link that
+    // lands on whichever the browser met first.
+    <section className="mawy-md-footnotes" aria-label={context.strings.footnotes}>
+      <h2 className="mawy-md-footnotes-title">{context.strings.footnotes}</h2>
+      <ol>
+        {footnotes.map((footnote, index) => (
+          <li key={index} id={footnoteId(footnote.slug)} {...origin(footnote)}>
+            {renderBlocks(footnote.children, context)}
+            <a
+              className="mawy-md-footnote-back"
+              href={`#${referenceId(footnote.slug, 0)}`}
+              aria-label={context.strings.footnoteBack}
+            >
+              ↩
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export function renderBlocks(
   blocks: MdBlock[],
   context: RenderContext,
@@ -548,6 +634,23 @@ export function renderBlocks(
           </Tag>
         );
       }
+
+      case 'definitionList':
+        return (
+          <dl key={index} className="mawy-md-definitions" {...origin(block)}>
+            {block.children.map((child, at) =>
+              child.type === 'definitionTerm' ? (
+                <dt key={at} {...origin(child)}>
+                  {renderInline(child.children, context)}
+                </dt>
+              ) : (
+                <dd key={at} {...origin(child)}>
+                  {renderBlocks(child.children, context, !block.loose)}
+                </dd>
+              )
+            )}
+          </dl>
+        );
 
       case 'table': {
         const header = block.children.filter((row) => row.header);

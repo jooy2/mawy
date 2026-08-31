@@ -59,17 +59,51 @@ CommonMark, and GitHub's additions on top of it:
 | --- | --- |
 | **Blocks** | ATX and setext headings, paragraphs, fenced and indented code, block quotations, ordered and bullet lists to any depth, thematic breaks, HTML blocks |
 | **Inline** | emphasis, strong, `code`, links, images, autolinks, hard line breaks, character references, backslash escapes |
-| **GitHub** | tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs and e-mail addresses, and the five [alert](https://docs.github.com/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts) kinds |
+| **GitHub** | tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs and e-mail addresses, footnotes, and the five [alert](https://docs.github.com/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts) kinds |
 | **References** | `[label]: url "title"` definitions, resolved wherever in the file they are written |
+| **And one more** | definition lists, which GitHub does not read |
 
-`parse` is where the two options live:
+`parse` is where the options live:
 
 ```tsx
-<MawyViewer value={document} parse={{ gfm: true, breaks: false }} />
+<MawyViewer value={document} parse={{ gfm: true, breaks: false, definitionLists: true }} />
 ```
 
 - **`gfm`** (default `true`) — GitHub's additions. Off, a `|` is a pipe and `~~` is four tildes.
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. Markdown says it is not. Chat clients and issue trackers say it is, which is what a reader who has never written Markdown expects, and the reason this is an option rather than a decision.
+- **`definitionLists`** (default `true`) — whether `: ` under a line of text is a term and what it means. See below.
+
+### Footnotes
+
+A `[^label]` in a sentence is a number, and the note it points at is drawn under the document with a link back to where it was mentioned:
+
+```md
+Mawy parses its own Markdown.[^why]
+
+[^why]: A parser is the only thing that can say where a piece of the document came from, and that is what everything else here is built on.
+```
+
+Three things are worth knowing, and all three are what GitHub does:
+
+- **They are numbered by the order they are first mentioned**, not the order they are written in — the reader meets `1` before `2` whatever the file looks like.
+- **A note nobody mentions is not drawn at all.** It is a note to the author, the same way a `[label]: url` nobody links to is.
+- **A `[^label]` with nothing to point at stays as the characters it was written with**, rather than becoming a link to nowhere.
+
+A note may be a whole run of blocks — a second paragraph, a list, a code block — as long as the lines after the first are indented four spaces. Where it was written does not matter: the parser lifts it out of the flow, so a note in the middle of a section is still read at the bottom.
+
+### Definition lists
+
+The one thing here that GitHub does not read. The syntax is [PHP Markdown Extra](https://michelf.ca/projects/php-markdown/extra/#def-list)'s, which is the one everybody who writes these uses:
+
+```md
+Markdown : A way of writing that reads as what it says.
+
+Mawy : This. : And the editor beside it.
+```
+
+A term is a line of text; what it means is a line opening with a colon **and a space** — the space is what keeps `:warning:` under a sentence from turning that sentence into a term, which it would do in a great many documents otherwise. Several terms may share a meaning, several meanings may share a term, and a meaning may be a whole run of blocks if the lines after the first are indented. A blank line before a meaning spaces the whole list out, exactly as it does in a bullet list.
+
+Pass `definitionLists: false` in `parse` to turn it off, for a document that has to mean exactly what it would mean on GitHub.
 
 ## Colouring a code block
 
@@ -259,5 +293,4 @@ Text is the one thing with no range on it, having no attributes to put one in. I
 
 ## Still to come
 
-- Footnotes, and the definition list syntax.
 - An extension point, so a document can carry a construct this package does not know about.
