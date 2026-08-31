@@ -49,9 +49,11 @@ That holds across the two packages as well, and it is checked rather than claime
 
 ::: fw flutter
 
-`value` is required in the Flutter package. Opening a file means a file picker, which means a plugin — a dependency this package does not have and an application usually already does. So reading the file is yours and drawing it is Mawy's.
+Not in the Flutter package, where `value` is required. Opening a file means a file picker, which means a plugin — a dependency this package does not have and an application usually already does. So reading the file is yours and drawing it is Mawy's, and the whole of this section is the React package's.
 
 :::
+
+::: fw react
 
 `value` is a prop rather than a requirement, and that is the shape of the component rather than a convenience. With no document the viewer **is** the file picker: drop a `.md` file on it, or choose one.
 
@@ -77,6 +79,8 @@ Which half you get follows from which props you pass:
 
 A file larger than five megabytes is refused rather than read. That is about a million words of Markdown, and the failure it prevents is a browser tab that stops answering because somebody dropped a database dump on it.
 
+:::
+
 ## What it reads
 
 CommonMark, and GitHub's additions on top of it:
@@ -91,9 +95,24 @@ CommonMark, and GitHub's additions on top of it:
 
 `parse` is where the options live:
 
+::: fw react
+
 ```tsx
 <MawyViewer value={document} parse={{ gfm: true, breaks: false, definitionLists: true }} />
 ```
+
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(
+  value: document,
+  parse: const MawyParseOptions(gfm: true, breaks: false, definitionLists: true),
+);
+```
+
+:::
 
 - **`gfm`** (default `true`) — GitHub's additions. Off, a `|` is a pipe and `~~` is four tildes.
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. Markdown says it is not. Chat clients and issue trackers say it is, which is what a reader who has never written Markdown expects, and the reason this is an option rather than a decision.
@@ -135,9 +154,11 @@ Pass `definitionLists: false` in `parse` to turn it off, for a document that has
 
 ::: fw flutter
 
-The Flutter package draws code blocks plain for now. `MawyHighlighter` is a React type, and the Dart side will want a shape of its own rather than the same one translated.
+The Flutter package draws code blocks plain for now. `MawyHighlighter` is a React type, and the Dart side will want a shape of its own rather than the same one translated — so the rest of this section is the React package's, and it is where that shape will be argued from.
 
 :::
+
+::: fw react
 
 Nothing is coloured by default, and that is not an omission. A highlighter is the largest thing a Markdown renderer can be made to carry, and most documents have nothing in them to colour — so it is a prop, and the prop takes a **function** so that nothing is even fetched until a document with a language on a fence is drawn:
 
@@ -167,11 +188,23 @@ Each coloured piece says where it came from, like everything else the viewer dra
 
 The colours themselves are eight custom properties — `--mawy-hl-comment`, `--mawy-hl-string`, `--mawy-hl-number`, `--mawy-hl-keyword`, `--mawy-hl-type`, `--mawy-hl-function`, `--mawy-hl-variable`, `--mawy-hl-punctuation` — declared on `.mawy-root` in both palettes and yours to redeclare.
 
+:::
+
 ## Safety
 
 A viewer renders content that the person running it did not write, so the default is the safe one.
 
+::: fw react
+
 **The document becomes React elements, not a string of HTML.** There is no `innerHTML` on the path from Markdown to the page: a node in the parsed document can only become an element the renderer has a `case` for. That is not escaping done carefully — it is escaping that has nothing to do, which is a stronger thing to be able to say.
+
+:::
+
+::: fw flutter
+
+**The document becomes widgets, not a string of anything.** There is no markup on the path from Markdown to the screen: a node in the parsed document can only become a widget the renderer has a `case` for. That is not escaping done carefully — it is escaping that has nothing to do, which is a stronger thing to be able to say.
+
+:::
 
 **Every URL is checked, in Markdown as much as in HTML.** `[click](javascript:…)` is plain Markdown with no HTML anywhere near it, so the scheme allowlist is not part of the HTML option and is not switched off with it. A refused destination is drawn as the words the author wrote, with no link around them — a reader sees the sentence rather than a control that does nothing.
 
@@ -227,7 +260,17 @@ MawyViewer(
 
 <MawyDemo name="viewer/minimal" flutter="viewer/minimal" :height="360" />
 
+::: fw react
+
 `toolbar` takes `true` for all of it, `false` for none, or the controls to draw and the order to draw them in:
+
+:::
+
+::: fw flutter
+
+`toolbar` takes a list: `kMawyViewerToolbar` for all of it, `const []` for none, or the controls to draw and the order to draw them in.
+
+:::
 
 | Item              | What it does                                                       |
 | ----------------- | ------------------------------------------------------------------ |
@@ -242,13 +285,53 @@ MawyViewer(
 | `'open'`          | the file picker                                                    |
 | `'separator'`     | a hairline, for grouping a long list                               |
 
+::: fw flutter
+
+They are the values of `MawyViewerToolbarItem` there — `MawyViewerToolbarItem.fontSize` for the second row and so on — and the list is the same one short of `open`, because this package does not open files.
+
+:::
+
 There is no way to put a control on it that is not on that list, and that is deliberate: a toolbar that takes arbitrary children is a toolbar the library can no longer make keyboard-operable.
 
+::: fw react
+
 It is a real `toolbar` rather than a row of buttons. One Tab enters it and one Tab leaves; the arrow keys, `Home` and `End` move between the controls inside. A reader who is keyboard-only should reach the document in two keystrokes rather than in eleven.
+
+:::
+
+::: fw flutter
+
+Every control is a named `Semantics` button that says whether it is pressed, so a screen reader reads the toolbar rather than a row of shapes. Keyboard traversal is not built yet — see [accessibility](#accessibility) below.
+
+:::
 
 ## Typefaces
 
 By default the menu offers three, and they are roles rather than font names: `sans`, `serif` and `mono`, drawn with whatever is already on the reader's machine. Nothing is downloaded and nothing can fail.
+
+::: fw flutter
+
+Those three are the whole of it here. `MawyFontFamily` has no fourth value and there is no `fonts` list to add one to, because the two things the React half of this section is about — a catalogue of families and a stylesheet fetched the moment one of them is first drawn — are a browser's, and a Flutter application declares the fonts it ships in `pubspec.yaml` long before a viewer is built.
+
+What a bundled face needs is a name, and that is `fontFamilyName`:
+
+```dart
+MawyViewer(
+  value: document,
+  defaultTypography: const MawyTypography(
+    fontFamily: MawyFontFamily.serif,
+    fontFamilyName: 'Archive',
+  ),
+);
+```
+
+Left out, each of the three roles is whatever the platform uses for that role. Set, it is the family named — the role still decides what the toolbar calls it and which of the three is selected, and `fontFamilyName` decides what is actually drawn.
+
+The rest of this section is the React package's.
+
+:::
+
+::: fw react
 
 Real web fonts are one prop away, and they are a prop rather than a default on purpose. A viewer is a component inside somebody else's page, and a component that opens a connection to a font CDN on its own has made a decision — about privacy, about working offline, about a request the page's own content policy may refuse — that was never its to make. So the library ships the list and the application says yes:
 
@@ -286,7 +369,11 @@ Your own list is the same shape:
 
 `id` is what `typography.fontFamily` is set to. `stack` defaults to `var(--mawy-font-{id})`, which is how the three built-in roles stay a stylesheet's business. `href` is a stylesheet fetched once, the first time the font is drawn — leave it out for a font the page already loads.
 
+:::
+
 ## Type, and who owns it
+
+::: fw react
 
 Every typography value reaches the page as a `--mawy-doc-*` custom property, so there are two ways in and they are the same way.
 
@@ -313,7 +400,51 @@ Anything left out of `typography` keeps its default, so `{ fontSize: 18 }` is a 
 
 The document's line height and letter spacing are declared on the text itself, not only on the container around it. That sounds like a detail and it is the difference between the controls working and not: an inherited value loses to _any_ declaration on the element, so one `article p { line-height: 28px }` in the surrounding page is enough to make the line-height control move a number that changes nothing a reader can see.
 
+:::
+
+::: fw flutter
+
+There is one way in, and it is the argument. `MawyTypography` has a default for every field rather than being a bag of optional ones, so naming one of them is a whole answer and the rest stays where it was:
+
+```dart
+MawyViewer(
+  value: document,
+  defaultTypography: const MawyTypography(fontSize: 18, measure: MawyMeasure.wide),
+  onTypographyChange: (MawyTypography typography) => save(typography),
+);
+```
+
+`defaultTypography` starts the viewer somewhere and leaves it holding its own settings. `typography` takes them away: pass it and the toolbar still reports what the reader chose through `onTypographyChange`, and nothing moves until the application passes the new value back. `onTypographyChange` is called either way, which is what makes remembering a reader's choice the same code in both.
+
+Changing one thing about settings you already have is `copyWith`:
+
+```dart
+setState(() => _type = _type.copyWith(fontSize: 18));
+```
+
+The sizes are logical pixels rather than CSS ones and the measure widths are 560, 704 and 880 — the same three columns at the same 16-pixel body size.
+
+:::
+
 ## Theming
+
+::: fw flutter
+
+The palette is [`MawyTokens`](../api/#mawytokens), and it is the stylesheet's custom properties under Dart names, value for value — `accent` is `--mawy-accent` and both are `#5b34ea`. `MawyTokens.light` and `MawyTokens.dark` are the two, and the viewer picks between them from `colorScheme` rather than from anything global, which is what lets one document be dark inside a light screen.
+
+**A viewer does not take a palette of its own yet.** There is no argument for one, so the React half of this section has no counterpart here — what the export is for today is an application drawing its own chrome beside a document and wanting the same colours in it:
+
+```dart
+final MawyTokens tokens = MawyTokens.of(Theme.of(context).brightness);
+
+Container(color: tokens.backgroundSunken, child: /* … */);
+```
+
+`MawyRadius` and `MawyMotion` are the same idea for the corner radii and for the one duration and one curve everything that moves uses.
+
+:::
+
+::: fw react
 
 Every colour the viewer draws with is a `--mawy-*` custom property declared on `.mawy-root`, and redeclaring one is the whole theming story:
 
@@ -326,15 +457,19 @@ Every colour the viewer draws with is a `--mawy-*` custom property declared on `
 
 They are on `.mawy-root` rather than on `:root` on purpose. A component library has no business writing to the document element — and a viewer that read its palette from `:root` could not be dark inside a light page, which is exactly what a single embedded document often wants to be.
 
-The light and dark palettes are chosen by `colorScheme`, which is `'system'` unless you say otherwise. `'system'` follows `prefers-color-scheme`; `'light'` and `'dark'` do not, so an application with its own switch drives the viewer from it and a reader on a dark machine still gets the light document you asked for.
+:::
+
+The light and dark palettes are chosen by `colorScheme`, which is `system` unless you say otherwise. `system` follows whatever the platform already says — `prefers-color-scheme` in a browser, the platform brightness in an app — and `light` and `dark` do not, so an application with its own switch drives the viewer from it and a reader on a dark machine still gets the light document you asked for.
 
 ## Where a piece of the page came from
 
 ::: fw flutter
 
-The ranges are in the Dart tree too — every `MdNode` carries one, and they are the same offsets. What is not there is an element to put them on: there is no DOM, so a range is something an application reads off `parseMarkdown` rather than off the screen.
+The ranges are in the Dart tree too, and they are the same offsets: every `MdNode` carries one, text nodes included. What is not there is an element to hang them on — there is no DOM — so a range is something an application reads off [`parseMarkdown`](../api/#parsemarkdown) rather than off the screen, and the rest of this section, which is about the attribute, is the React package's.
 
 :::
+
+::: fw react
 
 Every element the viewer draws carries `data-mawy-range="start,end"` — the offsets, in the Markdown it was given, of that piece's first character and of the one after its last. Blocks, list items, table rows and cells, and the inline elements inside them: emphasis, links, code spans, images.
 
@@ -348,9 +483,13 @@ In a document that reads `# Title`, a blank line, `## Second`, that second headi
 
 A range is the only way back: from a place on the page to the place in the document it was drawn from. The editor's `split` reads it twice over — to scroll the preview to the block the top line of the source is in, and to put the caret on the word a click in the preview landed on. An application can read it for the same kind of thing: a comment pinned to a paragraph, an "edit this section" control beside a heading. The offsets index the string you passed directly, in UTF-16 code units, so `value.slice(start, end)` is the Markdown behind whatever was clicked.
 
-Text is the one thing with no range on it, having no attributes to put one in. It does not need one: a run of text is bounded by the elements on either side of it, which is enough to find it in the source between them — a `<strong>` drawn from `**bold**` contains `bold` at exactly one place inside those eight characters.
+Text is the one thing on the page with no range on it, having no attributes to put one in. It does not need one: a run of text is bounded by the elements on either side of it, which is enough to find it in the source between them — a `<strong>` drawn from `**bold**` contains `bold` at exactly one place inside those eight characters.
+
+:::
 
 ## Accessibility
+
+::: fw react
 
 - The toolbar is a `toolbar` with one tab stop and arrow-key movement inside it.
 - Every icon button has a name; nothing is announced as "button".
@@ -358,6 +497,18 @@ Text is the one thing with no range on it, having no attributes to put one in. I
 - Following an outline entry moves the focus as well as the scroll, so the next `Tab` carries on from the heading rather than from the panel.
 - A code block's copy button is invisible until the pointer or the focus is on it, and is never removed from the layout — a button that is not in the layout is a button `Tab` walks past.
 - Animation is dropped under `prefers-reduced-motion`.
+
+:::
+
+::: fw flutter
+
+- Every control is a `Semantics` button with a name and, where it toggles, a state — so a screen reader reads the toolbar rather than a row of shapes.
+- Headings, links and images carry their own semantics through the document, and following an outline entry scrolls to the heading it names.
+- Text scales with the platform's own text size, because the sizes are logical pixels through `MawyTypography` rather than anything baked in.
+
+Three things the React package has and this one does not yet, and they are the honest list: keyboard traversal inside the toolbar, `Escape` closing a menu, and animation dropping out under the platform's reduce-motion setting.
+
+:::
 
 ## Still to come
 
