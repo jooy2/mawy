@@ -21,6 +21,9 @@ const siteUrl = packageJson.homepage.replace(/\/+$/, '');
 const repoUrl = packageJson.repository.url.replace(/\.git$/, '');
 const npmUrl = `https://www.npmjs.com/package/${packageJson.name}`;
 
+/** The card image. A square mark, which is why the Twitter card is `summary`. */
+const socialImage = `${siteUrl}/256x256.png`;
+
 /** `/` for whichever locale is the default, `/{lang}/` for every other one. */
 const localeBase = (lang: string) => (lang === defaultLocale ? '/' : `/${lang}/`);
 
@@ -70,8 +73,8 @@ const vitePressI18nConfig: VitePressI18nOptions = {
   rootLocale: defaultLocale,
   searchProvider: 'local',
   description: {
-    en: 'A Markdown editor and viewer in one package — a WYSIWYG surface, a plain source surface and a read-only viewer over the same document, sharing one parser and one renderer.',
-    ko: '마크다운 에디터와 뷰어를 하나의 패키지로. 위지윅 편집 화면, 마크다운 원문 편집 화면, 읽기 전용 뷰어가 같은 문서를 두고 하나의 파서와 하나의 렌더러를 공유합니다.'
+    en: 'A Markdown editor that also does the reading — write in WYSIWYG or in the source, switch freely, and show the finished document through a read-only viewer.',
+    ko: '마크다운을 쓰고 보여주는 일을 하나로 묶은 에디터. 위지윅 화면과 원문 화면을 오가며 쓰고, 다 쓴 문서는 읽기 전용 뷰어로 그대로 보여줍니다.'
   },
   themeConfig: {
     en: { nav: navFor('en', ['Guide', 'API']) },
@@ -291,14 +294,30 @@ const vitePressConfig: UserConfig = {
     [`${defaultLocale}/:rest*`]: ':rest*'
   },
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
-    ['meta', { name: 'theme-color', content: '#2f6feb' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/logo-32.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/logo-16.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '256x256', href: '/256x256.png' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/256x256.png' }],
+    // Last, and without a `type`: this is the one a browser reaches for when it
+    // has understood none of the above, and `favicon.ico` carries 16, 32 and 48
+    // in one file for exactly that case.
+    ['link', { rel: 'shortcut icon', href: '/favicon.ico' }],
+    // `--vp-c-brand-2`, as a literal: a `<meta>` cannot read a custom property,
+    // and this is the one place in the site that has to repeat one.
+    ['meta', { name: 'theme-color', content: '#5b34ea' }],
     // The half of the metadata that is the same on every page. The other half —
     // the canonical URL, the title, the description, the locale alternates — is
     // per page and lives in `transformHead`.
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'Mawy' }],
-    ['meta', { name: 'twitter:card', content: 'summary' }]
+    ['meta', { property: 'og:image', content: socialImage }],
+    ['meta', { property: 'og:image:width', content: '256' }],
+    ['meta', { property: 'og:image:height', content: '256' }],
+    ['meta', { property: 'og:image:alt', content: 'Mawy' }],
+    // `summary` and not `summary_large_image`: the image is a square mark, and
+    // a wide card would letterbox it into a strip of background.
+    ['meta', { name: 'twitter:card', content: 'summary' }],
+    ['meta', { name: 'twitter:image', content: socialImage }]
   ],
   sitemap: {
     hostname: packageJson.homepage
@@ -330,6 +349,7 @@ const vitePressConfig: UserConfig = {
   },
   transformHead,
   themeConfig: {
+    logo: { src: '/logo-32.png', width: 24, height: 24 },
     /**
      * `h2` and `h3`, nested.
      *

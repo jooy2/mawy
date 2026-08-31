@@ -1,3 +1,5 @@
+<img src="https://mawy.cdget.com/128x128.png" alt="Mawy" width="96" height="96" />
+
 # Mawy for React
 
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/mawy/blob/main/LICENSE) [![npm latest package](https://img.shields.io/npm/v/mawy/latest.svg)](https://www.npmjs.com/package/mawy) [![npm downloads](https://img.shields.io/npm/dm/mawy.svg)](https://www.npmjs.com/package/mawy)
@@ -8,7 +10,7 @@ Guides and the full API, in English and Korean. This README is just the quick st
 
 ---
 
-> **Mawy is a Markdown editor and a Markdown viewer in one package.** The same document, three ways of looking at it: a **WYSIWYG** surface that edits the rendered document directly, a **plain** surface that edits the Markdown source, and a **viewer** that only renders. One value, one parser, one set of extensions behind all three — so switching between them is a change of view rather than a change of document.
+> **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
 > [!IMPORTANT] **Not published yet.** This package is the scaffolding for the editor rather than the editor: it builds, it lints, it typechecks and its tests run in three real browsers, and the components are being written on top of it. The API below is what exists today, which is the shared type vocabulary and nothing else.
 

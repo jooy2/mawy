@@ -1,23 +1,33 @@
 /**
- * The site's palette.
+ * The site's palette, taken from the mark.
  *
  * VitePress draws everything from its own `--vp-*` variables, so a theme is a
  * handful of them redeclared rather than a stylesheet of overrides. Anything
  * that needs more than this belongs in a component under `theme/components`.
+ *
+ * The three brand steps are sampled from the logo's own gradient — indigo
+ * through violet — and each is picked for the surface it is read against:
+ * `brand-1` is link text, so it clears 4.5:1 on the page behind it (7.8:1 on
+ * white, 6:1 on the dark background), and the dark theme cannot reuse the light
+ * one because the same violet that is legible on white is 2.2:1 on `#1b1b1f`.
  */
 
 :root {
-  --vp-c-brand-1: #1f57cc;
-  --vp-c-brand-2: #2f6feb;
-  --vp-c-brand-3: #4d87f5;
-  --vp-c-brand-soft: rgb(47 111 235 / 14%);
+  --vp-c-brand-1: #4a29e0;
+  --vp-c-brand-2: #5b34ea;
+  --vp-c-brand-3: #7a52f5;
+  --vp-c-brand-soft: rgb(91 52 234 / 14%);
 
+  /* The mark's own sweep, violet into cyan. */
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(120deg, #2f6feb 30%, #5ac8fa);
+  --vp-home-hero-name-background: linear-gradient(120deg, #5b34ea 30%, #35b6f6);
+  --vp-home-hero-image-background-image: linear-gradient(-45deg, #5b34ea 40%, #35b6f6 60%);
+  --vp-home-hero-image-filter: blur(48px);
 }
 
 .dark {
-  --vp-c-brand-1: #7aa7ff;
-  --vp-c-brand-2: #4d87f5;
-  --vp-c-brand-3: #2f6feb;
+  --vp-c-brand-1: #9d86ff;
+  --vp-c-brand-2: #8f74ff;
+  --vp-c-brand-3: #7a52f5;
+  --vp-c-brand-soft: rgb(122 82 245 / 20%);
 }

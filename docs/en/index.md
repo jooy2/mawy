@@ -3,12 +3,17 @@ layout: home
 
 title: Mawy
 titleTemplate: A Markdown editor and viewer in one package
-description: A Markdown editor and viewer in one package — a WYSIWYG surface, a plain source surface and a read-only viewer over the same document, sharing one parser and one renderer. React first, ESM only, types included.
+description: A Markdown editor that also does the reading — write in WYSIWYG or in the source, switch freely, and show the finished document through a read-only viewer.
 
 hero:
   name: Mawy
   text: One document, three ways of looking at it
-  tagline: A WYSIWYG editor, a plain Markdown editor and a viewer, in one package and behind one value. Switching between them is a change of view, not a change of document.
+  tagline: A Markdown editor that also does the reading. Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
+  image:
+    src: /256x256.png
+    alt: Mawy
+    width: 200
+    height: 200
   actions:
     - theme: brand
       text: Get started
@@ -21,18 +26,22 @@ hero:
       link: https://github.com/jooy2/mawy
 
 features:
-  - title: Editor and viewer, one library
-    details: A viewer that renders differently from the editor that produced the document is the bug every editor-plus-separate-renderer setup eventually ships. Here they share the parser and the renderer.
-    link: /guide/viewer
-    linkText: The viewer
-  - title: WYSIWYG and source, one value
-    details: Two views of the same document rather than two editors. Toggling does not round-trip through a second implementation and does not lose what the other view could not express.
+  - title: Write it as it will look
+    details: The WYSIWYG surface shows the finished document while you are still writing it — headings at the size they will be, the table laid out, the image in place. Nothing to picture in your head, and nothing to preview first.
     link: /guide/editor
     linkText: The editor
-  - title: Close to zero dependencies
-    details: The package declares none, and a test fails the build if a source file imports something undeclared. A third-party library is brought in only where writing it ourselves would be worse — and only under a permissive licence.
-  - title: Tested where it runs
-    details: Selection, ranges, contenteditable and beforeinput are what an editor is made of, and a DOM emulator implements none of them faithfully. The suite runs in Chromium, Firefox and WebKit, on three operating systems.
+  - title: Or write the Markdown
+    details: Step into the source whenever the rendered view is in the way — a table that will not behave, a block you want to paste in whole — and step back out. It is the same document either way, so nothing is lost in the move.
+    link: /guide/editor
+    linkText: The editor
+  - title: Then hand it to a reader
+    details: When the writing is done, the viewer takes the same document and only shows it. What a reader sees is what the author had in front of them, down to the last line break.
+    link: /guide/viewer
+    linkText: The viewer
+  - title: Nothing to assemble first
+    details: One package and one line of CSS. No theme file to fill in before the first screen looks like something, no build-side plugin, and no second library to render what you wrote.
+    link: /guide/getting-started
+    linkText: Getting started
 ---
 
 ## Where this is

@@ -1,7 +1,7 @@
 {
   "name": "mawy",
   "version": "0.0.0",
-  "description": "A Markdown editor and viewer in one package — a WYSIWYG surface, a plain source surface and a read-only viewer over the same document. React, ESM only, types included, close to zero dependencies.",
+  "description": "A Markdown editor that also does the reading — write in WYSIWYG or in the source, switch freely, and show the finished document through a read-only viewer.",
   "type": "module",
   "types": "dist/index.d.ts",
   "sideEffects": [
