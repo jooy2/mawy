@@ -50,8 +50,17 @@ jobs:
 
       # pub.dev scores against this, and a package that would not publish is one
       # nobody finds out about until release day.
+      #
+      # `dart pub publish` refuses a tree with uncommitted changes in it, and on
+      # the runner the SDK's own `pub get` rewrites `analysis_options.yaml` —
+      # which is a failure about whichever Dart the runner installed rather than
+      # about the package. So whatever it touched is printed, and then put back,
+      # and the check is about the package as it is committed.
       - name: Check the package would publish
-        run: dart pub publish --dry-run
+        run: |
+          git status --porcelain
+          git checkout -- .
+          dart pub publish --dry-run
         working-directory: ./packages/flutter
 
   parity:
@@ -81,8 +90,10 @@ jobs:
         run: flutter pub get
         working-directory: ./packages/flutter
 
+      # `--silent`, because npm writes `> mawy-react@0.1.0 parity` to stdout on
+      # the runner and that banner lands in the file being diffed.
       - name: Print the React parser's trees
-        run: npm run parity > /tmp/react.json
+        run: npm run --silent parity > /tmp/react.json
         working-directory: ./packages/react
 
       - name: Print the Dart parser's trees
