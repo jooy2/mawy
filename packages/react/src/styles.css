@@ -1,0 +1,17 @@
+/**
+ * Mawy's stylesheet, imported once by the embedding application:
+ *
+ *     @import 'mawy/styles.css';
+ *
+ * Everything the library draws is expressed through the custom properties
+ * declared here, so a host application themes the editor by redeclaring a token
+ * rather than by out-specifying a rule. The tokens cascade, which means one
+ * declaration on a wrapping element reaches every Mawy surface inside it.
+ *
+ * `--mawy-*` is the whole namespace, and nothing outside it is a supported
+ * thing to override.
+ */
+
+:root {
+  color-scheme: light dark;
+}

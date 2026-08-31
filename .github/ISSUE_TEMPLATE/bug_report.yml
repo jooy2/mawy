@@ -1,0 +1,94 @@
+name: 🐛 Bug report
+description: Something behaves differently from what the documentation says.
+title: 'fix: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file this. Please write the issue in English so everyone can follow it.
+
+        **If the bug has a security impact — script running from document content, escaping the rendered output — do not file it here.** [SECURITY.md](https://github.com/jooy2/mawy/blob/main/SECURITY.md) has the private route.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the existing issues and this is not a duplicate.
+          required: true
+        - label: I am on the latest version of the package.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: The version of `mawy` you are on, or the commit if you are on a checkout.
+      placeholder: '0.1.0'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where does it happen?
+      multiple: true
+      options:
+        - WYSIWYG editor
+        - Plain (source) editor
+        - Viewer
+        - Parser / Markdown handling
+        - Types
+        - Build / packaging
+        - Documentation site
+        - Somewhere else
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happens
+    attributes:
+      label: What happens
+      description: What you see, and what you expected to see instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce
+      description: |
+        The steps, and the smallest input that shows it. A link to a runnable reproduction (StackBlitz, CodeSandbox, a repository) is the single most useful thing you can attach — a bug that can be run is usually fixed in the same sitting.
+
+        If the bug is about a particular document, paste the **Markdown source**, in a fenced block, rather than a screenshot of it.
+      value: |
+        1.
+        2.
+        3.
+
+        Reproduction:
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Where you ran into it.
+      value: |
+        - OS:
+        - Browser and version:
+        - React version:
+        - Node.js version:
+        - Bundler / framework (Vite, Next.js, …):
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Console output, a screen recording, what you already tried.
+    validations:
+      required: false

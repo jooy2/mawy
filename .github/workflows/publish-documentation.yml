@@ -1,0 +1,63 @@
+name: publish-documentation
+
+on:
+  # run every time a push occurs in the docs folder
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      # The site documents the packages and copies their changelogs in, so a
+      # change to a package can change the site.
+      - packages/**
+      - .github/workflows/publish-documentation.yml
+  # trigger deployment manually
+  workflow_dispatch:
+
+jobs:
+  publish-documentation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # fetch all commits to get last updated time or other git log info
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+
+      # cache node_modules
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        id: npm-cache
+        with:
+          path: |
+            docs/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('docs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      # install dependencies if the cache did not hit
+      - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm install
+        working-directory: ./docs
+
+      # `build` copies each package's changelog into every locale before
+      # VitePress runs.
+      - name: Build VitePress site
+        run: npm run build
+        working-directory: ./docs
+
+      # @see https://github.com/crazy-max/ghaction-github-pages
+      - name: Deploy to GitHub Pages
+        uses: crazy-max/ghaction-github-pages@v4
+        with:
+          target_branch: gh-pages
+          build_dir: docs-dist
+          jekyll: false
+          fqdn: 'mawy.cdget.com'
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}

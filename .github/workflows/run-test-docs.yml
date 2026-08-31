@@ -1,0 +1,43 @@
+name: run-test-docs
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - docs/**
+      - packages/**
+      - .github/workflows/run-test-docs.yml
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./docs
+
+jobs:
+  run-test-docs:
+    runs-on: ubuntu-latest
+    name: Lint and build the site
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # `lastUpdated` reads the git log, so a shallow clone builds a site
+          # where every page was last touched at the checkout.
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        name: Setup Node.js
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Check formatting
+        run: npx prettier . --check
+      - name: Typecheck
+        run: npm run typecheck
+      # A dead link in the site is a build failure in VitePress, which is the
+      # main thing this job is here to catch before the deploy runs.
+      - name: Build VitePress site
+        run: npm run build

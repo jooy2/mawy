@@ -1,0 +1,25 @@
+# System files
+.DS_Store
+Thumbs.db
+*.log
+
+# IDEs
+.idea/
+.vscode/
+.claude/
+
+# Project files
+src/
+test/
+CLAUDE.md
+
+# For development
+scripts/
+.git*
+eslint.config.ts
+.prettierignore
+.prettierrc
+.editorconfig
+tsconfig.json
+tsconfig.prod.json
+vitest.config.ts

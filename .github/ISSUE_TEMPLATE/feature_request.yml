@@ -1,0 +1,57 @@
+name: ✨ Feature request
+description: Something the library should be able to do and cannot.
+title: 'feat: '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Please write the issue in English so everyone can follow it.
+
+        If you are not sure yet whether this is a feature or a question about how to do something already, [Discussions](https://github.com/jooy2/mawy/discussions) is the better place to start.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the existing issues and this is not a duplicate.
+          required: true
+        - label: I checked the documentation and this is not already possible.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and where the library stops you. Describe the situation rather than the API you have in mind — the best solution is often not the one either of us thought of first.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: The behaviour, and — if you have one in mind — the shape of the API. Code that does not exist yet is fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you are doing instead
+      description: The workaround you have now, if any, and why it is not enough.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: dependency
+    attributes:
+      label: Would this need a third-party library?
+      description: Mawy aims at close to zero runtime dependencies, so this is worth saying up front rather than discovering halfway through. It is not a disqualification — it is a thing to weigh.
+      options:
+        - "No — it can be written in the package"
+        - "Probably yes"
+        - "I don't know"
+    validations:
+      required: true

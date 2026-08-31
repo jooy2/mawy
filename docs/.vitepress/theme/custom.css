@@ -1,0 +1,23 @@
+/**
+ * The site's palette.
+ *
+ * VitePress draws everything from its own `--vp-*` variables, so a theme is a
+ * handful of them redeclared rather than a stylesheet of overrides. Anything
+ * that needs more than this belongs in a component under `theme/components`.
+ */
+
+:root {
+  --vp-c-brand-1: #1f57cc;
+  --vp-c-brand-2: #2f6feb;
+  --vp-c-brand-3: #4d87f5;
+  --vp-c-brand-soft: rgb(47 111 235 / 14%);
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #2f6feb 30%, #5ac8fa);
+}
+
+.dark {
+  --vp-c-brand-1: #7aa7ff;
+  --vp-c-brand-2: #4d87f5;
+  --vp-c-brand-3: #2f6feb;
+}

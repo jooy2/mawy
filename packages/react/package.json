@@ -1,0 +1,120 @@
+{
+  "name": "mawy",
+  "version": "0.0.0",
+  "description": "A Markdown editor and viewer in one package — a WYSIWYG surface, a plain source surface and a read-only viewer over the same document. React, ESM only, types included, close to zero dependencies.",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "author": "CDGet <jooy2.contact@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://mawy.cdget.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jooy2/mawy",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/jooy2/mawy/issues"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.prod.json && node scripts/build-styles.mjs",
+    "lint": "eslint . --report-unused-disable-directives",
+    "lint:fix": "eslint . --report-unused-disable-directives --fix",
+    "prepare": "npm run build",
+    "format": "prettier .",
+    "format:fix": "prettier . --write",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --project tsconfig.prod.json --noEmit && tsc --project test/tsconfig.json"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "module": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "module": "./dist/types.js",
+      "default": "./dist/types.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "types": [
+        "dist/types.d.ts"
+      ]
+    }
+  },
+  "keywords": [
+    "mawy",
+    "markdown",
+    "markdown-editor",
+    "markdown-viewer",
+    "markdown-parser",
+    "wysiwyg",
+    "wysiwyg-editor",
+    "rich-text",
+    "rich-text-editor",
+    "text-editor",
+    "editor",
+    "viewer",
+    "preview",
+    "react",
+    "reactjs",
+    "react-component",
+    "react-markdown",
+    "typescript",
+    "tsx",
+    "esm",
+    "zero-dependency",
+    "accessible",
+    "accessibility",
+    "a11y",
+    "dark-mode"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@typescript-eslint/parser": "^8.68.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/browser": "^4.1.11",
+    "@vitest/browser-playwright": "^4.1.11",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.11.0",
+    "jiti": "^2.7.0",
+    "playwright": "^1.62.1",
+    "prettier": "^3.9.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.68.0",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11",
+    "vitest-browser-react": "^2.2.0"
+  },
+  "peerDependencies": {
+    "@types/react": "^18.0.0 || ^19.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
+  }
+}
