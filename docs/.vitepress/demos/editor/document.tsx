@@ -11,6 +11,9 @@ Type in this paragraph. Press Enter to split it in two, and Backspace at the
 start of one to join it back to the one above. Select something and press
 \`Cmd\`/\`Ctrl\` + **B**.
 
+한글도 그대로 됩니다. An input method is left alone for as long as it is
+composing, and what it wrote is read back when it finishes.
+
 ## Headings work the same way
 
 What does not work yet is everything below:

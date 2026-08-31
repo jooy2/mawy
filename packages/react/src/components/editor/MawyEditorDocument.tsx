@@ -6,7 +6,7 @@ import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock } from '../../internal/markdown/ast.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { renderBlocks, type RenderContext } from '../../internal/markdown/render.js';
-import { editFor, type MawyEdit } from '../../internal/editing.js';
+import { blockAt, editFor, type MawyEdit } from '../../internal/editing.js';
 import { sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
@@ -43,6 +43,12 @@ export interface MawyEditorDocumentProps {
  * rather than half-done — a list, a quotation, a table or a code block still
  * draws and still reads, and typing in one does nothing at all until the rules
  * for putting that edit back are written.
+ *
+ * An input method is the one thing that cannot be refused, and it is handled
+ * the other way round: the browser is left alone for the length of a
+ * composition and what it did is read back when the composition ends. Korean is
+ * composed a jamo at a time, and a surface that answered every one of them with
+ * "no" would be a surface that cannot write Korean at all.
  */
 export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocumentProps>(
   function MawyEditorDocument(
@@ -62,6 +68,10 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     ref
   ) {
     const root = React.useRef<HTMLElement>(null);
+    const composing = React.useRef(false);
+    const composed = React.useRef<{ host: Node; before: string; start: number } | null>(null);
+    /** Bumped to throw the drawing away and make it again from the document. */
+    const [generation, setGeneration] = React.useState(0);
     const gfm = parse?.gfm ?? true;
     const breaks = parse?.breaks ?? false;
 
@@ -87,6 +97,14 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       }
 
       const refuse = (event: Event) => {
+        // A composition is the one thing the browser is allowed to do to this
+        // tree. Refusing an `insertCompositionText` is refusing the composition
+        // itself, and an editor that does that to a Korean keyboard eats
+        // characters. What it did is read back in `compositionend` below.
+        if (composing.current) {
+          return;
+        }
+
         event.preventDefault();
 
         if (readOnly) {
@@ -121,7 +139,9 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       const read = () => {
         const selection = owner.getSelection();
 
-        if (!selection?.rangeCount) {
+        // A composition moves the caret on every keystroke and reporting each
+        // one is a render in the middle of one, which is how a composition dies.
+        if (composing.current || !selection?.rangeCount) {
           return;
         }
 
@@ -144,6 +164,103 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       return () => owner.removeEventListener('selectionchange', read);
     }, [value, onSelect]);
 
+    /**
+     * A composition, from the outside.
+     *
+     * Nothing is stopped and nothing is drawn again while one is running: the
+     * browser owns that run of text until it says it is finished, and any
+     * render in between takes the half-composed syllable with it. When it ends,
+     * the run is compared with what it said before and the difference is put
+     * into the document at the place that run came from.
+     */
+    React.useEffect(() => {
+      const element = root.current;
+
+      if (!element) {
+        return;
+      }
+
+      const owner = element.ownerDocument;
+
+      const opened = () => {
+        composing.current = true;
+        composed.current = null;
+
+        const node = owner.getSelection()?.anchorNode;
+
+        // Either the run of text the caret is in, or — with nothing to type
+        // into yet — the empty block it is in, which is where a composition
+        // straight after `Enter` lands.
+        const host =
+          node?.nodeType === 3 ? node : node?.nodeType === 1 && !node.textContent ? node : null;
+
+        if (!host || !element.contains(host) || !blockAt(element, host)) {
+          return;
+        }
+
+        const start = sourceAt(element, host, 0, value);
+
+        if (start !== null) {
+          composed.current = { host, before: contentOf(host), start };
+        }
+      };
+
+      const closed = () => {
+        composing.current = false;
+
+        const was = composed.current;
+
+        composed.current = null;
+
+        if (!was || readOnly) {
+          return;
+        }
+
+        if (!element.contains(was.host)) {
+          // The browser rearranged the tree rather than changing one run of text
+          // inside it, and there is nothing to read back from that. The drawing
+          // is thrown away and made again from the document, which is still
+          // exactly what it was: a composition that cannot be read is a
+          // composition that did not happen.
+          setGeneration((each) => each + 1);
+
+          return;
+        }
+
+        const after = contentOf(was.host);
+
+        if (after === was.before) {
+          return;
+        }
+
+        const anchor = owner.getSelection()?.anchorNode;
+        const caret =
+          anchor?.nodeType === 3 && was.host.contains(anchor)
+            ? was.start + (owner.getSelection()?.anchorOffset ?? 0)
+            : was.start + after.length;
+
+        // What was composed in goes back to what React last drew before the new
+        // document is handed over. React compares what it drew against what it
+        // is about to draw rather than against what is on the screen, so a run
+        // the browser changed underneath it is a run it would not think to
+        // change back.
+        restore(was.host, was.before);
+
+        onEdit({
+          value: value.slice(0, was.start) + after + value.slice(was.start + was.before.length),
+          caret
+        });
+      };
+
+      element.addEventListener('compositionstart', opened);
+      element.addEventListener('compositionend', closed);
+
+      return () => {
+        element.removeEventListener('compositionstart', opened);
+        element.removeEventListener('compositionend', closed);
+      };
+    }, [value, readOnly, onEdit]);
+
     return (
       <div className="mawy-document">
         <article
@@ -157,12 +274,25 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           onKeyDown={onKeyDown}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
-          {renderBlocks(blocks, context)}
+          <React.Fragment key={generation}>{renderBlocks(blocks, context)}</React.Fragment>
         </article>
       </div>
     );
   }
 );
+
+/** What a composition changed: a run of text, or an empty block's contents. */
+function contentOf(host: Node): string {
+  return host.nodeType === 3 ? (host as Text).data : (host.textContent ?? '');
+}
+
+function restore(host: Node, content: string): void {
+  if (host.nodeType === 3) {
+    (host as Text).data = content;
+  } else {
+    host.textContent = content;
+  }
+}
 
 /**
  * A paragraph with nothing in it, where the caret has nowhere else to be.

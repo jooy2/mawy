@@ -628,6 +628,149 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('One **two** three.');
   });
 
+  /**
+   * A composition, played out the way a browser plays one.
+   *
+   * There is no way to drive a real input method from a test, and there does not
+   * need to be: what an input method does to the page is exactly this — say it
+   * has started, change the run of text under the caret as many times as it
+   * likes, move the caret, and say it has finished. What is being checked is
+   * that the surface keeps its hands off in between and reads the result
+   * afterwards.
+   */
+  function compose(root: HTMLElement, saying: string, at: number, typed: string): Text {
+    put(root, saying, at);
+
+    const node = (document.getSelection() as Selection).anchorNode as Text;
+
+    root.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+
+    node.data = node.data.slice(0, at) + typed + node.data.slice(at);
+
+    const range = document.createRange();
+    const selection = document.getSelection() as Selection;
+
+    range.setStart(node, at + typed.length);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    root.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: typed }));
+
+    return node;
+  }
+
+  it('takes a composed word into the document once it is finished', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Hello." mode="wysiwyg" onChange={onChange} />
+    );
+
+    compose(bodyOf(screen), 'Hello.', 5, ' 한글');
+
+    expect(onChange).toHaveBeenLastCalledWith('Hello 한글.');
+  });
+
+  it('composes inside a bold run without disturbing its markers', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="A **bold** word." mode="wysiwyg" onChange={onChange} />
+    );
+
+    compose(bodyOf(screen), 'bold', 4, '한');
+
+    expect(onChange).toHaveBeenLastCalledWith('A **bold한** word.');
+  });
+
+  it('leaves the tree to the browser while a composition is running', async () => {
+    const screen = await render(<MawyEditor defaultValue="Hello." mode="wysiwyg" />);
+    const body = bodyOf(screen);
+
+    put(body, 'Hello.', 5);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+
+    const event = new InputEvent('beforeinput', {
+      inputType: 'insertCompositionText',
+      data: 'ㅎ',
+      bubbles: true,
+      cancelable: true
+    });
+
+    body.dispatchEvent(event);
+
+    // Refusing this is refusing the composition, and a Korean keyboard composes
+    // a jamo at a time — every one of them would be eaten.
+    expect(event.defaultPrevented).toBe(false);
+
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '' }));
+  });
+
+  it('changes nothing when a composition came to nothing', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Hello." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'Hello.', 5);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '' }));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('composes into the empty paragraph Enter just made', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'One.', 4);
+    type(bodyOf(screen), 'insertParagraph');
+
+    await vi.waitFor(() => expect(bodyOf(screen).children).toHaveLength(2));
+
+    const body = bodyOf(screen);
+    const room = body.children[1] as HTMLElement;
+    const selection = document.getSelection() as Selection;
+    const at = document.createRange();
+
+    at.setStart(room, 0);
+    at.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(at);
+
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+
+    // A block with nothing in it has no run of text for the composition to be
+    // in, so the browser makes one — which is why the block itself is what gets
+    // remembered when the caret is on one.
+    room.textContent = '한글';
+
+    const after = document.createRange();
+
+    after.setStart(room.firstChild as Text, 2);
+    after.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(after);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '한글' }));
+
+    expect(onChange).toHaveBeenLastCalledWith('One.\n\n한글');
+  });
+
+  it('leaves the caret after what was composed', async () => {
+    const screen = await render(<MawyEditor defaultValue="Hello." mode="wysiwyg" />);
+
+    compose(bodyOf(screen), 'Hello.', 5, ' 한글');
+
+    await vi.waitFor(() => {
+      const selection = document.getSelection() as Selection;
+
+      expect((selection.anchorNode as Text).data).toBe('Hello 한글.');
+      expect(selection.anchorOffset).toBe(8);
+    });
+  });
+
   it('does not change a read-only document', async () => {
     const onChange = vi.fn();
     const screen = await render(

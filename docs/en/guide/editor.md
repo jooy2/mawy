@@ -78,10 +78,13 @@ Edits land on the **drawn** character rather than the written one, and that is t
 
 `Enter` at the end of a paragraph is the one place the file cannot say what the screen needs to. Markdown has no empty paragraph: a blank line separates two blocks and a second blank line separates the same two. So the surface draws one anyway, in that one place, for as long as the caret is in it — and the moment anything is typed the blank line is doing the work and the paragraph is real.
 
+An input method is the one thing that **cannot** be refused, and it is handled the other way round. A composition is left completely alone: from `compositionstart` to `compositionend` the browser owns that run of text, nothing is prevented, and nothing is drawn again in between. When it finishes, the run is compared with what it said before and the difference goes into the Markdown at the place that run came from.
+
+Refusing a composition is refusing the composition. Korean is composed a jamo at a time, and an editor that answers each of them with "no" cannot write Korean at all. Pressing `Enter` and composing straight into the empty paragraph works too, because with no run of text to be in yet it is the block itself that is remembered.
+
 What does not work yet, and does nothing at all rather than something half-right:
 
 - **Lists, quotations, tables and code blocks.** They draw and they read; an edit inside one is refused, because the rule for writing that edit back is not written.
-- **Composition.** An IME is the next thing to build here. Until it is, Korean, Japanese and Chinese input belong on the `plain` surface, which keeps the browser's own.
 - **`Cmd`/`Ctrl` + `Z`.** The source surface uses the browser's undo stack, which a `contenteditable` that refuses every input does not get to keep. A history over the source string, shared by both surfaces, is what replaces it.
 - **Pasting, dropping and images.**
 
@@ -135,7 +138,7 @@ Two of those count more carefully than they look. **Characters** are code points
 
 ## Still to come
 
-- The rest of the `wysiwyg` surface: lists, quotations, tables and code blocks; composition; undo; paste.
+- The rest of the `wysiwyg` surface: lists, quotations, tables and code blocks; undo; paste.
 - Input rules: the Markdown you type turning into what it means as you type it.
 - Paste: HTML in, Markdown out.
 - Images.
