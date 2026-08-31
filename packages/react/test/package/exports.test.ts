@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isBare, sources } from '../support/sources';
+import { isBare, sources, specifiersIn } from '../support/sources';
 
 const BARREL = 'src/index.ts';
 
@@ -38,9 +38,9 @@ describe('package shape', () => {
     const extensionless: string[] = [];
 
     for (const [path, source] of Object.entries(sources)) {
-      for (const specifier of source.matchAll(/\bfrom\s+'([^']+)'/g)) {
-        if (!isBare(specifier[1]) && !/\.(js|jsx|css|json)$/.test(specifier[1])) {
-          extensionless.push(`${path} imports '${specifier[1]}'`);
+      for (const specifier of specifiersIn(source)) {
+        if (!isBare(specifier) && !/\.(js|jsx|css|json)$/.test(specifier)) {
+          extensionless.push(`${path} imports '${specifier}'`);
         }
       }
     }

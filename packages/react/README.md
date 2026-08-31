@@ -62,6 +62,18 @@ Pick what the toolbar has, and in what order:
 <MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />
 ```
 
+### Typefaces
+
+By default the typeface menu offers three roles — sans, serif, mono — drawn with whatever the reader's machine already has, and **nothing is fetched**. A catalogue of thirteen open-licensed families (all SIL OFL, five of them Korean) ships with the package and is opted into rather than assumed, because opening a connection to a font CDN is the embedding page's decision and not a component's:
+
+```tsx
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+
+<MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />;
+```
+
+Your own fonts go in the same list: `{ id, label, stack, href }`.
+
 ### What it reads
 
 CommonMark, plus GitHub's additions: tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs, and the five alert kinds. Link reference definitions resolve wherever in the file they are written. Syntax highlighting is not here yet.

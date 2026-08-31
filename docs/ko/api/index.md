@@ -57,6 +57,7 @@ import { MawyViewer } from 'mawy';
 | `defaultTypography` | `Partial<MawyTypography>` | 아래 참고 | 처음의 조판. |
 | `onTypographyChange` | `(typography: MawyTypography) => void` | — | 바뀔 때마다 호출됩니다. 제어 여부와 무관하게. |
 | `toolbar` | [`MawyViewerToolbarOption`](#mawyviewertoolbaroption) | `true` | 툴바에 어떤 컨트롤을 어떤 순서로 둘지. |
+| `fonts` | `readonly `[`MawyFont`](#mawyfont)`[]` | `MAWY_SYSTEM_FONTS` | 툴바가 제시할 글꼴과 나열 순서. |
 
 `typography`나 `defaultTypography`에서 빠뜨린 항목은 기본값을 지킵니다. `{ fontSize: 18 }`은 완전한 답입니다. 기본값은 고딕, 16px, 줄 간격 1.7, 자간 없음, `normal` 폭입니다.
 
@@ -144,10 +145,50 @@ interface MawyTypography {
 ### `MawyFontFamily`
 
 ```ts
-type MawyFontFamily = 'sans' | 'serif' | 'mono';
+type MawyFontFamily = 'sans' | 'serif' | 'mono' | (string & {});
 ```
 
-글꼴 이름이 아니라 계열입니다. 이 라이브러리는 폰트를 싣지 않고, 특정 폰트를 지정할 자격도 없습니다. 지정하는 것은 역할이고, 각 역할 뒤의 스택은 애플리케이션이 다시 선언할 수 있는 `--mawy-font-*` 커스텀 속성입니다.
+뷰어가 받은 글꼴 중 하나의 `id`입니다. `sans`·`serif`·`mono`는 라이브러리가 스스로 제공하는 셋이고, 글꼴 이름이 아니라 역할입니다. 내려받는 것이 없고, 각 역할 뒤의 스택은 애플리케이션이 다시 선언할 수 있는 `--mawy-font-*` 커스텀 속성입니다. 그 밖의 문자열은 `fonts`로 넘긴 글꼴의 `id`입니다.
+
+### `MawyFont`
+
+```ts
+interface MawyFont {
+  id: string;
+  label?: string;
+  stack?: string;
+  href?: string;
+}
+```
+
+툴바가 제시하는 글꼴 하나.
+
+- **`id`** — 이 글꼴을 고르기 위해 `typography.fontFamily`에 넣는 값.
+- **`label`** — 툴바에 보이는 이름. 빼면 `sans`·`serif`·`mono`는 로케일에서, 그 밖에는 `id`에서 가져옵니다.
+- **`stack`** — CSS `font-family` 값. 기본값은 `var(--mawy-font-{id})`.
+- **`href`** — 글꼴을 그리기 전에 도착해야 하는 스타일시트. 글꼴을 처음 그릴 때 또는 글꼴 메뉴에 이름이 처음 보일 때, 페이지당 한 번 받아옵니다.
+
+### `MAWY_SYSTEM_FONTS`
+
+```ts
+const MAWY_SYSTEM_FONTS: readonly MawyFont[];
+```
+
+독자의 기기에 이미 있는 것으로 그리는 세 역할. `href`가 없으므로 기본 상태의 뷰어는 아무것도 받아오지 않습니다.
+
+### `MAWY_WEB_FONTS`
+
+```ts
+const MAWY_WEB_FONTS: readonly MawyFont[];
+```
+
+바로 쓸 수 있는 열세 개의 오픈 라이선스 글꼴. 전부 SIL Open Font License이며 상업적 사용·임베딩·재배포가 허용됩니다. Inter, IBM Plex Sans, Atkinson Hyperlegible, Source Serif 4, Literata, Lora, EB Garamond, JetBrains Mono, 그리고 한글 다섯: Pretendard, Noto Sans KR, Noto Serif KR, 나눔명조, 고운돋움.
+
+**애플리케이션이 직접 넘기지 않으면 절대 쓰이지 않습니다.** 남의 페이지 안에 들어간 컴포넌트가 그들이 고르지 않은 폰트 CDN에 연결을 열 이유는 없습니다. 그래서 기본값이 아니라 export입니다.
+
+```tsx
+<MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
+```
 
 ### `MawyMeasure`
 

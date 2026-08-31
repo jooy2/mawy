@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { MawyViewer } from 'mawy';
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
 
 /**
  * The viewer, as a reader meets it.
@@ -267,6 +267,111 @@ describe('the toolbar', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
     await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('typefaces', () => {
+  const links = () => [...document.querySelectorAll('link[data-mawy-font]')];
+
+  it('offers the three the machine already has, and fetches nothing', async () => {
+    const before = links().length;
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['fontFamily']} />);
+
+    await screen.getByRole('button', { name: 'Typeface' }).click();
+
+    const options = [...screen.container.querySelectorAll('[role="radio"]')].map(
+      (option) => option.textContent
+    );
+
+    expect(options).toEqual(['Sans serif', 'Serif', 'Monospace']);
+    // The default list is the whole of the privacy story: no `href`, no request.
+    expect(MAWY_SYSTEM_FONTS.some((font) => font.href)).toBe(false);
+    expect(links()).toHaveLength(before);
+  });
+
+  it('lists the fonts it was given, and sets the document in the one chosen', async () => {
+    const fonts = [{ id: 'sans' }, { id: 'quire', label: 'Quire', stack: "'Quire', serif" }];
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={['fontFamily']} fonts={fonts} />
+    );
+    const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
+
+    await screen.getByRole('button', { name: 'Typeface' }).click();
+    await screen.getByRole('radio', { name: 'Quire' }).click();
+
+    expect(root.style.getPropertyValue('--mawy-doc-font')).toBe("'Quire', serif");
+  });
+
+  it('shows every name in its own face', async () => {
+    const fonts = [{ id: 'quire', label: 'Quire', stack: "'Quire', serif" }];
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={['fontFamily']} fonts={fonts} />
+    );
+
+    await screen.getByRole('button', { name: 'Typeface' }).click();
+
+    const option = screen.container.querySelector('[role="radio"]') as HTMLElement;
+
+    // Read back through the browser, which drops the quotes around a family
+    // name that did not need them.
+    expect(option.style.fontFamily).toBe('Quire, serif');
+  });
+
+  it('fetches a web font once the document is set in it', async () => {
+    const href = 'data:text/css,/* chosen */';
+    const fonts = [{ id: 'chosen', label: 'Chosen', stack: "'Chosen'", href }];
+
+    expect(links().some((link) => link.getAttribute('href') === href)).toBe(false);
+
+    await render(
+      <MawyViewer
+        value={SAMPLE}
+        toolbar={false}
+        fonts={fonts}
+        defaultTypography={{ fontFamily: 'chosen' }}
+      />
+    );
+
+    expect(links().filter((link) => link.getAttribute('href') === href)).toHaveLength(1);
+  });
+
+  it('fetches the rest only when the menu that shows them is opened', async () => {
+    const href = 'data:text/css,/* offered */';
+    const fonts = [{ id: 'sans' }, { id: 'offered', label: 'Offered', stack: "'Offered'", href }];
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={['fontFamily']} fonts={fonts} />
+    );
+
+    // Offered but not chosen: a reader who never opens the menu never asks.
+    expect(links().some((link) => link.getAttribute('href') === href)).toBe(false);
+
+    await screen.getByRole('button', { name: 'Typeface' }).click();
+
+    expect(links().filter((link) => link.getAttribute('href') === href)).toHaveLength(1);
+  });
+
+  it('falls back to the first font offered when the chosen one is not on the list', async () => {
+    const fonts = [{ id: 'quire', label: 'Quire', stack: "'Quire', serif" }];
+    const screen = await render(
+      <MawyViewer value={SAMPLE} fonts={fonts} defaultTypography={{ fontFamily: 'gone' }} />
+    );
+    const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
+
+    expect(root.style.getPropertyValue('--mawy-doc-font')).toBe("'Quire', serif");
+  });
+
+  it('ships a catalogue that is all open-licensed and all over https', () => {
+    expect(MAWY_WEB_FONTS.length).toBeGreaterThan(8);
+
+    for (const font of MAWY_WEB_FONTS) {
+      expect(font.label, `${font.id} has a label`).toBeTruthy();
+      expect(font.stack, `${font.id} has a stack`).toBeTruthy();
+      expect(font.href, `${font.id} has an href`).toMatch(/^https:\/\//);
+    }
+
+    // Ids are what `fontFamily` is set to, so two the same is one unreachable.
+    const ids = MAWY_WEB_FONTS.map((font) => font.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 

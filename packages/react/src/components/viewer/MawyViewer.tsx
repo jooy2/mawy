@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type {
   MawyColorScheme,
+  MawyFont,
   MawyHtmlPolicy,
   MawyLocale,
   MawyParseOptions,
@@ -10,6 +11,8 @@ import type {
   MawyViewerToolbarItem,
   MawyViewerToolbarOption
 } from '../../types.js';
+import { MAWY_SYSTEM_FONTS } from '../../fonts.js';
+import { fontOf, loadFontStylesheet } from '../../internal/fonts.js';
 import { useCopy } from '../../internal/clipboard.js';
 import { useControlled } from '../../internal/controlled.js';
 import { stringsFor } from '../../internal/i18n.js';
@@ -61,6 +64,26 @@ export interface MawyViewerProps extends Omit<
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
   onTypographyChange?: (typography: MawyTypography) => void;
+
+  /**
+   * The typefaces the toolbar offers, in the order it lists them.
+   *
+   * The default is the three roles already on the reader's machine, and it
+   * fetches nothing. `MAWY_WEB_FONTS` is a curated list of open-licensed
+   * families that do have to be downloaded — passing it is how an application
+   * says that a request to a font CDN is acceptable in its page, which is not
+   * a decision a component should make on its own:
+   *
+   * ```tsx
+   * <MawyViewer fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
+   * ```
+   *
+   * Nothing is fetched until a font is chosen or the toolbar's font menu is
+   * opened, and each stylesheet is fetched once per page.
+   *
+   * @default MAWY_SYSTEM_FONTS
+   */
+  fonts?: readonly MawyFont[];
 
   /**
    * The toolbar: `true` for all of it, `false` for none, or the controls to
@@ -116,6 +139,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     typography,
     defaultTypography,
     onTypographyChange,
+    fonts = MAWY_SYSTEM_FONTS,
     toolbar = true,
     parse,
     html = 'escape',
@@ -156,6 +180,16 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     { ...DEFAULT_TYPOGRAPHY, ...defaultTypography },
     onTypographyChange
   );
+
+  // The chosen font, if it is one that has to arrive first. Opening the font
+  // menu fetches the rest; this is for the one the document is already set in.
+  React.useEffect(() => {
+    const href = fontOf(type.fontFamily, fonts)?.href;
+
+    if (href) {
+      loadFontStylesheet(href);
+    }
+  }, [fonts, type.fontFamily]);
 
   const [outlineOpen, setOutlineOpen] = React.useState(false);
   const [activeHeading, setActiveHeading] = React.useState<string | null>(null);
@@ -347,7 +381,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       className={['mawy-root', 'mawy-viewer', className].filter(Boolean).join(' ')}
       data-mawy-color-scheme={scheme}
       data-mawy-dragging={dragging ? 'true' : undefined}
-      style={{ ...typographyStyle(type), ...style } as React.CSSProperties}
+      style={{ ...typographyStyle(type, fonts), ...style } as React.CSSProperties}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -359,6 +393,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
           strings={strings}
           typography={type}
           onTypographyChange={setType}
+          fonts={fonts}
           colorScheme={scheme}
           onColorSchemeChange={setScheme}
           outlineOpen={outlineOpen}

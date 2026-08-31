@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type {
   MawyColorScheme,
+  MawyFont,
   MawyFontFamily,
   MawyMeasure,
   MawyTypography,
@@ -12,6 +13,7 @@ import type { CopyState } from '../../internal/clipboard.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import { Choice, IconButton, Menu, Slider } from '../../internal/controls.js';
 import { DEFAULT_TYPOGRAPHY, TYPOGRAPHY_RANGE } from '../../internal/typography.js';
+import { fontStack, loadFontStylesheet } from '../../internal/fonts.js';
 import {
   CheckIcon,
   CopyIcon,
@@ -28,11 +30,70 @@ import {
   SystemThemeIcon
 } from '../../internal/icons.js';
 
+/** The label a font is listed under: its own, the locale's, or its id. */
+function labelOf(font: MawyFont, strings: MawyStrings): string {
+  if (font.label) {
+    return font.label;
+  }
+
+  const known: Record<string, string> = {
+    sans: strings.fontFamilySans,
+    serif: strings.fontFamilySerif,
+    mono: strings.fontFamilyMono
+  };
+
+  return known[font.id] ?? font.id;
+}
+
+/**
+ * The typefaces on offer, each drawn in itself.
+ *
+ * A font picker whose names are all set in the same face is a list of words.
+ * Which means the web fonts among them have to have arrived — so this fetches
+ * them, and it does it here rather than in the viewer because this component is
+ * mounted by the menu opening. A reader who never opens it never asks Google
+ * Fonts for anything.
+ */
+function FontChoice({
+  strings,
+  fonts,
+  value,
+  onChange
+}: {
+  strings: MawyStrings;
+  fonts: readonly MawyFont[];
+  value: MawyFontFamily;
+  onChange: (next: MawyFontFamily) => void;
+}): React.ReactElement {
+  React.useEffect(() => {
+    for (const font of fonts) {
+      if (font.href) {
+        loadFontStylesheet(font.href);
+      }
+    }
+  }, [fonts]);
+
+  return (
+    <Choice<MawyFontFamily>
+      label={strings.fontFamily}
+      value={value}
+      onChange={onChange}
+      options={fonts.map((font) => ({
+        value: font.id,
+        label: labelOf(font, strings),
+        style: { fontFamily: fontStack(font) }
+      }))}
+    />
+  );
+}
+
 export interface MawyViewerToolbarProps {
   items: readonly MawyViewerToolbarItem[];
   strings: MawyStrings;
   typography: MawyTypography;
   onTypographyChange: (next: MawyTypography) => void;
+  /** The typefaces on offer, in the order the menu lists them. */
+  fonts: readonly MawyFont[];
   colorScheme: MawyColorScheme;
   onColorSchemeChange: (next: MawyColorScheme) => void;
   outlineOpen: boolean;
@@ -70,6 +131,7 @@ export function MawyViewerToolbar({
   strings,
   typography,
   onTypographyChange,
+  fonts,
   colorScheme,
   onColorSchemeChange,
   outlineOpen,
@@ -158,15 +220,11 @@ export function MawyViewerToolbar({
             icon={<FontFamilyIcon className="mawy-icon" aria-hidden="true" />}
             {...roving(order[key])}
           >
-            <Choice<MawyFontFamily>
-              label={strings.fontFamily}
+            <FontChoice
+              strings={strings}
+              fonts={fonts}
               value={typography.fontFamily}
               onChange={(next) => set('fontFamily', next)}
-              options={[
-                { value: 'sans', label: strings.fontFamilySans },
-                { value: 'serif', label: strings.fontFamilySerif },
-                { value: 'mono', label: strings.fontFamilyMono }
-              ]}
             />
           </Menu>
         );

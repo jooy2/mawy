@@ -147,6 +147,8 @@ export interface ChoiceOption<T extends string> {
   value: T;
   label: string;
   icon?: React.ReactNode;
+  /** For an option that has to be shown as the thing it selects — a typeface. */
+  style?: React.CSSProperties;
 }
 
 export interface ChoiceProps<T extends string> {
@@ -172,6 +174,7 @@ export function Choice<T extends string>({
           role="radio"
           className="mawy-choice-option"
           aria-checked={option.value === value}
+          style={option.style}
           onClick={() => onChange(option.value)}
         >
           {option.icon}

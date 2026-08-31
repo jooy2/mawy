@@ -57,6 +57,7 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | `defaultTypography` | `Partial<MawyTypography>` | see below | What it is set as to begin with. |
 | `onTypographyChange` | `(typography: MawyTypography) => void` | — | Called whenever it changes, controlled or not. |
 | `toolbar` | [`MawyViewerToolbarOption`](#mawyviewertoolbaroption) | `true` | Which controls the toolbar has, and in what order. |
+| `fonts` | `readonly `[`MawyFont`](#mawyfont)`[]` | `MAWY_SYSTEM_FONTS` | The typefaces the toolbar offers, in the order it lists them. |
 
 Anything left out of `typography` or `defaultTypography` keeps its default, so `{ fontSize: 18 }` is a whole answer. The defaults are `sans`, 16px, a line height of 1.7, no extra letter spacing and the `normal` measure.
 
@@ -144,10 +145,50 @@ How the document is set. Every field reaches the page as a `--mawy-doc-*` custom
 ### `MawyFontFamily`
 
 ```ts
-type MawyFontFamily = 'sans' | 'serif' | 'mono';
+type MawyFontFamily = 'sans' | 'serif' | 'mono' | (string & {});
 ```
 
-A family rather than a font name. The library ships no fonts and has no business naming one — what it names is the role, and the stack behind each role is a `--mawy-font-*` custom property an application can redeclare.
+The `id` of one of the fonts the viewer was given. `sans`, `serif` and `mono` are the three it offers on its own, and they are roles rather than font names: nothing is downloaded, and the stack behind each is a `--mawy-font-*` custom property an application can redeclare. Any other string is the `id` of a font passed through `fonts`.
+
+### `MawyFont`
+
+```ts
+interface MawyFont {
+  id: string;
+  label?: string;
+  stack?: string;
+  href?: string;
+}
+```
+
+A typeface the toolbar offers.
+
+- **`id`** — what `typography.fontFamily` is set to in order to choose this font.
+- **`label`** — what the toolbar shows. `sans`, `serif` and `mono` take theirs from the locale when it is left out; anything else falls back to its `id`.
+- **`stack`** — the CSS `font-family` value. Defaults to `var(--mawy-font-{id})`.
+- **`href`** — a stylesheet that has to arrive before the font can be drawn. Fetched once per page, the first time the font is drawn or its name is shown in the typeface menu.
+
+### `MAWY_SYSTEM_FONTS`
+
+```ts
+const MAWY_SYSTEM_FONTS: readonly MawyFont[];
+```
+
+The three roles, drawn with whatever the reader's machine already has. None of them has an `href`, so the default viewer fetches nothing at all.
+
+### `MAWY_WEB_FONTS`
+
+```ts
+const MAWY_WEB_FONTS: readonly MawyFont[];
+```
+
+Thirteen open-licensed families, ready to be offered — every one under the SIL Open Font License, which permits commercial use, embedding and redistribution. Inter, IBM Plex Sans, Atkinson Hyperlegible, Source Serif 4, Literata, Lora, EB Garamond, JetBrains Mono, and five for Korean: Pretendard, Noto Sans KR, Noto Serif KR, Nanum Myeongjo and Gowun Dodum.
+
+**It is never used unless an application passes it in.** A component embedded in somebody else's page has no business opening a connection to a font CDN they did not choose, so this is an export rather than a default:
+
+```tsx
+<MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
+```
 
 ### `MawyMeasure`
 

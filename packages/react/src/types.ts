@@ -37,13 +37,45 @@ export type MawyColorScheme = 'light' | 'dark' | 'system';
 export type MawyLocale = 'en' | 'ko';
 
 /**
- * Which of the three typefaces the document is set in.
+ * Which typeface the document is set in — the `id` of one of the fonts the
+ * viewer was given.
  *
- * A family rather than a font name. The library ships no fonts and has no
- * business naming one — what it names is the role, and the stack behind each
- * role is a `--mawy-font-*` custom property an application can redeclare.
+ * `sans`, `serif` and `mono` are the three the library offers on its own, and
+ * they are roles rather than font names: nothing is downloaded, and the stack
+ * behind each is a `--mawy-font-*` custom property an application can
+ * redeclare. Any other string is the `id` of a font passed through the `fonts`
+ * prop — see `MawyFont`.
  */
-export type MawyFontFamily = 'sans' | 'serif' | 'mono';
+export type MawyFontFamily = 'sans' | 'serif' | 'mono' | (string & {});
+
+/**
+ * A typeface the toolbar offers.
+ *
+ * `href`, if it is there, is a stylesheet that has to arrive before the font
+ * can be drawn — a web font. **Nothing is ever fetched unless an application
+ * asks for it**, by passing fonts that have one: a component embedded in
+ * somebody else's page has no business opening a connection they did not
+ * choose, and the default list opens none. `MAWY_WEB_FONTS` is the opt-in.
+ */
+export interface MawyFont {
+  /** What `MawyTypography.fontFamily` is set to in order to choose this font. */
+  id: string;
+  /**
+   * What the toolbar shows. `sans`, `serif` and `mono` take their label from
+   * the locale when this is left out; anything else falls back to its `id`.
+   */
+  label?: string;
+  /**
+   * The CSS `font-family` value. Defaults to `var(--mawy-font-{id})`, which is
+   * how the three built-in roles stay themeable from a stylesheet.
+   */
+  stack?: string;
+  /**
+   * A stylesheet to load before the font can be drawn. Fetched once, the first
+   * time the font is chosen or its name is shown in the toolbar.
+   */
+  href?: string;
+}
 
 /**
  * How wide the text is allowed to run.

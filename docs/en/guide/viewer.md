@@ -105,22 +105,62 @@ The toolbar is about how the document is **set**, not about what it says. A read
 
 `toolbar` takes `true` for all of it, `false` for none, or the controls to draw and the order to draw them in:
 
-| Item              | What it does                             |
-| ----------------- | ---------------------------------------- |
-| `'fontFamily'`    | sans, serif or monospace                 |
-| `'fontSize'`      | 13 to 26 pixels                          |
-| `'lineHeight'`    | 1.3 to 2.4                               |
-| `'letterSpacing'` | −0.04 to 0.16em                          |
-| `'measure'`       | how wide the column of text may run      |
-| `'colorScheme'`   | light, dark, or whatever the system says |
-| `'outline'`       | opens the headings panel                 |
-| `'copy'`          | the Markdown source, to the clipboard    |
-| `'open'`          | the file picker                          |
-| `'separator'`     | a hairline, for grouping a long list     |
+| Item              | What it does                                                       |
+| ----------------- | ------------------------------------------------------------------ |
+| `'fontFamily'`    | whichever typefaces the viewer was given — see [below](#typefaces) |
+| `'fontSize'`      | 13 to 26 pixels                                                    |
+| `'lineHeight'`    | 1.3 to 2.4                                                         |
+| `'letterSpacing'` | −0.04 to 0.16em                                                    |
+| `'measure'`       | how wide the column of text may run                                |
+| `'colorScheme'`   | light, dark, or whatever the system says                           |
+| `'outline'`       | opens the headings panel                                           |
+| `'copy'`          | the Markdown source, to the clipboard                              |
+| `'open'`          | the file picker                                                    |
+| `'separator'`     | a hairline, for grouping a long list                               |
 
 There is no way to put a control on it that is not on that list, and that is deliberate: a toolbar that takes arbitrary children is a toolbar the library can no longer make keyboard-operable.
 
 It is a real `toolbar` rather than a row of buttons. One Tab enters it and one Tab leaves; the arrow keys, `Home` and `End` move between the controls inside. A reader who is keyboard-only should reach the document in two keystrokes rather than in eleven.
+
+## Typefaces
+
+By default the menu offers three, and they are roles rather than font names: `sans`, `serif` and `mono`, drawn with whatever is already on the reader's machine. Nothing is downloaded and nothing can fail.
+
+Real web fonts are one prop away, and they are a prop rather than a default on purpose. A viewer is a component inside somebody else's page, and a component that opens a connection to a font CDN on its own has made a decision — about privacy, about working offline, about a request the page's own content policy may refuse — that was never its to make. So the library ships the list and the application says yes:
+
+```tsx
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+
+<MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />;
+```
+
+Every family in `MAWY_WEB_FONTS` is under the SIL Open Font License, which permits commercial use, embedding and redistribution — there is nothing on the list to buy a licence for.
+
+|  |  |
+| --- | --- |
+| **Sans** | Inter, IBM Plex Sans, [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) |
+| **Serif** | Source Serif 4, Literata, Lora, EB Garamond |
+| **Mono** | JetBrains Mono |
+| **Korean** | Pretendard, Noto Sans KR, Noto Serif KR, Nanum Myeongjo, Gowun Dodum |
+
+The Korean families are on the list rather than left to the fallback, because "the typeface menu is Latin only" is exactly how a Korean document ends up set in something nobody chose.
+
+Nothing is fetched until it is needed. The font the document is already set in arrives when the viewer mounts; the rest arrive when the typeface menu is first opened — which is also when they have to, because every name in that menu is drawn in its own face. A reader who never opens it never asks for anything.
+
+Your own list is the same shape:
+
+```tsx
+<MawyViewer
+  value={document}
+  fonts={[
+    { id: 'sans' },
+    { id: 'house', label: 'Söhne', stack: "'Söhne', system-ui, sans-serif" },
+    { id: 'archive', label: 'Archive', stack: "'Archive', serif", href: '/fonts/archive.css' }
+  ]}
+/>
+```
+
+`id` is what `typography.fontFamily` is set to. `stack` defaults to `var(--mawy-font-{id})`, which is how the three built-in roles stay a stylesheet's business. `href` is a stylesheet fetched once, the first time the font is drawn — leave it out for a font the page already loads.
 
 ## Type, and who owns it
 
@@ -146,6 +186,8 @@ Or through CSS, with the toolbar left off entirely:
 ```
 
 Anything left out of `typography` keeps its default, so `{ fontSize: 18 }` is a whole answer rather than a partial one.
+
+The document's line height and letter spacing are declared on the text itself, not only on the container around it. That sounds like a detail and it is the difference between the controls working and not: an inherited value loses to _any_ declaration on the element, so one `article p { line-height: 28px }` in the surrounding page is enough to make the line-height control move a number that changes nothing a reader can see.
 
 ## Theming
 

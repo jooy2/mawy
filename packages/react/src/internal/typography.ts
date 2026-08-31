@@ -1,4 +1,5 @@
-import type { MawyMeasure, MawyTypography } from '../types.js';
+import type { MawyFont, MawyMeasure, MawyTypography } from '../types.js';
+import { fontOf, fontStack } from './fonts.js';
 
 /**
  * How a document is set when nobody has said otherwise.
@@ -49,7 +50,10 @@ function clamp(value: number, min: number, max: number): number {
  * wrapping element and leave the toolbar off — the same tokens, reached from
  * the other side.
  */
-export function typographyStyle(typography: MawyTypography): Record<string, string> {
+export function typographyStyle(
+  typography: MawyTypography,
+  fonts: readonly MawyFont[]
+): Record<string, string> {
   const size = clamp(
     typography.fontSize,
     TYPOGRAPHY_RANGE.fontSize.min,
@@ -57,7 +61,7 @@ export function typographyStyle(typography: MawyTypography): Record<string, stri
   );
 
   return {
-    '--mawy-doc-font': `var(--mawy-font-${typography.fontFamily})`,
+    '--mawy-doc-font': fontStack(fontOf(typography.fontFamily, fonts)),
     '--mawy-doc-size': `${size}px`,
     '--mawy-doc-line-height': String(
       clamp(typography.lineHeight, TYPOGRAPHY_RANGE.lineHeight.min, TYPOGRAPHY_RANGE.lineHeight.max)
