@@ -104,6 +104,20 @@ npm run typecheck
 
 The site pins `vite` to the version VitePress itself runs. Two copies of Vite in `docs/node_modules` is not a bigger install, it is a `@vitejs/plugin-react` compiled against a Vite that is not the one loading it.
 
+**Build the site with `packages/react/node_modules` moved aside**, at least once, before opening a pull request that touches either. The site renders the library from source through an alias, and a demo importing a specifier the alias no longer answers to builds on a machine that has the package installed beside it and fails in CI, where nothing does:
+
+```bash
+mv packages/react/node_modules packages/react/node_modules.aside
+cd docs && npm run typecheck && npm run build
+cd .. && mv packages/react/node_modules.aside packages/react/node_modules
+```
+
+### Writing a page that says two things
+
+The site is one site for both packages, and `::: fw react` / `::: fw flutter` marks the parts that differ — `docs/.vitepress/data/frameworks.ts` is the whole list of them. Both halves are in the document and CSS displays one, which is what makes the switch instant and keeps the two from drifting into two pages.
+
+**Never put a heading inside a `::: fw` block.** The blocks are hidden with `display: none` and VitePress builds its outline from the DOM, so a heading in the half a reader is not looking at sits in their sidebar pointing at nothing they can see. Keep the heading shared and mark the content under it — including, where a section belongs to one package alone, a line in the other's fold saying so.
+
 ## Third-party dependencies
 
 Mawy aims at close to zero runtime dependencies, and that is a design goal rather than a slogan: a Markdown editor is a component inside somebody else's application, and every package it drags in is one they did not choose.
