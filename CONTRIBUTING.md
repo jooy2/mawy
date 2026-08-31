@@ -42,6 +42,7 @@ A few notes that are easy to trip over:
 - **The editing surfaces are tested in a real browser.** Selection, ranges, `beforeinput` and `contenteditable` are what this library is made of, and a DOM emulator does not implement them faithfully enough for a passing test to mean anything. See below.
 - **Every rule in `src/styles.css` is scoped under `.mawy-root`.** A viewer is dropped into somebody else's page, and that page has an `article h2` or a `table { display: block }` of its own — both (0,1,1), both enough to beat a single class. The `:where()` resets at the top of the file are the deliberate exception: a reset should be the weakest thing in the room.
 - **The documentation site is where components are looked at.** `docs/.vitepress/theme/components/MawyDemo.vue` mounts a React root inside a Vue page, and `docs/.vitepress/demos/**/*.tsx` are real, runnable components rendered straight from `packages/react/src` through a Vite alias. Nothing on the site reads `dist/`, so an edit to a component is on the page as soon as it is saved. There is no separate demo application.
+- **The site has to be told where the library's own imports live**, in both `docs/.vitepress/config.ts` and `docs/tsconfig.json` — see [Third-party dependencies](#third-party-dependencies). This is the one thing in the repository that passes locally and fails in CI, so it is worth knowing before it happens rather than after.
 
 ## Running the checks
 
@@ -82,6 +83,14 @@ The site pins `vite` to the version VitePress itself runs. Two copies of Vite in
 Mawy aims at close to zero runtime dependencies, and that is a design goal rather than a slogan: a Markdown editor is a component inside somebody else's application, and every package it drags in is one they did not choose.
 
 The React package has **one**: [`lucide-react`](https://lucide.dev) (ISC), which is where the toolbar's icons come from. It brings nothing else with it and tree-shakes to the glyphs actually drawn. `test/package/dependencies.test.ts` fails the build if a source file imports anything that is not declared as a dependency or a peer, so the count cannot creep up by accident.
+
+**A runtime dependency has to be added in two places.** The documentation site renders the library from `packages/react/src` through an alias, and it installs only its own `node_modules` — so a package the library imports has to be a devDependency of `docs` as well, listed in `resolve.dedupe` in `docs/.vitepress/config.ts` and in `paths` in `docs/tsconfig.json`. Miss any of that and the site still builds on your machine, because `packages/react/node_modules` is sitting there; CI installs one folder at a time and does not have it. To check the way CI sees it, move the package's `node_modules` out of the way and build the site:
+
+```bash
+mv packages/react/node_modules packages/react/node_modules.bak
+cd docs && npm run typecheck && npm run build
+mv ../packages/react/node_modules.bak ../packages/react/node_modules
+```
 
 A pull request that adds a runtime dependency should say, in the description:
 

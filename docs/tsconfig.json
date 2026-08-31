@@ -13,8 +13,27 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "types": ["vite/client"],
+    /*
+     * Where the library and the things it imports are.
+     *
+     * `mawy` is the alias the demos use, and it points at source rather than at
+     * `dist/` for the same reason the Vite alias does. The rest of this map is
+     * the consequence: TypeScript resolves a bare specifier by walking up from
+     * the file that wrote it, so the library's own `import 'react'` looks in
+     * `packages/react/node_modules` and never in this folder. That directory
+     * exists on a machine that has run `npm install` in both places and does
+     * not exist in CI, which is where leaving this out fails.
+     *
+     * `resolve.dedupe` in `.vitepress/config.ts` says the same thing to Vite.
+     * Both have to be told, and anything added to one belongs in the other.
+     */
     "paths": {
-      "mawy": ["../packages/react/src/index.ts"]
+      "mawy": ["../packages/react/src/index.ts"],
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"],
+      "lucide-react": ["./node_modules/lucide-react"]
     }
   },
   "include": [".vitepress/**/*.ts", ".vitepress/**/*.tsx", ".vitepress/**/*.d.ts"]

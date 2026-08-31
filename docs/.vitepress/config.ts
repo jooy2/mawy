@@ -344,9 +344,23 @@ const vitePressConfig: UserConfig = {
         { find: /^mawy\/styles\.css$/, replacement: resolve(reactPackageDir, 'src/styles.css') },
         { find: /^mawy$/, replacement: resolve(reactPackageDir, 'src/index.ts') }
       ],
-      // One React for the page. Two is not a bigger bundle, it is a null hook
-      // dispatcher the moment the second package renders something.
-      dedupe: ['react', 'react-dom']
+      /*
+       * What the aliased source is allowed to import.
+       *
+       * `dedupe` resolves these from this folder rather than from beside the
+       * file that imported them, and that is doing two jobs. For React it is
+       * the usual one: two copies is not a bigger bundle, it is a null hook
+       * dispatcher the moment the second package renders something.
+       *
+       * For `lucide-react` it is the only thing that makes the import resolve
+       * at all. The alias points at `packages/react/src`, so Node's own lookup
+       * walks up from *there* and lands in `packages/react/node_modules` — a
+       * folder this site never installs and CI does not have. Anything the
+       * library's source imports has to be a devDependency here *and* on this
+       * list. Missing either one builds fine on a machine that has run
+       * `npm install` in both folders, and fails in CI, which has not.
+       */
+      dedupe: ['react', 'react-dom', 'lucide-react']
     },
     optimizeDeps: {
       include: ['react', 'react-dom', 'react-dom/client', 'lucide-react']
