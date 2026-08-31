@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ReactPlugin from '@vitejs/plugin-react';
 import { withSidebar } from 'vitepress-sidebar';
 import packageJson from '../../packages/react/package.json' with { type: 'json' };
 import { defineConfig, HeadConfig, SiteData, TransformContext, UserConfig } from 'vitepress';
@@ -12,6 +13,8 @@ import type { VitePressSidebarOptions } from 'vitepress-sidebar/types';
 const vitePressDir = dirname(fileURLToPath(import.meta.url));
 /** `docs/`, which is where the locale folders live and what VitePress serves. */
 const srcDir = resolve(vitePressDir, '..');
+/** The React package's source, which the live demos render straight from. */
+const reactPackageDir = resolve(srcDir, '../packages/react');
 
 const defaultLocale: string = 'en';
 const supportLocales: string[] = [defaultLocale, 'ko'];
@@ -321,6 +324,38 @@ const vitePressConfig: UserConfig = {
   ],
   sitemap: {
     hostname: packageJson.homepage
+  },
+  /* -------------------------------------------------------------------------
+   * The live demos
+   *
+   * VitePress compiles Markdown to Vue, so a React component reaches a page
+   * only as an island — `theme/components/MawyDemo.vue` owns a `<div>` and
+   * hands it to `createRoot()`. This is the half of that arrangement that is
+   * about the build.
+   *
+   * `mawy` points at `packages/react/src` rather than at its `dist/`, and that
+   * is the point: an edit to the viewer is on the page when it is saved, with
+   * nothing to rebuild in between. Nothing on this site ever reads `dist/`.
+   * ---------------------------------------------------------------------- */
+  vite: {
+    plugins: [ReactPlugin()],
+    resolve: {
+      alias: [
+        { find: /^mawy\/styles\.css$/, replacement: resolve(reactPackageDir, 'src/styles.css') },
+        { find: /^mawy$/, replacement: resolve(reactPackageDir, 'src/index.ts') }
+      ],
+      // One React for the page. Two is not a bigger bundle, it is a null hook
+      // dispatcher the moment the second package renders something.
+      dedupe: ['react', 'react-dom']
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-dom/client', 'lucide-react']
+    },
+    // The library is outside `docs/`, so the dev server has to be allowed to
+    // read it. Without this the alias resolves and the request is refused.
+    server: {
+      fs: { allow: [srcDir, reactPackageDir] }
+    }
   },
   /**
    * `robots.txt`, written rather than committed.

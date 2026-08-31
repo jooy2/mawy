@@ -31,3 +31,26 @@
   --vp-c-brand-3: #7a52f5;
   --vp-c-brand-soft: rgb(122 82 245 / 20%);
 }
+
+/**
+ * The live demos.
+ *
+ * A frame and nothing else. Everything inside the box is the real component
+ * drawing itself with the real stylesheet, and a demo whose frame restyled it
+ * would be showing something this library does not ship.
+ *
+ * `.vp-doc` styles every `h2`, `table` and `p` on the page at (0,1,1), which is
+ * why the library's own document rules are written under `.mawy-root` — a
+ * documentation site is the first host to prove that a single class is not
+ * enough, and it will not be the last.
+ */
+.mawy-demo {
+  margin: 22px 0;
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 14px;
+}
+
+.mawy-demo .mawy-root {
+  border-radius: 0;
+}
