@@ -1,0 +1,30 @@
+name: mawy
+description: >-
+  A Markdown viewer that draws the document rather than a string of HTML — its
+  own CommonMark and GFM parser, typography the reader controls, dark mode.
+version: 0.1.0
+repository: https://github.com/jooy2/mawy
+homepage: https://mawy.cdget.com
+issue_tracker: https://github.com/jooy2/mawy/issues
+topics:
+  - markdown
+  - viewer
+  - commonmark
+  - gfm
+  - rich-text
+
+environment:
+  sdk: ^3.8.0
+  flutter: '>=3.32.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # The same icon set the React package draws, so the two toolbars are the same
+  # toolbar. MIT, and it brings nothing else with it.
+  lucide_icons_flutter: ^3.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

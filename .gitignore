@@ -52,3 +52,7 @@ docs/*/changelog.md
 # Claude Code
 CLAUDE.md
 .claude/
+
+# Flutter
+.dart_tool/
+build/

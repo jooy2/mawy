@@ -1,0 +1,8 @@
+test/
+tool/
+pubspec.lock
+
+# The example is published — pub.dev looks for one and this is the real one.
+# What it compiles into is not.
+.dart_tool/
+build/
