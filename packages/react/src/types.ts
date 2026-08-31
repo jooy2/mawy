@@ -10,15 +10,63 @@
 /**
  * Which surface a document is shown on.
  *
- * The three are views of one document rather than three editors: switching is a
+ * These are views of one document rather than four editors: switching is a
  * change of view, and the value underneath does not round-trip through a second
  * implementation on the way.
  *
- * - `wysiwyg` — the rendered document, edited in place.
+ * - `wysiwyg` — the rendered document, edited in place. Not built yet.
  * - `plain` — the Markdown source, edited as text.
  * - `preview` — the rendered document, read-only.
+ * - `split` — the source on one side and the preview on the other, at once.
+ *
+ * `split` is the odd one, and it is on this list rather than beside it because
+ * of what a reader does with the control: the four are one group of buttons,
+ * one at a time, and "both" is the fourth answer to the same question. A
+ * separate prop would make it a second question about the first one.
  */
-export type MawyMode = 'wysiwyg' | 'plain' | 'preview';
+export type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
+
+/**
+ * One control on the editor's toolbar.
+ *
+ * Everything except `mode`, `colorScheme` and `separator` is a formatting
+ * command, and every one of them has a keyboard shortcut — the buttons are a
+ * way of finding the commands rather than the way of running them.
+ */
+export type MawyEditorToolbarItem =
+  | 'mode'
+  | 'bold'
+  | 'italic'
+  | 'strikethrough'
+  | 'code'
+  | 'link'
+  | 'heading'
+  | 'quote'
+  | 'bulletList'
+  | 'orderedList'
+  | 'taskList'
+  | 'codeBlock'
+  | 'rule'
+  | 'colorScheme'
+  | 'separator';
+
+/**
+ * The editor's toolbar, as an application asks for it. Same shape as the
+ * viewer's: `true` for all of it, `false` for none, or exactly these in exactly
+ * this order.
+ */
+export type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
+
+/**
+ * What the editor counts and shows along its bottom edge.
+ *
+ * `size` is the document in UTF-8 bytes, which is what a file on disk will be
+ * and is not the same number as `characters` the moment anything is not ASCII.
+ */
+export type MawyEditorStatusItem =
+  'position' | 'selection' | 'lines' | 'words' | 'characters' | 'size';
+
+export type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
 
 /**
  * Which palette to draw in.

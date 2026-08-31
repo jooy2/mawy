@@ -21,3 +21,13 @@ interface ImportMeta {
     options: { query: '?raw'; import: 'default'; eager: true }
   ): Record<string, string>;
 }
+
+/**
+ * A stylesheet imported for its effect and nothing else.
+ *
+ * Vite turns it into a `<style>` in the page; TypeScript has no idea what a
+ * `.css` file is and refuses the import without this. `vite/client` declares
+ * the same thing and is deliberately not in `types` here — one form is used,
+ * so one form is declared.
+ */
+declare module '*.css';

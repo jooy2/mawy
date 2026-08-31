@@ -12,6 +12,7 @@ import type {
 import type { CopyState } from '../../internal/clipboard.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import { Choice, IconButton, Menu, Slider } from '../../internal/controls.js';
+import { tabStops, useRoving } from '../../internal/roving.js';
 import { DEFAULT_TYPOGRAPHY, TYPOGRAPHY_RANGE } from '../../internal/typography.js';
 import { fontStack, loadFontStylesheet } from '../../internal/fonts.js';
 import {
@@ -142,70 +143,12 @@ export function MawyViewerToolbar({
   fileName,
   hasDocument
 }: MawyViewerToolbarProps): React.ReactElement {
-  const [active, setActive] = React.useState(0);
-  const controls = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const { onKeyDown, itemProps } = useRoving();
+  const order = tabStops(items, (item) => (item === 'separator' ? 0 : 1));
 
   const set = <K extends keyof MawyTypography>(key: K, value: MawyTypography[K]) => {
     onTypographyChange({ ...typography, [key]: value });
   };
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    // A panel that is open has its own keys — a slider's arrows are the whole
-    // point of it — so the toolbar stops listening while the focus is inside.
-    if ((event.target as HTMLElement).closest('.mawy-menu-panel')) {
-      return;
-    }
-
-    const buttons = controls.current.filter(Boolean) as HTMLButtonElement[];
-    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
-
-    if (at === -1 || buttons.length === 0) {
-      return;
-    }
-
-    const to =
-      event.key === 'ArrowRight'
-        ? (at + 1) % buttons.length
-        : event.key === 'ArrowLeft'
-          ? (at - 1 + buttons.length) % buttons.length
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? buttons.length - 1
-              : -1;
-
-    if (to === -1) {
-      return;
-    }
-
-    event.preventDefault();
-    setActive(to);
-    buttons[to].focus();
-  };
-
-  /**
-   * Which tab stop each item is, counted over the ones that are controls.
-   *
-   * A separator is drawn but is not reached, so its position is not a number in
-   * the sequence — which is why this is worked out for the whole list first
-   * rather than counted up as the list is drawn.
-   */
-  const order: number[] = [];
-  let counted = 0;
-
-  for (const item of items) {
-    order.push(item === 'separator' ? -1 : counted);
-    counted += item === 'separator' ? 0 : 1;
-  }
-
-  /** The props every control on the toolbar shares: one tab stop between them. */
-  const roving = (at: number) => ({
-    tabIndex: at === active ? 0 : -1,
-    onFocus: () => setActive(at),
-    ref: (node: HTMLButtonElement | null) => {
-      controls.current[at] = node;
-    }
-  });
 
   const control = (item: MawyViewerToolbarItem, key: number): React.ReactNode => {
     switch (item) {
@@ -218,7 +161,7 @@ export function MawyViewerToolbar({
             key={key}
             label={strings.fontFamily}
             icon={<FontFamilyIcon className="mawy-icon" aria-hidden="true" />}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           >
             <FontChoice
               strings={strings}
@@ -235,7 +178,7 @@ export function MawyViewerToolbar({
             key={key}
             label={strings.fontSize}
             icon={<FontSizeIcon className="mawy-icon" aria-hidden="true" />}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           >
             <Slider
               label={strings.fontSize}
@@ -256,7 +199,7 @@ export function MawyViewerToolbar({
             key={key}
             label={strings.lineHeight}
             icon={<LineHeightIcon className="mawy-icon" aria-hidden="true" />}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           >
             <Slider
               label={strings.lineHeight}
@@ -277,7 +220,7 @@ export function MawyViewerToolbar({
             key={key}
             label={strings.letterSpacing}
             icon={<LetterSpacingIcon className="mawy-icon" aria-hidden="true" />}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           >
             <Slider
               label={strings.letterSpacing}
@@ -298,7 +241,7 @@ export function MawyViewerToolbar({
             key={key}
             label={strings.measure}
             icon={<MeasureIcon className="mawy-icon" aria-hidden="true" />}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           >
             <Choice<MawyMeasure>
               label={strings.measure}
@@ -322,7 +265,7 @@ export function MawyViewerToolbar({
             key={key}
             label={strings.colorScheme}
             icon={<Icon className="mawy-icon" aria-hidden="true" />}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           >
             <Choice<MawyColorScheme>
               label={strings.colorScheme}
@@ -361,7 +304,7 @@ export function MawyViewerToolbar({
             disabled={!hasDocument}
             data-mawy-toolbar-item=""
             onClick={onOutlineToggle}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           />
         );
 
@@ -387,7 +330,7 @@ export function MawyViewerToolbar({
             data-mawy-toolbar-item=""
             data-mawy-state={copyState}
             onClick={onCopy}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           />
         );
 
@@ -399,7 +342,7 @@ export function MawyViewerToolbar({
             icon={<OpenFileIcon className="mawy-icon" aria-hidden="true" />}
             data-mawy-toolbar-item=""
             onClick={onOpenFile}
-            {...roving(order[key])}
+            {...itemProps(order[key])}
           />
         );
 

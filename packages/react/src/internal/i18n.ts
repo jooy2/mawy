@@ -52,6 +52,36 @@ export interface MawyStrings {
   alertImportant: string;
   alertWarning: string;
   alertCaution: string;
+  editor: string;
+  source: string;
+  mode: string;
+  modeWysiwyg: string;
+  modePlain: string;
+  modePreview: string;
+  modeSplit: string;
+  bold: string;
+  italic: string;
+  strikethrough: string;
+  codeSpan: string;
+  link: string;
+  heading: string;
+  heading1: string;
+  heading2: string;
+  heading3: string;
+  paragraph: string;
+  quote: string;
+  bulletList: string;
+  orderedList: string;
+  taskList: string;
+  codeBlock: string;
+  thematicBreak: string;
+  status: string;
+  statusPosition: string;
+  statusSelected: string;
+  statusLines: string;
+  statusWords: string;
+  statusCharacters: string;
+  editorPlaceholder: string;
 }
 
 const en: MawyStrings = {
@@ -92,7 +122,37 @@ const en: MawyStrings = {
   alertTip: 'Tip',
   alertImportant: 'Important',
   alertWarning: 'Warning',
-  alertCaution: 'Caution'
+  alertCaution: 'Caution',
+  editor: 'Document',
+  source: 'Markdown source',
+  mode: 'View',
+  modeWysiwyg: 'Formatted',
+  modePlain: 'Source',
+  modePreview: 'Preview',
+  modeSplit: 'Side by side',
+  bold: 'Bold',
+  italic: 'Italic',
+  strikethrough: 'Strikethrough',
+  codeSpan: 'Code',
+  link: 'Link',
+  heading: 'Heading',
+  heading1: 'Heading 1',
+  heading2: 'Heading 2',
+  heading3: 'Heading 3',
+  paragraph: 'Body text',
+  quote: 'Quotation',
+  bulletList: 'Bulleted list',
+  orderedList: 'Numbered list',
+  taskList: 'Task list',
+  codeBlock: 'Code block',
+  thematicBreak: 'Divider',
+  status: 'Document statistics',
+  statusPosition: 'Ln %L, Col %C',
+  statusSelected: '%N selected',
+  statusLines: 'lines',
+  statusWords: 'words',
+  statusCharacters: 'characters',
+  editorPlaceholder: 'Write in Markdown…'
 };
 
 const ko: MawyStrings = {
@@ -133,7 +193,37 @@ const ko: MawyStrings = {
   alertTip: '도움말',
   alertImportant: '중요',
   alertWarning: '주의',
-  alertCaution: '경고'
+  alertCaution: '경고',
+  editor: '문서',
+  source: '마크다운 원문',
+  mode: '보기',
+  modeWysiwyg: '서식',
+  modePlain: '원문',
+  modePreview: '미리보기',
+  modeSplit: '나란히',
+  bold: '굵게',
+  italic: '기울임',
+  strikethrough: '취소선',
+  codeSpan: '코드',
+  link: '링크',
+  heading: '제목',
+  heading1: '제목 1',
+  heading2: '제목 2',
+  heading3: '제목 3',
+  paragraph: '본문',
+  quote: '인용',
+  bulletList: '순서 없는 목록',
+  orderedList: '순서 있는 목록',
+  taskList: '체크 목록',
+  codeBlock: '코드 블록',
+  thematicBreak: '구분선',
+  status: '문서 통계',
+  statusPosition: '%L행 %C열',
+  statusSelected: '%N자 선택',
+  statusLines: '줄',
+  statusWords: '단어',
+  statusCharacters: '자',
+  editorPlaceholder: '마크다운으로 쓰세요…'
 };
 
 const STRINGS: Record<MawyLocale, MawyStrings> = { en, ko };

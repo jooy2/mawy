@@ -68,6 +68,11 @@
   --mawy-mark-bg: #fff3a8;
   --mawy-mark-fg: #4a3b00;
 
+  --mawy-syntax-marker: #7c56f0;
+  --mawy-syntax-code: #0f7a6a;
+  --mawy-syntax-link: #2563c9;
+  --mawy-syntax-muted: #8b8b96;
+
   --mawy-note: #2563c9;
   --mawy-tip: #17855a;
   --mawy-important: #7c3aed;
@@ -109,6 +114,11 @@
   --mawy-mark-bg: #4a3d00;
   --mawy-mark-fg: #ffe98a;
 
+  --mawy-syntax-marker: #b79bff;
+  --mawy-syntax-code: #5ecfb8;
+  --mawy-syntax-link: #6ea8fe;
+  --mawy-syntax-muted: #77778a;
+
   --mawy-note: #6ea8fe;
   --mawy-tip: #4ade9d;
   --mawy-important: #b79bff;
@@ -144,6 +154,11 @@
     --mawy-code-fg: #dcdce6;
     --mawy-mark-bg: #4a3d00;
     --mawy-mark-fg: #ffe98a;
+
+    --mawy-syntax-marker: #b79bff;
+    --mawy-syntax-code: #5ecfb8;
+    --mawy-syntax-link: #6ea8fe;
+    --mawy-syntax-muted: #77778a;
 
     --mawy-note: #6ea8fe;
     --mawy-tip: #4ade9d;
@@ -1040,4 +1055,256 @@
 .mawy-root .mawy-md-html img {
   max-width: 100%;
   height: auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * The editor
+ *
+ * The source surface is a `<textarea>` with a coloured copy of the same text
+ * laid exactly underneath it. The two only stay aligned while they agree on
+ * every property that decides where a character lands — font, size, line
+ * height, letter spacing, tab size, wrapping, and the padding that sets the
+ * left edge — which is why those are declared once, for both, and why the left
+ * inset is a single custom property rather than a number written twice.
+ * ------------------------------------------------------------------------- */
+
+.mawy-root.mawy-editor {
+  --mawy-src-size: 13.5px;
+  --mawy-src-line: 1.7;
+  --mawy-src-pad-y: 14px;
+  --mawy-src-pad-x: 16px;
+  --mawy-src-gap: 14px;
+}
+
+.mawy-root .mawy-editor-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.mawy-root .mawy-editor-pane {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mawy-root .mawy-editor-preview {
+  border-inline-start: 1px solid var(--mawy-border);
+}
+
+/* The viewer is a `.mawy-root` of its own, and inside a pane it fills it. */
+.mawy-root .mawy-editor-preview > .mawy-root {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mawy-root .mawy-toolbar-editor {
+  flex-wrap: wrap;
+  margin-inline-start: 0;
+}
+
+.mawy-root .mawy-segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: calc(var(--mawy-radius-md) + 2px);
+  background: var(--mawy-bg-sunken);
+}
+
+.mawy-root .mawy-segmented .mawy-button[aria-checked='true'] {
+  background: var(--mawy-bg-raised);
+  box-shadow: var(--mawy-shadow-1);
+  color: var(--mawy-fg);
+}
+
+/* The source surface ------------------------------------------------------ */
+
+.mawy-root .mawy-source {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  /* Where the text begins. One declaration, read by both layers. */
+  --mawy-src-indent: var(--mawy-src-pad-x);
+}
+
+.mawy-root .mawy-source[data-mawy-line-numbers] {
+  --mawy-src-indent: calc(var(--mawy-src-pad-x) + var(--mawy-gutter) + var(--mawy-src-gap));
+}
+
+/* Everything that decides where a character lands, said once for both layers. */
+.mawy-root .mawy-source-lines,
+.mawy-root .mawy-source-input {
+  font-family: var(--mawy-font-mono);
+  font-size: var(--mawy-src-size);
+  font-variant-ligatures: none;
+  line-height: var(--mawy-src-line);
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.mawy-root .mawy-source-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* The textarea's scrollbar takes width from its content box and would take
+   * none from this one, which is a whole column of drift down the page. */
+  scrollbar-gutter: stable;
+  pointer-events: none;
+}
+
+/*
+ * `minmax(0, …)` on the text column, and it is not a formality.
+ *
+ * A grid track sized `1fr` cannot shrink below its content's min-content
+ * width, and `overflow-wrap: break-word` does not lower that — only an
+ * unbreakable-word rule like `anywhere` would. So one long URL in the document
+ * widens this column past the textarea's, the copy underneath wraps later than
+ * the text above it, and every line after that one is out of step. The
+ * textarea has no such floor, so the grid must be told it has none either.
+ */
+.mawy-root .mawy-source-lines {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: var(--mawy-src-pad-y) var(--mawy-src-pad-x);
+  color: var(--mawy-fg);
+}
+
+.mawy-root .mawy-source[data-mawy-line-numbers] .mawy-source-lines {
+  grid-template-columns: var(--mawy-gutter) minmax(0, 1fr);
+  column-gap: var(--mawy-src-gap);
+}
+
+/* An empty line is still a line. Without this the copy underneath loses a row
+ * and drifts out of step with the textarea for the rest of the file. */
+.mawy-root .mawy-source-line,
+.mawy-root .mawy-source-number {
+  min-height: calc(var(--mawy-src-line) * 1em);
+}
+
+.mawy-root .mawy-source-line {
+  min-width: 0;
+}
+
+.mawy-root .mawy-source-number {
+  color: var(--mawy-fg-subtle);
+  text-align: end;
+  user-select: none;
+}
+
+.mawy-root .mawy-source-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: var(--mawy-src-pad-y) var(--mawy-src-pad-x) var(--mawy-src-pad-y) var(--mawy-src-indent);
+  overflow: auto;
+  scrollbar-gutter: stable;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  /* Transparent, so the coloured copy shows through — but the caret and the
+   * selection are the textarea's and stay visible. */
+  color: transparent;
+  caret-color: var(--mawy-fg);
+  resize: none;
+}
+
+.mawy-root .mawy-source-input:focus {
+  outline: none;
+}
+
+.mawy-root .mawy-source-input::placeholder {
+  color: var(--mawy-fg-subtle);
+}
+
+.mawy-root .mawy-source-input::selection {
+  background: color-mix(in srgb, var(--mawy-accent) 26%, transparent);
+}
+
+/* Syntax ------------------------------------------------------------------ */
+
+.mawy-root .mawy-tok-heading {
+  font-weight: 650;
+}
+
+.mawy-root .mawy-tok-marker,
+.mawy-root .mawy-tok-rule,
+.mawy-root .mawy-tok-reference {
+  color: var(--mawy-syntax-marker);
+}
+
+.mawy-root .mawy-tok-quote {
+  color: var(--mawy-syntax-marker);
+}
+
+.mawy-root .mawy-tok-code,
+.mawy-root .mawy-tok-fence {
+  color: var(--mawy-syntax-code);
+}
+
+.mawy-root .mawy-tok-link {
+  color: var(--mawy-syntax-link);
+}
+
+.mawy-root .mawy-tok-url,
+.mawy-root .mawy-tok-html,
+.mawy-root .mawy-tok-escape,
+.mawy-root .mawy-tok-table {
+  color: var(--mawy-syntax-muted);
+}
+
+.mawy-root .mawy-tok-task {
+  color: var(--mawy-tip);
+}
+
+.mawy-root .mawy-tok-emphasis {
+  font-style: italic;
+}
+
+.mawy-root .mawy-tok-strong {
+  font-weight: 700;
+}
+
+.mawy-root .mawy-tok-strike {
+  color: var(--mawy-fg-subtle);
+  text-decoration: line-through;
+}
+
+/* The status bar ---------------------------------------------------------- */
+
+.mawy-root .mawy-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 6px 12px;
+  border-top: 1px solid var(--mawy-border);
+  background: var(--mawy-chrome);
+  color: var(--mawy-fg-subtle);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mawy-root .mawy-status-cell {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .mawy-root .mawy-editor-body {
+    /* Two panes on a phone is two columns of nothing. */
+    flex-direction: column;
+  }
+
+  .mawy-root .mawy-editor-preview {
+    border-inline-start: 0;
+    border-top: 1px solid var(--mawy-border);
+  }
 }
