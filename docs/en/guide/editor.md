@@ -203,6 +203,18 @@ Where the image lands is where it was put: a drop goes to the point the pointer 
 
 The **drawn document is not coloured**, and will not be. The source surface has a highlighter of its own for the Markdown; the drawn one is a place where every caret has to find its way back into the source, and a second opinion about what the characters inside a code block are is not worth what it would cost there.
 
+## Indenting
+
+`Tab` indents and `Shift`+`Tab` takes it back, on the source surface. With nothing selected it puts the indentation in where the caret is, the way typing two spaces would. With anything selected it moves the lines that selection touches and leaves them selected, so it can be pressed again — a `Tab` that replaced the paragraph somebody had selected is the behaviour every editor gave up.
+
+**Two spaces**, and that is a Markdown fact rather than a taste. A nested list item has to clear its parent's marker, which under `- ` is two columns; four would be an indented code block the moment the list above it ends. Going back takes a tab or up to two spaces off the front of each line, and a line with nothing left to take is not an error — the rest of the block still moves.
+
+`Tab` in a textarea is a keyboard trap, and that is not a style opinion: somebody who cannot use a pointer would have no way to leave the editor at all. So the trap is opened rather than avoided.
+
+**Press `Escape`, then `Tab`, and the focus moves on.** One `Escape` arms it and anything else typed disarms it again. It is the rule CodeMirror, Monaco and GitHub's own editor all use, which is the point of matching them — anybody who has met one of those already knows it — and the surface says so to a screen reader, because a way out nobody is told about is a way out that does not exist for the person who needed it.
+
+The drawn document does not capture `Tab` at all. There is no trap there to open: it is one focusable thing, and `Tab` leaves it.
+
 ## Undo
 
 `Mod`+`Z` goes back, `Mod`+`Shift`+`Z` comes forward again, and `Ctrl`+`Y` is the same thing where Windows put it. The history is **one list for the whole editor** rather than one per surface.
@@ -235,4 +247,4 @@ Two of those count more carefully than they look. **Characters** are code points
 
 ## Accessibility
 
-The editing surface is a labelled `textbox` and everything reachable from the toolbar is reachable from the keyboard first. The toolbar is a real `toolbar`: one tab stop, arrow keys inside. `Tab` is deliberately **not** captured for indentation — a textarea that swallows `Tab` is a keyboard trap, and indentation is not worth one.
+The editing surface is a labelled `textbox` and everything reachable from the toolbar is reachable from the keyboard first. The toolbar is a real `toolbar`: one tab stop, arrow keys inside. `Tab` indents the source rather than moving the focus, so `Escape` and then `Tab` is the way out — see [indenting](#indenting), which has why.

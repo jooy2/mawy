@@ -19,6 +19,8 @@ export interface MawyEditorSourceProps {
   lineNumbers: boolean;
   readOnly: boolean;
   label: string;
+  /** How to leave, for a screen reader. `Tab` indents here. */
+  escapeHint: string;
   placeholder?: string;
 }
 
@@ -53,12 +55,16 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
       lineNumbers,
       readOnly,
       label,
+      escapeHint,
       placeholder
     },
     ref
   ) {
     const back = React.useRef<HTMLDivElement>(null);
     const input = React.useRef<HTMLTextAreaElement>(null);
+    // Two editors on one page would otherwise describe themselves with each
+    // other's element, and `useId` is React's answer to exactly that.
+    const hintId = `${React.useId()}-escape`;
 
     React.useImperativeHandle(ref, () => input.current as HTMLTextAreaElement);
 
@@ -96,6 +102,10 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
         // nothing has to be measured.
         style={{ '--mawy-gutter': `${String(lines.length).length}ch` } as React.CSSProperties}
       >
+        <p id={hintId} className="mawy-visually-hidden">
+          {escapeHint}
+        </p>
+
         <div className="mawy-source-layer" aria-hidden="true">
           <div className="mawy-source-lines" ref={back}>
             {lines.map((line, index) => (
@@ -113,6 +123,7 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
           value={value}
           readOnly={readOnly}
           aria-label={label}
+          aria-describedby={hintId}
           placeholder={placeholder}
           spellCheck="false"
           autoCapitalize="off"

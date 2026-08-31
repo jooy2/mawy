@@ -19,6 +19,9 @@
   The Dart parser reads the same syntax into the same tree, and `tool/parity.dart` diffs the two over the awkward cases and every Markdown file in the repository, as it does for everything else the parser reads.
 
 - **`MawyDirectives`, `MawyDirectiveProps`, `MawyDirectiveKind` and `MawyRange`**, exported from `mawy-react` and `mawy-react/types` like the rest of the vocabulary.
+- **`Tab` indents the source, and `Escape` is the way out.** `Tab` puts two spaces in where the caret is and `Shift`+`Tab` takes them back; anything _selected_ moves the lines it touches and stays selected, so it can be pressed again. Two spaces rather than four because that is a Markdown fact — a nested item has to clear its parent's marker, which under `- ` is two columns, and four would be an indented code block the moment the list above it ends.
+
+  A textarea that swallows `Tab` is a keyboard trap, so the trap is opened rather than avoided: **press `Escape`, then `Tab`, and the focus moves on.** Anything else typed arms indentation again. It is the rule CodeMirror, Monaco and GitHub's editor all use, and the surface says so through `aria-describedby`, because a way out nobody is told about is a way out that does not exist for the person who needed it. The drawn document does not capture `Tab` at all — there is no trap there to open.
 
 ## 0.1.0 (2026-08-31)
 

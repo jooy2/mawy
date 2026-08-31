@@ -1189,6 +1189,27 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Said, but not shown
+ *
+ * A rule with a name of its own rather than `display: none`, which is the whole
+ * difference: something hidden that way is hidden from a screen reader too, and
+ * this is text that exists only for one. Clipped to nothing and left in the
+ * layout, which is the shape every accessible library settled on.
+ * -------------------------------------------------------------------------- */
+
+.mawy-root .mawy-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
  * The editor
  *
  * The source surface is a `<textarea>` with a coloured copy of the same text

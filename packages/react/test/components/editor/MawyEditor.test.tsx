@@ -429,6 +429,53 @@ describe('the toolbar and the keyboard', () => {
     await expect.element(screen.getByRole('textbox')).toHaveValue('- one\n');
   });
 
+  it('indents with Tab, and lets go of it after Escape', async () => {
+    const screen = await render(<MawyEditor defaultValue="one" modes={['plain']} />);
+    const input = sourceOf(screen);
+    const press = (key: string, shift = false) => {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        shiftKey: shift,
+        bubbles: true,
+        cancelable: true
+      });
+
+      input.dispatchEvent(event);
+
+      return event;
+    };
+
+    input.focus();
+    input.setSelectionRange(0, 0);
+
+    expect(press('Tab').defaultPrevented).toBe(true);
+    await expect.element(screen.getByRole('textbox')).toHaveValue('  one');
+
+    // Going back takes the line's indentation off rather than the two
+    // characters in front of the caret, which is what `Shift`+`Tab` means.
+    input.setSelectionRange(2, 2);
+    expect(press('Tab', true).defaultPrevented).toBe(true);
+    await expect.element(screen.getByRole('textbox')).toHaveValue('one');
+
+    // A textarea that swallows Tab is a keyboard trap, so Escape opens it —
+    // and the next Tab after that is the browser's, which is the way out.
+    press('Escape');
+    expect(press('Tab').defaultPrevented).toBe(false);
+    await expect.element(screen.getByRole('textbox')).toHaveValue('one');
+
+    // And the door closes again behind whatever is typed next.
+    press('a');
+    expect(press('Tab').defaultPrevented).toBe(true);
+  });
+
+  it('says how to get out, where a screen reader will hear it', async () => {
+    const screen = await render(<MawyEditor defaultValue="one" modes={['plain']} />);
+    const input = sourceOf(screen);
+    const hint = screen.container.querySelector(`#${input.getAttribute('aria-describedby')}`);
+
+    expect(hint?.textContent).toContain('Escape');
+  });
+
   it('draws only the controls it was given', async () => {
     const screen = await render(
       <MawyEditor defaultValue={DOCUMENT} toolbar={['bold', 'italic']} modes={['plain']} />

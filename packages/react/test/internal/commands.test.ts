@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   commandActive,
   continueList,
+  indent,
   runCommand,
   type EditState,
   type MawyCommand
@@ -184,5 +185,42 @@ describe('Enter, inside a list', () => {
   it('says nothing about a line that is not a list item', () => {
     expect(enter('just text|')).toBeNull();
     expect(enter('- one «two»')).toBeNull();
+  });
+});
+
+/**
+ * `Tab` and `Shift`+`Tab`.
+ *
+ * Two spaces rather than four, and that is a Markdown fact rather than a taste:
+ * four spaces under a list that has ended is an indented code block, and two is
+ * what every nested item already written is indented by.
+ */
+describe('indenting', () => {
+  const tab = (marked: string, out = false): string => show(indent(at(marked), out));
+
+  it('puts the indentation in where the caret is, with nothing selected', () => {
+    expect(tab('one|')).toBe('one  |');
+    expect(tab('o|ne')).toBe('o  |ne');
+  });
+
+  it('moves the lines a selection touches rather than replacing it', () => {
+    // A `Tab` that eats the paragraph somebody had selected is the behaviour
+    // every editor gave up.
+    expect(tab('«one»')).toBe('«  one»');
+    expect(tab('- one\n«- two\n- three»')).toBe('- one\n«  - two\n  - three»');
+  });
+
+  it('takes a tab or up to two spaces off, going the other way', () => {
+    expect(tab('«  one»', true)).toBe('«one»');
+    expect(tab('« one»', true)).toBe('«one»');
+    expect(tab('«\tone»', true)).toBe('«one»');
+  });
+
+  it('outdents a line with nothing to take off, and the block still moves', () => {
+    expect(tab('«one\n  two»', true)).toBe('«one\ntwo»');
+  });
+
+  it('outdents from a caret too, because there is nothing else it could mean', () => {
+    expect(tab('  one|', true)).toBe('«one»');
   });
 });

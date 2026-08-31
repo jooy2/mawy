@@ -396,3 +396,59 @@ export function continueList(state: EditState): EditState | null {
     end: state.start + text.length
   };
 }
+
+/* -------------------------------------------------------------------------
+ * Indentation
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Two spaces, which is what a nested list item needs and not one more.
+ *
+ * Markdown counts columns rather than characters, and a nested item has to be
+ * indented past its parent's marker: under `- ` that is two, and two is what
+ * every Markdown document already written is indented by. Four would be an
+ * indented code block the moment the list above it ends, which is the failure
+ * this width exists to avoid.
+ */
+const INDENT = '  ';
+
+/** How much of a line's indentation to take off, in the width above. */
+function outdentOf(line: string): number {
+  const indent = indentOf(line);
+
+  if (indent.startsWith('\t')) {
+    return 1;
+  }
+
+  return Math.min(indent.length, INDENT.length);
+}
+
+/**
+ * `Tab` and `Shift`+`Tab`, over whatever the selection touches.
+ *
+ * A caret with nothing selected puts the indentation in where it is, the way
+ * typing two spaces would, so `Tab` in the middle of a word is two spaces in
+ * the middle of a word — that is what was pressed. Anything *selected* moves
+ * the lines it touches instead of being replaced by two spaces: a `Tab` that
+ * eats the paragraph somebody had selected is the behaviour every editor gave
+ * up. The same lines stay selected, so it can be pressed again.
+ *
+ * Outdenting takes a tab or up to two spaces off the front of each line, and a
+ * line with no indentation left is not an error — the rest of the block still
+ * moves.
+ */
+export function indent(state: EditState, out: boolean): EditState {
+  const spans = state.value.slice(state.start, state.end).includes('\n');
+
+  if (!out && !spans && state.start === state.end) {
+    return {
+      value: state.value.slice(0, state.start) + INDENT + state.value.slice(state.end),
+      start: state.start + INDENT.length,
+      end: state.start + INDENT.length
+    };
+  }
+
+  return mapLines(state, (lines) =>
+    lines.map((line) => (out ? line.slice(outdentOf(line)) : INDENT + line))
+  );
+}

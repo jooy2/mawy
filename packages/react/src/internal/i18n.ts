@@ -85,6 +85,14 @@ export interface MawyStrings {
   statusWords: string;
   statusCharacters: string;
   editorPlaceholder: string;
+  /**
+   * How to get out, said to a screen reader beside the surface.
+   *
+   * `Tab` indents here, which makes this a keyboard trap unless somebody is
+   * told the way out — and a rule nobody is told about is a rule that does not
+   * exist for the person who needed it.
+   */
+  sourceEscape: string;
   dropImage: string;
   uploading: string;
   uploadFailed: string;
@@ -162,6 +170,7 @@ const en: MawyStrings = {
   statusWords: 'words',
   statusCharacters: 'characters',
   editorPlaceholder: 'Write in Markdown…',
+  sourceEscape: 'Tab indents. Press Escape and then Tab to move on.',
   dropImage: 'Drop to add',
   uploading: 'Adding the image…',
   uploadFailed: 'That image could not be added.'
@@ -239,6 +248,7 @@ const ko: MawyStrings = {
   statusWords: '단어',
   statusCharacters: '자',
   editorPlaceholder: '마크다운으로 쓰세요…',
+  sourceEscape: 'Tab은 들여쓰기입니다. 빠져나가려면 Escape를 누른 다음 Tab을 누르세요.',
   dropImage: '놓으면 넣습니다',
   uploading: '이미지를 넣는 중…',
   uploadFailed: '이미지를 넣지 못했습니다.'

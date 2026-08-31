@@ -23,6 +23,7 @@ import { stringsFor } from '../../internal/i18n.js';
 import {
   commandActive,
   continueList,
+  indent,
   runCommand,
   type EditState,
   type MawyCommand
@@ -213,6 +214,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * the whole of why.
    */
   const aim = React.useRef<MawyAim | null>(null);
+  /**
+   * Whether `Escape` was the last key pressed, and so whether the next `Tab`
+   * leaves the editor rather than indenting. See `onKeyDown`.
+   */
+  const leaving = React.useRef(false);
 
   const notify = React.useRef(onChange);
   const history = React.useRef(emptyHistory());
@@ -700,6 +706,39 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    /*
+     * `Tab` indents, and `Escape` is the way out.
+     *
+     * A textarea that swallows `Tab` is a keyboard trap, and that is not a
+     * style opinion — somebody who cannot use a pointer would have no way to
+     * leave the editor at all. So the trap is opened rather than avoided:
+     * `Escape` once and the next `Tab` moves the focus, which is the rule
+     * CodeMirror, Monaco and GitHub's own editor all use, and the reason it is
+     * worth matching them is that anybody who has met one of those already
+     * knows it. The flag is cleared by anything else, so `Escape` never leaves
+     * the editor in a state a reader cannot see.
+     */
+    if (event.key === 'Escape') {
+      leaving.current = true;
+
+      return;
+    }
+
+    const wasLeaving = leaving.current;
+
+    leaving.current = false;
+
+    if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      if (wasLeaving || showDocument) {
+        return;
+      }
+
+      event.preventDefault();
+      apply(state, indent(state, event.shiftKey));
+
+      return;
+    }
+
     if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey) {
       // Carrying a list marker down is a thing done to a line of Markdown. In
       // the drawn document `Enter` is an `insertParagraph`, which the surface
@@ -929,6 +968,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               lineNumbers={lineNumbers}
               readOnly={readOnly}
               label={strings.source}
+              escapeHint={strings.sourceEscape}
               placeholder={placeholder ?? strings.editorPlaceholder}
             />
           </div>
