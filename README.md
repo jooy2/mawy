@@ -13,7 +13,7 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
 > [!IMPORTANT]
-> **Mawy is in early development, and the first half of it works.** The Markdown parser and `MawyViewer` are written and tested; `MawyEditor` is being built on top of them. Nothing is published to npm yet, and the API is not stable.
+> **Mawy is in early development, and most of it works.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested. What is left is the `wysiwyg` surface — editing the rendered document in place. Nothing is published to npm yet, and the API is not stable.
 
 ## Why Mawy
 
@@ -53,7 +53,7 @@ There is no install at the repository root and no root `package.json` — each f
 | Page                                                            | What you will find                                     |
 | --------------------------------------------------------------- | ------------------------------------------------------ |
 | [**Getting started**](https://mawy.cdget.com/guide/getting-started) | Install and setup, end to end.                     |
-| [**Editor**](https://mawy.cdget.com/guide/editor)               | The WYSIWYG and plain surfaces, and switching between them. |
+| [**Editor**](https://mawy.cdget.com/guide/editor)               | The source surface, the preview, and switching between them — with live demos. |
 | [**Viewer**](https://mawy.cdget.com/guide/viewer)               | Rendering a document without editing it — with live demos. |
 | [**API**](https://mawy.cdget.com/api/)                          | Every component and every option.                      |
 | [**Changelog**](https://mawy.cdget.com/changelog)               | What changed in each release.                          |

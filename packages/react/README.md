@@ -12,7 +12,7 @@ Guides and the full API, in English and Korean. This README is just the quick st
 
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
-> [!IMPORTANT] **Not published yet.** `MawyViewer` and the Markdown parser behind it are written and tested; `MawyEditor` is being built on top of them. `npm install mawy` does not resolve to anything yet and the API is not stable.
+> [!IMPORTANT] **Not published yet.** The parser, `MawyViewer` and `MawyEditor` are written and tested; the `wysiwyg` surface is the piece still to be built. `npm install mawy` does not resolve to anything yet and the API is not stable.
 
 - **Editor and viewer are the same library.** They share the parser and the renderer, so what was typed is what a reader sees — rather than what a second, separately maintained renderer makes of it.
 - **WYSIWYG and source are two views, not two editors.** Toggling does not round-trip through another implementation and does not lose what the other view could not express.
@@ -39,6 +39,18 @@ Add one line to your app's CSS entry point:
 The stylesheet is finished CSS. Everything the library draws goes through `--mawy-*` custom properties, so theming is a matter of redeclaring a token — which cascades, so one declaration on a wrapping element reaches every Mawy surface inside it — rather than out-specifying a rule.
 
 ## Usage
+
+```tsx
+import { MawyEditor } from 'mawy';
+
+export function Write() {
+  return <MawyEditor defaultValue="# Hello" onChange={save} />;
+}
+```
+
+The Markdown source with its syntax coloured, a live preview beside it, a formatting toolbar whose every command is also a keyboard shortcut, and a status bar that counts. It is a real `<textarea>` under a coloured copy of its own text, which is what keeps the native undo stack, the IME and the mobile keyboard working — none of which is worth losing for syntax colouring.
+
+And the read-only half:
 
 ```tsx
 import { MawyViewer } from 'mawy';

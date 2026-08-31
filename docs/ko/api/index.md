@@ -9,11 +9,56 @@ order: 2
 
 ::: warning 초기 단계입니다
 
-오늘 존재하는 컴포넌트는 `MawyViewer`입니다. `MawyEditor`가 다음입니다 — 무엇을 목표로 만들어지는지는 [에디터](../guide/editor)에 있습니다. 아직 npm에 게시된 것은 없고 API는 안정적이지 않습니다.
+아직 npm에 게시된 것은 없고 API는 안정적이지 않습니다. 남은 조각은 `wysiwyg` 화면이고, 이 페이지의 나머지는 전부 존재하며 동작합니다.
 
 :::
 
 ## 컴포넌트
+
+### `MawyEditor`
+
+뷰어를 옆에 둔 마크다운 에디터입니다. [에디터](../guide/editor)를 보세요.
+
+```tsx
+import { MawyEditor } from 'mawy';
+
+<MawyEditor defaultValue="# 안녕하세요" onChange={save} />;
+```
+
+`children`과 `onChange`를 뺀 `<div>`의 모든 프롭을 받아 그대로 넘깁니다. `ref`는 가장 바깥 엘리먼트에 닿습니다.
+
+#### 문서
+
+| 프롭 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `value` | `string` | — | 문서. 애플리케이션이 주인일 때. |
+| `defaultValue` | `string` | `''` | 에디터가 문서를 직접 가질 때, 시작할 문서. |
+| `onChange` | `(value: string) => void` | — | 모든 변경. 제어 여부와 무관하게. |
+| `readOnly` | `boolean` | `false` | 읽고 선택하고 복사하는 것은 그대로 됩니다. |
+| `placeholder` | `string` | 로케일에 맞는 안내문 | 문서가 비어 있는 동안 보입니다. |
+
+#### 화면
+
+| 프롭 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `mode` | [`MawyMode`](#mawymode) | — | 어느 화면인지. 애플리케이션이 주인일 때. |
+| `defaultMode` | `MawyMode` | `modes`의 첫 번째 | 시작할 화면. |
+| `onModeChange` | `(mode: MawyMode) => void` | — | 바뀔 때마다 호출됩니다. |
+| `modes` | `readonly MawyMode[]` | `['plain', 'split', 'preview']` | 전환 컨트롤이 제시할 화면. 하나만 주면 컨트롤이 사라집니다. |
+
+`'wysiwyg'`도 받지만 원문 화면을 보여줍니다. 그 뒤의 화면은 아직 만들어지지 않았습니다.
+
+#### Chrome
+
+| 프롭 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `toolbar` | [`MawyEditorToolbarOption`](#mawyeditortoolbaroption) | `true` | 툴바에 어떤 컨트롤을 어떤 순서로 둘지. |
+| `status` | [`MawyEditorStatusOption`](#mawyeditorstatusoption) | `true` | 상태 표시줄이 세는 것. |
+| `lineNumbers` | `boolean` | `true` | 원문 왼쪽의 줄 번호 거터. |
+
+#### 미리보기와 팔레트
+
+`parse`, `html`, `fonts`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`, `locale`은 [`MawyViewer`](#mawyviewer)에서와 정확히 같은 의미이고, 앞의 다섯은 미리보기로 그대로 전달됩니다.
 
 ### `MawyViewer`
 
@@ -77,14 +122,62 @@ import { MawyViewer } from 'mawy';
 ### `MawyMode`
 
 ```ts
-type MawyMode = 'wysiwyg' | 'plain' | 'preview';
+type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 ```
 
-문서를 어느 화면에서 보여줄지. 셋은 세 개의 에디터가 아니라 한 문서를 보는 세 가지 방식입니다 — [에디터](../guide/editor)를 보세요.
+문서를 어느 화면에서 보여줄지. 네 개의 에디터가 아니라 한 문서를 보는 네 가지 방식입니다 — [에디터](../guide/editor)를 보세요.
 
-- `'wysiwyg'` — 그려진 문서를 그 자리에서 편집.
+- `'wysiwyg'` — 그려진 문서를 그 자리에서 편집. 아직 없고 `plain`으로 대체됩니다.
 - `'plain'` — 마크다운 원문을 텍스트로 편집.
 - `'preview'` — 그려진 문서, 읽기 전용.
+- `'split'` — 한쪽에 원문, 다른 쪽에 미리보기를 동시에.
+
+`split`이 이 목록 옆이 아니라 안에 있는 것은 독자가 그 컨트롤로 하는 일 때문입니다. 넷은 한 번에 하나씩 고르는 하나의 버튼 묶음이고, "둘 다"는 같은 질문에 대한 네 번째 답입니다.
+
+### `MawyEditorToolbarItem`
+
+```ts
+type MawyEditorToolbarItem =
+  | 'mode'
+  | 'bold'
+  | 'italic'
+  | 'strikethrough'
+  | 'code'
+  | 'link'
+  | 'heading'
+  | 'quote'
+  | 'bulletList'
+  | 'orderedList'
+  | 'taskList'
+  | 'codeBlock'
+  | 'rule'
+  | 'colorScheme'
+  | 'separator';
+```
+
+에디터 툴바의 컨트롤 하나. `mode`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다.
+
+### `MawyEditorToolbarOption`
+
+```ts
+type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
+```
+
+`true`는 위 순서대로 전부, `false`는 툴바 없음, 배열은 정확히 그것들을 그 순서로.
+
+### `MawyEditorStatusItem`
+
+```ts
+type MawyEditorStatusItem = 'position' | 'selection' | 'lines' | 'words' | 'characters' | 'size';
+```
+
+에디터가 아래쪽에 세어 보여주는 것. `characters`는 코드 포인트라서 이모지 하나는 하나입니다. `words`는 공백으로 나눈 수에 한자·히라가나·가타카나 글자를 각각 더합니다. 그 언어들은 공백 없이 쓰이기 때문이고, 한국어는 띄어 쓰므로 어절 하나가 한 단어입니다. `size`는 UTF-8 바이트이고, 그것이 디스크에 저장될 크기입니다.
+
+### `MawyEditorStatusOption`
+
+```ts
+type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
+```
 
 ### `MawyColorScheme`
 

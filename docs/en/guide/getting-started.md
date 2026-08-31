@@ -9,7 +9,7 @@ Mawy ships as one package per language. React is the one that exists today; Flut
 
 ::: warning Not published yet
 
-`npm install mawy` does not resolve to anything yet. Everything on this page is real and runs — the viewer exists and this site draws it — but it is reached by building the repository rather than by installing it. The editor lands next; follow the [changelog](../changelog).
+`npm install mawy` does not resolve to anything yet. Everything on this page is real and runs — this site draws both components — but it is reached by building the repository rather than by installing it. Follow the [changelog](../changelog).
 
 :::
 
@@ -38,6 +38,18 @@ Add one line to your application's CSS entry point:
 ```
 
 The stylesheet is finished CSS — no build-side setup, no plugin, no configuration. Everything the library draws goes through `--mawy-*` custom properties, so theming is a matter of redeclaring a token rather than out-specifying a rule. Tokens cascade, which means one declaration on a wrapping element reaches every Mawy surface inside it.
+
+## Writing a document
+
+```tsx
+import { MawyEditor } from 'mawy';
+
+export function Page() {
+  return <MawyEditor defaultValue="# Hello" onChange={save} />;
+}
+```
+
+The Markdown source with its syntax coloured, a live preview beside it, a formatting toolbar whose every command is also a keyboard shortcut, and a status bar that counts. [The editor](./editor) has the rest.
 
 ## Showing a document
 

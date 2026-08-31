@@ -9,11 +9,56 @@ Everything the package exports. Each entry says what it is, what it takes and wh
 
 ::: warning Early
 
-`MawyViewer` is the component that exists today. `MawyEditor` lands next — [the editor](../guide/editor) describes what it is being built to do. Nothing is published to npm yet and the API is not stable.
+Nothing is published to npm yet and the API is not stable. The `wysiwyg` surface is the piece still to be built; everything on this page exists and runs.
 
 :::
 
 ## Components
+
+### `MawyEditor`
+
+A Markdown editor with the viewer beside it. See [the editor](../guide/editor).
+
+```tsx
+import { MawyEditor } from 'mawy';
+
+<MawyEditor defaultValue="# Hello" onChange={save} />;
+```
+
+Every prop of `<div>` is accepted and forwarded, apart from `children` and `onChange`. A `ref` reaches the outermost element.
+
+#### The document
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `value` | `string` | — | The document, when the application owns it. |
+| `defaultValue` | `string` | `''` | The document to start with, when the editor is to keep it. |
+| `onChange` | `(value: string) => void` | — | Every change, controlled or not. |
+| `readOnly` | `boolean` | `false` | The document can still be read, selected and copied. |
+| `placeholder` | `string` | a localised prompt | Shown while the document is empty. |
+
+#### Surfaces
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `mode` | [`MawyMode`](#mawymode) | — | Which surface, when the application owns it. |
+| `defaultMode` | `MawyMode` | the first of `modes` | Which surface to start on. |
+| `onModeChange` | `(mode: MawyMode) => void` | — | Called whenever it changes. |
+| `modes` | `readonly MawyMode[]` | `['plain', 'split', 'preview']` | Which surfaces the switch offers. Give it one and the switch disappears. |
+
+`'wysiwyg'` is accepted and shows the source: the surface behind it is not built yet.
+
+#### Chrome
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `toolbar` | [`MawyEditorToolbarOption`](#mawyeditortoolbaroption) | `true` | Which controls the toolbar has, and in what order. |
+| `status` | [`MawyEditorStatusOption`](#mawyeditorstatusoption) | `true` | What the status bar counts. |
+| `lineNumbers` | `boolean` | `true` | The gutter down the left of the source. |
+
+#### The preview, and the palette
+
+`parse`, `html`, `fonts`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first five are passed straight through to the preview.
 
 ### `MawyViewer`
 
@@ -77,14 +122,62 @@ Exported from `mawy` and from `mawy/types`. The second entry point exists so an 
 ### `MawyMode`
 
 ```ts
-type MawyMode = 'wysiwyg' | 'plain' | 'preview';
+type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 ```
 
-Which surface a document is shown on. The three are views of one document rather than three editors — see [the editor](../guide/editor).
+Which surface a document is shown on. These are views of one document rather than four editors — see [the editor](../guide/editor).
 
-- `'wysiwyg'` — the rendered document, edited in place.
+- `'wysiwyg'` — the rendered document, edited in place. Not built yet; falls back to `plain`.
 - `'plain'` — the Markdown source, edited as text.
 - `'preview'` — the rendered document, read-only.
+- `'split'` — the source on one side and the preview on the other, at once.
+
+`split` is on this list rather than beside it because of what a reader does with the control: the four are one group of buttons, one at a time, and "both" is the fourth answer to the same question.
+
+### `MawyEditorToolbarItem`
+
+```ts
+type MawyEditorToolbarItem =
+  | 'mode'
+  | 'bold'
+  | 'italic'
+  | 'strikethrough'
+  | 'code'
+  | 'link'
+  | 'heading'
+  | 'quote'
+  | 'bulletList'
+  | 'orderedList'
+  | 'taskList'
+  | 'codeBlock'
+  | 'rule'
+  | 'colorScheme'
+  | 'separator';
+```
+
+One control on the editor's toolbar. Everything except `mode`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them.
+
+### `MawyEditorToolbarOption`
+
+```ts
+type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
+```
+
+`true` is every control in the order above; `false` is no toolbar; an array is exactly those, in that order.
+
+### `MawyEditorStatusItem`
+
+```ts
+type MawyEditorStatusItem = 'position' | 'selection' | 'lines' | 'words' | 'characters' | 'size';
+```
+
+What the editor counts along its bottom edge. `characters` are code points, so an emoji is one. `words` adds every Han, hiragana and katakana character to the space-separated count, because those are written without spaces; Korean is spaced, so an eojeol is one word. `size` is UTF-8 bytes, which is what a file on disk will be.
+
+### `MawyEditorStatusOption`
+
+```ts
+type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
+```
 
 ### `MawyColorScheme`
 
