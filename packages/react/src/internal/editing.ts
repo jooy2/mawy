@@ -17,6 +17,7 @@
  */
 
 import { continueList } from './commands.js';
+import { markdownFromHtml } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
 
 /** A document after an edit, and where the caret goes once it is drawn again. */
@@ -346,7 +347,11 @@ function breakAt(
  * have its way with the tree whenever it met something new would be a surface
  * whose document and drawing quietly stopped being the same thing.
  */
-export function editFor(event: InputEvent, root: HTMLElement, value: string): MawyEdit | null {
+/** Where the caret is, in the document and on the page, or `null` for nowhere. */
+function placeOf(
+  root: HTMLElement,
+  value: string
+): { start: number; end: number; node: Node; offset: number } | null {
   const selection = root.ownerDocument.getSelection();
 
   if (!selection?.rangeCount) {
@@ -371,8 +376,55 @@ export function editFor(event: InputEvent, root: HTMLElement, value: string): Ma
     return null;
   }
 
-  const start = Math.min(head, tail);
-  const end = Math.max(head, tail);
+  return {
+    start: Math.min(head, tail),
+    end: Math.max(head, tail),
+    node: range.startContainer,
+    offset: range.startOffset
+  };
+}
+
+/**
+ * What was put on the clipboard, as Markdown where there is any to be made.
+ *
+ * Inside a code block it is the plain text and nothing else: everything in
+ * there is the characters it is, and a pasted heading is a line beginning with
+ * a hash rather than a heading.
+ */
+export function markdownFor(
+  clipboard: { getData(kind: string): string } | null,
+  literal: boolean
+): string {
+  const plain = clipboard?.getData('text/plain') ?? '';
+
+  if (literal || !clipboard) {
+    return plain;
+  }
+
+  return markdownFromHtml(clipboard.getData('text/html')) || plain;
+}
+
+/**
+ * Text put in where the caret is, whatever brought it there.
+ *
+ * A paste arrives as its own event rather than through `beforeinput`, because
+ * that is the one every browser puts the clipboard on.
+ */
+export function editForText(root: HTMLElement, value: string, text: string): MawyEdit | null {
+  const place = placeOf(root, value);
+
+  return place && text ? splice(value, place.start, place.end, text) : null;
+}
+
+export function editFor(event: InputEvent, root: HTMLElement, value: string): MawyEdit | null {
+  const place = placeOf(root, value);
+
+  if (!place) {
+    return null;
+  }
+
+  const { start, end } = place;
+  const range = { startContainer: place.node, startOffset: place.offset };
 
   switch (event.inputType) {
     case 'insertText':
@@ -404,6 +456,13 @@ export function editFor(event: InputEvent, root: HTMLElement, value: string): Ma
       return start === end
         ? deleteAfter(root, value, range.startContainer, range.startOffset, start)
         : splice(value, start, end, '');
+
+    case 'insertFromDrop': {
+      const block = blockAt(root, range.startContainer);
+      const text = markdownFor(event.dataTransfer, block?.tagName === 'PRE');
+
+      return text ? splice(value, start, end, text) : null;
+    }
 
     default:
       return null;

@@ -931,6 +931,85 @@ describe('the document surface', () => {
 });
 
 /**
+ * Pasting, on both surfaces.
+ *
+ * What is on a clipboard as HTML is read back as Markdown — a heading copied
+ * from a web page arrives as `## `, not as the word it said. What is on it as
+ * nothing but text is left to the browser, whose own paste is exactly right and
+ * keeps the caret, the scroll and the undo run where they were.
+ */
+describe('pasting', () => {
+  /** A clipboard, and the event that carries it. */
+  function paste(element: HTMLElement, kinds: Record<string, string>): ClipboardEvent {
+    const clipboard = new DataTransfer();
+
+    for (const [kind, value] of Object.entries(kinds)) {
+      clipboard.setData(kind, value);
+    }
+
+    const event = new ClipboardEvent('paste', {
+      clipboardData: clipboard,
+      bubbles: true,
+      cancelable: true
+    });
+
+    element.dispatchEvent(event);
+
+    return event;
+  }
+
+  it('reads HTML back as Markdown on the drawn document', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Before." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'Before.', 7);
+    paste(bodyOf(screen), {
+      'text/html': '<p>A <strong>bold</strong> <a href="/u">link</a>.</p>',
+      'text/plain': 'A bold link.'
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith('Before.A **bold** [link](/u).');
+  });
+
+  it('pastes the plain text into a code block, where markup is not markup', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'```\ncode\n```'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'code', 4);
+    paste(bodyOf(screen), { 'text/html': '<h1>Title</h1>', 'text/plain': 'Title' });
+
+    expect(onChange).toHaveBeenLastCalledWith('```\ncodeTitle\n```');
+  });
+
+  it('reads HTML back as Markdown on the source surface too', async () => {
+    const screen = await render(<MawyEditor defaultValue="Before." modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    paste(input, { 'text/html': '<h2>Title</h2>', 'text/plain': 'Title' });
+
+    await vi.waitFor(() => expect(input.value).toBe('Before.## Title'));
+  });
+
+  it('leaves a clipboard with nothing but text on it to the browser', async () => {
+    const screen = await render(<MawyEditor defaultValue="Before." modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+
+    const event = paste(input, { 'text/plain': 'plain words' });
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+});
+
+/**
  * Undo, over the document rather than over a surface.
  *
  * The source surface has the browser's own stack and the drawn one has nothing

@@ -25,6 +25,7 @@ import {
   type MawyCommand
 } from '../../internal/commands.js';
 import type { MawyEdit } from '../../internal/editing.js';
+import { markdownFromHtml } from '../../internal/markdown/paste.js';
 import {
   difference,
   emptyHistory,
@@ -425,6 +426,32 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [readOnly, run, stateNow]
   );
 
+  /**
+   * A paste into the source, read back as Markdown where there is any to read.
+   *
+   * A clipboard with nothing but text on it is left to the browser: its own
+   * paste is exactly right, and letting it happen keeps the caret, the scroll
+   * and the undo run where they were.
+   */
+  const onPaste = React.useCallback(
+    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const state = readOnly ? null : stateNow();
+      const markdown = state ? markdownFromHtml(event.clipboardData.getData('text/html')) : '';
+
+      if (!state || !markdown) {
+        return;
+      }
+
+      event.preventDefault();
+      run(state, {
+        value: state.value.slice(0, state.start) + markdown + state.value.slice(state.end),
+        start: state.start + markdown.length,
+        end: state.start + markdown.length
+      });
+    },
+    [readOnly, run, stateNow]
+  );
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented || readOnly) {
       return;
@@ -654,6 +681,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               onSelect={readSelection}
               onKeyDown={onKeyDown}
               onScroll={syncScroll}
+              onPaste={onPaste}
               gfm={parse?.gfm ?? true}
               lineNumbers={lineNumbers}
               readOnly={readOnly}

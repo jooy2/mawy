@@ -6,7 +6,13 @@ import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock } from '../../internal/markdown/ast.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { renderBlocks, type RenderContext } from '../../internal/markdown/render.js';
-import { blockAt, editFor, type MawyEdit } from '../../internal/editing.js';
+import {
+  blockAt,
+  editFor,
+  editForText,
+  markdownFor,
+  type MawyEdit
+} from '../../internal/editing.js';
 import { sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
@@ -118,9 +124,34 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         }
       };
 
-      element.addEventListener('beforeinput', refuse);
+      /**
+       * A paste comes in as its own event rather than through `beforeinput`,
+       * because that is the one every browser puts the clipboard on. What is on
+       * it as HTML is read back as Markdown; what is on it as text is text.
+       */
+      const paste = (event: ClipboardEvent) => {
+        event.preventDefault();
 
-      return () => element.removeEventListener('beforeinput', refuse);
+        if (readOnly) {
+          return;
+        }
+
+        const where = element.ownerDocument.getSelection()?.anchorNode;
+        const literal = Boolean(where && blockAt(element, where)?.tagName === 'PRE');
+        const edit = editForText(element, value, markdownFor(event.clipboardData, literal));
+
+        if (edit) {
+          onEdit(edit);
+        }
+      };
+
+      element.addEventListener('beforeinput', refuse);
+      element.addEventListener('paste', paste);
+
+      return () => {
+        element.removeEventListener('beforeinput', refuse);
+        element.removeEventListener('paste', paste);
+      };
     }, [value, readOnly, onEdit]);
 
     /**

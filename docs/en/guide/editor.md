@@ -97,7 +97,7 @@ Refusing a composition is refusing the composition. Korean is composed a jamo at
 What does not work yet, and does nothing at all rather than something half-right:
 
 - **Raw HTML that is being drawn rather than shown.** Under `sanitize` and `raw` the markup reached the page through `dangerouslySetInnerHTML`, which means React does not know what is inside it and could not put it back. Under `escape` — the default — it is text like any other text, and edits like any other.
-- **Pasting, dropping, and putting an image in.**
+- **Putting an image in.** One pasted or dropped as part of a web page arrives as an image, because that is markup; one on the clipboard as a _file_ — a screenshot — does not, because there is nowhere for the bytes to go until an application says where.
 
 ## Formatting
 
@@ -149,6 +149,16 @@ What is stored is the document before each change together with where the caret 
 
 A run of typing is **one step**, not one per keystroke — a `Mod`+`Z` that gives back one character at a time is one nobody presses twice. A change carries on from the one before it while it is the same kind of change, in the same place, within a moment of it. A syllable being composed counts as more of the same typing, because a Korean keyboard rewrites what it wrote on every jamo and none of those are separate thoughts. A line ending closes the run behind it: what is typed after `Enter` is the next thing the writer meant, and undo stops between the two.
 
+## Pasting
+
+**What is on the clipboard as HTML arrives as Markdown.** Copy a section of a web page into either surface and the headings are hashes, the links are links, the list is a list. Copy out of a word processor and the same is true.
+
+A clipboard with nothing but text on it is left to the browser. Its own paste is exactly right, and letting it happen keeps the caret, the scroll and the run of undo where they were.
+
+This is **not** the renderer run backwards, and the difference is the whole reason it is allowed to exist. Markup from somewhere else is read once, for whatever can be made of it; nothing round-trips through it. So it is allowed to be lossy and it is — a `<span style="color: red">` is its text, a `<video>` is nothing, an attribute nobody named is gone. Every URL goes through the same check a Markdown link gets, so a pasted `javascript:` link arrives as the words it was written with rather than as a link that does nothing.
+
+Inside a code block a paste is the plain text and nothing else. Everything in there is the characters it is, and a pasted heading is a line beginning with a hash.
+
 ## The status bar
 
 ```tsx
@@ -162,7 +172,6 @@ Two of those count more carefully than they look. **Characters** are code points
 ## Still to come
 
 - Input rules: the Markdown you type turning into what it means as you type it.
-- Paste: HTML in, Markdown out.
 - Images.
 - The extension point, so a document can carry a construct this package does not know about.
 

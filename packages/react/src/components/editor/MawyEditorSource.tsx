@@ -14,6 +14,7 @@ export interface MawyEditorSourceProps {
    * container hears nothing at all when the box inside it moves.
    */
   onScroll: () => void;
+  onPaste: React.ClipboardEventHandler<HTMLTextAreaElement>;
   gfm: boolean;
   lineNumbers: boolean;
   readOnly: boolean;
@@ -47,6 +48,7 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
       onSelect,
       onKeyDown,
       onScroll,
+      onPaste,
       gfm,
       lineNumbers,
       readOnly,
@@ -121,6 +123,7 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
           onScroll={scrolled}
           onSelect={onSelect}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
         />
       </div>
     );
