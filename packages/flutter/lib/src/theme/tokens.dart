@@ -6,10 +6,14 @@
 /// palette is copied rather than re-chosen, and a change to either is a change
 /// anyone can find in the other.
 ///
-/// An application that wants its own palette passes one. Nothing here is
-/// consulted through a global; a [MawyTokens] travels down the tree with the
-/// viewer that was given it, which is what lets one document be dark inside a
-/// light screen.
+/// Nothing here is consulted through a global. A [MawyTokens] is chosen from
+/// the brightness the viewer was told to draw at and handed down that viewer's
+/// own tree, which is what lets one document be dark inside a light screen.
+///
+/// It is exported for the application drawing its own chrome beside a document
+/// and wanting the same colours in it. There is no way to hand a viewer a
+/// palette of your own yet — the React package's `--mawy-*` custom properties
+/// have no counterpart here.
 library;
 
 import 'package:flutter/widgets.dart';
