@@ -9,7 +9,7 @@ Everything the package exports. Each entry says what it is, what it takes and wh
 
 ::: warning Early
 
-Nothing is published to npm yet and the API is not stable. The `wysiwyg` surface is the piece still to be built; everything on this page exists and runs.
+Nothing is published to npm yet and the API is not stable. The `wysiwyg` surface is partly built — see [the editor](../guide/editor#the-document-surface) for exactly which part. Everything else on this page exists and runs.
 
 :::
 
@@ -46,7 +46,7 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 | `onModeChange` | `(mode: MawyMode) => void` | — | Called whenever it changes. |
 | `modes` | `readonly MawyMode[]` | `['plain', 'split', 'preview']` | Which surfaces the switch offers. Give it one and the switch disappears. |
 
-`'wysiwyg'` is accepted and shows the source: the surface behind it is not built yet.
+`'wysiwyg'` is not on the default list. It draws the document and edits it in place, and it is partly built — pass it in `modes` to offer it.
 
 #### Chrome
 
@@ -127,7 +127,7 @@ type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 
 Which surface a document is shown on. These are views of one document rather than four editors — see [the editor](../guide/editor).
 
-- `'wysiwyg'` — the rendered document, edited in place. Not built yet; falls back to `plain`.
+- `'wysiwyg'` — the rendered document, edited in place. Partly built, and not on the default list.
 - `'plain'` — the Markdown source, edited as text.
 - `'preview'` — the rendered document, read-only.
 - `'split'` — the source on one side and the preview on the other, at once.

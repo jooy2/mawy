@@ -147,10 +147,16 @@ describe('the modes', () => {
     expect(screen.container.querySelector('.mawy-source')).toBeNull();
   });
 
-  it('shows the source for a surface that is not built yet', async () => {
+  it('draws the document itself on the wysiwyg surface', async () => {
     const screen = await render(<MawyEditor defaultValue={DOCUMENT} mode="wysiwyg" />);
 
-    expect(screen.container.querySelector('.mawy-source')).not.toBeNull();
+    expect(screen.container.querySelector('.mawy-source')).toBeNull();
+    await expect
+      .element(screen.getByRole('heading', { name: 'Title', level: 1 }))
+      .toBeInTheDocument();
+    expect(
+      screen.container.querySelector('.mawy-document-body')?.getAttribute('contenteditable')
+    ).toBe('true');
   });
 });
 
@@ -411,5 +417,229 @@ describe('the status bar', () => {
     const screen = await render(<MawyEditor defaultValue="a" modes={['plain']} status={false} />);
 
     expect(screen.container.querySelector('.mawy-status')).toBeNull();
+  });
+});
+
+/**
+ * The document, edited in place.
+ *
+ * Every assertion here goes through `beforeinput`, because that is the only way
+ * anything reaches this surface: the browser is refused and the event is turned
+ * into an edit to the Markdown, which is then parsed and drawn again. So what is
+ * being checked each time is the *string* that came out, which is the thing the
+ * application is given and the thing that has to be right.
+ */
+describe('the document surface', () => {
+  const bodyOf = (screen: { container: HTMLElement }) =>
+    screen.container.querySelector('.mawy-document-body') as HTMLElement;
+
+  /** Put the caret inside the run of text saying exactly this. */
+  function put(root: HTMLElement, saying: string, offset: number, through = offset): void {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if ((node as Text).data === saying) {
+        const range = document.createRange();
+        const selection = document.getSelection() as Selection;
+
+        range.setStart(node, offset);
+        range.setEnd(node, through);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        return;
+      }
+    }
+
+    if (saying === '') {
+      // A block with nothing in it has no run of text to put the caret inside,
+      // so the caret goes on the block.
+      const element = [...root.children].find((child) => !child.textContent);
+      const range = document.createRange();
+      const selection = document.getSelection() as Selection;
+
+      if (element) {
+        range.setStart(element, 0);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        return;
+      }
+    }
+
+    throw new Error(`no run saying ${JSON.stringify(saying)}`);
+  }
+
+  const type = (root: HTMLElement, inputType: string, data?: string) =>
+    root.dispatchEvent(
+      new InputEvent('beforeinput', { inputType, data, bubbles: true, cancelable: true })
+    );
+
+  it('types into a paragraph and into the middle of a bold run', async () => {
+    const onChange = vi.fn();
+    const source = 'One two.\n\nA **bold** word.';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One two.', 3);
+    type(body, 'insertText', ' and');
+
+    expect(onChange).toHaveBeenLastCalledWith('One and two.\n\nA **bold** word.');
+
+    // The surface reads the document it was last given, so the next edit is
+    // made against the one that is now drawn rather than the one that was.
+    await vi.waitFor(() => expect(bodyOf(screen).textContent).toContain('One and two.'));
+
+    put(bodyOf(screen), 'bold', 2);
+    type(bodyOf(screen), 'insertText', 'LD');
+
+    // Inside the asterisks, which is what the markers being part of the range
+    // rather than part of the text is for.
+    expect(onChange).toHaveBeenLastCalledWith('One and two.\n\nA **boLDld** word.');
+  });
+
+  it('replaces what was selected', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One two three.', 4, 7);
+    type(body, 'insertText', 'six');
+
+    expect(onChange).toHaveBeenLastCalledWith('One six three.');
+  });
+
+  it('deletes one drawn character, not one written one', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="A **bold** word." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    // The caret after `bold`, where the next character written is an asterisk
+    // and the next character drawn is the `d`.
+    put(body, 'bold', 4);
+    type(body, 'deleteContentBackward');
+
+    expect(onChange).toHaveBeenLastCalledWith('A **bol** word.');
+  });
+
+  it('joins a paragraph to the one above it when backspace starts it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'First.\n\n## Second'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'Second', 0);
+    type(body, 'deleteContentBackward');
+
+    // The blank line and the heading's own hashes both go, which is what joining
+    // two blocks means when one of them was a heading.
+    expect(onChange).toHaveBeenLastCalledWith('First.Second');
+  });
+
+  it('deletes forward, and across a block boundary', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'One.\n\nTwo.'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One.', 4);
+    type(body, 'deleteContentForward');
+
+    expect(onChange).toHaveBeenLastCalledWith('One.Two.');
+  });
+
+  it('splits a paragraph in two', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One two.', 4);
+    type(body, 'insertParagraph');
+
+    expect(onChange).toHaveBeenLastCalledWith('One \n\ntwo.');
+  });
+
+  it('leaves somewhere to type when Enter ends the document', async () => {
+    const screen = await render(<MawyEditor defaultValue="One." mode="wysiwyg" />);
+
+    put(bodyOf(screen), 'One.', 4);
+    type(bodyOf(screen), 'insertParagraph');
+
+    // Markdown cannot write an empty paragraph, so the surface draws one for as
+    // long as the caret is in it. Without it Enter would look like it did
+    // nothing at all.
+    await vi.waitFor(() => {
+      const blocks = [...bodyOf(screen).children];
+
+      expect(blocks).toHaveLength(2);
+      expect(blocks[1].textContent).toBe('');
+    });
+  });
+
+  it('draws an empty document as somewhere to start', async () => {
+    const onChange = vi.fn();
+    const screen = await render(<MawyEditor mode="wysiwyg" onChange={onChange} />);
+    const body = bodyOf(screen);
+
+    expect(body.children).toHaveLength(1);
+
+    put(body, '', 0);
+    type(body, 'insertText', 'Hello');
+
+    expect(onChange).toHaveBeenLastCalledWith('Hello');
+  });
+
+  it('refuses an edit it has no rule for yet', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'- one\n- two'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'one', 3);
+    type(body, 'insertText', '!');
+
+    // A list is drawn and read but not yet edited, and the answer to that is
+    // nothing rather than something half-right.
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('runs a toolbar command on the caret it has', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'One two three.', 4, 7);
+
+    await screen.getByRole('button', { name: 'Bold' }).click();
+
+    expect(onChange).toHaveBeenLastCalledWith('One **two** three.');
+  });
+
+  it('does not change a read-only document', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two." mode="wysiwyg" readOnly onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    expect(body.getAttribute('contenteditable')).not.toBe('true');
+
+    put(body, 'One two.', 4);
+    type(body, 'insertText', 'x');
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

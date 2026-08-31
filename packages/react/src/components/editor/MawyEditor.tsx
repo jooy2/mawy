@@ -24,11 +24,13 @@ import {
   type EditState,
   type MawyCommand
 } from '../../internal/commands.js';
-import { caretFromPoint, sourceAt } from '../../internal/position.js';
+import type { MawyEdit } from '../../internal/editing.js';
+import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
 import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
+import { MawyEditorDocument } from './MawyEditorDocument.js';
 import { MawyEditorSource } from './MawyEditorSource.js';
 
 /** What the editor offers until an application says otherwise. */
@@ -155,8 +157,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
   const [selection, setSelection] = React.useState({ start: 0, end: 0 });
   const source = React.useRef<HTMLTextAreaElement>(null);
+  const drawn = React.useRef<HTMLElement>(null);
   const preview = React.useRef<HTMLDivElement>(null);
   const pending = React.useRef<[number, number] | null>(null);
+  /** Where an empty paragraph is being drawn, because the caret is in it. */
+  const [room, setRoom] = React.useState<number | null>(null);
 
   const notify = React.useRef(onChange);
 
@@ -179,11 +184,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * Which surfaces are on screen
    * ------------------------------------------------------------------ */
 
-  // `wysiwyg` is on the list of modes but has nothing behind it yet, so it
-  // shows the source rather than an empty pane.
-  const showSource = current !== 'preview';
+  const showSource = current === 'plain' || current === 'split';
+  const showDocument = current === 'wysiwyg';
   const showPreview = current === 'preview' || current === 'split';
-  const editable = showSource && !readOnly;
+  const editable = (showSource || showDocument) && !readOnly;
 
   const items: readonly MawyEditorToolbarItem[] =
     toolbar === false ? [] : toolbar === true ? DEFAULT_EDITOR_TOOLBAR : toolbar;
@@ -217,9 +221,57 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     return () => document.removeEventListener('selectionchange', readSelection);
   }, [showSource, readSelection]);
 
+  /** What the caret is reported as while the drawn document has it. */
+  const readDrawnSelection = React.useCallback((next: { start: number; end: number }) => {
+    setSelection(next);
+    // The empty paragraph is only there while the caret is in it.
+    setRoom((was) => (was === null || (next.start === was && next.end === was) ? was : null));
+  }, []);
+
+  /**
+   * An edit made in the drawn document: the Markdown changes, and where the
+   * caret should be once it has been parsed and drawn again is remembered until
+   * it has been.
+   */
+  const applyEdit = React.useCallback(
+    (edit: MawyEdit) => {
+      pending.current = [edit.caret, edit.caret];
+      setRoom(edit.betweenBlocks ? edit.caret : null);
+      write(edit.value);
+    },
+    [write]
+  );
+
   React.useLayoutEffect(() => {
-    if (pending.current && source.current) {
-      source.current.setSelectionRange(pending.current[0], pending.current[1]);
+    if (!pending.current) {
+      return;
+    }
+
+    const [start, end] = pending.current;
+
+    if (showDocument) {
+      const element = drawn.current;
+      const head = element && domAt(element, start, text);
+      const tail = element && (start === end ? head : domAt(element, end, text));
+
+      if (!element || !head || !tail) {
+        return;
+      }
+
+      const range = element.ownerDocument.createRange();
+      const selection_ = element.ownerDocument.getSelection();
+
+      range.setStart(head.node, head.offset);
+      range.setEnd(tail.node, tail.offset);
+      selection_?.removeAllRanges();
+      selection_?.addRange(range);
+      pending.current = null;
+
+      return;
+    }
+
+    if (source.current) {
+      source.current.setSelectionRange(start, end);
       pending.current = null;
       readSelection();
     }
@@ -295,39 +347,68 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [readSelection, write]
   );
 
-  const command = React.useCallback(
-    (name: MawyCommand) => {
-      const element = source.current;
+  /**
+   * A command's result, put back through whichever surface has the caret.
+   *
+   * The commands themselves are pure functions of `{ value, start, end }` and
+   * know nothing about either surface, which is what lets the whole toolbar
+   * work on the drawn document without a second implementation of any of it.
+   */
+  const run = React.useCallback(
+    (before: EditState, after: EditState) => {
+      if (!showDocument) {
+        apply(before, after);
 
-      if (!element || readOnly) {
         return;
       }
 
-      const before: EditState = {
-        value: text,
-        start: element.selectionStart,
-        end: element.selectionEnd
-      };
-
-      apply(before, runCommand(name, before));
+      pending.current = [after.start, after.end];
+      setRoom(null);
+      write(after.value);
     },
-    [apply, readOnly, text]
+    [apply, showDocument, write]
   );
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  /** The document and the caret, as whichever surface has it reports them. */
+  const stateNow = React.useCallback((): EditState | null => {
+    if (showDocument) {
+      return { value: text, start: selection.start, end: selection.end };
+    }
+
+    const element = source.current;
+
+    return element
+      ? { value: text, start: element.selectionStart, end: element.selectionEnd }
+      : null;
+  }, [showDocument, text, selection]);
+
+  const command = React.useCallback(
+    (name: MawyCommand) => {
+      const before = readOnly ? null : stateNow();
+
+      if (before) {
+        run(before, runCommand(name, before));
+      }
+    },
+    [readOnly, run, stateNow]
+  );
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented || readOnly) {
       return;
     }
 
-    const element = event.currentTarget;
-    const state: EditState = {
-      value: text,
-      start: element.selectionStart,
-      end: element.selectionEnd
-    };
+    const state = stateNow();
+
+    if (!state) {
+      return;
+    }
 
     if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey) {
-      const next = continueList(state);
+      // Carrying a list marker down is a thing done to a line of Markdown. In
+      // the drawn document `Enter` is an `insertParagraph` the surface answers
+      // for, and a list is not something it can edit yet either way.
+      const next = showDocument ? null : continueList(state);
 
       if (next) {
         event.preventDefault();
@@ -344,7 +425,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     if (event.shiftKey) {
       if (event.key.toLowerCase() === 'x') {
         event.preventDefault();
-        apply(state, runCommand('strikethrough', state));
+        run(state, runCommand('strikethrough', state));
       }
 
       return;
@@ -354,7 +435,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     if (name) {
       event.preventDefault();
-      apply(state, runCommand(name, state));
+      run(state, runCommand(name, state));
     }
   };
 
@@ -531,6 +612,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           </div>
         ) : null}
 
+        {showDocument ? (
+          <div className="mawy-editor-pane">
+            <MawyEditorDocument
+              ref={drawn}
+              value={text}
+              onEdit={applyEdit}
+              onSelect={readDrawnSelection}
+              onKeyDown={onKeyDown}
+              readOnly={readOnly}
+              label={strings.document}
+              placeholder={placeholder ?? strings.editorPlaceholder}
+              parse={parse}
+              html={html}
+              strings={strings}
+              room={room}
+            />
+          </div>
+        ) : null}
+
         {showPreview ? (
           <div
             className="mawy-editor-pane mawy-editor-preview"
@@ -553,7 +653,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         ) : null}
       </div>
 
-      {statusItems.length && showSource ? (
+      {statusItems.length && (showSource || showDocument) ? (
         <MawyEditorStatus
           value={text}
           selection={selection}

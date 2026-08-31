@@ -1119,6 +1119,37 @@
   color: var(--mawy-fg);
 }
 
+/* The document, edited in place ------------------------------------------- */
+
+.mawy-root .mawy-document {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.mawy-root .mawy-document-body {
+  outline: none;
+}
+
+.mawy-root .mawy-document-body:focus-visible {
+  outline: 2px solid var(--mawy-accent);
+  outline-offset: -4px;
+  border-radius: var(--mawy-radius-md);
+}
+
+/* A block with nothing in it is still somewhere the caret has to be able to
+ * go, and a box of no height is nowhere on the screen for it to sit. */
+.mawy-root .mawy-document-body :is(p, h1, h2, h3, h4, h5, h6):empty {
+  min-height: calc(1em * var(--mawy-doc-line-height));
+}
+
+.mawy-root .mawy-document-body > p:only-child:empty::before {
+  content: var(--mawy-placeholder, '');
+  color: var(--mawy-fg-subtle);
+  pointer-events: none;
+}
+
 /* The source surface ------------------------------------------------------ */
 
 .mawy-root .mawy-source {

@@ -25,12 +25,12 @@ Here the document is a string of Markdown and every surface is a way of looking 
 
 ## Modes
 
-| Mode        | Editable | Shows                                |
-| ----------- | -------- | ------------------------------------ |
-| `'plain'`   | Yes      | The Markdown source                  |
-| `'preview'` | No       | The rendered document                |
-| `'split'`   | Yes      | Both, side by side                   |
-| `'wysiwyg'` | —        | Not built yet; falls back to `plain` |
+| Mode        | Editable | Shows                           |
+| ----------- | -------- | ------------------------------- |
+| `'plain'`   | Yes      | The Markdown source             |
+| `'preview'` | No       | The rendered document           |
+| `'split'`   | Yes      | Both, side by side              |
+| `'wysiwyg'` | In part  | The rendered document, in place |
 
 `modes` decides which of them the toolbar offers, and the switch disappears when there is only one:
 
@@ -57,6 +57,33 @@ Everything that decides where a character lands — font, size, line height, let
 The syntax colouring is Mawy's own parser's vocabulary, but not Mawy's own parser. A line being typed is half-written most of the time, and a highlighter that waited for `**bold` to be closed before admitting anything was happening would flicker on every keystroke — so it reads a line at a time, approximately, and deliberately says nothing about an unfinished marker.
 
 `lineNumbers` turns the gutter off. It is on by default, and the numbers stay lined up with soft-wrapped text because both layers are one grid rather than two stacks of rows.
+
+## The document surface
+
+`wysiwyg` draws the document and lets you edit it where it is drawn. It is **partly built**, and what follows is exactly which part.
+
+<MawyDemo name="editor/document" />
+
+There is no second model behind it. What is on screen is a drawing of the Markdown and the Markdown is what is true: every keystroke is refused, turned into an edit to that string, and the document is drawn again from whatever the string became. Nothing is ever read back out of the tree the browser wanted to change. There is no DOM-to-Markdown serialiser in this package and there is not going to be one — a second implementation is a second opinion about what a document means, and the two disagree the first time anybody writes something unusual.
+
+It is not on `modes` by default. An application asks for it:
+
+```tsx
+<MawyEditor defaultValue={document} modes={['wysiwyg', 'plain']} />
+```
+
+What works: typing and deleting inside a paragraph or a heading, splitting one with `Enter`, joining two with `Backspace` at the start of the second, `Shift`+`Enter` for a hard break, replacing a selection, and every command on the toolbar — those are pure functions of the source and its selection, so they needed nothing new to work here.
+
+Edits land on the **drawn** character rather than the written one, and that is the difference the whole surface turns on. The caret after `bold` in `**bold**` has an asterisk in front of it in the file and a `d` in front of it on the page. `Backspace` there takes the `d`.
+
+`Enter` at the end of a paragraph is the one place the file cannot say what the screen needs to. Markdown has no empty paragraph: a blank line separates two blocks and a second blank line separates the same two. So the surface draws one anyway, in that one place, for as long as the caret is in it — and the moment anything is typed the blank line is doing the work and the paragraph is real.
+
+What does not work yet, and does nothing at all rather than something half-right:
+
+- **Lists, quotations, tables and code blocks.** They draw and they read; an edit inside one is refused, because the rule for writing that edit back is not written.
+- **Composition.** An IME is the next thing to build here. Until it is, Korean, Japanese and Chinese input belong on the `plain` surface, which keeps the browser's own.
+- **`Cmd`/`Ctrl` + `Z`.** The source surface uses the browser's undo stack, which a `contenteditable` that refuses every input does not get to keep. A history over the source string, shared by both surfaces, is what replaces it.
+- **Pasting, dropping and images.**
 
 ## Formatting
 
@@ -108,7 +135,7 @@ Two of those count more carefully than they look. **Characters** are code points
 
 ## Still to come
 
-- The `wysiwyg` surface — editing the rendered document in place.
+- The rest of the `wysiwyg` surface: lists, quotations, tables and code blocks; composition; undo; paste.
 - Input rules: the Markdown you type turning into what it means as you type it.
 - Paste: HTML in, Markdown out.
 - Images.

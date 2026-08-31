@@ -109,12 +109,68 @@ export function sourceAt(root: Element, node: Node, offset: number, text: string
     return offset === 0 ? own.start : own.end;
   }
 
+  return Math.min(textStartOf(host, node, text) + offset, range.end);
+}
+
+/** Where a run of text begins in the document. */
+function textStartOf(host: Element, node: Node, text: string): number {
+  const range = rangeOf(host) as MdRange;
   const value = (node as Text).data;
   const floor = floorFor(host, node, range.start);
   const found = text.indexOf(value, floor);
-  const at = found !== -1 && found + value.length <= range.end ? found : floor;
 
-  return Math.min(at + offset, range.end);
+  return found !== -1 && found + value.length <= range.end ? found : floor;
+}
+
+/**
+ * The place on the page a position in the document is drawn at — `sourceAt`
+ * read the other way, which is how a caret survives the document being parsed
+ * and drawn again underneath it.
+ *
+ * The search is narrowed to the innermost element whose range holds the offset
+ * before any text is looked at, so an edit in a long document does not walk it.
+ * A position that falls inside markup rather than inside anything drawn — the
+ * `**` of a bold run — comes back as the nearest place before it, which is
+ * where a caret can actually go.
+ */
+export function domAt(
+  root: Element,
+  offset: number,
+  text: string
+): { node: Node; offset: number } | null {
+  let host: Element = root;
+
+  for (const element of root.querySelectorAll('[data-mawy-range]')) {
+    const range = rangeOf(element);
+
+    if (range && range.start <= offset && offset <= range.end && host.contains(element)) {
+      host = element;
+    }
+  }
+
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+  let fallback: { node: Node; offset: number } | null = null;
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const inside = hostOf(root, node);
+
+    if (!inside) {
+      continue;
+    }
+
+    const start = textStartOf(inside, node, text);
+    const value = (node as Text).data;
+
+    if (offset >= start && offset <= start + value.length) {
+      return { node, offset: offset - start };
+    }
+
+    if (start <= offset) {
+      fallback = { node, offset: value.length };
+    }
+  }
+
+  return fallback ?? (host === root ? null : { node: host, offset: 0 });
 }
 
 /** The character a point on the page is over, in whichever way the browser has. */

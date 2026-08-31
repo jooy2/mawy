@@ -13,7 +13,7 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
 > [!IMPORTANT]
-> **Mawy is in early development, and most of it works.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested. What is left is the `wysiwyg` surface — editing the rendered document in place. Nothing is published to npm yet, and the API is not stable.
+> **Mawy is in early development, and most of it works.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested. The `wysiwyg` surface — editing the drawn document in place — is partly built: paragraphs and headings can be typed in, split and joined, and everything else is refused rather than half-done. Nothing is published to npm yet, and the API is not stable.
 
 ## Why Mawy
 

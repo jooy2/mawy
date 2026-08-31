@@ -14,7 +14,8 @@
  * change of view, and the value underneath does not round-trip through a second
  * implementation on the way.
  *
- * - `wysiwyg` — the rendered document, edited in place. Not built yet.
+ * - `wysiwyg` — the rendered document, edited in place. Partly built: the text
+ *   of paragraphs and headings, and nothing else yet. Not on the default list.
  * - `plain` — the Markdown source, edited as text.
  * - `preview` — the rendered document, read-only.
  * - `split` — the source on one side and the preview on the other, at once.
