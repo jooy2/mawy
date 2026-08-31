@@ -80,6 +80,23 @@ const keys = (element: HTMLElement, key: string, shift = false) =>
     })
   );
 
+/**
+ * A `paste`, carrying this clipboard.
+ *
+ * Firefox throws the `clipboardData` handed to the constructor away and hands
+ * the event an empty transfer of its own, so the clipboard goes on afterwards
+ * as an own property, which shadows the getter in every browser.
+ */
+function clipboardEvent(clipboard: DataTransfer): ClipboardEvent {
+  const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+
+  if (event.clipboardData !== clipboard) {
+    Object.defineProperty(event, 'clipboardData', { value: clipboard, configurable: true });
+  }
+
+  return event;
+}
+
 describe('the source surface', () => {
   it('draws a line number for every line, and a coloured copy of every line', async () => {
     const screen = await render(<MawyEditor defaultValue={DOCUMENT} modes={['plain']} />);
@@ -1160,11 +1177,7 @@ describe('pasting', () => {
       clipboard.setData(kind, value);
     }
 
-    const event = new ClipboardEvent('paste', {
-      clipboardData: clipboard,
-      bubbles: true,
-      cancelable: true
-    });
+    const event = clipboardEvent(clipboard);
 
     element.dispatchEvent(event);
 
@@ -1268,11 +1281,7 @@ describe('images', () => {
   }
 
   function pasteFiles(element: HTMLElement, files: File[], kinds: Record<string, string> = {}) {
-    const event = new ClipboardEvent('paste', {
-      clipboardData: carrying(files, kinds),
-      bubbles: true,
-      cancelable: true
-    });
+    const event = clipboardEvent(carrying(files, kinds));
 
     element.dispatchEvent(event);
 

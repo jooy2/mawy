@@ -296,6 +296,13 @@ describe('the toolbar', () => {
 describe('typefaces', () => {
   const links = () => [...document.querySelectorAll('link[data-mawy-font]')];
 
+  // Which quote goes around a family name is the browser's to choose, and the
+  // three do not agree: WebKit rewrites `'` as `"` on the way back out of a
+  // custom property, and Firefox keeps the quotes that Chromium and WebKit drop
+  // off a `font-family`. The stack is what is being checked, not the
+  // punctuation, so the punctuation goes.
+  const unquoted = (value: string) => value.replace(/['"]/g, '');
+
   it('offers the three the machine already has, and fetches nothing', async () => {
     const before = links().length;
     const screen = await render(<MawyViewer value={SAMPLE} toolbar={['fontFamily']} />);
@@ -322,7 +329,7 @@ describe('typefaces', () => {
     await screen.getByRole('button', { name: 'Typeface' }).click();
     await screen.getByRole('radio', { name: 'Quire' }).click();
 
-    expect(root.style.getPropertyValue('--mawy-doc-font')).toBe("'Quire', serif");
+    expect(unquoted(root.style.getPropertyValue('--mawy-doc-font'))).toBe('Quire, serif');
   });
 
   it('shows every name in its own face', async () => {
@@ -335,9 +342,7 @@ describe('typefaces', () => {
 
     const option = screen.container.querySelector('[role="radio"]') as HTMLElement;
 
-    // Read back through the browser, which drops the quotes around a family
-    // name that did not need them.
-    expect(option.style.fontFamily).toBe('Quire, serif');
+    expect(unquoted(option.style.fontFamily)).toBe('Quire, serif');
   });
 
   it('fetches a web font once the document is set in it', async () => {
@@ -380,7 +385,7 @@ describe('typefaces', () => {
     );
     const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
 
-    expect(root.style.getPropertyValue('--mawy-doc-font')).toBe("'Quire', serif");
+    expect(unquoted(root.style.getPropertyValue('--mawy-doc-font'))).toBe('Quire, serif');
   });
 
   it('ships a catalogue that is all open-licensed and all over https', () => {
