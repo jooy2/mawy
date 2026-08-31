@@ -71,7 +71,35 @@ CommonMark, and GitHub's additions on top of it:
 - **`gfm`** (default `true`) — GitHub's additions. Off, a `|` is a pipe and `~~` is four tildes.
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. Markdown says it is not. Chat clients and issue trackers say it is, which is what a reader who has never written Markdown expects, and the reason this is an option rather than a decision.
 
-Syntax highlighting is not here yet. It is the standing example of a place a third-party library is worth a dependency, and it will arrive behind an interface so an application that does not want it does not pay for it.
+## Colouring a code block
+
+Nothing is coloured by default, and that is not an omission. A highlighter is the largest thing a Markdown renderer can be made to carry, and most documents have nothing in them to colour — so it is a prop, and the prop takes a **function** so that nothing is even fetched until a document with a language on a fence is drawn:
+
+```tsx
+<MawyViewer
+  value={document}
+  highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+/>
+```
+
+`mawy/highlight` is a separate entry point, so an application that never mentions it never ships it. What is in it is Mawy's own highlighter, for the languages a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
+
+For anything more than that, `MawyHighlighter` is the whole interface and Shiki or Prism behind it is a few lines:
+
+```tsx
+const shiki: MawyHighlighter = {
+  supports: (language) => languages.includes(language),
+  highlight: async (code, language) => toMawyTokens(await codeToTokens(code, { lang: language }))
+};
+```
+
+It is **tokens rather than markup**, and that is the same decision the rest of the library rests on. What a highlighter hands back is text and names — `keyword`, `string`, `comment`, and ten more — and this package decides what element each becomes, so nothing reaches the page as a string of HTML and a highlighter cannot put a `<script>` in a document by being wrong. A name the list does not have is drawn as plain text.
+
+The one thing a highlighter has to promise is that its tokens **are** the code. What comes back is joined together and checked against what went in, and a block whose tokens do not add up is drawn plain — colour is not worth a page that says something the document does not.
+
+Each coloured piece says where it came from, like everything else the viewer draws, so a click in the middle of a code block still finds the character it landed on.
+
+The colours themselves are eight custom properties — `--mawy-hl-comment`, `--mawy-hl-string`, `--mawy-hl-number`, `--mawy-hl-keyword`, `--mawy-hl-type`, `--mawy-hl-function`, `--mawy-hl-variable`, `--mawy-hl-punctuation` — declared on `.mawy-root` in both palettes and yours to redeclare.
 
 ## Safety
 
@@ -231,6 +259,5 @@ Text is the one thing with no range on it, having no attributes to put one in. I
 
 ## Still to come
 
-- Syntax-highlighted code blocks, behind an interface.
 - Footnotes, and the definition list syntax.
 - An extension point, so a document can carry a construct this package does not know about.

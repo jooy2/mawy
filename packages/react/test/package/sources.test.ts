@@ -36,6 +36,30 @@ describe('reading source as text', () => {
     expect(specifiersIn(source)).toEqual(['./real.js']);
   });
 
+  it('does not read a quote inside a regular expression as a string', () => {
+    // A highlighter is full of these, and without knowing what a regex literal
+    // is, the `"` below opens a string that runs to the next one in the file —
+    // taking everything between it and there out of the reckoning.
+    const source = ['const STRING = /"(?:\\\\.|[^"])*"/y;', "import { a } from './real.js';"].join(
+      '\n'
+    );
+
+    expect(specifiersIn(source)).toEqual(['./real.js']);
+  });
+
+  it("does not read a list of a language's keywords as an import", () => {
+    // `from`, a space and a quote is the shape of an import and also the shape
+    // of the end of a line of prose. A specifier is what tells them apart: it
+    // has no whitespace in it.
+    const source = [
+      "const KEYWORDS = 'else except finally for from ' +",
+      "  'global if import in is lambda';",
+      "import './real.js';"
+    ].join('\n');
+
+    expect(specifiersIn(source)).toEqual(['./real.js']);
+  });
+
   it('still sees every form of a real import', () => {
     const source = [
       "import a from 'one';",

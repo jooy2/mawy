@@ -16,7 +16,12 @@
  */
 
 import * as React from 'react';
-import type { MawyHtmlPolicy } from '../../types.js';
+import type {
+  MawyCodeToken,
+  MawyCodeTokenKind,
+  MawyHighlighter,
+  MawyHtmlPolicy
+} from '../../types.js';
 import type { MdBlock, MdCode, MdInline, MdListItem, MdRange, MdTableRow } from './ast.js';
 import { sanitizeHtml } from './html.js';
 import type { MawyStrings } from '../i18n.js';
@@ -34,6 +39,12 @@ import { useCopy } from '../clipboard.js';
 export interface RenderContext {
   html: MawyHtmlPolicy;
   strings: MawyStrings;
+  /**
+   * What colours a code block, once it has arrived. `null` while it is being
+   * fetched, and for ever in an application that never asked for one — in both
+   * of which the code is drawn as the text it is.
+   */
+  highlighter?: MawyHighlighter | null;
 }
 
 /**
@@ -181,6 +192,181 @@ const ALERT_ICONS = {
   caution: CautionIcon
 };
 
+/** The kinds a token is allowed to be. Anything else is drawn as plain text. */
+const CODE_TOKEN_KINDS = new Set<string>([
+  'comment',
+  'string',
+  'regex',
+  'number',
+  'constant',
+  'keyword',
+  'type',
+  'function',
+  'variable',
+  'attribute',
+  'tag',
+  'operator',
+  'punctuation'
+]);
+
+/**
+ * Tokens, checked against the code they claim to be.
+ *
+ * A highlighter that drops a character or invents one would have the page
+ * showing something the document does not say, and the `data-mawy-range` on the
+ * element saying it came from characters it did not. Colour is not worth that,
+ * so tokens that do not join back into the code exactly are thrown away and the
+ * block is drawn plain.
+ */
+function checkedTokens(tokens: MawyCodeToken[] | null, code: string): MawyCodeToken[] | null {
+  return tokens && tokens.map((token) => token.text).join('') === code ? tokens : null;
+}
+
+/**
+ * Where each token sits in the document.
+ *
+ * A coloured code block is a row of elements where there used to be one run of
+ * text, and an element that does not say where it came from is a hole in the
+ * one promise the renderer makes about all of them. The code's own line offsets
+ * are what closes it: a token knows which line it starts on and how far into it,
+ * and the parser wrote down where each of those lines is.
+ */
+function tokenRanges(tokens: MawyCodeToken[], lines: number[]): (MdRange | null)[] {
+  const out: (MdRange | null)[] = [];
+  let line = 0;
+  let column = 0;
+
+  for (const token of tokens) {
+    const fromLine = lines[line];
+    const fromColumn = column;
+
+    for (let at = 0; at < token.text.length; at += 1) {
+      if (token.text[at] === '\n') {
+        line += 1;
+        column = 0;
+      } else {
+        column += 1;
+      }
+    }
+
+    const toLine = lines[line];
+
+    out.push(
+      fromLine === undefined || toLine === undefined
+        ? null
+        : { start: fromLine + fromColumn, end: toLine + column }
+    );
+  }
+
+  return out;
+}
+
+function CodeText({
+  tokens,
+  code,
+  lines
+}: {
+  tokens: MawyCodeToken[] | null;
+  code: string;
+  lines: number[];
+}): React.ReactNode {
+  if (!tokens) {
+    return code;
+  }
+
+  const ranges = tokenRanges(tokens, lines);
+
+  return tokens.map((token, index) => {
+    if (!token.kind || !CODE_TOKEN_KINDS.has(token.kind)) {
+      return token.text;
+    }
+
+    const range = ranges[index];
+
+    return (
+      <span
+        key={index}
+        className={`mawy-hl-${token.kind as MawyCodeTokenKind}`}
+        {...(range ? origin({ range }) : {})}
+      >
+        {token.text}
+      </span>
+    );
+  });
+}
+
+/**
+ * What a highlighter makes of a code block, if there is one and it knows the
+ * language.
+ *
+ * The first attempt is made while rendering rather than in an effect, so a
+ * highlighter that answers straight away colours the block on the first paint
+ * and on a server — no flash of plain code, and nothing extra to hydrate. One
+ * that answers with a promise gets the block drawn plain and coloured when it
+ * arrives.
+ */
+function useHighlighted(
+  block: MdCode,
+  highlighter: MawyHighlighter | null
+): MawyCodeToken[] | null {
+  const { value, lang } = block;
+
+  const attempt = React.useMemo(() => {
+    if (!highlighter || !lang || !value) {
+      return null;
+    }
+
+    try {
+      return highlighter.supports(lang) ? highlighter.highlight(value, lang) : null;
+    } catch {
+      // A highlighter is somebody else's code running inside a render. It is
+      // allowed to be wrong; it is not allowed to take the document down.
+      return null;
+    }
+  }, [highlighter, lang, value]);
+
+  // What arrived, and which attempt it arrived for. Kept together so that an
+  // answer to a question nobody is asking any more is ignored rather than
+  // cleared: clearing it would be a second render for a value already thrown
+  // away, and the check below would have refused it anyway.
+  const [answer, setAnswer] = React.useState<{
+    to: Promise<MawyCodeToken[]>;
+    tokens: MawyCodeToken[];
+  } | null>(null);
+
+  React.useEffect(() => {
+    if (!attempt || Array.isArray(attempt)) {
+      return;
+    }
+
+    let live = true;
+
+    void attempt.then(
+      (tokens) => {
+        if (live) {
+          setAnswer({ to: attempt, tokens });
+        }
+      },
+      () => {
+        // A highlighter that will not answer is a code block without colour,
+        // which is the state it is already in.
+      }
+    );
+
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  const tokens = Array.isArray(attempt)
+    ? attempt
+    : answer && answer.to === attempt
+      ? answer.tokens
+      : null;
+
+  return checkedTokens(tokens, value);
+}
+
 function CodeBlock({
   block,
   context
@@ -191,6 +377,7 @@ function CodeBlock({
   const { value, lang } = block;
   const [state, copy] = useCopy();
   const Icon = state === 'copied' ? CheckIcon : CopyIcon;
+  const tokens = useHighlighted(block, context.highlighter ?? null);
 
   return (
     <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined} {...origin(block)}>
@@ -202,7 +389,7 @@ function CodeBlock({
           className={lang ? `mawy-md-lang language-${lang}` : 'mawy-md-lang'}
           {...origin({ range: block.content })}
         >
-          {value}
+          <CodeText tokens={tokens} code={value} lines={block.lines} />
         </code>
       </pre>
       <button

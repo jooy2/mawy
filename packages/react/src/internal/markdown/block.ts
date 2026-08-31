@@ -449,6 +449,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         type: 'code',
         range,
         content: { start: from, end: body.length ? lineEnd(body[body.length - 1]) : from },
+        lines: body.map((each) => each.start),
         // A backtick in an info string is not a language, it is an unclosed
         // span that happens to sit on the fence line.
         lang: words[0] && !words[0].includes('`') ? words[0] : null,
@@ -653,6 +654,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
           start: body[0]?.start ?? lines[opened].start,
           end: lineEnd(body[body.length - 1] ?? lines[opened])
         },
+        lines: body.map((each) => each.start),
         lang: null,
         meta: null,
         value: body.map((each) => each.text).join('\n')

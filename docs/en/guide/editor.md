@@ -182,6 +182,19 @@ Answer with the URL to write, or with `{ url, alt, title }` to say what goes aro
 
 Where the image lands is where it was put: a drop goes to the point the pointer let go of it, and a paste goes to the caret. Several files dropped together are one upload after another and then **one** edit, so `Mod`+`Z` takes back the thing you did rather than the last file of it.
 
+## Colour in the preview
+
+`highlight` is passed straight through to the viewer inside the preview, so a `split` or `preview` surface colours its code the way [the viewer does](./viewer#colouring-a-code-block) — including the lazy form, which is the one to use:
+
+```tsx
+<MawyEditor
+  defaultValue={document}
+  highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+/>
+```
+
+The **drawn document is not coloured**, and will not be. The source surface has a highlighter of its own for the Markdown; the drawn one is a place where every caret has to find its way back into the source, and a second opinion about what the characters inside a code block are is not worth what it would cost there.
+
 ## Undo
 
 `Mod`+`Z` goes back, `Mod`+`Shift`+`Z` comes forward again, and `Ctrl`+`Y` is the same thing where Windows put it. The history is **one list for the whole editor** rather than one per surface.

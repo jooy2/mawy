@@ -164,6 +164,73 @@ export interface MawyFont {
 }
 
 /**
+ * What a piece of code turns out to be.
+ *
+ * A closed list, and closed on purpose: a token's kind becomes a class name on
+ * an element the renderer draws, so a highlighter cannot invent one — the same
+ * rule that keeps a parsed document from becoming an element nobody decided to
+ * draw. A kind this does not name is drawn as the plain text it is.
+ */
+export type MawyCodeTokenKind =
+  | 'comment'
+  | 'string'
+  | 'regex'
+  | 'number'
+  | 'constant'
+  | 'keyword'
+  | 'type'
+  | 'function'
+  | 'variable'
+  | 'attribute'
+  | 'tag'
+  | 'operator'
+  | 'punctuation';
+
+/** One run of a code block, and what it is. */
+export interface MawyCodeToken {
+  text: string;
+  /** `null` for a run that is nothing in particular. */
+  kind: MawyCodeTokenKind | null;
+}
+
+/**
+ * Something that can colour a code block.
+ *
+ * Tokens rather than markup, which is the whole shape of it: what a highlighter
+ * hands back is text and names, and the renderer decides what element that
+ * becomes. Nothing reaches the page as a string of HTML, here as anywhere else
+ * in this library, and a highlighter cannot put a `<script>` in a document by
+ * being wrong.
+ *
+ * The one thing a highlighter has to promise is that its tokens *are* the code:
+ * joining every `text` back together has to give back exactly what it was
+ * given. What it hands back is checked against that, and a code block that
+ * fails the check is drawn plain — colour is not worth a document that says
+ * something else.
+ */
+export interface MawyHighlighter {
+  /** Whether it has anything to say about this language. */
+  supports(language: string): boolean;
+  /**
+   * The code, taken apart. May be answered later — a highlighter that has to
+   * fetch a grammar first is the usual reason — in which case the block is
+   * drawn plain until it arrives.
+   */
+  highlight(code: string, language: string): MawyCodeToken[] | Promise<MawyCodeToken[]>;
+}
+
+/**
+ * A highlighter, or the way to get one.
+ *
+ * A function is what makes it lazy, and lazy is the point: pass
+ * `() => import('mawy/highlight').then((module) => module.mawyHighlighter())`
+ * and nothing is fetched until a document with a fenced code block *and* a
+ * language on the fence is actually drawn. A reader who never opens one never
+ * pays for it, and an application that never sets the prop never ships it.
+ */
+export type MawyHighlight = MawyHighlighter | (() => MawyHighlighter | Promise<MawyHighlighter>);
+
+/**
  * How wide the text is allowed to run.
  *
  * A line that is too long is the failure that arrives with a larger text size:

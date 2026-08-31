@@ -29,6 +29,7 @@
      */
     "paths": {
       "mawy": ["../packages/react/src/index.ts"],
+      "mawy/highlight": ["../packages/react/src/highlight.ts"],
       "react": ["./node_modules/@types/react"],
       "react/*": ["./node_modules/@types/react/*"],
       "react-dom": ["./node_modules/@types/react-dom"],

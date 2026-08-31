@@ -95,6 +95,13 @@ export function measureAnchors(
   const anchors: MawyScrollAnchor[] = [{ from: 0, to: 0 }];
 
   for (const element of blocks) {
+    // Nothing inside a code block is an anchor. The block itself is one, and a
+    // coloured one is a few hundred elements that all start on lines the block
+    // already covers — every one of them a layout read for nothing.
+    if (element.closest('pre')) {
+      continue;
+    }
+
     const start = Number.parseInt(element.dataset.mawyRange ?? '', 10);
     const row = Number.isFinite(start) ? rows[lineAt(starts, start)] : undefined;
 

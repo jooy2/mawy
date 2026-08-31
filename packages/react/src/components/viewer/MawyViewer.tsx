@@ -4,6 +4,7 @@ import * as React from 'react';
 import type {
   MawyColorScheme,
   MawyFont,
+  MawyHighlight,
   MawyHtmlPolicy,
   MawyLocale,
   MawyParseOptions,
@@ -18,6 +19,7 @@ import { useControlled } from '../../internal/controlled.js';
 import { stringsFor } from '../../internal/i18n.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { renderBlocks } from '../../internal/markdown/render.js';
+import { useHighlighter } from '../../internal/highlighter.js';
 import { DEFAULT_TYPOGRAPHY, typographyStyle } from '../../internal/typography.js';
 import { DEFAULT_TOOLBAR, MawyViewerToolbar } from './MawyViewerToolbar.js';
 import { MawyViewerEmpty } from './MawyViewerEmpty.js';
@@ -115,6 +117,26 @@ export interface MawyViewerProps extends Omit<
   /** What the file picker offers. @default every Markdown and text extension */
   accept?: string;
 
+  /**
+   * What colours a fenced code block that names its language.
+   *
+   * Nothing at all by default, because nothing at all is what most documents
+   * need and a highlighter is the largest thing a Markdown renderer can be made
+   * to carry. Pass one, or — better — pass a function that fetches one, and it
+   * is fetched the first time a document with a language on a fence is drawn:
+   *
+   * ```tsx
+   * import { mawyHighlighter } from 'mawy/highlight';
+   *
+   * <MawyViewer value={document} highlight={mawyHighlighter} />
+   * ```
+   *
+   * `MawyHighlighter` is the whole interface, and it is tokens rather than
+   * markup: what a highlighter says is text and names, and this library decides
+   * what element that becomes.
+   */
+  highlight?: MawyHighlight;
+
   /** What to draw instead of the file picker when there is no document. */
   empty?: React.ReactNode;
 }
@@ -146,6 +168,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     locale = 'en',
     fileDrop,
     accept = ACCEPT,
+    highlight,
     empty,
     className,
     style,
@@ -205,7 +228,11 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
    * ------------------------------------------------------------------ */
 
   const document_ = React.useMemo(() => parseMarkdown(text, { gfm, breaks }), [text, gfm, breaks]);
-  const context = React.useMemo(() => ({ html, strings }), [html, strings]);
+  const highlighter = useHighlighter(highlight, document_);
+  const context = React.useMemo(
+    () => ({ html, strings, highlighter }),
+    [html, strings, highlighter]
+  );
   const content = React.useMemo(
     () => renderBlocks(document_.root.children, context),
     [document_, context]

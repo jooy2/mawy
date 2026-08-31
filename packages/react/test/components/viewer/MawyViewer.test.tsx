@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+import {
+  MAWY_SYSTEM_FONTS,
+  MAWY_WEB_FONTS,
+  MawyViewer,
+  type MawyCodeToken,
+  type MawyHighlighter
+} from 'mawy';
 
 /**
  * The viewer, as a reader meets it.
@@ -423,6 +429,161 @@ describe('copying', () => {
     const screen = await render(<MawyViewer toolbar={['copy']} />);
 
     await expect.element(screen.getByRole('button', { name: 'Copy the Markdown' })).toBeDisabled();
+  });
+});
+
+/**
+ * Colouring a code block, which the viewer does not do on its own.
+ *
+ * A highlighter is the largest thing a Markdown renderer can be made to carry
+ * and most documents have nothing in them to colour, so it is a prop — and a
+ * prop that may be a *function*, called only when a document turns out to have
+ * a language on a fence.
+ */
+describe('highlighting', () => {
+  /** A highlighter that colours the word it was told to and nothing else. */
+  const wordSpotter = (word: string): MawyHighlighter => ({
+    supports: (language) => language === 'ts',
+    highlight: (code) =>
+      code
+        .split(new RegExp(`(${word})`))
+        .filter(Boolean)
+        .map((text) => ({ text, kind: text === word ? ('keyword' as const) : null }))
+  });
+
+  it('draws a code block plain when nobody offered to colour one', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={false} />);
+
+    expect(screen.container.querySelector('.mawy-md-lang')?.textContent).toBe('const a = 1;');
+    expect(screen.container.querySelector('.mawy-hl-keyword')).toBe(null);
+  });
+
+  it('draws the tokens a highlighter hands back', async () => {
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={false} highlight={wordSpotter('const')} />
+    );
+
+    expect(screen.container.querySelector('.mawy-hl-keyword')?.textContent).toBe('const');
+    // The code is still the code: what is drawn joins back into exactly what
+    // the document said.
+    expect(screen.container.querySelector('.mawy-md-lang')?.textContent).toBe('const a = 1;');
+  });
+
+  it('says where a coloured piece of the code came from', async () => {
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={false} highlight={wordSpotter('const')} />
+    );
+    const range = screen.container
+      .querySelector('.mawy-hl-keyword')
+      ?.getAttribute('data-mawy-range');
+    const [start, end] = (range ?? '').split(',').map(Number);
+
+    expect(SAMPLE.slice(start, end)).toBe('const');
+  });
+
+  it('leaves a language it was told nothing about alone', async () => {
+    const screen = await render(
+      <MawyViewer
+        value={['```rust', 'const a = 1;', '```'].join('\n')}
+        toolbar={false}
+        highlight={wordSpotter('const')}
+      />
+    );
+
+    expect(screen.container.querySelector('.mawy-hl-keyword')).toBe(null);
+  });
+
+  it('throws the tokens away when they are not the code any more', async () => {
+    // Colour is not worth a page that says something the document does not.
+    const liar: MawyHighlighter = {
+      supports: () => true,
+      highlight: () => [{ text: 'something else entirely', kind: 'keyword' }]
+    };
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={false} highlight={liar} />);
+
+    expect(screen.container.querySelector('.mawy-md-lang')?.textContent).toBe('const a = 1;');
+    expect(screen.container.querySelector('.mawy-hl-keyword')).toBe(null);
+  });
+
+  it('draws a kind it has never heard of as the text it is', async () => {
+    const inventive = {
+      supports: () => true,
+      highlight: (code: string) => [{ text: code, kind: 'onload=alert(1)' }]
+    } as unknown as MawyHighlighter;
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={false} highlight={inventive} />
+    );
+
+    expect(screen.container.querySelector('.mawy-md-lang')?.textContent).toBe('const a = 1;');
+    expect(screen.container.querySelector('.mawy-md-lang span')).toBe(null);
+  });
+
+  it('keeps drawing when a highlighter throws', async () => {
+    const broken: MawyHighlighter = {
+      supports: () => true,
+      highlight: () => {
+        throw new Error('no');
+      }
+    };
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={false} highlight={broken} />);
+
+    expect(screen.container.querySelector('.mawy-md-lang')?.textContent).toBe('const a = 1;');
+  });
+
+  it('draws plain until one that answers later has answered', async () => {
+    let answer: (tokens: MawyCodeToken[]) => void = () => {};
+    const slow: MawyHighlighter = {
+      supports: () => true,
+      highlight: () => new Promise<MawyCodeToken[]>((resolve) => (answer = resolve))
+    };
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={false} highlight={slow} />);
+
+    expect(screen.container.querySelector('.mawy-md-lang')?.textContent).toBe('const a = 1;');
+    expect(screen.container.querySelector('.mawy-hl-string')).toBe(null);
+
+    answer([{ text: 'const a = 1;', kind: 'string' }]);
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-hl-string')?.textContent).toBe('const a = 1;')
+    );
+  });
+
+  it('fetches one only when a document has a language on a fence', async () => {
+    const fetched = vi.fn(async () => wordSpotter('const'));
+
+    const prose = await render(
+      <MawyViewer
+        value={'Just words.\n\n```\nno language\n```'}
+        toolbar={false}
+        highlight={fetched}
+      />
+    );
+
+    expect(prose.container.querySelector('.mawy-md-lang')).toBeTruthy();
+    expect(fetched).not.toHaveBeenCalled();
+
+    const withCode = await render(
+      <MawyViewer value={SAMPLE} toolbar={false} highlight={fetched} />
+    );
+
+    await vi.waitFor(() =>
+      expect(withCode.container.querySelector('.mawy-hl-keyword')?.textContent).toBe('const')
+    );
+    expect(fetched).toHaveBeenCalledTimes(1);
+  });
+
+  it('finds a fence inside a list or a quotation too', async () => {
+    const fetched = vi.fn(async () => wordSpotter('const'));
+
+    await render(
+      <MawyViewer
+        value={'- one\n\n  ```ts\n  const a = 1;\n  ```'}
+        toolbar={false}
+        highlight={fetched}
+      />
+    );
+
+    await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
   });
 });
 

@@ -73,6 +73,16 @@
   --mawy-syntax-link: #2563c9;
   --mawy-syntax-muted: #8b8b96;
 
+  /* A code block's own colours, for whichever highlighter is drawing it. */
+  --mawy-hl-comment: #7b7b88;
+  --mawy-hl-string: #0f7a4a;
+  --mawy-hl-number: #a8541b;
+  --mawy-hl-keyword: #8a37c4;
+  --mawy-hl-type: #9a6407;
+  --mawy-hl-function: #2159bd;
+  --mawy-hl-variable: #b03a5b;
+  --mawy-hl-punctuation: #7b7b88;
+
   --mawy-note: #2563c9;
   --mawy-tip: #17855a;
   --mawy-important: #7c3aed;
@@ -119,6 +129,15 @@
   --mawy-syntax-link: #6ea8fe;
   --mawy-syntax-muted: #77778a;
 
+  --mawy-hl-comment: #8b8b9c;
+  --mawy-hl-string: #7ddba4;
+  --mawy-hl-number: #f0a26b;
+  --mawy-hl-keyword: #d5a3ff;
+  --mawy-hl-type: #f0d08a;
+  --mawy-hl-function: #7fb6ff;
+  --mawy-hl-variable: #ff9ab0;
+  --mawy-hl-punctuation: #8b8b9c;
+
   --mawy-note: #6ea8fe;
   --mawy-tip: #4ade9d;
   --mawy-important: #b79bff;
@@ -159,6 +178,15 @@
     --mawy-syntax-code: #5ecfb8;
     --mawy-syntax-link: #6ea8fe;
     --mawy-syntax-muted: #77778a;
+
+    --mawy-hl-comment: #8b8b9c;
+    --mawy-hl-string: #7ddba4;
+    --mawy-hl-number: #f0a26b;
+    --mawy-hl-keyword: #d5a3ff;
+    --mawy-hl-type: #f0d08a;
+    --mawy-hl-function: #7fb6ff;
+    --mawy-hl-variable: #ff9ab0;
+    --mawy-hl-punctuation: #8b8b9c;
 
     --mawy-note: #6ea8fe;
     --mawy-tip: #4ade9d;
@@ -1307,6 +1335,52 @@
 .mawy-root .mawy-tok-strike {
   color: var(--mawy-fg-subtle);
   text-decoration: line-through;
+}
+
+/* A code block's own syntax, from whichever highlighter drew it -------------
+ *
+ * Thirteen names and eight colours: `constant` reads as a number because that
+ * is what most of them are, `tag` reads as a function because both are the name
+ * of the thing being used, and `regex` reads as a string because it is one. A
+ * palette with a separate colour for every name is a code block nobody reads.
+ */
+
+.mawy-root .mawy-hl-comment {
+  color: var(--mawy-hl-comment);
+  font-style: italic;
+}
+
+.mawy-root .mawy-hl-string,
+.mawy-root .mawy-hl-regex {
+  color: var(--mawy-hl-string);
+}
+
+.mawy-root .mawy-hl-number,
+.mawy-root .mawy-hl-constant {
+  color: var(--mawy-hl-number);
+}
+
+.mawy-root .mawy-hl-keyword {
+  color: var(--mawy-hl-keyword);
+}
+
+.mawy-root .mawy-hl-type {
+  color: var(--mawy-hl-type);
+}
+
+.mawy-root .mawy-hl-function,
+.mawy-root .mawy-hl-tag {
+  color: var(--mawy-hl-function);
+}
+
+.mawy-root .mawy-hl-variable,
+.mawy-root .mawy-hl-attribute {
+  color: var(--mawy-hl-variable);
+}
+
+.mawy-root .mawy-hl-operator,
+.mawy-root .mawy-hl-punctuation {
+  color: var(--mawy-hl-punctuation);
 }
 
 /* The status bar ---------------------------------------------------------- */

@@ -27,7 +27,7 @@ function inline(block: MdBlock): MdInline[] {
 
 /**
  * The same tree with every range taken off — a node's own, and the `content`
- * range a code block carries as well.
+ * range and line offsets a code block carries as well.
  *
  * The assertions about shape are read far more often than they are written, and
  * a range in each of them would bury what any one is checking. The ranges have
@@ -41,7 +41,7 @@ function bare<T>(node: T): T {
   if (node && typeof node === 'object') {
     return Object.fromEntries(
       Object.entries(node)
-        .filter(([key]) => key !== 'range' && key !== 'content')
+        .filter(([key]) => key !== 'range' && key !== 'content' && key !== 'lines')
         .map(([key, value]) => [key, bare(value)])
     ) as T;
   }
@@ -434,6 +434,16 @@ describe('source positions', () => {
     const alone = first('```') as MdCode;
 
     expect(alone.content).toEqual({ start: 3, end: 3 });
+  });
+
+  it('says where each line of a code block starts, so a piece of it can be found', () => {
+    const source = 'Text\n\n  ```\n  one\n  two\n  ```';
+    const code = blocks(source)[1] as MdCode;
+
+    // Past the indent the fence was written with, which is the offset the code
+    // as it reads is actually at.
+    expect(code.lines.map((at) => source.slice(at, at + 3))).toEqual(['one', 'two']);
+    expect(first('```\n```') as MdCode).toMatchObject({ lines: [] });
   });
 
   it('reaches inside a paragraph', () => {

@@ -71,7 +71,35 @@ CommonMark, 그리고 그 위에 GitHub이 더한 것들입니다.
 - **`gfm`** (기본값 `true`) — GitHub의 확장. 끄면 `|`는 그냥 세로줄이고 `~~`는 물결 넷입니다.
 - **`breaks`** (기본값 `false`) — 문단 안의 줄바꿈 하나를 줄바꿈으로 볼지. 마크다운은 아니라고 합니다. 채팅 클라이언트와 이슈 트래커는 맞다고 합니다. 마크다운을 써 본 적 없는 독자가 기대하는 쪽이 후자이고, 이것이 이 항목이 결정이 아니라 옵션인 이유입니다.
 
-문법 강조는 아직 없습니다. 외부 라이브러리를 쓸 만한 자리의 대표적인 예이고, 필요 없는 애플리케이션이 비용을 치르지 않도록 인터페이스 뒤에 두고 들여올 예정입니다.
+## 코드 블록에 색 입히기
+
+기본값은 색이 없는 것이고, 빠뜨린 것이 아닙니다. 하이라이터는 마크다운 렌더러가 지고 갈 수 있는 것 중 가장 큰 것이고, 대부분의 문서에는 색을 입힐 것이 없습니다. 그래서 프롭이고, 그 프롭은 **함수**를 받습니다. 펜스에 언어가 적힌 문서를 실제로 그리기 전까지는 가져오지도 않도록.
+
+```tsx
+<MawyViewer
+  value={document}
+  highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+/>
+```
+
+`mawy/highlight`는 별도의 진입점이라, 언급한 적 없는 애플리케이션의 번들에는 들어가지 않습니다. 안에 든 것은 Mawy가 직접 만든 하이라이터이고, 문서가 흔히 보여주는 언어들 — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp`과 그것들이 함께 답하는 이름들 — 을 압니다. **근사적이고**, 의도적으로 그리고 앞으로도 그렇습니다. 중괄호가 든 템플릿 리터럴이나 나눗셈처럼 읽히는 정규식은 조금씩 틀리게 나오고, 그건 문제가 되지 않습니다. 색은 반드시 맞아야 하는 종류의 답이 아니니까요.
+
+그 이상이 필요하면 `MawyHighlighter`가 인터페이스 전부이고, 그 뒤에 Shiki나 Prism을 두는 것은 몇 줄입니다.
+
+```tsx
+const shiki: MawyHighlighter = {
+  supports: (language) => languages.includes(language),
+  highlight: async (code, language) => toMawyTokens(await codeToTokens(code, { lang: language }))
+};
+```
+
+**마크업이 아니라 토큰**이고, 이것은 이 라이브러리 전체가 딛고 선 것과 같은 결정입니다. 하이라이터가 답하는 것은 텍스트와 이름 — `keyword`, `string`, `comment` 외 열 가지 — 이고, 그것이 어떤 엘리먼트가 될지는 이 패키지가 정합니다. HTML 문자열로 화면에 닿는 것이 하나도 없고, 하이라이터가 틀렸다고 해서 문서에 `<script>`를 넣을 수는 없습니다. 목록에 없는 이름은 그냥 텍스트로 그려집니다.
+
+하이라이터가 지켜야 할 것은 하나, 토큰이 **곧 그 코드**라는 것입니다. 돌아온 것을 다시 이어 붙여 들어간 것과 비교하고, 맞지 않는 블록은 색 없이 그립니다. 문서가 하지 않은 말을 화면이 하는 것과 바꿀 만한 색은 없습니다.
+
+색이 입혀진 조각도 뷰어가 그리는 다른 모든 것처럼 어디서 왔는지 말합니다. 코드 블록 한가운데를 클릭해도 여전히 그 글자를 찾아냅니다.
+
+색 자체는 여덟 개의 커스텀 프로퍼티입니다 — `--mawy-hl-comment`, `--mawy-hl-string`, `--mawy-hl-number`, `--mawy-hl-keyword`, `--mawy-hl-type`, `--mawy-hl-function`, `--mawy-hl-variable`, `--mawy-hl-punctuation`. 밝은 팔레트와 어두운 팔레트 양쪽에서 `.mawy-root`에 선언되어 있고, 다시 선언하는 것은 여러분 몫입니다.
 
 ## 안전
 
@@ -231,6 +259,5 @@ import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
 
 ## 아직 남은 것
 
-- 인터페이스 뒤에 둔 코드 블록 문법 강조.
 - 각주와 정의 목록 문법.
 - 확장 지점. 이 패키지가 모르는 구성을 문서가 실어 나를 수 있도록.

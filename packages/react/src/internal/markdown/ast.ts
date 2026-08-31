@@ -75,6 +75,12 @@ export interface MdCode {
    * in it, which is still a place a caret can be and so still needs an answer.
    */
   content: MdRange;
+  /**
+   * Where each line of `value` starts in the document, so a piece of the code
+   * can be pointed back at the characters it came from. Empty for a block with
+   * nothing in it.
+   */
+  lines: number[];
   /** The first word of the info string — `ts` in ```` ```ts twoslash ````. */
   lang: string | null;
   /** Everything after it, untouched. Nothing reads this yet. */

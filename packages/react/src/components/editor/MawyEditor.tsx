@@ -8,6 +8,7 @@ import type {
   MawyEditorToolbarOption,
   MawyEditorStatusItem,
   MawyFont,
+  MawyHighlight,
   MawyHtmlPolicy,
   MawyImageUpload,
   MawyLocale,
@@ -118,6 +119,13 @@ export interface MawyEditorProps extends Omit<
   /* The preview's half of the props, passed straight through to the viewer. */
   parse?: MawyParseOptions;
   html?: MawyHtmlPolicy;
+  /**
+   * What colours a fenced code block in the preview. The drawn document is not
+   * coloured and will not be: an editing surface where the caret has to find
+   * its way back into the source is not the place for a second opinion about
+   * what the characters are.
+   */
+  highlight?: MawyHighlight;
   fonts?: readonly MawyFont[];
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
@@ -156,6 +164,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     onUploadImage,
     parse,
     html = 'escape',
+    highlight,
     fonts = MAWY_SYSTEM_FONTS,
     typography,
     defaultTypography,
@@ -949,6 +958,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               fileDrop={false}
               parse={parse}
               html={html}
+              highlight={highlight}
               fonts={fonts}
               locale={locale}
               colorScheme={scheme}

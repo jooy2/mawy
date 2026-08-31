@@ -44,6 +44,11 @@
       "module": "./dist/types.js",
       "default": "./dist/types.js"
     },
+    "./highlight": {
+      "types": "./dist/highlight.d.ts",
+      "module": "./dist/highlight.js",
+      "default": "./dist/highlight.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"
   },
@@ -51,6 +56,9 @@
     "*": {
       "types": [
         "dist/types.d.ts"
+      ],
+      "highlight": [
+        "dist/highlight.d.ts"
       ]
     }
   },

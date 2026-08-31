@@ -35,7 +35,20 @@ export const sources: Record<string, string> = Object.fromEntries(
  * Strings are tracked as well as comments, and not for tidiness: half the
  * specifiers in this package are URLs, and `https://…` inside a string literal
  * is a `//` that starts no comment at all.
+ *
+ * Regular expressions are tracked for the mirror-image reason. A quote inside
+ * one — `/"(?:\\.|[^"])*"/` is an ordinary thing for a highlighter to
+ * contain — would otherwise open a string that runs to whatever quote came
+ * next, and everything in between would be read as being inside it.
  */
+
+/**
+ * What a `/` can follow and still be opening a regular expression rather than
+ * dividing by something. The usual heuristic, and enough for source we wrote.
+ */
+const BEFORE_REGEX =
+  /(?:[([{,;:=!?&|+\-*%~^<>]|\b(?:return|typeof|case|in|of|new|delete|void|do|else))$/;
+
 export function withoutComments(source: string): string {
   let out = '';
   let at = 0;
@@ -56,6 +69,36 @@ export function withoutComments(source: string): string {
       // An unterminated block comment runs to the end of the file, and there is
       // nothing after it to look at.
       at = end === -1 ? source.length : end + 2;
+      continue;
+    }
+
+    if (source[at] === '/' && BEFORE_REGEX.test(out.trimEnd())) {
+      // A regular expression, skipped whole and copied nowhere: a specifier
+      // never lives inside one, and the quotes and slashes that do would each
+      // be read as the start of something they are not.
+      let inClass = false;
+
+      at += 1;
+
+      while (at < source.length && source[at] !== '\n') {
+        const character = source[at];
+
+        if (character === '\\') {
+          at += 2;
+          continue;
+        }
+
+        at += 1;
+
+        if (character === '[') {
+          inClass = true;
+        } else if (character === ']') {
+          inClass = false;
+        } else if (character === '/' && !inClass) {
+          break;
+        }
+      }
+
       continue;
     }
 
@@ -92,9 +135,14 @@ export function withoutComments(source: string): string {
  * form — and pulling a TypeScript parser into the test suite to recognise three
  * of them would be a dependency bigger than the thing it checks. What it does
  * need is for the comments to be gone first.
+ *
+ * A specifier holds no whitespace, and saying so is what keeps a list of a
+ * language's keywords from reading as an import: `'… for from ' + 'global …'`
+ * is `from`, a space and a quote, and the only thing separating it from the
+ * real shape is what ends up captured.
  */
 export function specifiersIn(source: string): string[] {
-  const forms = /\bfrom\s+'([^']+)'|\bimport\s+'([^']+)'|\bimport\(\s*'([^']+)'\s*\)/g;
+  const forms = /\bfrom\s+'([^'\s]+)'|\bimport\s+'([^'\s]+)'|\bimport\(\s*'([^'\s]+)'\s*\)/g;
 
   return [...withoutComments(source).matchAll(forms)].map(
     (match) => (match[1] ?? match[2] ?? match[3]) as string

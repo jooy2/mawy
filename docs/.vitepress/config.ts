@@ -342,6 +342,7 @@ const vitePressConfig: UserConfig = {
     resolve: {
       alias: [
         { find: /^mawy\/styles\.css$/, replacement: resolve(reactPackageDir, 'src/styles.css') },
+        { find: /^mawy\/highlight$/, replacement: resolve(reactPackageDir, 'src/highlight.ts') },
         { find: /^mawy$/, replacement: resolve(reactPackageDir, 'src/index.ts') }
       ],
       /*

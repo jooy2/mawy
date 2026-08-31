@@ -19,7 +19,7 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 
 - **Editor and viewer are the same library.** A viewer that renders differently from the editor that produced the document is the bug every "editor plus separate renderer" setup eventually ships. Here they share the parser and the renderer, so what you typed is what a reader sees.
 - **WYSIWYG and source are two views, not two editors.** Toggling does not round-trip through a second implementation and does not lose what the other view could not express.
-- **Close to zero dependencies.** The parser, the document model and the editing surface are ours. A third-party library is brought in only where writing it ourselves would be worse than depending on it: today that is [`lucide-react`](https://lucide.dev) for the toolbar's icons, and syntax highlighting will be the next one. Only under a permissive licence, and a test in the suite fails the build if a source file imports something undeclared.
+- **Close to zero dependencies.** The parser, the document model, the editing surface and the syntax highlighter are ours. A third-party library is brought in only where writing it ourselves would be worse than depending on it: today that is [`lucide-react`](https://lucide.dev) for the toolbar's icons, and nothing else. Only under a permissive licence, and a test in the suite fails the build if a source file imports something undeclared.
 - **The document becomes React elements, not a string of HTML.** There is no `innerHTML` between Markdown and the page, which is what makes the viewer's safe default free rather than careful.
 - **Types in the box.** TypeScript declarations ship with the package, so your editor knows the prop names and the values they take before you do.
 
