@@ -2,7 +2,7 @@
 
 > This package's history. Each language Mawy ships for keeps its own changelog beside its own manifest, because they version independently.
 
-## 0.1.0 — 2026-08-31
+## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.
 
