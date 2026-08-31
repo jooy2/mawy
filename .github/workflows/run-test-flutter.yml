@@ -10,6 +10,13 @@ on:
       - packages/react/src/internal/markdown/**
       - packages/react/scripts/parity.mjs
       - .github/workflows/run-test-flutter.yml
+  push:
+    branches: [main]
+    paths:
+      - packages/flutter/**
+      - packages/react/src/internal/markdown/**
+      - packages/react/scripts/parity.mjs
+      - .github/workflows/run-test-flutter.yml
   workflow_dispatch:
 
 jobs:

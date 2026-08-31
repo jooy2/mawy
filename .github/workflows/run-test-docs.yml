@@ -7,6 +7,12 @@ on:
       - docs/**
       - packages/**
       - .github/workflows/run-test-docs.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - packages/**
+      - .github/workflows/run-test-docs.yml
   workflow_dispatch:
 
 defaults:
