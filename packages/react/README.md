@@ -48,7 +48,7 @@ export function Write() {
 }
 ```
 
-The Markdown source with its syntax coloured, a live preview beside it, a formatting toolbar whose every command is also a keyboard shortcut, and a status bar that counts. It is a real `<textarea>` under a coloured copy of its own text, which is what keeps the native undo stack, the IME and the mobile keyboard working — none of which is worth losing for syntax colouring.
+The Markdown source with its syntax coloured, a live preview beside it, a formatting toolbar whose every command is also a keyboard shortcut, and a status bar that counts. It is a real `<textarea>` under a coloured copy of its own text, which is what keeps the IME and the mobile keyboard working — neither of which is worth losing for syntax colouring.
 
 And the read-only half:
 

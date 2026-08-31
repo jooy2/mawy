@@ -50,7 +50,7 @@ It goes the other way too. **Click a word in the preview and the caret lands on 
 
 A real `<textarea>`, with a coloured copy of the same text laid exactly underneath it.
 
-That arrangement is the point rather than a trick. The textarea keeps everything that is extremely hard to reimplement and extremely obvious when it is missing: the **native undo stack**, the **IME** — Korean is composed a jamo at a time, and an editor that fights the composition eats characters — the mobile keyboard, autocorrect, spellcheck, and every text-selection gesture the platform has. What a textarea cannot do is colour anything, so its text is made transparent, its caret and selection are left visible, and a layer behind it draws the same characters in colour.
+That arrangement is the point rather than a trick. The textarea keeps everything that is extremely hard to reimplement and extremely obvious when it is missing: the **IME** — Korean is composed a jamo at a time, and an editor that fights the composition eats characters — the mobile keyboard, autocorrect, spellcheck, and every text-selection gesture the platform has. What a textarea cannot do is colour anything, so its text is made transparent, its caret and selection are left visible, and a layer behind it draws the same characters in colour.
 
 Everything that decides where a character lands — font, size, line height, letter spacing, tab size, wrapping, and the padding that sets the left edge — is declared once in the stylesheet, for both layers. That is what keeps them in step, and it is why the editor's monospace face is `--mawy-font-mono` and not a choice the component makes.
 
@@ -85,7 +85,6 @@ Refusing a composition is refusing the composition. Korean is composed a jamo at
 What does not work yet, and does nothing at all rather than something half-right:
 
 - **Lists, quotations, tables and code blocks.** They draw and they read; an edit inside one is refused, because the rule for writing that edit back is not written.
-- **`Cmd`/`Ctrl` + `Z`.** The source surface uses the browser's undo stack, which a `contenteditable` that refuses every input does not get to keep. A history over the source string, shared by both surfaces, is what replaces it.
 - **Pasting, dropping and images.**
 
 ## Formatting
@@ -101,6 +100,8 @@ Every button on the toolbar runs a command that also has a keyboard shortcut, an
 | `Mod` + `K`             | Link                                   |
 | `Mod` + `1` / `2` / `3` | Heading 1, 2, 3                        |
 | `Mod` + `0`             | Body text                              |
+| `Mod` + `Z`             | Undo                                   |
+| `Mod` + `Shift` + `Z`   | Redo, and `Ctrl` + `Y` as well         |
 | `Enter`                 | Carries a list marker to the next line |
 
 `Mod` is Command or Control, whichever the machine has — both are accepted rather than guessed at.
@@ -109,7 +110,7 @@ Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and t
 
 `Enter` at the end of a list item carries the marker down and counts an ordered list on. Pressing it again on the item that is still empty takes the marker away instead of making another — without that, leaving a list means deleting the bullet the editor has just helpfully added.
 
-The edits go in through the browser's own text-insertion command, which is what keeps them on the **native undo stack**. Writing the value through React instead would work and would quietly break `Mod`+`Z`, which for a text editor is not a small loss.
+The edits go in through the browser's own text-insertion command, which leaves the caret, the scroll position and any composition in progress exactly where they were — a controlled write promises none of that. Undo used to be the reason and is not any more; it has a section of its own below.
 
 `toolbar` takes `true`, `false`, or the controls to draw and the order to draw them in:
 
@@ -126,6 +127,16 @@ The edits go in through the browser's own text-insertion command, which is what 
 | `'colorScheme'` | Light, dark, or whatever the system says |
 | `'separator'` | A hairline, for grouping |
 
+## Undo
+
+`Mod`+`Z` goes back, `Mod`+`Shift`+`Z` comes forward again, and `Ctrl`+`Y` is the same thing where Windows put it. The history is **one list for the whole editor** rather than one per surface.
+
+It has to be. The source surface could have used the browser's own stack — a `<textarea>` keeps an excellent one — but the drawn document is a `contenteditable` that refuses every input, which is another way of saying it never gets an entry on the browser's stack at all. Two stacks would be worse than one either way: an edit made in `wysiwyg` and taken back in `plain` would step through half of what happened and then stop.
+
+What is stored is the document before each change together with where the caret was, because that is the state undo has to arrive at.
+
+A run of typing is **one step**, not one per keystroke — a `Mod`+`Z` that gives back one character at a time is one nobody presses twice. A change carries on from the one before it while it is the same kind of change, in the same place, within a moment of it. A syllable being composed counts as more of the same typing, because a Korean keyboard rewrites what it wrote on every jamo and none of those are separate thoughts. A line ending closes the run behind it: what is typed after `Enter` is the next thing the writer meant, and undo stops between the two.
+
 ## The status bar
 
 ```tsx
@@ -138,7 +149,7 @@ Two of those count more carefully than they look. **Characters** are code points
 
 ## Still to come
 
-- The rest of the `wysiwyg` surface: lists, quotations, tables and code blocks; undo; paste.
+- The rest of the `wysiwyg` surface: lists, quotations, tables and code blocks; paste.
 - Input rules: the Markdown you type turning into what it means as you type it.
 - Paste: HTML in, Markdown out.
 - Images.

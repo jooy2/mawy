@@ -20,6 +20,64 @@ const DOCUMENT = ['# Title', '', 'Some words here.', '', '- one', '- two'].join(
 const sourceOf = (screen: { container: HTMLElement }) =>
   screen.container.querySelector('.mawy-source-input') as HTMLTextAreaElement;
 
+const bodyOf = (screen: { container: HTMLElement }) =>
+  screen.container.querySelector('.mawy-document-body') as HTMLElement;
+
+/** Put the caret inside the run of text saying exactly this. */
+function put(root: HTMLElement, saying: string, offset: number, through = offset): void {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if ((node as Text).data === saying) {
+      const range = document.createRange();
+      const selection = document.getSelection() as Selection;
+
+      range.setStart(node, offset);
+      range.setEnd(node, through);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      return;
+    }
+  }
+
+  if (saying === '') {
+    // A block with nothing in it has no run of text to put the caret inside,
+    // so the caret goes on the block.
+    const element = [...root.children].find((child) => !child.textContent);
+    const range = document.createRange();
+    const selection = document.getSelection() as Selection;
+
+    if (element) {
+      range.setStart(element, 0);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      return;
+    }
+  }
+
+  throw new Error(`no run saying ${JSON.stringify(saying)}`);
+}
+
+const type = (root: HTMLElement, inputType: string, data?: string) =>
+  root.dispatchEvent(
+    new InputEvent('beforeinput', { inputType, data, bubbles: true, cancelable: true })
+  );
+
+/** A shortcut, pressed. `metaKey` and `ctrlKey` are both accepted, so one does. */
+const keys = (element: HTMLElement, key: string, shift = false) =>
+  element.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key,
+      metaKey: true,
+      shiftKey: shift,
+      bubbles: true,
+      cancelable: true
+    })
+  );
+
 describe('the source surface', () => {
   it('draws a line number for every line, and a coloured copy of every line', async () => {
     const screen = await render(<MawyEditor defaultValue={DOCUMENT} modes={['plain']} />);
@@ -430,52 +488,6 @@ describe('the status bar', () => {
  * application is given and the thing that has to be right.
  */
 describe('the document surface', () => {
-  const bodyOf = (screen: { container: HTMLElement }) =>
-    screen.container.querySelector('.mawy-document-body') as HTMLElement;
-
-  /** Put the caret inside the run of text saying exactly this. */
-  function put(root: HTMLElement, saying: string, offset: number, through = offset): void {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      if ((node as Text).data === saying) {
-        const range = document.createRange();
-        const selection = document.getSelection() as Selection;
-
-        range.setStart(node, offset);
-        range.setEnd(node, through);
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        return;
-      }
-    }
-
-    if (saying === '') {
-      // A block with nothing in it has no run of text to put the caret inside,
-      // so the caret goes on the block.
-      const element = [...root.children].find((child) => !child.textContent);
-      const range = document.createRange();
-      const selection = document.getSelection() as Selection;
-
-      if (element) {
-        range.setStart(element, 0);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        return;
-      }
-    }
-
-    throw new Error(`no run saying ${JSON.stringify(saying)}`);
-  }
-
-  const type = (root: HTMLElement, inputType: string, data?: string) =>
-    root.dispatchEvent(
-      new InputEvent('beforeinput', { inputType, data, bubbles: true, cancelable: true })
-    );
-
   it('types into a paragraph and into the middle of a bold run', async () => {
     const onChange = vi.fn();
     const source = 'One two.\n\nA **bold** word.';
@@ -784,5 +796,91 @@ describe('the document surface', () => {
     type(body, 'insertText', 'x');
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Undo, over the document rather than over a surface.
+ *
+ * The source surface has the browser's own stack and the drawn one has nothing
+ * — a `contenteditable` that refuses every input never gets an entry on it — so
+ * both put their changes on one history of Mawy's own. What that buys, and what
+ * these check, is that a step made on one surface can be taken back on the
+ * other.
+ */
+describe('undo', () => {
+  it('takes a command back on the source surface, and puts it back again', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two three" modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(4, 7);
+    keys(input, 'b');
+
+    await vi.waitFor(() => expect(input.value).toBe('one **two** three'));
+
+    keys(input, 'z');
+
+    await vi.waitFor(() => expect(input.value).toBe('one two three'));
+
+    keys(input, 'z', true);
+
+    await vi.waitFor(() => expect(input.value).toBe('one **two** three'));
+  });
+
+  it('takes an edit back on the drawn document', async () => {
+    const screen = await render(<MawyEditor defaultValue="One two." mode="wysiwyg" />);
+
+    put(bodyOf(screen), 'One two.', 3);
+    type(bodyOf(screen), 'insertText', ' and');
+
+    await vi.waitFor(() => expect(bodyOf(screen).textContent).toBe('One and two.'));
+
+    keys(bodyOf(screen), 'z');
+
+    await vi.waitFor(() => expect(bodyOf(screen).textContent).toBe('One two.'));
+  });
+
+  it('takes back on one surface what was done on the other', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="One two."
+        defaultMode="wysiwyg"
+        modes={['wysiwyg', 'plain']}
+        onChange={onChange}
+      />
+    );
+
+    put(bodyOf(screen), 'One two.', 3);
+    type(bodyOf(screen), 'insertText', ' and');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One and two.'));
+
+    await screen.getByRole('radio', { name: 'Source' }).click();
+
+    const input = sourceOf(screen);
+
+    expect(input.value).toBe('One and two.');
+
+    input.focus();
+    keys(input, 'z');
+
+    // The edit was made where there is no source to look at, and taken back
+    // where there is nothing else. One history, or switching surface would step
+    // back through half of what happened and then stop.
+    await vi.waitFor(() => expect(input.value).toBe('One two.'));
+  });
+
+  it('leaves a read-only document alone', async () => {
+    const screen = await render(<MawyEditor defaultValue="one" modes={['plain']} readOnly />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    keys(input, 'z');
+
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(input.value).toBe('one');
   });
 });

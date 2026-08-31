@@ -25,6 +25,14 @@ import {
   type MawyCommand
 } from '../../internal/commands.js';
 import type { MawyEdit } from '../../internal/editing.js';
+import {
+  difference,
+  emptyHistory,
+  record,
+  redo,
+  undo,
+  type MawyStep
+} from '../../internal/history.js';
 import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
@@ -164,13 +172,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const [room, setRoom] = React.useState<number | null>(null);
 
   const notify = React.useRef(onChange);
+  const history = React.useRef(emptyHistory());
+  const restoring = React.useRef(false);
+  /** The document and the caret as they were drawn, which is what undo stores. */
+  const drew = React.useRef<MawyStep>({ value: text, start: 0, end: 0 });
 
   React.useEffect(() => {
     notify.current = onChange;
+    drew.current = { value: text, ...selection };
   });
 
   const write = React.useCallback(
     (next: string) => {
+      // Everything that changes the document comes through here, which is what
+      // lets one history cover both surfaces — and what stops it covering its
+      // own footsteps while it is putting a step back.
+      if (!restoring.current) {
+        record(history.current, drew.current, next, Date.now());
+      }
+
       if (!controlled) {
         setHeld(next);
       }
@@ -282,11 +302,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * ------------------------------------------------------------------ */
 
   /**
-   * The edit goes in through `execCommand`, which is deprecated and is still
-   * the only way to change a textarea's value and have the change land on the
-   * browser's own undo stack. Writing `value` through React instead works and
-   * quietly breaks Cmd+Z, which for a text editor is not a small loss — it is
-   * most of what the textarea was chosen for.
+   * The edit goes in through `execCommand`, which is deprecated and is still the
+   * gentlest way to change a textarea's value: the caret, the scroll and any
+   * composition in progress are left where they were, which a controlled write
+   * does not promise. Undo is no longer the reason — that is `history.ts` now,
+   * and it covers both surfaces rather than only this one.
    */
   const apply = React.useCallback(
     (before: EditState, after: EditState) => {
@@ -301,45 +321,27 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
-      // The smallest run that actually differs, so the undo stack gets one
-      // entry about the thing that changed rather than one about the file.
-      const a = before.value;
-      const b = after.value;
-      let head = 0;
-
-      while (head < a.length && head < b.length && a[head] === b[head]) {
-        head += 1;
-      }
-
-      let tail = 0;
-
-      while (
-        tail < a.length - head &&
-        tail < b.length - head &&
-        a[a.length - 1 - tail] === b[b.length - 1 - tail]
-      ) {
-        tail += 1;
-      }
-
-      const inserted = b.slice(head, b.length - tail);
+      // The smallest run that actually differs, so what goes into the textarea
+      // is the thing that changed rather than the whole file.
+      const change = difference(before.value, after.value);
 
       element.focus();
-      element.setSelectionRange(head, a.length - tail);
+      element.setSelectionRange(change.at, change.at + change.removed);
 
       let done: boolean;
 
       try {
-        done = inserted
-          ? document.execCommand('insertText', false, inserted)
+        done = change.inserted
+          ? document.execCommand('insertText', false, change.inserted)
           : document.execCommand('delete');
       } catch {
         // Refused, or gone: some day it will be, and the fallback is the plain
-        // controlled write. It costs the undo stack, not the edit.
+        // controlled write. It costs nothing but the way the change got in.
         done = false;
       }
 
       if (!done) {
-        write(b);
+        write(after.value);
       }
 
       pending.current = [after.start, after.end];
@@ -382,6 +384,36 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       : null;
   }, [showDocument, text, selection]);
 
+  /**
+   * One step back through the history, or forward again.
+   *
+   * The step is put in the way any other change would be, so the surface that
+   * has the caret is the surface that gets it — and `restoring` is what keeps
+   * the history from writing down the fact that it was read.
+   */
+  const travel = React.useCallback(
+    (back: boolean) => {
+      const now = stateNow();
+
+      if (readOnly || !now) {
+        return;
+      }
+
+      const step = back ? undo(history.current, now) : redo(history.current, now);
+
+      if (!step) {
+        return;
+      }
+
+      restoring.current = true;
+      pending.current = [step.start, step.end];
+      setRoom(null);
+      write(step.value);
+      restoring.current = false;
+    },
+    [readOnly, stateNow, write]
+  );
+
   const command = React.useCallback(
     (name: MawyCommand) => {
       const before = readOnly ? null : stateNow();
@@ -422,8 +454,27 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    const key = event.key.toLowerCase();
+
+    // Before the modifiers are read for anything else, because `Cmd`+`Shift`+`Z`
+    // is a redo rather than a shifted shortcut, and `Ctrl`+`Y` is the same thing
+    // where Windows put it.
+    if (key === 'z') {
+      event.preventDefault();
+      travel(!event.shiftKey);
+
+      return;
+    }
+
+    if (key === 'y' && !event.shiftKey) {
+      event.preventDefault();
+      travel(false);
+
+      return;
+    }
+
     if (event.shiftKey) {
-      if (event.key.toLowerCase() === 'x') {
+      if (key === 'x') {
         event.preventDefault();
         run(state, runCommand('strikethrough', state));
       }
@@ -431,7 +482,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
-    const name = SHORTCUTS[event.key.toLowerCase()];
+    const name = SHORTCUTS[key];
 
     if (name) {
       event.preventDefault();
