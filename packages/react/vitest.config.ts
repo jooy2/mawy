@@ -44,7 +44,16 @@ export default defineConfig({
     alias: {
       // Tests import from 'mawy' exactly as a consumer would.
       mawy: resolve(rootDir, 'src/index.ts')
-    }
+    },
+    // One React, however many packages ask for it. Two copies is not a bigger
+    // bundle, it is a null hook dispatcher the moment a second package renders.
+    dedupe: ['react', 'react-dom']
+  },
+  // Named explicitly so the prebundler puts them in shared chunks rather than
+  // inlining a second React into whichever dependency reached it first — which
+  // is exactly the two-copies failure `dedupe` above cannot see.
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-dom/client', 'lucide-react', 'vitest-browser-react']
   },
   test: {
     include: ['test/**/*.test.{ts,tsx}'],

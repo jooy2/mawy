@@ -1,0 +1,328 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render } from 'vitest-browser-react';
+import { MawyViewer } from 'mawy';
+
+/**
+ * The viewer, as a reader meets it.
+ *
+ * The parser has its own file and is tested as a tree there, so what is left
+ * for this one is everything that only exists once the two are put together:
+ * the empty state, the toolbar, the settings reaching the document, and the
+ * places where the safety story has to survive contact with the DOM.
+ */
+
+const SAMPLE = [
+  '# Title',
+  '',
+  'A paragraph with **strong** text and a [link](https://example.com).',
+  '',
+  '## Second',
+  '',
+  '| a | b |',
+  '| - | - |',
+  '| 1 | 2 |',
+  '',
+  '```ts',
+  'const a = 1;',
+  '```'
+].join('\n');
+
+describe('the document', () => {
+  it('renders headings, prose and a table', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} />);
+
+    await expect
+      .element(screen.getByRole('heading', { name: 'Title', level: 1 }))
+      .toBeInTheDocument();
+    await expect.element(screen.getByRole('table')).toBeInTheDocument();
+    await expect
+      .element(screen.getByRole('link', { name: 'link' }))
+      .toHaveAttribute('href', 'https://example.com');
+  });
+
+  it('gives every heading the id its outline links to', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} />);
+    const heading = screen.getByRole('heading', { name: 'Second' }).element();
+
+    expect(heading.id).toBe('second');
+  });
+
+  it('puts a tight list item on one line and a loose one in a paragraph', async () => {
+    const tight = await render(<MawyViewer value={'- [x] done\n- [ ] not'} />);
+
+    // A `<p>` inside a tight item is what puts a task list's checkbox on the
+    // line above its own label, which is the whole reason the flag exists.
+    expect(tight.container.querySelectorAll('.mawy-md-task p')).toHaveLength(0);
+    expect(tight.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+
+    const loose = await render(<MawyViewer value={'- one\n\n- two'} />);
+
+    expect(loose.container.querySelectorAll('.mawy-md-list li > p')).toHaveLength(2);
+  });
+
+  it('reads breaks and gfm the way the parse option says', async () => {
+    const screen = await render(<MawyViewer value={'a\nb'} parse={{ breaks: true }} />);
+
+    expect(screen.container.querySelectorAll('br')).toHaveLength(1);
+  });
+});
+
+describe('safety', () => {
+  it('draws a refused link as words rather than as a control', async () => {
+    const screen = await render(<MawyViewer value="[click](javascript:alert(1))" />);
+
+    expect(screen.container.querySelector('a')).toBeNull();
+    await expect.element(screen.getByText('click')).toBeInTheDocument();
+  });
+
+  it('shows raw HTML as text by default', async () => {
+    const screen = await render(<MawyViewer value={'<img src=x onerror=alert(1)>'} />);
+
+    expect(screen.container.querySelector('img')).toBeNull();
+    expect(screen.container.textContent).toContain('<img src=x onerror=alert(1)>');
+  });
+
+  it('keeps the element and drops the handler when asked to sanitise', async () => {
+    const screen = await render(
+      <MawyViewer
+        html="sanitize"
+        value={'<p class="k" onclick="alert(1)">hi</p><script></script>'}
+      />
+    );
+
+    const paragraph = screen.container.querySelector('.mawy-md-html p');
+
+    expect(paragraph).not.toBeNull();
+    expect(paragraph?.getAttribute('onclick')).toBeNull();
+    expect(paragraph?.getAttribute('class')).toBe('k');
+    expect(screen.container.querySelector('script')).toBeNull();
+  });
+
+  it('drops a script and everything in it, however it is wrapped', async () => {
+    const screen = await render(
+      <MawyViewer
+        html="sanitize"
+        value={'<div><script>alert(1)</script></div><nope><script>alert(2)</script></nope>'}
+      />
+    );
+
+    // Not merely "no `<script>` element": an unwrapped one would put its own
+    // source on the page as a line of visible text.
+    expect(screen.container.querySelector('script')).toBeNull();
+    expect(screen.container.textContent).not.toContain('alert(1)');
+    expect(screen.container.textContent).not.toContain('alert(2)');
+  });
+
+  it('strips an attribute it does not allow, and one whose URL it will not follow', async () => {
+    const screen = await render(
+      <MawyViewer
+        html="sanitize"
+        value={'<img src="/a.png" srcset="/a.png 1x" style="position:fixed" alt="a">'}
+      />
+    );
+
+    const image = screen.container.querySelector('.mawy-md-html img');
+
+    expect(image?.getAttribute('src')).toBe('/a.png');
+    expect(image?.getAttribute('alt')).toBe('a');
+    expect(image?.hasAttribute('srcset')).toBe(false);
+    expect(image?.hasAttribute('style')).toBe(false);
+  });
+
+  it('draws raw HTML as written only when told to', async () => {
+    const screen = await render(<MawyViewer html="raw" value={'<p id="wrote">hi</p>'} />);
+
+    expect(screen.container.querySelector('#wrote')).not.toBeNull();
+  });
+});
+
+describe('with no document', () => {
+  it('offers to open a file', async () => {
+    const screen = await render(<MawyViewer />);
+
+    await expect.element(screen.getByRole('button', { name: 'Choose a file' })).toBeInTheDocument();
+  });
+
+  it('opens a file that is dropped on it', async () => {
+    const onValueChange = vi.fn();
+    const screen = await render(<MawyViewer onValueChange={onValueChange} />);
+    const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
+
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(['# Dropped'], 'note.md', { type: 'text/markdown' }));
+    root.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true }));
+
+    await expect.element(screen.getByRole('heading', { name: 'Dropped' })).toBeInTheDocument();
+    expect(onValueChange).toHaveBeenCalledWith('# Dropped', expect.any(File));
+  });
+
+  it('leaves a controlled document to the application', async () => {
+    const onValueChange = vi.fn();
+    const screen = await render(<MawyViewer value="# Kept" onValueChange={onValueChange} />);
+    const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
+
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(['# Dropped'], 'note.md'));
+    root.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true }));
+
+    // `fileDrop` defaults to off when the value is the application's, so the
+    // drop does nothing at all — not even a callback.
+    await expect.element(screen.getByRole('heading', { name: 'Kept' })).toBeInTheDocument();
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it('renders whatever the application would rather show instead', async () => {
+    const screen = await render(<MawyViewer empty={<p>Nothing here</p>} />);
+
+    await expect.element(screen.getByText('Nothing here')).toBeInTheDocument();
+  });
+});
+
+describe('the toolbar', () => {
+  it('draws every control by default, and none when turned off', async () => {
+    const all = await render(<MawyViewer value={SAMPLE} />);
+
+    await expect.element(all.getByRole('toolbar')).toBeInTheDocument();
+    expect(all.container.querySelectorAll('.mawy-toolbar-controls .mawy-button')).toHaveLength(9);
+
+    const none = await render(<MawyViewer value={SAMPLE} toolbar={false} />);
+
+    expect(none.container.querySelector('.mawy-toolbar')).toBeNull();
+  });
+
+  it('draws exactly the controls it was given, in that order', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['colorScheme', 'copy']} />);
+    const labels = [
+      ...screen.container.querySelectorAll('.mawy-toolbar-controls .mawy-button')
+    ].map((button) => button.getAttribute('aria-label'));
+
+    expect(labels).toEqual(['Theme', 'Copy the Markdown']);
+  });
+
+  it('speaks the locale it was given', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} locale="ko" toolbar={['outline']} />);
+
+    await expect.element(screen.getByRole('button', { name: '목차' })).toBeInTheDocument();
+  });
+
+  it('is one tab stop, with the arrows moving inside it', async () => {
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={['colorScheme', 'outline', 'copy']} />
+    );
+    const buttons = [
+      ...screen.container.querySelectorAll<HTMLButtonElement>('.mawy-toolbar-controls .mawy-button')
+    ];
+
+    expect(buttons.map((button) => button.tabIndex)).toEqual([0, -1, -1]);
+
+    buttons[0].focus();
+    buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    expect(document.activeElement).toBe(buttons[1]);
+  });
+
+  it('changes the theme through its menu', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['colorScheme']} />);
+    const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
+
+    expect(root.dataset.mawyColorScheme).toBe('system');
+
+    await screen.getByRole('button', { name: 'Theme' }).click();
+    await screen.getByRole('radio', { name: 'Dark' }).click();
+
+    expect(root.dataset.mawyColorScheme).toBe('dark');
+  });
+
+  it('sets the document type from the typography controls', async () => {
+    const onTypographyChange = vi.fn();
+    const screen = await render(
+      <MawyViewer value={SAMPLE} toolbar={['fontFamily']} onTypographyChange={onTypographyChange} />
+    );
+    const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
+
+    await screen.getByRole('button', { name: 'Typeface' }).click();
+    await screen.getByRole('radio', { name: 'Serif', exact: true }).click();
+
+    expect(root.style.getPropertyValue('--mawy-doc-font')).toBe('var(--mawy-font-serif)');
+    expect(onTypographyChange).toHaveBeenCalledWith(
+      expect.objectContaining({ fontFamily: 'serif' })
+    );
+  });
+
+  it('starts from the typography it was given', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} defaultTypography={{ fontSize: 21 }} />);
+    const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
+
+    expect(root.style.getPropertyValue('--mawy-doc-size')).toBe('21px');
+    // Everything left out keeps its default rather than being dropped.
+    expect(root.style.getPropertyValue('--mawy-doc-line-height')).toBe('1.7');
+  });
+
+  it('shuts a menu on Escape', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['colorScheme']} />);
+
+    await screen.getByRole('button', { name: 'Theme' }).click();
+    await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('copying', () => {
+  it('puts the Markdown source on the clipboard, not the rendering', async () => {
+    const written: string[] = [];
+    const clipboard = navigator.clipboard;
+
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (text: string) => {
+          written.push(text);
+
+          return Promise.resolve();
+        }
+      }
+    });
+
+    try {
+      const screen = await render(<MawyViewer value="# Title" toolbar={['copy']} />);
+
+      await screen.getByRole('button', { name: 'Copy the Markdown' }).click();
+      await expect.element(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+      expect(written).toEqual(['# Title']);
+    } finally {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
+    }
+  });
+
+  it('has nothing to copy when there is no document', async () => {
+    const screen = await render(<MawyViewer toolbar={['copy']} />);
+
+    await expect.element(screen.getByRole('button', { name: 'Copy the Markdown' })).toBeDisabled();
+  });
+});
+
+describe('the outline', () => {
+  it('lists the headings and jumps to one', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['outline']} />);
+
+    await screen.getByRole('button', { name: 'Outline' }).click();
+
+    const link = screen.getByRole('button', { name: 'Second' });
+    await expect.element(link).toBeInTheDocument();
+
+    await link.click();
+
+    expect(document.activeElement?.id).toBe('second');
+  });
+
+  it('says so when there is nothing to list', async () => {
+    const screen = await render(<MawyViewer value="just a paragraph" toolbar={['outline']} />);
+
+    await screen.getByRole('button', { name: 'Outline' }).click();
+
+    await expect.element(screen.getByText('This document has no headings.')).toBeInTheDocument();
+  });
+});

@@ -1,0 +1,430 @@
+'use client';
+
+import * as React from 'react';
+import type {
+  MawyColorScheme,
+  MawyHtmlPolicy,
+  MawyLocale,
+  MawyParseOptions,
+  MawyTypography,
+  MawyViewerToolbarItem,
+  MawyViewerToolbarOption
+} from '../../types.js';
+import { useCopy } from '../../internal/clipboard.js';
+import { useControlled } from '../../internal/controlled.js';
+import { stringsFor } from '../../internal/i18n.js';
+import { parseMarkdown } from '../../internal/markdown/parse.js';
+import { renderBlocks } from '../../internal/markdown/render.js';
+import { DEFAULT_TYPOGRAPHY, typographyStyle } from '../../internal/typography.js';
+import { DEFAULT_TOOLBAR, MawyViewerToolbar } from './MawyViewerToolbar.js';
+import { MawyViewerEmpty } from './MawyViewerEmpty.js';
+import { MawyViewerOutline } from './MawyViewerOutline.js';
+
+/** What a file picker offers, and what a drop is checked against. */
+const ACCEPT = '.md,.markdown,.mdown,.mkd,.mdx,.txt,text/markdown,text/plain';
+
+/** Five megabytes of Markdown is about a million words. */
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+export interface MawyViewerProps extends Omit<
+  React.ComponentPropsWithoutRef<'div'>,
+  'children' | 'onChange'
+> {
+  /**
+   * The document, as Markdown.
+   *
+   * Optional, and that is the whole design of this component rather than a
+   * convenience: with no document the viewer *is* the file picker, so an
+   * application that has nothing to show yet has something to render.
+   *
+   * Passing it makes the document the application's. It will not change on its
+   * own, and opening a file reports through `onValueChange` instead.
+   */
+  value?: string;
+  /** The document to start with, when the viewer is to keep it itself. */
+  defaultValue?: string;
+  /**
+   * A new document, and the file it came from — `null` when it came from
+   * somewhere else. Called whether or not `value` is being passed.
+   */
+  onValueChange?: (value: string, file: File | null) => void;
+
+  /** @default 'system' */
+  colorScheme?: MawyColorScheme;
+  defaultColorScheme?: MawyColorScheme;
+  onColorSchemeChange?: (colorScheme: MawyColorScheme) => void;
+
+  /**
+   * How the document is set. Anything left out keeps its default, so
+   * `{ fontSize: 18 }` is a whole answer.
+   */
+  typography?: Partial<MawyTypography>;
+  defaultTypography?: Partial<MawyTypography>;
+  onTypographyChange?: (typography: MawyTypography) => void;
+
+  /**
+   * The toolbar: `true` for all of it, `false` for none, or the controls to
+   * draw and the order to draw them in.
+   * @default true
+   */
+  toolbar?: MawyViewerToolbarOption;
+
+  /** How the Markdown is read. @default `{ gfm: true, breaks: false }` */
+  parse?: MawyParseOptions;
+
+  /**
+   * What becomes of raw HTML inside the document.
+   * @default 'escape'
+   */
+  html?: MawyHtmlPolicy;
+
+  /** The language of the viewer's own chrome. @default 'en' */
+  locale?: MawyLocale;
+
+  /**
+   * Whether a file dropped onto the viewer opens in it.
+   *
+   * On unless `value` is being passed — an application that owns the document
+   * has not asked for a second way of replacing it, and can say so explicitly.
+   */
+  fileDrop?: boolean;
+
+  /** What the file picker offers. @default every Markdown and text extension */
+  accept?: string;
+
+  /** What to draw instead of the file picker when there is no document. */
+  empty?: React.ReactNode;
+}
+
+/**
+ * A Markdown document, rendered and not editable.
+ *
+ * The document becomes React elements rather than a string of HTML, which is
+ * what makes the default safe: there is no HTML to escape, because there is no
+ * HTML — a node in the parsed document can only become an element the renderer
+ * has a case for. Raw HTML written *inside* the document is the one exception,
+ * and it is inert until an application asks for it with `html`.
+ */
+export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(function MawyViewer(
+  {
+    value,
+    defaultValue,
+    onValueChange,
+    colorScheme,
+    defaultColorScheme,
+    onColorSchemeChange,
+    typography,
+    defaultTypography,
+    onTypographyChange,
+    toolbar = true,
+    parse,
+    html = 'escape',
+    locale = 'en',
+    fileDrop,
+    accept = ACCEPT,
+    empty,
+    className,
+    style,
+    ...rest
+  },
+  ref
+) {
+  const strings = stringsFor(locale);
+  const gfm = parse?.gfm ?? true;
+  const breaks = parse?.breaks ?? false;
+  const droppable = fileDrop ?? value === undefined;
+
+  const controlled = value !== undefined;
+  const [held, setHeld] = React.useState(defaultValue ?? '');
+  const text = controlled ? value : held;
+
+  const [fileName, setFileName] = React.useState<string | null>(null);
+  const [readError, setReadError] = React.useState<string | null>(null);
+
+  const [scheme, setScheme] = useControlled(
+    colorScheme,
+    defaultColorScheme ?? 'system',
+    onColorSchemeChange
+  );
+
+  const given = React.useMemo(
+    () => (typography ? { ...DEFAULT_TYPOGRAPHY, ...typography } : undefined),
+    [typography]
+  );
+  const [type, setType] = useControlled(
+    given,
+    { ...DEFAULT_TYPOGRAPHY, ...defaultTypography },
+    onTypographyChange
+  );
+
+  const [outlineOpen, setOutlineOpen] = React.useState(false);
+  const [activeHeading, setActiveHeading] = React.useState<string | null>(null);
+  const [dragging, setDragging] = React.useState(false);
+  const [copyState, copy] = useCopy();
+
+  const scroller = React.useRef<HTMLDivElement>(null);
+  const picker = React.useRef<HTMLInputElement>(null);
+  const depth = React.useRef(0);
+
+  /* ---------------------------------------------------------------------
+   * The document
+   * ------------------------------------------------------------------ */
+
+  const document_ = React.useMemo(() => parseMarkdown(text, { gfm, breaks }), [text, gfm, breaks]);
+  const context = React.useMemo(() => ({ html, strings }), [html, strings]);
+  const content = React.useMemo(
+    () => renderBlocks(document_.root.children, context),
+    [document_, context]
+  );
+
+  const items: readonly MawyViewerToolbarItem[] =
+    toolbar === false ? [] : toolbar === true ? DEFAULT_TOOLBAR : toolbar;
+
+  /* ---------------------------------------------------------------------
+   * Opening a file
+   * ------------------------------------------------------------------ */
+
+  const load = React.useCallback(
+    (next: string, file: File | null) => {
+      if (!controlled) {
+        setHeld(next);
+      }
+
+      setFileName(file?.name ?? null);
+      onValueChange?.(next, file);
+    },
+    [controlled, onValueChange]
+  );
+
+  const read = React.useCallback(
+    async (file: File) => {
+      setReadError(null);
+
+      if (file.size > MAX_FILE_SIZE) {
+        setReadError(strings.fileTooLarge);
+
+        return;
+      }
+
+      try {
+        load(await file.text(), file);
+      } catch {
+        setReadError(strings.readFailed);
+      }
+    },
+    [load, strings]
+  );
+
+  /* ---------------------------------------------------------------------
+   * Where the reader is
+   * ------------------------------------------------------------------ */
+
+  React.useEffect(() => {
+    const element = scroller.current;
+
+    if (!outlineOpen || !element) {
+      return;
+    }
+
+    let queued = 0;
+
+    const measure = () => {
+      queued = 0;
+      const headings = [...element.querySelectorAll<HTMLElement>('.mawy-md-heading')];
+
+      // The viewer scrolls inside itself when it has been given a height, and
+      // otherwise the page scrolls around it. Clamping the box's top at zero is
+      // what makes one line of arithmetic answer both.
+      const line = Math.max(element.getBoundingClientRect().top, 0) + 24;
+      let current: string | null = headings[0]?.id ?? null;
+
+      for (const heading of headings) {
+        if (heading.getBoundingClientRect().top > line) {
+          break;
+        }
+
+        current = heading.id;
+      }
+
+      setActiveHeading(current);
+    };
+
+    const onScroll = () => {
+      queued ||= requestAnimationFrame(measure);
+    };
+
+    measure();
+    element.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(queued);
+      element.removeEventListener('scroll', onScroll);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [outlineOpen, document_]);
+
+  const goTo = React.useCallback((slug: string) => {
+    const heading = [
+      ...(scroller.current?.querySelectorAll<HTMLElement>('.mawy-md-heading') ?? [])
+    ].find((element) => element.id === slug);
+
+    if (!heading) {
+      return;
+    }
+
+    heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    // Moving the page is only half of following a link. The focus has to go
+    // with it, or the next Tab carries on from wherever the outline was.
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }, []);
+
+  /* ---------------------------------------------------------------------
+   * Dragging a file over
+   * ------------------------------------------------------------------ */
+
+  const carriesFile = (event: React.DragEvent) => [...event.dataTransfer.types].includes('Files');
+
+  const onDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!droppable || !carriesFile(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    depth.current += 1;
+    setDragging(true);
+  };
+
+  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!droppable || !carriesFile(event)) {
+      return;
+    }
+
+    // Without this the browser opens the file itself, replacing the page.
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const onDragLeave = () => {
+    // Dragging across a child fires leave on the parent, so the enters and the
+    // leaves are counted rather than trusted one at a time.
+    depth.current = Math.max(depth.current - 1, 0);
+
+    if (depth.current === 0) {
+      setDragging(false);
+    }
+  };
+
+  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!droppable || !carriesFile(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    depth.current = 0;
+    setDragging(false);
+
+    const file = event.dataTransfer.files[0];
+
+    if (file) {
+      void read(file);
+    }
+  };
+
+  /* ---------------------------------------------------------------------
+   * Drawing
+   * ------------------------------------------------------------------ */
+
+  const hasDocument = text.trim().length > 0;
+
+  return (
+    <div
+      {...rest}
+      ref={ref}
+      className={['mawy-root', 'mawy-viewer', className].filter(Boolean).join(' ')}
+      data-mawy-color-scheme={scheme}
+      data-mawy-dragging={dragging ? 'true' : undefined}
+      style={{ ...typographyStyle(type), ...style } as React.CSSProperties}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {items.length ? (
+        <MawyViewerToolbar
+          items={items}
+          strings={strings}
+          typography={type}
+          onTypographyChange={setType}
+          colorScheme={scheme}
+          onColorSchemeChange={setScheme}
+          outlineOpen={outlineOpen}
+          onOutlineToggle={() => setOutlineOpen((was) => !was)}
+          onOpenFile={() => picker.current?.click()}
+          onCopy={() => copy(text)}
+          copyState={copyState}
+          fileName={fileName}
+          hasDocument={hasDocument}
+        />
+      ) : null}
+
+      <div className="mawy-viewer-body">
+        {outlineOpen && hasDocument ? (
+          <MawyViewerOutline
+            entries={document_.outline}
+            strings={strings}
+            active={activeHeading}
+            onSelect={goTo}
+            onClose={() => setOutlineOpen(false)}
+          />
+        ) : null}
+
+        <div className="mawy-viewer-scroll" ref={scroller}>
+          {hasDocument ? (
+            <article className="mawy-md" aria-label={fileName ?? strings.document}>
+              {content}
+            </article>
+          ) : (
+            (empty ?? (
+              <MawyViewerEmpty
+                strings={strings}
+                droppable={droppable}
+                error={readError}
+                onOpenFile={() => picker.current?.click()}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {dragging ? (
+        <div className="mawy-drop-veil" aria-hidden="true">
+          <span>{strings.dropHere}</span>
+        </div>
+      ) : null}
+
+      <input
+        ref={picker}
+        type="file"
+        className="mawy-file-input"
+        accept={accept}
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0];
+
+          if (file) {
+            void read(file);
+          }
+
+          // Cleared, so that choosing the same file twice in a row is two
+          // events rather than one.
+          event.currentTarget.value = '';
+        }}
+      />
+    </div>
+  );
+});

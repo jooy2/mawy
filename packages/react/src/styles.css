@@ -10,8 +10,1000 @@
  *
  * `--mawy-*` is the whole namespace, and nothing outside it is a supported
  * thing to override.
+ *
+ * The tokens are declared on `.mawy-root` rather than on `:root`, which is the
+ * one structural decision in this file. A component library has no business
+ * writing to the document element, and a viewer that read its palette from
+ * `:root` could not be dark inside a light page — which is exactly what a
+ * side-by-side editor and preview, or a single embedded document, wants to be.
  */
 
-:root {
-  color-scheme: light dark;
+/* ---------------------------------------------------------------------------
+ * Tokens
+ * ------------------------------------------------------------------------- */
+
+.mawy-root {
+  /* The three families the document may be set in. Named roles, not fonts: the
+   * package ships no typefaces and should not pretend to. */
+  --mawy-font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Pretendard', 'Apple SD Gothic Neo',
+    'Noto Sans KR', Roboto, sans-serif;
+  --mawy-font-serif:
+    ui-serif, 'Iowan Old Style', 'Source Serif 4', 'Noto Serif KR', 'Nanum Myeongjo', Georgia, serif;
+  --mawy-font-mono:
+    ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  /* How the document is set. The viewer writes these from its own state; an
+   * application that would rather drive the type itself declares them instead
+   * and leaves the toolbar off. */
+  --mawy-doc-font: var(--mawy-font-sans);
+  --mawy-doc-size: 16px;
+  --mawy-doc-line-height: 1.7;
+  --mawy-doc-letter-spacing: 0em;
+  --mawy-doc-measure: 44rem;
+
+  --mawy-radius-sm: 6px;
+  --mawy-radius-md: 9px;
+  --mawy-radius-lg: 14px;
+
+  --mawy-bg: #ffffff;
+  --mawy-bg-sunken: #f6f6f8;
+  --mawy-bg-raised: #ffffff;
+  --mawy-chrome: rgb(255 255 255 / 82%);
+
+  --mawy-fg: #16161a;
+  --mawy-fg-muted: #5b5b66;
+  --mawy-fg-subtle: #8b8b96;
+
+  --mawy-border: #e5e5ea;
+  --mawy-border-strong: #d0d0d8;
+
+  --mawy-accent: #5b34ea;
+  --mawy-accent-hover: #4a29e0;
+  --mawy-accent-fg: #ffffff;
+  --mawy-accent-soft: rgb(91 52 234 / 10%);
+
+  --mawy-code-bg: #f3f3f6;
+  --mawy-code-fg: #24242c;
+  --mawy-mark-bg: #fff3a8;
+  --mawy-mark-fg: #4a3b00;
+
+  --mawy-note: #2563c9;
+  --mawy-tip: #17855a;
+  --mawy-important: #7c3aed;
+  --mawy-warning: #b3760a;
+  --mawy-caution: #cf3232;
+
+  --mawy-shadow-1: 0 1px 2px rgb(16 16 24 / 6%);
+  --mawy-shadow-2: 0 1px 2px rgb(16 16 24 / 8%), 0 10px 28px -6px rgb(16 16 24 / 14%);
+
+  --mawy-duration: 140ms;
+  --mawy-easing: cubic-bezier(0.2, 0, 0.2, 1);
+
+  color-scheme: light;
+}
+
+/* Two selectors and not one: an explicit `dark` wins wherever it is set, and
+ * `system` is the only value that asks the operating system. A single
+ * `prefers-color-scheme` block would make `light` unreachable on a dark machine. */
+.mawy-root[data-mawy-color-scheme='dark'] {
+  --mawy-bg: #17171b;
+  --mawy-bg-sunken: #101014;
+  --mawy-bg-raised: #1e1e24;
+  --mawy-chrome: rgb(23 23 27 / 84%);
+
+  --mawy-fg: #e9e9ef;
+  --mawy-fg-muted: #a2a2af;
+  --mawy-fg-subtle: #77778a;
+
+  --mawy-border: #2b2b33;
+  --mawy-border-strong: #3d3d47;
+
+  --mawy-accent: #9d86ff;
+  --mawy-accent-hover: #ad9aff;
+  --mawy-accent-fg: #14101f;
+  --mawy-accent-soft: rgb(157 134 255 / 16%);
+
+  --mawy-code-bg: #22222a;
+  --mawy-code-fg: #dcdce6;
+  --mawy-mark-bg: #4a3d00;
+  --mawy-mark-fg: #ffe98a;
+
+  --mawy-note: #6ea8fe;
+  --mawy-tip: #4ade9d;
+  --mawy-important: #b79bff;
+  --mawy-warning: #e2b14a;
+  --mawy-caution: #ff7b72;
+
+  --mawy-shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
+  --mawy-shadow-2: 0 1px 2px rgb(0 0 0 / 44%), 0 12px 32px -8px rgb(0 0 0 / 60%);
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mawy-root[data-mawy-color-scheme='system'] {
+    --mawy-bg: #17171b;
+    --mawy-bg-sunken: #101014;
+    --mawy-bg-raised: #1e1e24;
+    --mawy-chrome: rgb(23 23 27 / 84%);
+
+    --mawy-fg: #e9e9ef;
+    --mawy-fg-muted: #a2a2af;
+    --mawy-fg-subtle: #77778a;
+
+    --mawy-border: #2b2b33;
+    --mawy-border-strong: #3d3d47;
+
+    --mawy-accent: #9d86ff;
+    --mawy-accent-hover: #ad9aff;
+    --mawy-accent-fg: #14101f;
+    --mawy-accent-soft: rgb(157 134 255 / 16%);
+
+    --mawy-code-bg: #22222a;
+    --mawy-code-fg: #dcdce6;
+    --mawy-mark-bg: #4a3d00;
+    --mawy-mark-fg: #ffe98a;
+
+    --mawy-note: #6ea8fe;
+    --mawy-tip: #4ade9d;
+    --mawy-important: #b79bff;
+    --mawy-warning: #e2b14a;
+    --mawy-caution: #ff7b72;
+
+    --mawy-shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
+    --mawy-shadow-2: 0 1px 2px rgb(0 0 0 / 44%), 0 12px 32px -8px rgb(0 0 0 / 60%);
+
+    color-scheme: dark;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The shell
+ *
+ * `:where()` on everything the shell resets, so a host application's own rules
+ * outrank these without `!important` and without caring about import order.
+ * ------------------------------------------------------------------------- */
+
+.mawy-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--mawy-fg);
+  background: var(--mawy-bg);
+  font-family: var(--mawy-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: start;
+  -webkit-text-size-adjust: 100%;
+}
+
+.mawy-root :where(*, *::before, *::after) {
+  box-sizing: border-box;
+}
+
+.mawy-root :where(button, input) {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.mawy-root :where(:focus-visible) {
+  outline: 2px solid var(--mawy-accent);
+  outline-offset: 2px;
+  border-radius: var(--mawy-radius-sm);
+}
+
+.mawy-root .mawy-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+}
+
+.mawy-root .mawy-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Buttons and menus
+ * ------------------------------------------------------------------------- */
+
+.mawy-root .mawy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mawy-radius-md);
+  background: transparent;
+  color: var(--mawy-fg-muted);
+  cursor: pointer;
+  transition:
+    background var(--mawy-duration) var(--mawy-easing),
+    color var(--mawy-duration) var(--mawy-easing);
+}
+
+.mawy-root .mawy-button-labelled {
+  width: auto;
+  padding: 0 10px;
+}
+
+.mawy-root .mawy-button:hover:not(:disabled) {
+  background: var(--mawy-bg-sunken);
+  color: var(--mawy-fg);
+}
+
+.mawy-root .mawy-button[data-mawy-pressed='true'],
+.mawy-root .mawy-button[aria-pressed='true'] {
+  background: var(--mawy-accent-soft);
+  color: var(--mawy-accent);
+}
+
+.mawy-root .mawy-button[data-mawy-state='copied'] {
+  color: var(--mawy-tip);
+}
+
+.mawy-root .mawy-button[data-mawy-state='failed'] {
+  color: var(--mawy-caution);
+}
+
+.mawy-root .mawy-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mawy-root .mawy-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.mawy-root .mawy-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 208px;
+  padding: 8px;
+  border: 1px solid var(--mawy-border);
+  border-radius: var(--mawy-radius-lg);
+  background: var(--mawy-bg-raised);
+  box-shadow: var(--mawy-shadow-2);
+  animation: mawy-menu-in var(--mawy-duration) var(--mawy-easing);
+}
+
+.mawy-root .mawy-menu-panel[data-mawy-align='start'] {
+  inset-inline-start: 0;
+}
+
+.mawy-root .mawy-menu-panel[data-mawy-align='end'] {
+  inset-inline-end: 0;
+}
+
+@keyframes mawy-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mawy-root .mawy-menu-panel {
+    animation: none;
+  }
+}
+
+.mawy-root .mawy-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mawy-root .mawy-choice-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--mawy-radius-sm);
+  background: transparent;
+  color: var(--mawy-fg-muted);
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--mawy-duration) var(--mawy-easing);
+}
+
+.mawy-root .mawy-choice-option:hover {
+  background: var(--mawy-bg-sunken);
+}
+
+.mawy-root .mawy-choice-option[aria-checked='true'] {
+  background: var(--mawy-accent-soft);
+  color: var(--mawy-accent);
+  font-weight: 550;
+}
+
+.mawy-root .mawy-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 6px 6px;
+}
+
+.mawy-root .mawy-slider-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mawy-fg-muted);
+}
+
+.mawy-root .mawy-slider-label output {
+  color: var(--mawy-fg);
+  font-family: var(--mawy-font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mawy-root .mawy-slider input[type='range'] {
+  width: 100%;
+  height: 18px;
+  accent-color: var(--mawy-accent);
+  cursor: pointer;
+}
+
+.mawy-root .mawy-slider-reset {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--mawy-accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mawy-root .mawy-slider-reset:disabled {
+  color: var(--mawy-fg-subtle);
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------------------
+ * The toolbar
+ * ------------------------------------------------------------------------- */
+
+.mawy-root .mawy-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--mawy-border);
+  background: var(--mawy-chrome);
+  backdrop-filter: blur(12px);
+}
+
+.mawy-root .mawy-toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding-inline-start: 4px;
+  color: var(--mawy-fg-muted);
+  font-size: 13px;
+}
+
+.mawy-root .mawy-toolbar-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mawy-root .mawy-toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: auto;
+}
+
+.mawy-root .mawy-toolbar-separator {
+  width: 1px;
+  height: 18px;
+  margin: 0 5px;
+  background: var(--mawy-border);
+}
+
+/* ---------------------------------------------------------------------------
+ * The body: outline beside document
+ * ------------------------------------------------------------------------- */
+
+.mawy-root .mawy-viewer-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Scrolls inside itself when the viewer has been given a height, and lets the
+ * page scroll when it has not. Both come from the same declaration: an
+ * auto-height box with `overflow: auto` simply grows. */
+.mawy-root .mawy-viewer-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mawy-root .mawy-viewer-scroll {
+    scroll-behavior: auto;
+  }
+}
+
+.mawy-root .mawy-outline {
+  flex: none;
+  width: 236px;
+  max-height: 100%;
+  padding: 12px 8px 20px;
+  overflow: auto;
+  border-inline-end: 1px solid var(--mawy-border);
+  background: var(--mawy-bg-sunken);
+}
+
+.mawy-root .mawy-outline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 8px 10px;
+}
+
+.mawy-root .mawy-outline-title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--mawy-fg-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mawy-root .mawy-outline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mawy-root .mawy-outline-list li {
+  margin: 0;
+}
+
+.mawy-root .mawy-outline-link {
+  display: block;
+  width: 100%;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--mawy-radius-sm);
+  background: none;
+  color: var(--mawy-fg-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: start;
+  cursor: pointer;
+  transition: color var(--mawy-duration) var(--mawy-easing);
+}
+
+.mawy-root .mawy-outline-link[data-mawy-depth='1'] {
+  padding-inline-start: 22px;
+}
+
+.mawy-root .mawy-outline-link[data-mawy-depth='2'] {
+  padding-inline-start: 34px;
+  font-size: 12.5px;
+}
+
+.mawy-root .mawy-outline-link[data-mawy-depth='3'] {
+  padding-inline-start: 46px;
+  font-size: 12.5px;
+}
+
+.mawy-root .mawy-outline-link:hover {
+  color: var(--mawy-fg);
+}
+
+.mawy-root .mawy-outline-link[aria-current='location'] {
+  color: var(--mawy-accent);
+  font-weight: 550;
+  box-shadow: inset 2px 0 0 var(--mawy-accent);
+}
+
+.mawy-root .mawy-outline-empty {
+  margin: 0;
+  padding: 4px 10px;
+  color: var(--mawy-fg-subtle);
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------------------------
+ * No document yet
+ * ------------------------------------------------------------------------- */
+
+.mawy-root .mawy-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 280px;
+  height: 100%;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.mawy-root .mawy-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--mawy-bg-sunken);
+  color: var(--mawy-fg-subtle);
+}
+
+.mawy-root .mawy-empty-mark svg {
+  width: 24px;
+  height: 24px;
+}
+
+.mawy-root .mawy-empty-title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mawy-root .mawy-empty-hint {
+  max-width: 32ch;
+  margin: 0;
+  padding: 0;
+  color: var(--mawy-fg-muted);
+}
+
+.mawy-root .mawy-empty-action {
+  margin-top: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--mawy-border-strong);
+  border-radius: var(--mawy-radius-md);
+  background: var(--mawy-bg-raised);
+  box-shadow: var(--mawy-shadow-1);
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    border-color var(--mawy-duration) var(--mawy-easing),
+    color var(--mawy-duration) var(--mawy-easing);
+}
+
+.mawy-root .mawy-empty-action:hover {
+  border-color: var(--mawy-accent);
+  color: var(--mawy-accent);
+}
+
+.mawy-root .mawy-empty-error {
+  margin: 4px 0 0;
+  color: var(--mawy-caution);
+}
+
+.mawy-root .mawy-drop-veil {
+  position: absolute;
+  inset: 8px;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--mawy-accent);
+  border-radius: var(--mawy-radius-lg);
+  background: color-mix(in srgb, var(--mawy-bg) 80%, var(--mawy-accent));
+  color: var(--mawy-accent);
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * The document
+ *
+ * Every selector here is under `.mawy-root`, and that is not decoration. A
+ * viewer is dropped into somebody else's page, and that page has an `article h2`
+ * or a `table { display: block }` of its own — both of which are (0,1,1) and
+ * would win against a single class. `.mawy-root .mawy-md-heading` is (0,2,0),
+ * which beats an element rule without needing `!important` and still loses to a
+ * host that means it.
+ *
+ * The `:where()` resets above are the opposite case on purpose: a reset should
+ * be the weakest thing in the room.
+ * ------------------------------------------------------------------------- */
+
+.mawy-root .mawy-md {
+  max-width: var(--mawy-doc-measure);
+  margin: 0 auto;
+  padding: 40px 28px 96px;
+  color: var(--mawy-fg);
+  font-family: var(--mawy-doc-font);
+  font-size: var(--mawy-doc-size);
+  line-height: var(--mawy-doc-line-height);
+  letter-spacing: var(--mawy-doc-letter-spacing);
+  overflow-wrap: break-word;
+  transition: max-width var(--mawy-duration) var(--mawy-easing);
+}
+
+@media (max-width: 640px) {
+  .mawy-root .mawy-md {
+    padding: 24px 18px 64px;
+  }
+}
+
+.mawy-root .mawy-md > :first-child {
+  margin-top: 0;
+}
+
+.mawy-root .mawy-md > :last-child {
+  margin-bottom: 0;
+}
+
+.mawy-root .mawy-md p {
+  margin: 0 0 1em;
+}
+
+/* Headings ---------------------------------------------------------------- */
+
+.mawy-root .mawy-md-heading {
+  margin: 2em 0 0.6em;
+  padding: 0;
+  border: 0;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.014em;
+  scroll-margin-top: 60px;
+}
+
+.mawy-root .mawy-md-heading:focus {
+  outline: none;
+}
+
+.mawy-root .mawy-md h1.mawy-md-heading {
+  margin-top: 0;
+  font-size: 1.9em;
+}
+
+.mawy-root .mawy-md h2.mawy-md-heading {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--mawy-border);
+  font-size: 1.45em;
+}
+
+.mawy-root .mawy-md h3.mawy-md-heading {
+  font-size: 1.2em;
+}
+
+.mawy-root .mawy-md h4.mawy-md-heading {
+  font-size: 1.05em;
+}
+
+.mawy-root .mawy-md h5.mawy-md-heading,
+.mawy-root .mawy-md h6.mawy-md-heading {
+  color: var(--mawy-fg-muted);
+  font-size: 1em;
+}
+
+/* Runs of text ------------------------------------------------------------ */
+
+.mawy-root .mawy-md-link {
+  color: var(--mawy-accent);
+  font-weight: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--mawy-accent) 40%, transparent);
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color var(--mawy-duration) var(--mawy-easing);
+}
+
+.mawy-root .mawy-md-link:hover {
+  text-decoration-color: currentcolor;
+}
+
+.mawy-root .mawy-md strong {
+  font-weight: 650;
+}
+
+.mawy-root .mawy-md em {
+  font-style: italic;
+}
+
+.mawy-root .mawy-md del {
+  color: var(--mawy-fg-subtle);
+}
+
+.mawy-root .mawy-md mark {
+  background: var(--mawy-mark-bg);
+  color: var(--mawy-mark-fg);
+}
+
+.mawy-root .mawy-md-image {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--mawy-radius-md);
+}
+
+.mawy-root .mawy-md-rule {
+  height: 1px;
+  margin: 2.2em 0;
+  border: 0;
+  background: var(--mawy-border);
+}
+
+/* Lists ------------------------------------------------------------------- */
+
+.mawy-root .mawy-md-list {
+  margin: 0 0 1em;
+  padding-inline-start: 1.5em;
+  list-style-position: outside;
+}
+
+.mawy-root .mawy-md-list li {
+  margin: 0.25em 0;
+}
+
+.mawy-root .mawy-md-list li::marker {
+  color: var(--mawy-fg-subtle);
+}
+
+.mawy-root .mawy-md-list .mawy-md-list {
+  margin-bottom: 0;
+}
+
+/* No marker, because the checkbox is the marker. It is pulled back into the
+ * gutter the bullets use, so a list with both in it does not step in and out. */
+.mawy-root .mawy-md-task {
+  list-style: none;
+}
+
+.mawy-root .mawy-md-checkbox {
+  width: 1em;
+  height: 1em;
+  margin-inline: -1.45em 0.45em;
+  vertical-align: -0.12em;
+  accent-color: var(--mawy-accent);
+}
+
+/* Quotations and alerts ---------------------------------------------------- */
+
+.mawy-root .mawy-md blockquote {
+  margin: 0 0 1em;
+  padding: 0.15em 0 0.15em 1.1em;
+  border-inline-start: 3px solid var(--mawy-border-strong);
+  color: var(--mawy-fg-muted);
+}
+
+.mawy-root .mawy-md-alert {
+  padding: 0.85em 1.1em;
+  border-inline-start-width: 3px;
+  border-inline-start-color: var(--mawy-alert, var(--mawy-border-strong));
+  border-radius: 0 var(--mawy-radius-md) var(--mawy-radius-md) 0;
+  background: color-mix(in srgb, var(--mawy-alert, currentcolor) 7%, transparent);
+  color: var(--mawy-fg);
+}
+
+.mawy-root .mawy-md-alert[data-mawy-alert='note'] {
+  --mawy-alert: var(--mawy-note);
+}
+
+.mawy-root .mawy-md-alert[data-mawy-alert='tip'] {
+  --mawy-alert: var(--mawy-tip);
+}
+
+.mawy-root .mawy-md-alert[data-mawy-alert='important'] {
+  --mawy-alert: var(--mawy-important);
+}
+
+.mawy-root .mawy-md-alert[data-mawy-alert='warning'] {
+  --mawy-alert: var(--mawy-warning);
+}
+
+.mawy-root .mawy-md-alert[data-mawy-alert='caution'] {
+  --mawy-alert: var(--mawy-caution);
+}
+
+.mawy-root .mawy-md-alert-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  margin: 0 0 0.4em;
+  color: var(--mawy-alert);
+  font-weight: 650;
+}
+
+.mawy-root .mawy-md-alert > :last-child {
+  margin-bottom: 0;
+}
+
+/* Code -------------------------------------------------------------------- */
+
+.mawy-root .mawy-md-code {
+  padding: 0.15em 0.4em;
+  border-radius: var(--mawy-radius-sm);
+  background: var(--mawy-code-bg);
+  color: var(--mawy-code-fg);
+  font-family: var(--mawy-font-mono);
+  font-size: 0.875em;
+  font-weight: inherit;
+  letter-spacing: 0;
+}
+
+.mawy-root .mawy-md-code::before,
+.mawy-root .mawy-md-code::after {
+  content: none;
+}
+
+.mawy-root .mawy-md-pre {
+  position: relative;
+  margin: 0 0 1.2em;
+}
+
+.mawy-root .mawy-md-pre pre {
+  margin: 0;
+  padding: 0.95em 1.05em;
+  overflow-x: auto;
+  border: 1px solid var(--mawy-border);
+  border-radius: var(--mawy-radius-md);
+  background: var(--mawy-code-bg);
+  color: var(--mawy-code-fg);
+  font-family: var(--mawy-font-mono);
+  font-size: 0.855em;
+  line-height: 1.6;
+  letter-spacing: 0;
+  tab-size: 2;
+}
+
+.mawy-root .mawy-md-pre code {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* The language, as a label rather than as a chip: it is there to be read when
+ * it is looked for, and to be invisible the rest of the time. */
+.mawy-root .mawy-md-pre[data-mawy-lang]::after {
+  content: attr(data-mawy-lang);
+  position: absolute;
+  top: 0.65em;
+  inset-inline-start: 1.05em;
+  color: var(--mawy-fg-subtle);
+  font-family: var(--mawy-font-mono);
+  font-size: 0.7em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.mawy-root .mawy-md-pre[data-mawy-lang] pre {
+  padding-top: 2.1em;
+}
+
+.mawy-root .mawy-code-copy {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--mawy-radius-sm);
+  background: transparent;
+  color: var(--mawy-fg-subtle);
+  font-size: 14px;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity var(--mawy-duration) var(--mawy-easing);
+}
+
+/* Not `display: none` while hidden — a keyboard has to be able to reach it, and
+ * a button that is not in the layout is a button Tab walks past. */
+.mawy-root .mawy-md-pre:hover .mawy-code-copy,
+.mawy-root .mawy-code-copy:focus-visible,
+.mawy-root .mawy-code-copy[data-mawy-state='copied'] {
+  opacity: 1;
+}
+
+.mawy-root .mawy-code-copy:hover {
+  border-color: var(--mawy-border);
+  background: var(--mawy-bg-raised);
+  color: var(--mawy-fg);
+}
+
+.mawy-root .mawy-code-copy[data-mawy-state='copied'] {
+  color: var(--mawy-tip);
+}
+
+/* Tables ------------------------------------------------------------------ */
+
+.mawy-root .mawy-md-table-scroll {
+  margin: 0 0 1.2em;
+  overflow-x: auto;
+}
+
+.mawy-root .mawy-md-table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.94em;
+}
+
+.mawy-root .mawy-md-table th,
+.mawy-root .mawy-md-table td {
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--mawy-border);
+  text-align: start;
+}
+
+.mawy-root .mawy-md-table th {
+  background: var(--mawy-bg-sunken);
+  font-weight: 650;
+}
+
+.mawy-root .mawy-md-table tr {
+  background: transparent;
+  border: 0;
+}
+
+.mawy-root .mawy-md-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--mawy-bg-sunken) 55%, transparent);
+}
+
+/* Raw HTML ---------------------------------------------------------------- */
+
+.mawy-root .mawy-md-html-source {
+  display: block;
+  margin: 0 0 1em;
+  padding: 0.5em 0.7em;
+  border: 1px dashed var(--mawy-border-strong);
+  border-radius: var(--mawy-radius-sm);
+  background: var(--mawy-bg-sunken);
+  color: var(--mawy-fg-muted);
+  font-family: var(--mawy-font-mono);
+  font-size: 0.82em;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.mawy-root span.mawy-md-html-source {
+  display: inline;
+  margin: 0;
+  padding: 0.1em 0.3em;
+  border: 0;
+  white-space: normal;
+}
+
+.mawy-root .mawy-md-html img {
+  max-width: 100%;
+  height: auto;
 }
