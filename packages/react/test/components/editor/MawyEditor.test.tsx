@@ -214,6 +214,73 @@ describe('the two panes of split', () => {
     }
   });
 
+  it('puts the caret on the word a click in the preview landed on', async () => {
+    const source = 'A paragraph with **strong** words.\n\n## A heading here\n\nMore words.';
+    const screen = await render(
+      <MawyEditor defaultValue={source} defaultMode="split" style={{ height: '24rem' }} />
+    );
+    const input = sourceOf(screen);
+
+    /** A click where the element actually is, which is what the caret follows. */
+    const clickCentreOf = (selector: string) => {
+      const element = screen.container.querySelector(
+        `.mawy-editor-preview ${selector}`
+      ) as HTMLElement;
+      const box = element.getBoundingClientRect();
+
+      element.dispatchEvent(
+        new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          clientX: box.left + box.width / 2,
+          clientY: box.top + box.height / 2
+        })
+      );
+    };
+
+    clickCentreOf('strong');
+
+    await vi.waitFor(() => {
+      expect(input.selectionStart).toBeGreaterThanOrEqual(source.indexOf('strong'));
+      expect(input.selectionStart).toBeLessThanOrEqual(source.indexOf('strong') + 6);
+    });
+
+    clickCentreOf('h2');
+
+    await vi.waitFor(() => {
+      expect(input.selectionStart).toBeGreaterThanOrEqual(source.indexOf('A heading here'));
+      expect(input.selectionStart).toBeLessThanOrEqual(source.indexOf('here') + 4);
+    });
+  });
+
+  it('leaves a link in the preview alone', async () => {
+    const source = 'Words and [a link](https://example.com) after them.';
+    const screen = await render(
+      <MawyEditor defaultValue={source} defaultMode="split" style={{ height: '24rem' }} />
+    );
+    const input = sourceOf(screen);
+    const link = screen.container.querySelector('.mawy-editor-preview a') as HTMLElement;
+    const box = link.getBoundingClientRect();
+
+    input.setSelectionRange(0, 0);
+    // The click is a real one and would take the test off the page with it.
+    link.addEventListener('click', (event) => event.preventDefault(), { capture: true });
+    link.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: box.left + box.width / 2,
+        clientY: box.top + box.height / 2
+      })
+    );
+
+    await new Promise((done) => setTimeout(done, 30));
+
+    // Following the link is what a click on one is for, and moving the caret
+    // out from under it would be a second thing happening at the same time.
+    expect(input.selectionStart).toBe(0);
+  });
+
   it('hears the textarea scroll, which does not bubble to the pane around it', async () => {
     const screen = await render(
       <MawyEditor

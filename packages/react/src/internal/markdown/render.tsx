@@ -39,12 +39,16 @@ export interface RenderContext {
 /**
  * Which characters of the source an element was drawn from.
  *
- * Every element the renderer draws for a block carries it, along with the list
- * items and table rows inside them, because a range is the only way back: from
- * a place on the page to the place in the document it came from. The preview
- * in `split` scrolling in step with the source is the first thing to ask, and
- * the surface that edits the drawn document will ask the same question in both
- * directions.
+ * Every element the renderer draws carries it — blocks, list items, table rows
+ * and cells, and the inline elements inside them — because a range is the only
+ * way back: from a place on the page to the place in the document it came
+ * from. The preview in `split` scrolls by it, a click in the preview finds the
+ * word it landed on by it, and the surface that edits the drawn document will
+ * ask the same question in both directions.
+ *
+ * Text is the one thing that cannot carry one, having no attributes to carry it
+ * with. It does not need to: a run of text is bounded by the elements on either
+ * side of it, which is enough to find it in the source between them.
  */
 function origin(node: { range: MdRange }): { 'data-mawy-range': string } {
   return { 'data-mawy-range': `${node.range.start},${node.range.end}` };
@@ -61,24 +65,42 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
         return node.value;
 
       case 'emphasis':
-        return <em key={index}>{renderInline(node.children, context)}</em>;
+        return (
+          <em key={index} {...origin(node)}>
+            {renderInline(node.children, context)}
+          </em>
+        );
 
       case 'strong':
-        return <strong key={index}>{renderInline(node.children, context)}</strong>;
+        return (
+          <strong key={index} {...origin(node)}>
+            {renderInline(node.children, context)}
+          </strong>
+        );
 
       case 'delete':
-        return <del key={index}>{renderInline(node.children, context)}</del>;
+        return (
+          <del key={index} {...origin(node)}>
+            {renderInline(node.children, context)}
+          </del>
+        );
 
       case 'inlineCode':
         return (
-          <code key={index} className="mawy-md-code">
+          <code key={index} className="mawy-md-code" {...origin(node)}>
             {node.value}
           </code>
         );
 
       case 'link':
         return (
-          <a key={index} className="mawy-md-link" href={node.url} title={node.title ?? undefined}>
+          <a
+            key={index}
+            className="mawy-md-link"
+            href={node.url}
+            title={node.title ?? undefined}
+            {...origin(node)}
+          >
             {renderInline(node.children, context)}
           </a>
         );
@@ -93,14 +115,17 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
             title={node.title ?? undefined}
             loading="lazy"
             decoding="async"
+            {...origin(node)}
           />
         );
 
       case 'break':
-        return <br key={index} />;
+        return <br key={index} {...origin(node)} />;
 
       case 'inlineHtml':
-        return <RawHtml key={index} value={node.value} context={context} inline />;
+        return (
+          <RawHtml key={index} value={node.value} context={context} inline marks={origin(node)} />
+        );
 
       default:
         return null;
@@ -235,6 +260,7 @@ function renderRow(
         <Cell
           key={column}
           scope={row.header ? 'col' : undefined}
+          {...origin(cell)}
           style={
             align[column] ? { textAlign: align[column] as 'left' | 'center' | 'right' } : undefined
           }

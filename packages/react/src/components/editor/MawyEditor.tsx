@@ -24,6 +24,7 @@ import {
   type EditState,
   type MawyCommand
 } from '../../internal/commands.js';
+import { caretFromPoint, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
@@ -435,6 +436,56 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   }, [syncScroll]);
 
   /* ---------------------------------------------------------------------
+   * Clicking the preview
+   * ------------------------------------------------------------------ */
+
+  /**
+   * A click in the preview puts the caret on the same word in the source.
+   *
+   * It is the other direction of the question the scrolling asks, and the one
+   * the surface that edits the drawn document will be built on: a place on the
+   * page, read back as a place in the document. Nothing is scrolled on purpose
+   * — in `split` the two panes are already lined up, so a word the preview is
+   * showing is a word the source is showing, and the browser's own nudge to
+   * bring the caret into view is as far as either pane needs to move.
+   */
+  const jumpToSource = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const input = source.current;
+      const scroller = event.currentTarget.querySelector<HTMLElement>('.mawy-viewer-scroll');
+
+      if (!input || !scroller || !showSource) {
+        return;
+      }
+
+      // A link is a link, a checkbox is a checkbox, and a code block's copy
+      // button is already doing something with the click.
+      if ((event.target as HTMLElement).closest('a, button, input, label, select, textarea')) {
+        return;
+      }
+
+      const selection = window.getSelection();
+
+      // Text was being selected to copy, not a place being asked for.
+      if (selection && !selection.isCollapsed) {
+        return;
+      }
+
+      const point = caretFromPoint(event.clientX, event.clientY);
+      const at = point && sourceAt(scroller, point.node, point.offset, text);
+
+      if (at === null || at === undefined) {
+        return;
+      }
+
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(at, at);
+      readSelection();
+    },
+    [showSource, text, readSelection]
+  );
+
+  /* ---------------------------------------------------------------------
    * Drawing
    * ------------------------------------------------------------------ */
 
@@ -481,7 +532,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         ) : null}
 
         {showPreview ? (
-          <div className="mawy-editor-pane mawy-editor-preview" ref={preview}>
+          <div
+            className="mawy-editor-pane mawy-editor-preview"
+            ref={preview}
+            onClick={jumpToSource}
+          >
             <MawyViewer
               value={text}
               toolbar={false}

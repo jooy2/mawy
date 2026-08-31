@@ -204,9 +204,9 @@ They are on `.mawy-root` rather than on `:root` on purpose. A component library 
 
 The light and dark palettes are chosen by `colorScheme`, which is `'system'` unless you say otherwise. `'system'` follows `prefers-color-scheme`; `'light'` and `'dark'` do not, so an application with its own switch drives the viewer from it and a reader on a dark machine still gets the light document you asked for.
 
-## Where a block came from
+## Where a piece of the page came from
 
-Every element the viewer draws for a block carries `data-mawy-range="start,end"` — the offsets, in the Markdown it was given, of that block's first character and of the one after its last. List items and table rows carry it too.
+Every element the viewer draws carries `data-mawy-range="start,end"` — the offsets, in the Markdown it was given, of that piece's first character and of the one after its last. Blocks, list items, table rows and cells, and the inline elements inside them: emphasis, links, code spans, images.
 
 In a document that reads `# Title`, a blank line, `## Second`, that second heading is drawn as:
 
@@ -214,7 +214,9 @@ In a document that reads `# Title`, a blank line, `## Second`, that second headi
 <h2 id="second" class="mawy-md-heading" data-mawy-range="9,18">Second</h2>
 ```
 
-It is there because a range is the only way back: from a place on the page to the place in the document it was drawn from. The editor's `split` reads it to scroll the preview to the block the top line of the source is in. An application can read it for the same kind of thing — a comment pinned to a paragraph, an "edit this section" control beside a heading — and the offsets index the string you passed directly, in UTF-16 code units, so `value.slice(start, end)` is the Markdown behind what was clicked.
+A range is the only way back: from a place on the page to the place in the document it was drawn from. The editor's `split` reads it twice over — to scroll the preview to the block the top line of the source is in, and to put the caret on the word a click in the preview landed on. An application can read it for the same kind of thing: a comment pinned to a paragraph, an "edit this section" control beside a heading. The offsets index the string you passed directly, in UTF-16 code units, so `value.slice(start, end)` is the Markdown behind whatever was clicked.
+
+Text is the one thing with no range on it, having no attributes to put one in. It does not need one: a run of text is bounded by the elements on either side of it, which is enough to find it in the source between them — a `<strong>` drawn from `**bold**` contains `bold` at exactly one place inside those eight characters.
 
 ## Accessibility
 
