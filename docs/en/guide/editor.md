@@ -72,9 +72,21 @@ It is not on `modes` by default. An application asks for it:
 <MawyEditor defaultValue={document} modes={['wysiwyg', 'plain']} />
 ```
 
-What works: typing and deleting inside a paragraph or a heading, splitting one with `Enter`, joining two with `Backspace` at the start of the second, `Shift`+`Enter` for a hard break, replacing a selection, and every command on the toolbar — those are pure functions of the source and its selection, so they needed nothing new to work here.
+What works: typing and deleting **anywhere there is text to type in** — a paragraph, a heading, a list item, a quotation, a table cell, a code block — replacing a selection, `Shift`+`Enter` for a hard break, and every command on the toolbar. Those last needed nothing new: they are pure functions of the source and its selection and neither surface is mentioned anywhere in them.
 
-Edits land on the **drawn** character rather than the written one, and that is the difference the whole surface turns on. The caret after `bold` in `**bold**` has an asterisk in front of it in the file and a `d` in front of it on the page. `Backspace` there takes the `d`.
+Edits land on the **drawn** character rather than the written one, and that is the difference the whole surface turns on. The caret after `bold` in `**bold**` has an asterisk in front of it in the file and a `d` in front of it on the page. `Backspace` there takes the `d`. An image and a hard break come out in one piece, because each of them is one character to a reader and none at all to a walk over the runs of text.
+
+`Enter` is a different thing in every container it is pressed in, because a blank line means something different in each:
+
+| Where           | What `Enter` does                                                             |
+| --------------- | ----------------------------------------------------------------------------- |
+| Between blocks  | A blank line                                                                  |
+| In a list item  | A new item, marker carried down — and on an item still empty, the marker goes |
+| In a quotation  | Ends the paragraph, which takes a _blank quoted line_ rather than a new one   |
+| In a code block | A newline and nothing else                                                    |
+| In a table      | Nothing: a row is a line, and there is nowhere in the file for a second one   |
+
+`Backspace` at the start of a block joins it to the one before it: two list items run together, a paragraph joins the heading above it. Two things it will not join — a table cell to the cell beside it, which would be eating the pipe between them, and a code block to whatever is above it, which would be eating the fence.
 
 `Enter` at the end of a paragraph is the one place the file cannot say what the screen needs to. Markdown has no empty paragraph: a blank line separates two blocks and a second blank line separates the same two. So the surface draws one anyway, in that one place, for as long as the caret is in it — and the moment anything is typed the blank line is doing the work and the paragraph is real.
 
@@ -84,8 +96,8 @@ Refusing a composition is refusing the composition. Korean is composed a jamo at
 
 What does not work yet, and does nothing at all rather than something half-right:
 
-- **Lists, quotations, tables and code blocks.** They draw and they read; an edit inside one is refused, because the rule for writing that edit back is not written.
-- **Pasting, dropping and images.**
+- **Raw HTML that is being drawn rather than shown.** Under `sanitize` and `raw` the markup reached the page through `dangerouslySetInnerHTML`, which means React does not know what is inside it and could not put it back. Under `escape` — the default — it is text like any other text, and edits like any other.
+- **Pasting, dropping, and putting an image in.**
 
 ## Formatting
 
@@ -149,7 +161,6 @@ Two of those count more carefully than they look. **Characters** are code points
 
 ## Still to come
 
-- The rest of the `wysiwyg` surface: lists, quotations, tables and code blocks; paste.
 - Input rules: the Markdown you type turning into what it means as you type it.
 - Paste: HTML in, Markdown out.
 - Images.

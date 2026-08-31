@@ -67,6 +67,17 @@ describe('a run of text', () => {
     expect(at(screen.container, source, 'the docs')).toBe(source.indexOf('the docs'));
   });
 
+  it('reads across the marker a container puts in front of every line', async () => {
+    const source = '> one\n> two';
+    const screen = await render(<MawyViewer value={source} />);
+
+    // The paragraph reads `one\ntwo` and is written `> one\n> two`, so a search
+    // for the whole of it finds nothing at all. Each line is found on its own.
+    expect(at(screen.container, source, 'one\ntwo', 0)).toBe(2);
+    expect(at(screen.container, source, 'one\ntwo', 4)).toBe(source.indexOf('two'));
+    expect(at(screen.container, source, 'one\ntwo', 7)).toBe(source.length);
+  });
+
   it('lands early rather than elsewhere when the text is not what was written', async () => {
     // `&amp;` is one character drawn and five written, and nothing is left to
     // say where the other four went. The answer stays inside the paragraph.

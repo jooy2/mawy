@@ -104,22 +104,67 @@ export function sourceAt(root: Element, node: Node, offset: number, text: string
       return inside ? inside.start : sourceAt(root, child, 0, text);
     }
 
-    const own = rangeOf(element) ?? range;
-
-    return offset === 0 ? own.start : own.end;
+    // Nothing in it, or nothing left of it: the caret is after whatever the
+    // element is written with — after the bullet of an empty list item, after
+    // the hashes of an empty heading. There is nowhere else in the file it
+    // could be, and the start would be in front of the markers rather than in
+    // the element at all.
+    return (rangeOf(element) ?? range).end;
   }
 
-  return Math.min(textStartOf(host, node, text) + offset, range.end);
+  const rows = linesOf(host, node, text);
+
+  for (const row of rows) {
+    if (offset <= row.at + row.length) {
+      return row.from + Math.max(offset - row.at, 0);
+    }
+  }
+
+  return Math.min(floorFor(host, node, range.start) + offset, range.end);
 }
 
-/** Where a run of text begins in the document. */
-function textStartOf(host: Element, node: Node, text: string): number {
+/**
+ * Where each line of a run of text sits in the document, found a line at a time.
+ *
+ * A run of text is usually the characters it was written with, and then finding
+ * it is one search. It is not when the lines it runs across carry a container's
+ * prefix: a paragraph inside a quotation reads as `one\ntwo` and is written as
+ * `> one\n> two`, and searching for the whole of it finds nothing. So each line
+ * is found on its own, starting after the last one — which is exact, and is
+ * also how the offsets inside it stay right across the `> ` in the middle.
+ *
+ * What is left over is a line that is not the characters it was written with at
+ * all, because a character reference or a backslash escape was decoded on the
+ * way in. Nothing can say where those went; the search stops there and the
+ * count carries on from the last thing that was certain.
+ */
+function linesOf(
+  host: Element,
+  node: Node,
+  text: string
+): { at: number; from: number; length: number }[] {
   const range = rangeOf(host) as MdRange;
   const value = (node as Text).data;
-  const floor = floorFor(host, node, range.start);
-  const found = text.indexOf(value, floor);
+  const rows: { at: number; from: number; length: number }[] = [];
+  let cursor = floorFor(host, node, range.start);
+  let at = 0;
 
-  return found !== -1 && found + value.length <= range.end ? found : floor;
+  for (const line of value.split('\n')) {
+    const found = text.indexOf(line, cursor);
+
+    if (found === -1 || found + line.length > range.end) {
+      break;
+    }
+
+    rows.push({ at, from: found, length: line.length });
+    at += line.length + 1;
+
+    const newline = text.indexOf('\n', found + line.length);
+
+    cursor = newline === -1 ? found + line.length : newline + 1;
+  }
+
+  return rows;
 }
 
 /**
@@ -158,15 +203,16 @@ export function domAt(
       continue;
     }
 
-    const start = textStartOf(inside, node, text);
-    const value = (node as Text).data;
+    const rows = linesOf(inside, node, text);
 
-    if (offset >= start && offset <= start + value.length) {
-      return { node, offset: offset - start };
+    for (const row of rows) {
+      if (offset >= row.from && offset <= row.from + row.length) {
+        return { node, offset: row.at + (offset - row.from) };
+      }
     }
 
-    if (start <= offset) {
-      fallback = { node, offset: value.length };
+    if (rows.length && rows[0].from <= offset) {
+      fallback = { node, offset: (node as Text).data.length };
     }
   }
 

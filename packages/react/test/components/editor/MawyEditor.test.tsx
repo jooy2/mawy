@@ -44,7 +44,9 @@ function put(root: HTMLElement, saying: string, offset: number, through = offset
   if (saying === '') {
     // A block with nothing in it has no run of text to put the caret inside,
     // so the caret goes on the block.
-    const element = [...root.children].find((child) => !child.textContent);
+    const element = [...root.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li')].find(
+      (child) => !child.textContent
+    );
     const range = document.createRange();
     const selection = document.getSelection() as Selection;
 
@@ -612,18 +614,147 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('Hello');
   });
 
-  it('refuses an edit it has no rule for yet', async () => {
+  it('types inside a list item, a quotation, a table cell and a code block', async () => {
+    const cases: [string, string, string][] = [
+      ['- one\n- two', 'one', '- one!\n- two'],
+      ['> quoted', 'quoted', '> quoted!'],
+      ['| a | b |\n| - | - |\n| 1 | 2 |', '1', '| a | b |\n| - | - |\n| 1! | 2 |'],
+      ['```ts\nconst a = 1;\n```', 'const a = 1;', '```ts\nconst a = 1;!\n```']
+    ];
+
+    for (const [source, run, expected] of cases) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+      );
+
+      put(bodyOf(screen), run, run.length);
+      type(bodyOf(screen), 'insertText', '!');
+
+      expect(onChange).toHaveBeenLastCalledWith(expected);
+    }
+  });
+
+  it('carries a list marker down, and gives it up on an item still empty', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <MawyEditor defaultValue={'- one\n- two'} mode="wysiwyg" onChange={onChange} />
     );
-    const body = bodyOf(screen);
 
-    put(body, 'one', 3);
-    type(body, 'insertText', '!');
+    put(bodyOf(screen), 'one', 3);
+    type(bodyOf(screen), 'insertParagraph');
 
-    // A list is drawn and read but not yet edited, and the answer to that is
-    // nothing rather than something half-right.
+    expect(onChange).toHaveBeenLastCalledWith('- one\n- \n- two');
+
+    const gone = vi.fn();
+    const empty = await render(
+      <MawyEditor defaultValue={'- one\n- '} mode="wysiwyg" onChange={gone} />
+    );
+
+    expect(empty.container.querySelectorAll('li')).toHaveLength(2);
+
+    put(bodyOf(empty), '', 0);
+    type(bodyOf(empty), 'insertParagraph');
+
+    // The bullet goes rather than a second empty one arriving, which is how a
+    // list is left — the same rule the source surface has on `Enter`.
+    expect(gone).toHaveBeenLastCalledWith('- one\n');
+  });
+
+  it('carries a quotation down, and a code block takes one newline', async () => {
+    const quoted = vi.fn();
+    const quote = await render(
+      <MawyEditor defaultValue={'> one\n> two'} mode="wysiwyg" onChange={quoted} />
+    );
+
+    put(bodyOf(quote), 'one\ntwo', 7);
+    type(bodyOf(quote), 'insertParagraph');
+
+    // A quotation's lines run on into one paragraph, so ending one takes a
+    // blank quoted line rather than a new quoted line.
+    expect(quoted).toHaveBeenLastCalledWith('> one\n> two\n> \n> ');
+
+    const coded = vi.fn();
+    const code = await render(
+      <MawyEditor defaultValue={'```ts\nconst a = 1;\n```'} mode="wysiwyg" onChange={coded} />
+    );
+
+    put(bodyOf(code), 'const a = 1;', 5);
+    type(bodyOf(code), 'insertParagraph');
+
+    // Everything in a code block is the characters it is, blank lines included.
+    expect(coded).toHaveBeenLastCalledWith('```ts\nconst\n a = 1;\n```');
+  });
+
+  it('leaves a table alone where a row is a line and a cell is a cell', async () => {
+    const source = '| a | b |\n| - | - |\n| 1 | 2 |';
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), '2', 0);
+    type(bodyOf(screen), 'insertParagraph');
+    type(bodyOf(screen), 'deleteContentBackward');
+
+    // There is nowhere in the file for a second row to go, and joining two
+    // cells would be eating the pipe between them.
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('joins a list item to the one above it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'- one\n- two'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'two', 0);
+    type(bodyOf(screen), 'deleteContentBackward');
+
+    expect(onChange).toHaveBeenLastCalledWith('- onetwo');
+  });
+
+  it('takes out an image, and a hard break, as the one thing each of them is', async () => {
+    const image = vi.fn();
+    const withImage = await render(
+      <MawyEditor defaultValue={'Before ![a](/i.png) after.'} mode="wysiwyg" onChange={image} />
+    );
+
+    put(bodyOf(withImage), ' after.', 0);
+    type(bodyOf(withImage), 'deleteContentBackward');
+
+    // An image is one character to a reader and none at all to a walk over the
+    // runs of text; without saying so, this would have taken the `e` of
+    // `Before` from the other side of it.
+    expect(image).toHaveBeenLastCalledWith('Before  after.');
+
+    const broken = vi.fn();
+    const withBreak = await render(
+      <MawyEditor defaultValue={'one  \ntwo'} mode="wysiwyg" onChange={broken} />
+    );
+
+    put(bodyOf(withBreak), 'two', 0);
+    type(bodyOf(withBreak), 'deleteContentBackward');
+
+    expect(broken).toHaveBeenLastCalledWith('onetwo');
+  });
+
+  it('refuses an edit inside raw HTML it is drawing rather than showing', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'<div>hi</div>'}
+        mode="wysiwyg"
+        html="sanitize"
+        onChange={onChange}
+      />
+    );
+
+    put(bodyOf(screen), 'hi', 2);
+    type(bodyOf(screen), 'insertText', '!');
+
+    // It reached the page through `dangerouslySetInnerHTML`, so React does not
+    // know what is in there and could not put it back.
     expect(onChange).not.toHaveBeenCalled();
   });
 

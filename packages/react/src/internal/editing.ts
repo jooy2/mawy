@@ -16,7 +16,8 @@
  * backspace there removes a separator rather than a letter.
  */
 
-import { sourceAt } from './position.js';
+import { continueList } from './commands.js';
+import { rangeOf, sourceAt } from './position.js';
 
 /** A document after an edit, and where the caret goes once it is drawn again. */
 export interface MawyEdit {
@@ -31,20 +32,44 @@ export interface MawyEdit {
   betweenBlocks?: boolean;
 }
 
-/** The blocks whose text this surface knows how to put an edit back into. */
-const EDITABLE = /^(?:P|H1|H2|H3|H4|H5|H6)$/;
+/**
+ * The smallest thing on the page that holds a run of text of its own.
+ *
+ * Not the outermost block: a list item is one of these and so is each paragraph
+ * inside a loose one, because what this answers is "are these two places in the
+ * same run of text", and backspace at the start of the second of them is a
+ * question about the boundary rather than about a character.
+ */
+const BLOCKS = 'p, h1, h2, h3, h4, h5, h6, li, td, th, blockquote, pre, .mawy-md-html-source';
 
-/** The top-level block a place on the page is in, if it is one of those. */
+/**
+ * Where an edit cannot go, whatever it is.
+ *
+ * Raw HTML that is being *drawn* rather than shown reached the page through
+ * `dangerouslySetInnerHTML`, which means React does not know what is inside it
+ * and cannot put it back. The markup is editable as the text it is written as —
+ * that is the `escape` policy, and `.mawy-md-html-source` is on the list above.
+ */
+const INERT = '.mawy-md-html';
+
+/** Blocks nothing joins across: the edge of one is not a character. */
+const CLOSED = /^(?:TD|TH|PRE)$/;
+
 export function blockAt(root: HTMLElement, node: Node): HTMLElement | null {
-  let at: Node | null = node;
+  const from = node.nodeType === 1 ? (node as HTMLElement) : node.parentElement;
 
-  while (at && at.parentNode && at.parentNode !== root) {
-    at = at.parentNode;
+  if (!from || from.closest(INERT)) {
+    return null;
   }
 
-  return at?.parentNode === root && EDITABLE.test((at as HTMLElement).tagName)
-    ? (at as HTMLElement)
-    : null;
+  const block = from.closest<HTMLElement>(BLOCKS);
+
+  return block && root.contains(block) ? block : null;
+}
+
+/** Whether what lies between two blocks is something to delete. */
+function joins(here: HTMLElement | null, there: HTMLElement | null): boolean {
+  return Boolean(here && there && !CLOSED.test(here.tagName) && !CLOSED.test(there.tagName));
 }
 
 function splice(value: string, start: number, end: number, text: string): MawyEdit {
@@ -112,6 +137,42 @@ function after(
 }
 
 /**
+ * A drawn thing with no text in it, next to a place on the page.
+ *
+ * An image and a hard break are one character to a reader and none at all to a
+ * walk over the runs of text — so without this, backspace beside an image would
+ * find the letter on the other side of it and take that instead.
+ */
+function atomAt(root: HTMLElement, node: Node, offset: number, back: boolean): HTMLElement | null {
+  const beside =
+    node.nodeType === 3
+      ? (back ? offset === 0 : offset === (node as Text).data.length)
+        ? back
+          ? node.previousSibling
+          : node.nextSibling
+        : null
+      : node.nodeType === 1
+        ? node.childNodes[back ? offset - 1 : offset]
+        : null;
+
+  return beside?.nodeType === 1 &&
+    !beside.textContent &&
+    (beside as HTMLElement).hasAttribute('data-mawy-range') &&
+    root.contains(beside)
+    ? (beside as HTMLElement)
+    : null;
+}
+
+/** Everything an atom was written with, taken out in one go. */
+function removeAtom(value: string, atom: HTMLElement): MawyEdit | null {
+  const range = rangeOf(atom);
+
+  return range
+    ? { value: value.slice(0, range.start) + value.slice(range.end), caret: range.start }
+    : null;
+}
+
+/**
  * Backspace.
  *
  * One drawn character goes, which is not the same as one written character:
@@ -129,6 +190,12 @@ function deleteBefore(
   offset: number,
   caret: number
 ): MawyEdit | null {
+  const atom = atomAt(root, node, offset, true);
+
+  if (atom) {
+    return removeAtom(value, atom);
+  }
+
   const back = before(root, node, offset);
 
   if (!back) {
@@ -142,8 +209,11 @@ function deleteBefore(
     return null;
   }
 
-  if (blockAt(root, back.node) !== blockAt(root, node)) {
-    return to < caret ? splice(value, to, caret, '') : null;
+  const here = blockAt(root, node);
+  const there = blockAt(root, back.node);
+
+  if (here !== there) {
+    return joins(here, there) && to < caret ? splice(value, to, caret, '') : null;
   }
 
   return splice(value, from, Math.max(to, from + 1), '');
@@ -157,6 +227,12 @@ function deleteAfter(
   offset: number,
   caret: number
 ): MawyEdit | null {
+  const atom = atomAt(root, node, offset, false);
+
+  if (atom) {
+    return removeAtom(value, atom);
+  }
+
   const ahead = after(root, node, offset);
 
   if (!ahead) {
@@ -170,11 +246,95 @@ function deleteAfter(
     return null;
   }
 
-  if (blockAt(root, ahead.node) !== blockAt(root, node)) {
-    return from > caret ? { value: value.slice(0, caret) + value.slice(from), caret } : null;
+  const here = blockAt(root, node);
+  const there = blockAt(root, ahead.node);
+
+  if (here !== there) {
+    return joins(here, there) && from > caret
+      ? { value: value.slice(0, caret) + value.slice(from), caret }
+      : null;
   }
 
   return { value: value.slice(0, from) + value.slice(Math.max(to, from + 1)), caret };
+}
+
+/** A quotation carries its own marker down the way a list carries a bullet. */
+const QUOTED = /^((?:[ \t]*>[ \t]?)+)(.*)$/;
+
+function continueQuote(value: string, caret: number): MawyEdit | null {
+  const from = value.lastIndexOf('\n', caret - 1) + 1;
+  const quote = QUOTED.exec(value.slice(from, caret));
+
+  if (!quote) {
+    return null;
+  }
+
+  const [, marker, content] = quote;
+
+  if (!content.trim()) {
+    // An empty quoted line: the marker goes, the same way an empty list item
+    // gives its bullet up rather than making another one.
+    return { value: value.slice(0, from) + value.slice(caret), caret: from, betweenBlocks: true };
+  }
+
+  // Two lines rather than one, and the middle one blank. A quotation's lines
+  // run on into a single paragraph, so `> a` under `> b` is one paragraph with
+  // a soft break in it — and `Enter` in a drawn document is meant to end the
+  // paragraph, not wrap it.
+  const text = `\n${marker}\n${marker}`;
+
+  return { value: value.slice(0, caret) + text + value.slice(caret), caret: caret + text.length };
+}
+
+/**
+ * `Enter`, which is a different thing in every container it is pressed in.
+ *
+ * A blank line separates two blocks, and that is the answer only where the
+ * caret is between blocks to begin with. Inside a list it is a new item with
+ * the marker carried down; inside a quotation it is a new quoted line; inside a
+ * code block it is a newline and nothing else, because everything in there is
+ * the characters it is. In a table it is nothing at all: a row is a line, and
+ * there is nowhere in the file for a second one to go.
+ */
+function breakAt(
+  root: HTMLElement,
+  value: string,
+  start: number,
+  end: number,
+  node: Node
+): MawyEdit | null {
+  const block = blockAt(root, node);
+  const tag = block?.tagName;
+
+  if (tag === 'TD' || tag === 'TH') {
+    return null;
+  }
+
+  if (tag === 'PRE') {
+    return splice(value, start, end, '\n');
+  }
+
+  if (start === end) {
+    const item = continueList({ value, start, end });
+
+    if (item) {
+      return {
+        value: item.value,
+        caret: item.start,
+        // A marker given up leaves the caret where nothing is drawn any more,
+        // which is the whole point of giving it up.
+        betweenBlocks: item.value.length < value.length
+      };
+    }
+
+    const quoted = continueQuote(value, start);
+
+    if (quoted) {
+      return quoted;
+    }
+  }
+
+  return { ...splice(value, start, end, '\n\n'), betweenBlocks: true };
 }
 
 /**
@@ -220,12 +380,20 @@ export function editFor(event: InputEvent, root: HTMLElement, value: string): Ma
       return event.data === null ? null : splice(value, start, end, event.data);
 
     case 'insertParagraph':
-      return { ...splice(value, start, end, '\n\n'), betweenBlocks: true };
+      return breakAt(root, value, start, end, range.startContainer);
 
-    case 'insertLineBreak':
+    case 'insertLineBreak': {
+      const block = blockAt(root, range.startContainer);
+
+      if (block?.tagName === 'TD' || block?.tagName === 'TH') {
+        return null;
+      }
+
       // Two spaces and a newline: the hard break nearly every Markdown file in
-      // the world is written with, however invisible it is.
-      return splice(value, start, end, '  \n');
+      // the world is written with, however invisible it is. Inside a code block
+      // a newline is just a newline.
+      return splice(value, start, end, block?.tagName === 'PRE' ? '\n' : '  \n');
+    }
 
     case 'deleteContentBackward':
       return start === end

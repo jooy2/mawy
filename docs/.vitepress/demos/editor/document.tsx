@@ -16,19 +16,23 @@ composing, and what it wrote is read back when it finishes.
 
 ## Headings work the same way
 
-What does not work yet is everything below:
+So do the containers. Type in any of these, and press Enter at the end of one:
 
-- a list item
-- another one
+- a list item, where Enter carries the bullet down
+- and Enter on the empty item that follows gives it up again
 
-> a quotation
+> a quotation, where ending a paragraph takes a blank quoted line
+
+| a table | where Enter |
+| ------- | ----------- |
+| has     | nowhere     |
 
 \`\`\`ts
-const code = 'a code block';
+const code = 'a code block, where a newline is a newline';
 \`\`\`
 
-Those still draw and still read. Typing in one does nothing at all, which is
-the honest answer until the rule for writing that edit back is written.
+An image or a hard break comes out in one piece, because each of them is one
+character to a reader and none at all to a walk over the text.
 `;
 
 /** The `wysiwyg` surface: the drawn document, edited in place. */
