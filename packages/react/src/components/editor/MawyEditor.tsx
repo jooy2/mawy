@@ -24,6 +24,7 @@ import {
   type EditState,
   type MawyCommand
 } from '../../internal/commands.js';
+import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
 import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
@@ -361,14 +362,21 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * ------------------------------------------------------------------ */
 
   const queued = React.useRef(0);
+  const anchors = React.useRef<{
+    places: MawyScrollAnchor[];
+    source: number;
+    preview: number;
+  } | null>(null);
 
   /**
-   * Proportional, not line for line.
+   * The preview follows the source, at the places the two of them agree on.
    *
-   * Matching a source line to the block it became needs the parser to remember
-   * where every node came from, which it does not yet. Proportional is what
-   * the difference looks like from the outside: near enough for a long
-   * document, visibly approximate for a short one.
+   * Which places those are has to be measured, and measuring costs a layout
+   * read for every block on the page — so the pairs are kept until something
+   * moves. The two scroll heights answer for nearly all of that: an edit, a
+   * font, a window, an image that finished loading, all change one of them. An
+   * edit that leaves both heights exactly where they were drops the table
+   * anyway, from the effect below.
    */
   const syncScroll = React.useCallback(() => {
     if (current !== 'split' || queued.current) {
@@ -385,15 +393,46 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
-      const travel = from.scrollHeight - from.clientHeight;
-
-      if (travel > 0) {
-        to.scrollTop = (from.scrollTop / travel) * (to.scrollHeight - to.clientHeight);
+      if (
+        !anchors.current ||
+        anchors.current.source !== from.scrollHeight ||
+        anchors.current.preview !== to.scrollHeight
+      ) {
+        anchors.current = {
+          places: measureAnchors(from, to, text),
+          source: from.scrollHeight,
+          preview: to.scrollHeight
+        };
       }
+
+      const travel = to.scrollHeight - to.clientHeight;
+      const { places } = anchors.current;
+      // Nothing to line up against — an empty document, or a preview that has
+      // not been drawn yet. A fraction of the way through is the honest answer
+      // to a question with nothing else in it.
+      const wanted = places.length
+        ? previewScrollFor(places, from.scrollTop)
+        : (from.scrollTop / Math.max(from.scrollHeight - from.clientHeight, 1)) * travel;
+
+      // Instant rather than the stylesheet's `smooth`. The preview is being
+      // dragged by the source, and an animation started again on every frame
+      // of a scroll is an animation that never arrives.
+      to.scrollTo({ top: Math.max(0, Math.min(travel, wanted)), behavior: 'instant' });
     });
-  }, [current]);
+  }, [current, text]);
 
   React.useEffect(() => () => cancelAnimationFrame(queued.current), []);
+
+  /**
+   * The document moved under both panes, so what was measured is wrong and the
+   * preview has to catch up without waiting for somebody to scroll. `syncScroll`
+   * is rebuilt whenever the text or the mode is, which is exactly when this
+   * should run.
+   */
+  React.useLayoutEffect(() => {
+    anchors.current = null;
+    syncScroll();
+  }, [syncScroll]);
 
   /* ---------------------------------------------------------------------
    * Drawing
@@ -424,13 +463,14 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       <div className="mawy-editor-body">
         {showSource ? (
-          <div className="mawy-editor-pane" onScroll={syncScroll}>
+          <div className="mawy-editor-pane">
             <MawyEditorSource
               ref={source}
               value={text}
               onChange={write}
               onSelect={readSelection}
               onKeyDown={onKeyDown}
+              onScroll={syncScroll}
               gfm={parse?.gfm ?? true}
               lineNumbers={lineNumbers}
               readOnly={readOnly}

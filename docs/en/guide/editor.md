@@ -42,7 +42,7 @@ Here the document is a string of Markdown and every surface is a way of looking 
 
 `mode` / `defaultMode` / `onModeChange` are the usual three: pass `mode` and the application decides, pass `defaultMode` and the editor keeps it, and `onModeChange` is called either way.
 
-In `split`, the preview scrolls with the source **proportionally** rather than line for line, so the two agree closely over a long document and visibly less so over a short one. Matching a source line to the block it became needs the parser to remember where every node came from, which it now does — the preview is the half that has yet to be taught to ask.
+In `split`, the preview scrolls with the source **to the block** rather than to the same fraction of the way down the file. Whichever line is at the top of the source decides which block is at the top of the preview, and the positions in between run straight from one block to the next. A fraction cannot do that: sixty lines of source that are sixty lines of page, with prose on either side that is neither, is exactly where the two drift apart.
 
 ## The source surface
 

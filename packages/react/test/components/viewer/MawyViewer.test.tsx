@@ -65,6 +65,23 @@ describe('the document', () => {
 
     expect(screen.container.querySelectorAll('br')).toHaveLength(1);
   });
+
+  it('says which characters of the source each block was drawn from', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} />);
+    const drawn = [...screen.container.querySelectorAll('[data-mawy-range]')].map((element) => {
+      const [start, end] = (element.getAttribute('data-mawy-range') ?? '').split(',');
+
+      return SAMPLE.slice(Number(start), Number(end));
+    });
+
+    // Every element that carries one is pointing at the text it is showing,
+    // which is what a preview scrolling with the source reads it for.
+    expect(drawn).toContain('# Title');
+    expect(drawn).toContain('## Second');
+    expect(drawn).toContain('```ts\nconst a = 1;\n```');
+    expect(drawn).toContain('| 1 | 2 |');
+    expect(drawn).toContain('A paragraph with **strong** text and a [link](https://example.com).');
+  });
 });
 
 describe('safety', () => {

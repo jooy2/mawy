@@ -8,6 +8,12 @@ export interface MawyEditorSourceProps {
   onChange: (next: string) => void;
   onSelect: () => void;
   onKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement>;
+  /**
+   * The textarea scrolled. It has to be handed down rather than caught on the
+   * element around this one: `scroll` does not bubble, so a handler on a
+   * container hears nothing at all when the box inside it moves.
+   */
+  onScroll: () => void;
   gfm: boolean;
   lineNumbers: boolean;
   readOnly: boolean;
@@ -35,7 +41,18 @@ export interface MawyEditorSourceProps {
  */
 export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditorSourceProps>(
   function MawyEditorSource(
-    { value, onChange, onSelect, onKeyDown, gfm, lineNumbers, readOnly, label, placeholder },
+    {
+      value,
+      onChange,
+      onSelect,
+      onKeyDown,
+      onScroll,
+      gfm,
+      lineNumbers,
+      readOnly,
+      label,
+      placeholder
+    },
     ref
   ) {
     const back = React.useRef<HTMLDivElement>(null);
@@ -63,6 +80,11 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
 
     // A document that arrives already scrolled, or one that got shorter.
     React.useLayoutEffect(sync, [sync, value]);
+
+    const scrolled = React.useCallback(() => {
+      sync();
+      onScroll();
+    }, [sync, onScroll]);
 
     return (
       <div
@@ -96,7 +118,7 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
           autoComplete="off"
           wrap="soft"
           onChange={(event) => onChange(event.currentTarget.value)}
-          onScroll={sync}
+          onScroll={scrolled}
           onSelect={onSelect}
           onKeyDown={onKeyDown}
         />

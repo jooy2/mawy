@@ -17,7 +17,7 @@
 
 import * as React from 'react';
 import type { MawyHtmlPolicy } from '../../types.js';
-import type { MdBlock, MdInline, MdListItem, MdTableRow } from './ast.js';
+import type { MdBlock, MdCode, MdInline, MdListItem, MdRange, MdTableRow } from './ast.js';
 import { sanitizeHtml } from './html.js';
 import type { MawyStrings } from '../i18n.js';
 import {
@@ -34,6 +34,20 @@ import { useCopy } from '../clipboard.js';
 export interface RenderContext {
   html: MawyHtmlPolicy;
   strings: MawyStrings;
+}
+
+/**
+ * Which characters of the source an element was drawn from.
+ *
+ * Every element the renderer draws for a block carries it, along with the list
+ * items and table rows inside them, because a range is the only way back: from
+ * a place on the page to the place in the document it came from. The preview
+ * in `split` scrolling in step with the source is the first thing to ask, and
+ * the surface that edits the drawn document will ask the same question in both
+ * directions.
+ */
+function origin(node: { range: MdRange }): { 'data-mawy-range': string } {
+  return { 'data-mawy-range': `${node.range.start},${node.range.end}` };
 }
 
 /* -------------------------------------------------------------------------
@@ -101,11 +115,13 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
 function RawHtml({
   value,
   context,
-  inline
+  inline,
+  marks
 }: {
   value: string;
   context: RenderContext;
   inline?: boolean;
+  marks?: { 'data-mawy-range': string };
 }): React.ReactElement {
   // `sanitize` needs a DOM to parse with. Where there is none — a server render
   // — it comes back `null` and the markup is shown rather than guessed at.
@@ -118,10 +134,14 @@ function RawHtml({
   const Tag = inline ? 'span' : 'div';
 
   if (html === null) {
-    return <Tag className="mawy-md-html-source">{value}</Tag>;
+    return (
+      <Tag className="mawy-md-html-source" {...marks}>
+        {value}
+      </Tag>
+    );
   }
 
-  return <Tag className="mawy-md-html" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <Tag className="mawy-md-html" {...marks} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 /* -------------------------------------------------------------------------
@@ -137,19 +157,18 @@ const ALERT_ICONS = {
 };
 
 function CodeBlock({
-  value,
-  lang,
+  block,
   context
 }: {
-  value: string;
-  lang: string | null;
+  block: MdCode;
   context: RenderContext;
 }): React.ReactElement {
+  const { value, lang } = block;
   const [state, copy] = useCopy();
   const Icon = state === 'copied' ? CheckIcon : CopyIcon;
 
   return (
-    <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined}>
+    <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined} {...origin(block)}>
       <pre>
         <code className={lang ? `mawy-md-lang language-${lang}` : 'mawy-md-lang'}>{value}</code>
       </pre>
@@ -183,7 +202,7 @@ function renderListItem(
   const task = item.checked !== null;
 
   return (
-    <li key={index} className={task ? 'mawy-md-task' : undefined}>
+    <li key={index} className={task ? 'mawy-md-task' : undefined} {...origin(item)}>
       {task ? (
         <input
           type="checkbox"
@@ -211,7 +230,7 @@ function renderRow(
   const Cell = row.header ? 'th' : 'td';
 
   return (
-    <tr key={index}>
+    <tr key={index} {...origin(row)}>
       {row.children.map((cell, column) => (
         <Cell
           key={column}
@@ -245,7 +264,7 @@ export function renderBlocks(
         const Tag = `h${block.depth}` as 'h1';
 
         return (
-          <Tag key={index} id={block.slug} className="mawy-md-heading">
+          <Tag key={index} id={block.slug} className="mawy-md-heading" {...origin(block)}>
             {renderInline(block.children, context)}
           </Tag>
         );
@@ -255,15 +274,21 @@ export function renderBlocks(
         return tight ? (
           <React.Fragment key={index}>{renderInline(block.children, context)}</React.Fragment>
         ) : (
-          <p key={index}>{renderInline(block.children, context)}</p>
+          <p key={index} {...origin(block)}>
+            {renderInline(block.children, context)}
+          </p>
         );
 
       case 'code':
-        return <CodeBlock key={index} value={block.value} lang={block.lang} context={context} />;
+        return <CodeBlock key={index} block={block} context={context} />;
 
       case 'blockquote': {
         if (!block.alert) {
-          return <blockquote key={index}>{renderBlocks(block.children, context)}</blockquote>;
+          return (
+            <blockquote key={index} {...origin(block)}>
+              {renderBlocks(block.children, context)}
+            </blockquote>
+          );
         }
 
         const Icon = ALERT_ICONS[block.alert];
@@ -273,7 +298,12 @@ export function renderBlocks(
           ];
 
         return (
-          <blockquote key={index} className="mawy-md-alert" data-mawy-alert={block.alert}>
+          <blockquote
+            key={index}
+            className="mawy-md-alert"
+            data-mawy-alert={block.alert}
+            {...origin(block)}
+          >
             <p className="mawy-md-alert-label">
               <Icon className="mawy-icon" aria-hidden="true" />
               {label}
@@ -291,6 +321,7 @@ export function renderBlocks(
             key={index}
             className={block.loose ? 'mawy-md-list' : 'mawy-md-list mawy-md-tight'}
             start={block.ordered && block.start !== 1 ? block.start : undefined}
+            {...origin(block)}
           >
             {block.children.map((item, at) => renderListItem(item, at, context, !block.loose))}
           </Tag>
@@ -304,7 +335,7 @@ export function renderBlocks(
         return (
           // A wide table scrolls inside its own box rather than making the page
           // scroll sideways, which is the one thing a reader cannot undo.
-          <div key={index} className="mawy-md-table-scroll">
+          <div key={index} className="mawy-md-table-scroll" {...origin(block)}>
             <table className="mawy-md-table">
               {header.length ? (
                 <thead>{header.map((row, at) => renderRow(row, at, context, block.align))}</thead>
@@ -316,10 +347,10 @@ export function renderBlocks(
       }
 
       case 'thematicBreak':
-        return <hr key={index} className="mawy-md-rule" />;
+        return <hr key={index} className="mawy-md-rule" {...origin(block)} />;
 
       case 'html':
-        return <RawHtml key={index} value={block.value} context={context} />;
+        return <RawHtml key={index} value={block.value} context={context} marks={origin(block)} />;
 
       default:
         return null;

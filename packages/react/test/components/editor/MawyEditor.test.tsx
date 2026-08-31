@@ -154,6 +154,83 @@ describe('the modes', () => {
   });
 });
 
+/**
+ * `split`, and the two panes staying on the same part of the document.
+ *
+ * Only a browser can answer this: it is two boxes, laid out, scrolled, and
+ * measured against each other. A document with a code block in it is the shape
+ * that catches a preview scrolled by the fraction of the way through the file
+ * instead — sixty lines of source that are sixty lines of page, with prose on
+ * either side that is neither.
+ */
+describe('the two panes of split', () => {
+  const LONG = [
+    '# Title',
+    '',
+    '```text',
+    ...Array.from({ length: 60 }, (_, at) => `code line ${at}`),
+    '```',
+    '',
+    ...Array.from({ length: 8 }, (_, at) => `## Section ${at}\n\nA short paragraph.\n`),
+    'The end.',
+    ''
+  ].join('\n');
+
+  /** Where the source has to be scrolled to for a line to be at the top of it. */
+  function scrollTo(container: HTMLElement, offset: number): void {
+    const input = container.querySelector('.mawy-source-input') as HTMLTextAreaElement;
+    const layer = container.querySelector('.mawy-source-lines') as HTMLElement;
+    const rows = [...container.querySelectorAll('.mawy-source-line')] as HTMLElement[];
+    const row = rows[LONG.slice(0, offset).split('\n').length - 1];
+
+    input.scrollTop = row.getBoundingClientRect().top - layer.getBoundingClientRect().top;
+  }
+
+  it('scrolls the preview to the block the top line of the source belongs to', async () => {
+    const screen = await render(
+      <MawyEditor
+        defaultValue={LONG}
+        defaultMode="split"
+        style={{ height: '20rem', width: '60rem' }}
+      />
+    );
+
+    const scroller = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+    // Two of them, at different depths of the document. One block landing at
+    // the top could be a fraction that happened to be right; two cannot, since
+    // a fraction is one straight line and this document is not.
+    for (const heading of ['## Section 2', '## Section 6']) {
+      const at = LONG.indexOf(heading);
+
+      scrollTo(screen.container, at);
+
+      await vi.waitFor(() => {
+        const element = scroller.querySelector(`[data-mawy-range^="${at},"]`);
+        const top = element!.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+
+        expect(Math.abs(top)).toBeLessThan(2);
+      });
+    }
+  });
+
+  it('hears the textarea scroll, which does not bubble to the pane around it', async () => {
+    const screen = await render(
+      <MawyEditor
+        defaultValue={LONG}
+        defaultMode="split"
+        style={{ height: '20rem', width: '60rem' }}
+      />
+    );
+
+    const scroller = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+    scrollTo(screen.container, LONG.indexOf('## Section 6'));
+
+    await vi.waitFor(() => expect(scroller.scrollTop).toBeGreaterThan(0));
+  });
+});
+
 describe('the toolbar and the keyboard', () => {
   it('runs a command on the selection, and draws itself as pressed once it has', async () => {
     const screen = await render(<MawyEditor defaultValue="one two three" modes={['plain']} />);
