@@ -42,7 +42,7 @@ Here the document is a string of Markdown and every surface is a way of looking 
 
 `mode` / `defaultMode` / `onModeChange` are the usual three: pass `mode` and the application decides, pass `defaultMode` and the editor keeps it, and `onModeChange` is called either way.
 
-In `split`, the preview scrolls with the source **proportionally** rather than line for line. Matching a source line to the block it became needs the parser to remember where every node came from, which it does not yet — so the two agree closely over a long document and visibly less so over a short one.
+In `split`, the preview scrolls with the source **proportionally** rather than line for line, so the two agree closely over a long document and visibly less so over a short one. Matching a source line to the block it became needs the parser to remember where every node came from, which it now does — the preview is the half that has yet to be taught to ask.
 
 ## The source surface
 

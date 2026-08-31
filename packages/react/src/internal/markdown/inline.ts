@@ -13,8 +13,9 @@
  * inner `]` to consume the inner `[`, which is a fact about the whole line.
  */
 
-import type { MdDefinition, MdInline, MdText } from './ast.js';
+import type { MdDefinition, MdInline, MdRange, MdText } from './ast.js';
 import { decodeEntities } from './entities.js';
+import { endOffset, rangeOf, type Sourced } from './source.js';
 import { safeImageUrl, safeUrl } from './url.js';
 
 export interface InlineOptions {
@@ -66,8 +67,8 @@ interface State {
   openers: Chunk[];
 }
 
-function textChunk(value: string): Chunk {
-  return { node: { type: 'text', value }, delimiter: null, opener: null };
+function textChunk(value: string, range: MdRange): Chunk {
+  return { node: { type: 'text', range, value }, delimiter: null, opener: null };
 }
 
 function nodeChunk(node: MdInline): Chunk {
@@ -200,12 +201,23 @@ function processEmphasis(state: State, bottom: number): void {
     const closerAt = chunks.indexOf(closerChunk);
     const children = chunks.slice(openerAt + 1, closerAt).map((chunk) => chunk.node);
 
+    // The characters that pair off are the *last* of the opening run and the
+    // first of the closing one, so the node starts where what is left of the
+    // opener ends. A run is a run of one character, which is what lets both
+    // ends be counted rather than looked up.
+    const openerNode = openerChunk.node as MdText;
+    const closerNode = closerChunk.node as MdText;
+    const range: MdRange = {
+      start: openerNode.range.end - use,
+      end: closerNode.range.start + use
+    };
+
     const node: MdInline =
       closer.char === '~'
-        ? { type: 'delete', children }
+        ? { type: 'delete', range, children }
         : use === 2
-          ? { type: 'strong', children }
-          : { type: 'emphasis', children };
+          ? { type: 'strong', range, children }
+          : { type: 'emphasis', range, children };
 
     chunks.splice(openerAt + 1, closerAt - openerAt - 1, nodeChunk(node));
     delimiters.splice(found + 1, closerIndex - found - 1);
@@ -213,8 +225,10 @@ function processEmphasis(state: State, bottom: number): void {
 
     opener.length -= use;
     closer.length -= use;
-    (openerChunk.node as MdText).value = closer.char.repeat(opener.length);
-    (closerChunk.node as MdText).value = closer.char.repeat(closer.length);
+    openerNode.value = closer.char.repeat(opener.length);
+    openerNode.range = { start: openerNode.range.start, end: range.start };
+    closerNode.value = closer.char.repeat(closer.length);
+    closerNode.range = { start: range.end, end: closerNode.range.end };
 
     if (closer.length === 0) {
       drop(chunks, closerChunk);
@@ -488,8 +502,19 @@ function trimLiteral(match: string): string {
   return entity ? trimmed.slice(0, entity.index) : trimmed;
 }
 
-/** A text node split around the bare URLs and e-mail addresses inside it. */
-function linkifyText(value: string): MdInline[] {
+/**
+ * A text node split around the bare URLs and e-mail addresses inside it.
+ *
+ * The pieces get their offsets by counting from the node's own start, which is
+ * exact whenever the node is the characters it was written with — and it is,
+ * unless a character reference or a backslash escape was decoded on the way in.
+ * Nothing is left to say where those went, so the count is held inside the
+ * node's range instead: a piece may then be a character or two out, and is
+ * still in order and still inside the node it came from.
+ */
+function linkifyText(node: MdText): MdInline[] {
+  const { value } = node;
+  const offset = (index: number) => Math.min(node.range.start + index, node.range.end);
   const out: MdInline[] = [];
   let last = 0;
 
@@ -518,19 +543,35 @@ function linkifyText(value: string): MdInline[] {
     }
 
     if (at > last) {
-      out.push({ type: 'text', value: value.slice(last, at) });
+      out.push({
+        type: 'text',
+        range: { start: offset(last), end: offset(at) },
+        value: value.slice(last, at)
+      });
     }
 
-    out.push({ type: 'link', url, title: null, children: [{ type: 'text', value: text }] });
+    const range = { start: offset(at), end: offset(at + text.length) };
+
+    out.push({
+      type: 'link',
+      range,
+      url,
+      title: null,
+      children: [{ type: 'text', range, value: text }]
+    });
     last = at + text.length;
     LITERAL.lastIndex = last;
   }
 
   if (last < value.length) {
-    out.push({ type: 'text', value: value.slice(last) });
+    out.push({
+      type: 'text',
+      range: { start: offset(last), end: node.range.end },
+      value: value.slice(last)
+    });
   }
 
-  return out.length ? out : [{ type: 'text', value }];
+  return out.length ? out : [node];
 }
 
 /** The same, over a finished tree — but never inside a link, which has one. */
@@ -539,7 +580,7 @@ function linkify(nodes: MdInline[]): MdInline[] {
 
   for (const node of nodes) {
     if (node.type === 'text') {
-      out.push(...linkifyText(node.value));
+      out.push(...linkifyText(node));
       continue;
     }
 
@@ -572,10 +613,11 @@ function merge(nodes: MdInline[]): MdInline[] {
 
       if (previous?.type === 'text') {
         previous.value += node.value;
+        previous.range = { start: previous.range.start, end: node.range.end };
         continue;
       }
 
-      out.push({ type: 'text', value: node.value });
+      out.push({ type: 'text', range: node.range, value: node.value });
       continue;
     }
 
@@ -626,16 +668,30 @@ export function toPlainText(nodes: MdInline[]): string {
  * The scanner
  * ---------------------------------------------------------------------- */
 
-export function parseInline(source: string, options: InlineOptions): MdInline[] {
+export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
+  const source = raw.text;
   const state: State = { chunks: [], delimiters: [], openers: [] };
   const { chunks, delimiters, openers } = state;
 
+  /** Where a stretch of this text sits in the document. */
+  const span = (from: number, to: number): MdRange => rangeOf(raw, from, to);
+
   let pending = '';
+  let pendingAt = 0;
   let at = 0;
+
+  /** Characters that are going to be a text node, once something ends it. */
+  const hold = (text: string, from: number) => {
+    if (!pending) {
+      pendingAt = from;
+    }
+
+    pending += text;
+  };
 
   const flush = () => {
     if (pending) {
-      chunks.push(textChunk(decodeEntities(pending)));
+      chunks.push(textChunk(decodeEntities(pending), span(pendingAt, pendingAt + pending.length)));
       pending = '';
     }
   };
@@ -663,7 +719,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
 
       if (next === '\n') {
         flush();
-        chunks.push(nodeChunk({ type: 'break' }));
+        chunks.push(nodeChunk({ type: 'break', range: span(at, at + 2) }));
         at += 2;
 
         while (WHITESPACE.test(source[at] ?? '') && source[at] !== '\n') {
@@ -675,23 +731,25 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
 
       if (next !== undefined && ESCAPABLE.test(next)) {
         flush();
-        chunks.push(textChunk(next));
+        chunks.push(textChunk(next, span(at, at + 2)));
         at += 2;
         continue;
       }
 
-      pending += character;
+      hold(character, at);
       at += 1;
       continue;
     }
 
     if (character === '`') {
-      const span = readCodeSpan(source, at);
+      const code = readCodeSpan(source, at);
 
-      if (span) {
+      if (code) {
         flush();
-        chunks.push(nodeChunk({ type: 'inlineCode', value: span.value }));
-        at = span.end;
+        chunks.push(
+          nodeChunk({ type: 'inlineCode', range: span(at, code.end), value: code.value })
+        );
+        at = code.end;
         continue;
       }
 
@@ -701,7 +759,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
         run += 1;
       }
 
-      pending += source.slice(at, at + run);
+      hold(source.slice(at, at + run), at);
       at += run;
       continue;
     }
@@ -712,16 +770,19 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
 
       if (uri) {
         const url = safeUrl(uri[1]);
+        const range = span(at, at + uri[0].length);
+        const inside = span(at + 1, at + 1 + uri[1].length);
         flush();
         chunks.push(
           url
             ? nodeChunk({
                 type: 'link',
+                range,
                 url,
                 title: null,
-                children: [{ type: 'text', value: uri[1] }]
+                children: [{ type: 'text', range: inside, value: uri[1] }]
               })
-            : textChunk(uri[1])
+            : textChunk(uri[1], range)
         );
         at += uri[0].length;
         continue;
@@ -734,9 +795,12 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
         chunks.push(
           nodeChunk({
             type: 'link',
+            range: span(at, at + email[0].length),
             url: `mailto:${email[1]}`,
             title: null,
-            children: [{ type: 'text', value: email[1] }]
+            children: [
+              { type: 'text', range: span(at + 1, at + 1 + email[1].length), value: email[1] }
+            ]
           })
         );
         at += email[0].length;
@@ -750,12 +814,18 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
         // Whether this reaches the page as markup or as four visible characters
         // is the renderer's decision, not the parser's — the tree says what the
         // document says, and policy is applied once, where it can be seen.
-        chunks.push(nodeChunk({ type: 'inlineHtml', value: html[0] }));
+        chunks.push(
+          nodeChunk({
+            type: 'inlineHtml',
+            range: span(at, at + html[0].length),
+            value: html[0]
+          })
+        );
         at += html[0].length;
         continue;
       }
 
-      pending += character;
+      hold(character, at);
       at += 1;
       continue;
     }
@@ -765,7 +835,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
       const text = image ? '![' : '[';
       flush();
 
-      const chunk = textChunk(text);
+      const chunk = textChunk(text, span(at, at + text.length));
       chunk.opener = { image, active: true, textStart: at + text.length };
       chunks.push(chunk);
       openers.push(chunk);
@@ -779,7 +849,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
       const openerChunk = openers.pop();
 
       if (!openerChunk?.opener) {
-        chunks.push(textChunk(']'));
+        chunks.push(textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
@@ -790,7 +860,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
         // Deactivated by a link that closed inside this one. Both brackets are
         // now text — the opening one stays exactly where it was written, which
         // is what `[a [b](c)](d)` needs to keep its first character.
-        chunks.push(textChunk(']'));
+        chunks.push(textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
@@ -826,7 +896,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
         // Not a link after all. The bracket that opened it is text, and so is
         // this one — but the opener is gone, so a later `]` cannot claim it.
         openerChunk.opener = null;
-        chunks.push(textChunk(']'));
+        chunks.push(textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
@@ -837,22 +907,29 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
       const children = chunks.slice(openerAt + 1).map((each) => each.node);
       const url = opener.image ? safeImageUrl(destination.url) : safeUrl(destination.url);
       const taken = chunks.length - openerAt;
+      const range: MdRange = { start: openerChunk.node.range.start, end: endOffset(raw, end) };
 
       if (opener.image && url) {
         chunks.splice(
           openerAt,
           taken,
-          nodeChunk({ type: 'image', url, title: destination.title, alt: toPlainText(children) })
+          nodeChunk({
+            type: 'image',
+            range,
+            url,
+            title: destination.title,
+            alt: toPlainText(children)
+          })
         );
       } else if (opener.image) {
         // A destination we will not follow. An image has nothing to fall back
         // to but the words the author wrote in place of it.
-        chunks.splice(openerAt, taken, textChunk(toPlainText(children)));
+        chunks.splice(openerAt, taken, textChunk(toPlainText(children), range));
       } else if (url) {
         chunks.splice(
           openerAt,
           taken,
-          nodeChunk({ type: 'link', url, title: destination.title, children })
+          nodeChunk({ type: 'link', range, url, title: destination.title, children })
         );
       } else {
         // The same for a link: the label stays and reads as ordinary text, so a
@@ -882,7 +959,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
       // GitHub's strikethrough is exactly two tildes. One is a tilde, and three
       // is somebody drawing a line.
       if (character === '~' && run !== 2) {
-        pending += source.slice(at, at + run);
+        hold(source.slice(at, at + run), at);
         at += run;
         continue;
       }
@@ -895,7 +972,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
 
       flush();
 
-      const chunk = textChunk(source.slice(at, at + run));
+      const chunk = textChunk(source.slice(at, at + run), span(at, at + run));
       chunk.delimiter = { char: character, length: run, original: run, canOpen, canClose };
       chunks.push(chunk);
       delimiters.push(chunk);
@@ -906,13 +983,16 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
     if (character === '\n') {
       const hard = /[ \t]{2,}$/.test(pending);
       pending = pending.replace(/[ \t]+$/, '');
+      // A hard break is the spaces as well as the newline: they are what makes
+      // it one, and they are no part of the text node in front of it.
+      const from = hard && pending ? pendingAt + pending.length : at;
       flush();
 
-      if (hard || options.breaks) {
-        chunks.push(nodeChunk({ type: 'break' }));
-      } else {
-        chunks.push(textChunk('\n'));
-      }
+      chunks.push(
+        hard || options.breaks
+          ? nodeChunk({ type: 'break', range: span(from, at + 1) })
+          : textChunk('\n', span(at, at + 1))
+      );
 
       at += 1;
 
@@ -923,7 +1003,7 @@ export function parseInline(source: string, options: InlineOptions): MdInline[] 
       continue;
     }
 
-    pending += character;
+    hold(character, at);
     at += 1;
   }
 

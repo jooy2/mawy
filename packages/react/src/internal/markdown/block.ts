@@ -6,6 +6,11 @@
  * one block ends, strips whatever prefix its container puts on every line —
  * a `>`, an indent — and parses the inside the same way.
  *
+ * Which is why a line here is a `Line` rather than a string. Stripping a prefix
+ * makes a shorter line, and a shorter line has different offsets; carrying the
+ * offset along means a block nested four containers deep still knows which
+ * characters of the document it was read out of.
+ *
  * Inline content is *not* parsed here. A link may be written as `[a][ref]` and
  * resolved by a definition that appears at the bottom of the file, so nothing
  * inside a paragraph can be read until every line of the document has been
@@ -22,14 +27,28 @@ import type {
   MdInline,
   MdListItem,
   MdParagraph,
+  MdRange,
   MdTableCell,
   MdTableRow
 } from './ast.js';
 import { normalizeLabel } from './inline.js';
+import {
+  advance,
+  append,
+  fromLines,
+  fromText,
+  lineEnd,
+  rangeOf,
+  slice,
+  sourced,
+  trim,
+  type Line,
+  type Sourced
+} from './source.js';
 
 /** Somewhere a run of inline nodes has to go once there is one. */
 export interface PendingInline {
-  raw: string;
+  raw: Sourced;
   target: { children: MdInline[] };
 }
 
@@ -48,6 +67,7 @@ const ATX = /^ {0,3}(#{1,6})(?:[ \t]+(.*))?$/;
 const FENCE = /^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$/;
 const THEMATIC = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 const QUOTE = /^ {0,3}>/;
+const QUOTE_PREFIX = /^ {0,3}> ?/;
 const SETEXT = /^ {0,3}(=+|-+)[ \t]*$/;
 const BULLET = /^( {0,3})([-+*])([ \t]+|$)/;
 const ORDERED = /^( {0,3})(\d{1,9})([.)])([ \t]+|$)/;
@@ -70,8 +90,8 @@ function indentOf(line: string): number {
   return width;
 }
 
-/** Leading indentation removed, up to `width` columns of it. */
-function unindent(line: string, width: number): string {
+/** How many characters it takes to walk `width` columns of indentation. */
+function indentTaken(line: string, width: number): number {
   let taken = 0;
   let at = 0;
 
@@ -87,7 +107,12 @@ function unindent(line: string, width: number): string {
     at += 1;
   }
 
-  return line.slice(at);
+  return at;
+}
+
+/** Leading indentation removed, up to `width` columns of it. */
+function unindent(line: Line, width: number): Line {
+  return advance(line, indentTaken(line.text, width));
 }
 
 interface Marker {
@@ -132,17 +157,25 @@ function markerAt(line: string): Marker | null {
   };
 }
 
-/** `# Heading ###` — the depth and what is left after the hashes come off. */
-function atxAt(line: string): { depth: number; text: string } | null {
+/**
+ * `# Heading ###` — the depth, what is left once the hashes come off, and how
+ * far into the line that text begins.
+ */
+function atxAt(line: string): { depth: number; text: string; at: number } | null {
   const match = ATX.exec(line);
 
   if (!match) {
     return null;
   }
 
-  const text = (match[2] ?? '').replace(/(?:^|[ \t])#+[ \t]*$/, '').trim();
+  const body = match[2] ?? '';
+  const closed = body.replace(/(?:^|[ \t])#+[ \t]*$/, '');
 
-  return { depth: match[1].length, text };
+  return {
+    depth: match[1].length,
+    text: closed.trim(),
+    at: line.length - body.length + (closed.length - closed.trimStart().length)
+  };
 }
 
 /* -------------------------------------------------------------------------
@@ -213,50 +246,61 @@ function htmlStartAt(line: string, interrupting: boolean): HtmlStart | null {
 
 const DELIMITER_ROW = /^ {0,3}\|?(?:[ \t]*:?-+:?[ \t]*\|)*[ \t]*:?-+:?[ \t]*\|?[ \t]*$/;
 
-/** A row split on its unescaped pipes, with the outer pair dropped. */
-function splitRow(line: string): string[] {
-  const cells: string[] = [];
-  let cell = '';
+/**
+ * A row split on its unescaped pipes, with the outer pair dropped.
+ *
+ * Each cell comes back knowing where it was written, and an escaped pipe is the
+ * only thing that complicates it: `\|` is one character in the cell and two in
+ * the document, so the run of text ends there and the next one starts at the
+ * pipe the cell actually kept.
+ */
+function splitRow(line: Line): Sourced[] {
+  const leading = line.text.length - line.text.trimStart().length;
+  const cells: Sourced[] = [];
+  let text = line.text.trim();
+  let base = line.start + leading;
   let at = 0;
-  let text = line.trim();
 
   if (text.startsWith('|')) {
     text = text.slice(1);
+    base += 1;
   }
 
   if (/(?:^|[^\\])\|$/.test(text)) {
     text = text.slice(0, -1);
   }
 
+  let cell = sourced(base);
+
   while (at < text.length) {
     const character = text[at];
 
     if (character === '\\' && text[at + 1] === '|') {
-      cell += '|';
+      append(cell, '|', base + at + 1);
       at += 2;
       continue;
     }
 
     if (character === '|') {
-      cells.push(cell.trim());
-      cell = '';
+      cells.push(trim(cell));
       at += 1;
+      cell = sourced(base + at);
       continue;
     }
 
-    cell += character;
+    append(cell, character, base + at);
     at += 1;
   }
 
-  cells.push(cell.trim());
+  cells.push(trim(cell));
 
   return cells;
 }
 
-function alignmentsOf(line: string): MdAlign[] {
-  return splitRow(line).map((cell) => {
-    const left = cell.startsWith(':');
-    const right = cell.endsWith(':');
+function alignmentsOf(line: Line): MdAlign[] {
+  return splitRow(line).map(({ text }) => {
+    const left = text.startsWith(':');
+    const right = text.endsWith(':');
 
     if (left && right) {
       return 'center';
@@ -280,10 +324,14 @@ const DEFINITION =
  * third line of a sentence is that sentence's third line — which is why this
  * runs against the paragraph rather than against the document.
  */
-function takeDefinitions(text: string, into: Map<string, MdDefinition>): string {
-  let rest = text;
+function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): Sourced {
+  let taken = 0;
 
-  for (let match = DEFINITION.exec(rest); match; match = DEFINITION.exec(rest)) {
+  for (
+    let match = DEFINITION.exec(paragraph.text.slice(taken));
+    match;
+    match = DEFINITION.exec(paragraph.text.slice(taken))
+  ) {
     const label = normalizeLabel(match[1]);
     const url = match[2].startsWith('<') ? match[2].slice(1, -1) : match[2];
     const title = match[3] ? match[3].slice(1, -1) : null;
@@ -293,10 +341,10 @@ function takeDefinitions(text: string, into: Map<string, MdDefinition>): string 
       into.set(label, { url, title });
     }
 
-    rest = rest.slice(match[0].length);
+    taken += match[0].length;
   }
 
-  return rest;
+  return taken === 0 ? paragraph : slice(paragraph, taken, paragraph.text.length);
 }
 
 /* -------------------------------------------------------------------------
@@ -321,12 +369,18 @@ function interrupts(line: string): boolean {
   return Boolean(marker) && !marker!.empty && (!marker!.ordered || marker!.number === 1);
 }
 
-export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
+export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
   const blocks: MdBlock[] = [];
   let at = 0;
 
+  /** From the start of one line to the end of another. */
+  const across = (first: number, last: number): MdRange => ({
+    start: lines[first].start,
+    end: lineEnd(lines[last])
+  });
+
   /** A block whose text is read later, once the definitions are all known. */
-  const withInline = <T extends { children: MdInline[] }>(node: T, raw: string): T => {
+  const withInline = <T extends { children: MdInline[] }>(node: T, raw: Sourced): T => {
     context.pending.push({ raw, target: node });
 
     return node;
@@ -335,42 +389,46 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
   while (at < lines.length) {
     const line = lines[at];
 
-    if (BLANK.test(line)) {
+    if (BLANK.test(line.text)) {
       at += 1;
       continue;
     }
 
     /* Thematic break — before lists, because `- - -` is a rule and not three
      * empty bullets. */
-    if (THEMATIC.test(line)) {
-      blocks.push({ type: 'thematicBreak' });
+    if (THEMATIC.test(line.text)) {
+      blocks.push({ type: 'thematicBreak', range: across(at, at) });
       at += 1;
       continue;
     }
 
-    const atx = atxAt(line);
+    const atx = atxAt(line.text);
 
     if (atx) {
       blocks.push(
         withInline<MdHeading>(
-          { type: 'heading', depth: atx.depth, children: [], slug: '' },
-          atx.text
+          { type: 'heading', range: across(at, at), depth: atx.depth, children: [], slug: '' },
+          fromText(atx.text, line.start + atx.at)
         )
       );
       at += 1;
       continue;
     }
 
-    const fence = FENCE.exec(line);
+    const fence = FENCE.exec(line.text);
 
     if (fence) {
       const [, indent, marker, info] = fence;
-      const body: string[] = [];
+      const body: Line[] = [];
       const closing = new RegExp(`^ {0,3}${marker[0]}{${marker.length},}[ \\t]*$`);
+      const opened = at;
+      let last = at;
       at += 1;
 
       while (at < lines.length) {
-        if (closing.test(lines[at])) {
+        last = at;
+
+        if (closing.test(lines[at].text)) {
           at += 1;
           break;
         }
@@ -383,23 +441,27 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
 
       blocks.push({
         type: 'code',
+        range: across(opened, last),
         // A backtick in an info string is not a language, it is an unclosed
         // span that happens to sit on the fence line.
         lang: words[0] && !words[0].includes('`') ? words[0] : null,
         meta: words.length > 1 ? words.slice(1).join(' ') : null,
-        value: body.join('\n')
+        value: body.map((each) => each.text).join('\n')
       });
       continue;
     }
 
-    if (QUOTE.test(line)) {
-      const inner: string[] = [];
+    if (QUOTE.test(line.text)) {
+      const inner: Line[] = [];
+      const opened = at;
 
       while (at < lines.length) {
         const current = lines[at];
 
-        if (QUOTE.test(current)) {
-          inner.push(current.replace(/^ {0,3}> ?/, ''));
+        if (QUOTE.test(current.text)) {
+          const prefix = QUOTE_PREFIX.exec(current.text);
+
+          inner.push(advance(current, prefix ? prefix[0].length : 0));
           at += 1;
           continue;
         }
@@ -407,10 +469,10 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
         // A quotation runs on across a line that forgot its `>`, but only while
         // the paragraph inside it is still open.
         if (
-          BLANK.test(current) ||
+          BLANK.test(current.text) ||
           inner.length === 0 ||
-          BLANK.test(inner[inner.length - 1]) ||
-          interrupts(current)
+          BLANK.test(inner[inner.length - 1].text) ||
+          interrupts(current.text)
         ) {
           break;
         }
@@ -420,18 +482,23 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
       }
 
       let alert: MdAlertKind | null = null;
-      const first = ALERT.exec(inner[0] ?? '');
+      const first = ALERT.exec(inner[0]?.text ?? '');
 
       if (first) {
         alert = first[1].toLowerCase() as MdAlertKind;
         inner.shift();
       }
 
-      blocks.push({ type: 'blockquote', alert, children: parseBlocks(inner, context) });
+      blocks.push({
+        type: 'blockquote',
+        range: across(opened, at - 1),
+        alert,
+        children: parseBlocks(inner, context)
+      });
       continue;
     }
 
-    const marker = markerAt(line);
+    const marker = markerAt(line.text);
 
     if (marker) {
       const items: MdListItem[] = [];
@@ -439,7 +506,7 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
       let separated = false;
 
       while (at < lines.length) {
-        const current = markerAt(lines[at]);
+        const current = markerAt(lines[at].text);
 
         if (
           !current ||
@@ -453,7 +520,8 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
           loose = true;
         }
 
-        const body = [lines[at].slice(Math.min(current.contentIndent, lines[at].length))];
+        const opened = at;
+        const body = [advance(lines[at], Math.min(current.contentIndent, lines[at].text.length))];
         at += 1;
 
         let blankInside = false;
@@ -461,14 +529,14 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
         while (at < lines.length) {
           const next = lines[at];
 
-          if (BLANK.test(next)) {
-            body.push('');
+          if (BLANK.test(next.text)) {
+            body.push({ text: '', start: next.start });
             blankInside = true;
             at += 1;
             continue;
           }
 
-          if (indentOf(next) >= current.contentIndent) {
+          if (indentOf(next.text) >= current.contentIndent) {
             body.push(unindent(next, current.contentIndent));
             at += 1;
             continue;
@@ -476,17 +544,17 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
 
           // Anything less indented either starts the next item, starts a new
           // block, or is a lazy continuation of a paragraph still open here.
-          if (markerAt(next) || blankInside || interrupts(next)) {
+          if (markerAt(next.text) || blankInside || interrupts(next.text)) {
             break;
           }
 
-          body.push(next.trimStart());
+          body.push(advance(next, next.text.length - next.text.trimStart().length));
           at += 1;
         }
 
         let trailing = false;
 
-        while (body.length && BLANK.test(body[body.length - 1])) {
+        while (body.length && BLANK.test(body[body.length - 1].text)) {
           body.pop();
           trailing = true;
         }
@@ -494,24 +562,33 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
         separated = trailing;
 
         let checked: boolean | null = null;
-        const task = /^\[([ xX])\](?=[ \t]|$)[ \t]*/.exec(body[0] ?? '');
+        const task = /^\[([ xX])\](?=[ \t]|$)[ \t]*/.exec(body[0]?.text ?? '');
 
         if (task && context.gfm) {
           checked = task[1] !== ' ';
-          body[0] = body[0].slice(task[0].length);
+          body[0] = advance(body[0], task[0].length);
         }
 
         const children = parseBlocks(body, context);
 
-        if (children.length > 1 && body.some((each) => BLANK.test(each))) {
+        if (children.length > 1 && body.some((each) => BLANK.test(each.text))) {
           loose = true;
         }
 
-        items.push({ type: 'listItem', checked, children });
+        items.push({
+          type: 'listItem',
+          range: {
+            start: lines[opened].start,
+            end: lineEnd(body[body.length - 1] ?? lines[opened])
+          },
+          checked,
+          children
+        });
       }
 
       blocks.push({
         type: 'list',
+        range: { start: items[0].range.start, end: items[items.length - 1].range.end },
         ordered: marker.ordered,
         start: marker.ordered ? marker.number : 1,
         loose,
@@ -520,17 +597,20 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
       continue;
     }
 
-    const html = htmlStartAt(line, false);
+    const html = htmlStartAt(line.text, false);
 
     if (html) {
       const body: string[] = [];
+      const opened = at;
+      let last = at;
 
       while (at < lines.length) {
-        if (html.closer === null && BLANK.test(lines[at])) {
+        if (html.closer === null && BLANK.test(lines[at].text)) {
           break;
         }
 
-        body.push(lines[at]);
+        body.push(lines[at].text);
+        last = at;
         at += 1;
 
         if (html.closer && html.closer.test(body[body.length - 1])) {
@@ -538,78 +618,109 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
         }
       }
 
-      blocks.push({ type: 'html', value: body.join('\n') });
+      blocks.push({ type: 'html', range: across(opened, last), value: body.join('\n') });
       continue;
     }
 
-    if (indentOf(line) >= 4) {
-      const body: string[] = [];
+    if (indentOf(line.text) >= 4) {
+      const body: Line[] = [];
+      const opened = at;
 
-      while (at < lines.length && (BLANK.test(lines[at]) || indentOf(lines[at]) >= 4)) {
+      while (at < lines.length && (BLANK.test(lines[at].text) || indentOf(lines[at].text) >= 4)) {
         body.push(unindent(lines[at], 4));
         at += 1;
       }
 
-      while (body.length && BLANK.test(body[body.length - 1])) {
+      while (body.length && BLANK.test(body[body.length - 1].text)) {
         body.pop();
       }
 
-      blocks.push({ type: 'code', lang: null, meta: null, value: body.join('\n') });
+      blocks.push({
+        type: 'code',
+        range: {
+          start: lines[opened].start,
+          end: lineEnd(body[body.length - 1] ?? lines[opened])
+        },
+        lang: null,
+        meta: null,
+        value: body.map((each) => each.text).join('\n')
+      });
       continue;
     }
 
     if (
       context.gfm &&
-      line.includes('|') &&
+      line.text.includes('|') &&
       at + 1 < lines.length &&
-      DELIMITER_ROW.test(lines[at + 1]) &&
+      DELIMITER_ROW.test(lines[at + 1].text) &&
       splitRow(lines[at + 1]).length === splitRow(line).length
     ) {
       const align = alignmentsOf(lines[at + 1]);
       const rows: MdTableRow[] = [];
+      const opened = at;
 
-      const rowOf = (source: string, header: boolean): MdTableRow => {
+      const rowOf = (source: Line, header: boolean): MdTableRow => {
         const cells = splitRow(source);
-        const children: MdTableCell[] = align.map((_, column) =>
-          withInline<MdTableCell>({ type: 'tableCell', children: [] }, cells[column] ?? '')
-        );
+        const children: MdTableCell[] = align.map((_, column) => {
+          const cell = cells[column] ?? sourced(lineEnd(source));
 
-        return { type: 'tableRow', header, children };
+          return withInline<MdTableCell>(
+            { type: 'tableCell', range: rangeOf(cell, 0, cell.text.length), children: [] },
+            cell
+          );
+        });
+
+        return {
+          type: 'tableRow',
+          range: { start: source.start, end: lineEnd(source) },
+          header,
+          children
+        };
       };
 
       rows.push(rowOf(line, true));
       at += 2;
 
-      while (at < lines.length && !BLANK.test(lines[at]) && !interrupts(lines[at])) {
+      while (at < lines.length && !BLANK.test(lines[at].text) && !interrupts(lines[at].text)) {
         rows.push(rowOf(lines[at], false));
         at += 1;
       }
 
-      blocks.push({ type: 'table', align, children: rows });
+      blocks.push({ type: 'table', range: across(opened, at - 1), align, children: rows });
       continue;
     }
 
     /* Everything else is a paragraph, up to the first line that is not. */
-    const paragraph: string[] = [line];
+    const paragraph: Line[] = [line];
     at += 1;
 
     while (at < lines.length) {
       const next = lines[at];
 
-      if (BLANK.test(next)) {
+      if (BLANK.test(next.text)) {
         break;
       }
 
-      const setext = SETEXT.exec(next);
+      const setext = SETEXT.exec(next.text);
 
       if (setext) {
+        const underline = lines[at];
         at += 1;
-        const text = takeDefinitions(paragraph.join('\n'), context.definitions).trim();
+        const text = trim(takeDefinitions(fromLines(paragraph), context.definitions));
 
-        if (text) {
+        if (text.text) {
           blocks.push(
             withInline<MdHeading>(
-              { type: 'heading', depth: setext[1][0] === '=' ? 1 : 2, children: [], slug: '' },
+              {
+                type: 'heading',
+                // Both lines: the underline is as much the heading as the words
+                // above it, and a range that stopped short would leave it out
+                // of whatever the heading is replaced by.
+                range: { start: rangeOf(text, 0, 0).start, end: lineEnd(underline) },
+                depth: setext[1][0] === '=' ? 1 : 2,
+                children: [],
+                slug: ''
+              },
               text
             )
           );
@@ -619,7 +730,7 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
         break;
       }
 
-      if (interrupts(next)) {
+      if (interrupts(next.text)) {
         break;
       }
 
@@ -628,10 +739,15 @@ export function parseBlocks(lines: string[], context: BlockContext): MdBlock[] {
     }
 
     if (paragraph.length) {
-      const text = takeDefinitions(paragraph.join('\n'), context.definitions).trim();
+      const text = trim(takeDefinitions(fromLines(paragraph), context.definitions));
 
-      if (text) {
-        blocks.push(withInline<MdParagraph>({ type: 'paragraph', children: [] }, text));
+      if (text.text) {
+        blocks.push(
+          withInline<MdParagraph>(
+            { type: 'paragraph', range: rangeOf(text, 0, text.text.length), children: [] },
+            text
+          )
+        );
       }
     }
   }
