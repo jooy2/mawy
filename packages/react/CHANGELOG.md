@@ -2,6 +2,24 @@
 
 > This package's history. Each language Mawy ships for keeps its own changelog beside its own manifest, because they version independently.
 
+## Unreleased
+
+### Added
+
+- **Directives — a way for a document to carry a construct this package does not know about.** The parser reads a shape and stops there: `:::name[label]{key=value}` … `:::` around blocks, `::name[label]{attrs}` on a line of its own, and `:name[label]{attrs}` inside a sentence. What each one _means_ is the application's, through `directives`:
+
+  ```tsx
+  <MawyViewer value={document} directives={{ callout: Callout, youtube: YouTube }} />
+  ```
+
+  A component is handed the name, whatever was written in `{…}` — with `{#id}` arriving as `id`, `{.a .b}` as `class` and a bare name as a flag — the `[label]` already drawn, a container's blocks already drawn, the range it was written at and the characters it was written with. Which keeps the safety story exactly where it was: the application composes React elements, and no markup string is on the path from the document to the page. **A name nobody registered is drawn as the characters it was written with**, the same answer raw HTML gets under the default `html` policy, because a viewer that was never told what a construct means should show what the author wrote rather than quietly lose it — and on the `wysiwyg` surface those characters _are_ the source, one for one, so an unhandled directive is editable exactly where it was typed.
+
+  The syntax is the generic directives proposal's, which is what `remark-directive` reads, so a document written for one is read by the other. Two rules here are narrower than that extension's, and both are about not changing what an existing document already said: the colons must be followed immediately by the name, so `::: tip` with a space is the paragraph it always was; and an inline directive must carry a label or attributes, so `Note:` and `12:30` and `:warning:` stay what they are.
+
+  The Dart parser reads the same syntax into the same tree, and `tool/parity.dart` diffs the two over the awkward cases and every Markdown file in the repository, as it does for everything else the parser reads.
+
+- **`MawyDirectives`, `MawyDirectiveProps`, `MawyDirectiveKind` and `MawyRange`**, exported from `mawy-react` and `mawy-react/types` like the rest of the vocabulary.
+
 ## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

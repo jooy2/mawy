@@ -14,8 +14,9 @@
  */
 
 import type { MdDefinition, MdInline, MdRange, MdText } from './ast.js';
+import { readDirectiveHead } from './directive.js';
 import { decodeEntities } from './entities.js';
-import { endOffset, rangeOf, type Sourced } from './source.js';
+import { endOffset, rangeOf, slice, type Sourced } from './source.js';
 import { safeImageUrl, safeUrl } from './url.js';
 
 export interface InlineOptions {
@@ -838,6 +839,32 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
       hold(character, at);
       at += 1;
       continue;
+    }
+
+    /* A directive: a construct this parser reads and does not understand. */
+    if (character === ':' && source[at - 1] !== ':' && source[at + 1] !== ':') {
+      const head = readDirectiveHead(source, at + 1);
+      // A name on its own is not enough here. A colon is a colon in far more
+      // sentences than it is a directive — `Note:` and `see:foo` among them —
+      // so an inline one has to carry a `[label]` or `{attributes}` to be one.
+      const named = head !== null && head.end > at + 1 + head.name.length;
+
+      if (head && named) {
+        flush();
+        chunks.push(
+          nodeChunk({
+            type: 'textDirective',
+            range: span(at, head.end),
+            name: head.name,
+            attributes: head.attributes,
+            children: head.label
+              ? parseInline(slice(raw, head.label.start, head.label.end), options)
+              : []
+          })
+        );
+        at = head.end;
+        continue;
+      }
     }
 
     /* A footnote, which is a label that points at a block written elsewhere. */

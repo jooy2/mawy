@@ -22,18 +22,21 @@ import type {
   MdAlertKind,
   MdAlign,
   MdBlock,
+  MdContainerDirective,
   MdDefinition,
   MdDefinitionDescription,
   MdDefinitionTerm,
   MdFootnoteDefinition,
   MdHeading,
   MdInline,
+  MdLeafDirective,
   MdListItem,
   MdParagraph,
   MdRange,
   MdTableCell,
   MdTableRow
 } from './ast.js';
+import { readDirectiveHead, type DirectiveHead } from './directive.js';
 import { normalizeLabel } from './inline.js';
 import {
   advance,
@@ -52,7 +55,8 @@ import {
 /** Somewhere a run of inline nodes has to go once there is one. */
 export interface PendingInline {
   raw: Sourced;
-  target: { children: MdInline[] };
+  /** The empty list the parsed nodes are put into. */
+  target: MdInline[];
 }
 
 export interface BlockContext {
@@ -89,6 +93,8 @@ const FOOTNOTE = /^ {0,3}\[\^([^\]\n]+)\]:[ \t]*/;
  * list with the sentence above as its term.
  */
 const DESCRIBES = /^ {0,3}:[ \t]+/;
+const DIRECTIVE_INDENT = /^ {0,3}/;
+const TRAILING = /^[ \t]*$/;
 
 /** How far a block that opened on one line has to be indented to carry on. */
 const CONTINUATION = 4;
@@ -201,6 +207,41 @@ function atxAt(line: string): { depth: number; text: string; at: number } | null
 /* -------------------------------------------------------------------------
  * HTML blocks
  * ---------------------------------------------------------------------- */
+
+interface DirectiveLine {
+  /** How many colons opened it: two is a leaf, three or more a container. */
+  colons: number;
+  indent: number;
+  head: DirectiveHead;
+}
+
+/**
+ * A line that is a directive and nothing else.
+ *
+ * The colons have to be followed immediately by the name — `::: tip` with a
+ * space is a paragraph, which is what it was before this syntax existed and
+ * what every document that already writes containers that way still means —
+ * and nothing but whitespace may follow the head, because a line with words
+ * after it is a line of prose that happens to start with punctuation.
+ */
+function directiveAt(line: string): DirectiveLine | null {
+  const indent = DIRECTIVE_INDENT.exec(line)![0].length;
+  let at = indent;
+  let colons = 0;
+
+  while (line[at] === ':') {
+    colons += 1;
+    at += 1;
+  }
+
+  if (colons < 2) {
+    return null;
+  }
+
+  const head = readDirectiveHead(line, at);
+
+  return head && TRAILING.test(line.slice(head.end)) ? { colons, indent, head } : null;
+}
 
 const RAW_TEXT = /^ {0,3}<(script|pre|style|textarea)(?:[\s>]|$)/i;
 const BLOCK_TAGS = new Set(
@@ -471,6 +512,10 @@ function interrupts(line: string): boolean {
     return true;
   }
 
+  if (directiveAt(line)) {
+    return true;
+  }
+
   if (htmlStartAt(line, true)) {
     return true;
   }
@@ -495,7 +540,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
   /** A block whose text is read later, once the definitions are all known. */
   const withInline = <T extends { children: MdInline[] }>(node: T, raw: Sourced): T => {
-    context.pending.push({ raw, target: node });
+    context.pending.push({ raw, target: node.children });
 
     return node;
   };
@@ -570,6 +615,71 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         meta: words.length > 1 ? words.slice(1).join(' ') : null,
         value: body.map((each) => each.text).join('\n')
       });
+      continue;
+    }
+
+    /* A directive, which is a shape rather than a meaning. */
+    const directive = directiveAt(line.text);
+
+    if (directive) {
+      const { colons, indent, head } = directive;
+      const opened = at;
+      /** The `[label]`, in the document's own offsets. */
+      const label = head.label
+        ? fromText(line.text.slice(head.label.start, head.label.end), line.start + head.label.start)
+        : null;
+
+      at += 1;
+
+      if (colons === 2) {
+        const node: MdLeafDirective = {
+          type: 'leafDirective',
+          range: across(opened, opened),
+          name: head.name,
+          attributes: head.attributes,
+          children: []
+        };
+
+        if (label) {
+          context.pending.push({ raw: label, target: node.children });
+        }
+
+        blocks.push(node);
+        continue;
+      }
+
+      const body: Line[] = [];
+      // At least as many colons as opened it and nothing else on the line,
+      // which is what lets `::::` hold a `:::` without being closed by it.
+      const closing = new RegExp(`^ {0,3}:{${colons},}[ \\t]*$`);
+      let last = opened;
+
+      while (at < lines.length) {
+        last = at;
+
+        if (closing.test(lines[at].text)) {
+          at += 1;
+          break;
+        }
+
+        body.push(unindent(lines[at], indent));
+        at += 1;
+      }
+
+      const node: MdContainerDirective = {
+        type: 'containerDirective',
+        range: across(opened, last),
+        name: head.name,
+        attributes: head.attributes,
+        label: [],
+        children: parseBlocks(body, context)
+      };
+
+      if (label) {
+        context.pending.push({ raw: label, target: node.label });
+      }
+
+      blocks.push(node);
       continue;
     }
 

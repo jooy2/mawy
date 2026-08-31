@@ -233,6 +233,67 @@ void main() {
     });
   });
 
+  group('directives', () {
+    testWidgets('hands one to the builder registered for the name', (WidgetTester tester) async {
+      MawyDirective? seen;
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: ':::callout[Careful]{kind=warning}\nBody **text**.\n:::',
+            toolbar: const <MawyViewerToolbarItem>[],
+            directives: <String, MawyDirectiveBuilder>{
+              'callout': (BuildContext context, MawyDirective directive) {
+                seen = directive;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[Text.rich(directive.label!), ...directive.children!],
+                );
+              },
+            },
+          ),
+        ),
+      );
+
+      expect(seen!.name, 'callout');
+      expect(seen!.kind, MawyDirectiveKind.container);
+      expect(seen!.attributes, <String, String>{'kind': 'warning'});
+      expect(seen!.source, ':::callout[Careful]{kind=warning}\nBody **text**.\n:::');
+      expect(find.textContaining('Careful'), findsOneWidget);
+      expect(find.textContaining('Body text.'), findsOneWidget);
+    });
+
+    testWidgets('draws one inside a sentence, in the sentence', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: 'Press :kbd[Ctrl] to go.',
+            toolbar: const <MawyViewerToolbarItem>[],
+            directives: <String, MawyDirectiveBuilder>{
+              'kbd': (BuildContext context, MawyDirective directive) =>
+                  Text.rich(directive.label!, key: const Key('kbd')),
+            },
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('kbd')), findsOneWidget);
+    });
+
+    testWidgets('shows a name nobody claimed as the characters it was written with', (
+      WidgetTester tester,
+    ) async {
+      // Nothing is lost and nothing is invented, which is the same answer raw
+      // HTML gets and for the same reason.
+      await tester.pumpWidget(
+        host(const MawyViewer(value: '::video{src=/a.mp4}', toolbar: <MawyViewerToolbarItem>[])),
+      );
+
+      expect(find.text('::video{src=/a.mp4}'), findsOneWidget);
+    });
+  });
+
   group('links', () {
     testWidgets('does nothing with one until an application says what to do', (
       WidgetTester tester,

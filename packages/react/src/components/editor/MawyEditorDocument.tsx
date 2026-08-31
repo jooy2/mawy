@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { MawyHtmlPolicy, MawyParseOptions } from '../../types.js';
+import type { MawyDirectives, MawyHtmlPolicy, MawyParseOptions } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock } from '../../internal/markdown/ast.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
@@ -33,6 +33,8 @@ export interface MawyEditorDocumentProps {
   placeholder?: string;
   parse?: MawyParseOptions;
   html: MawyHtmlPolicy;
+  /** What draws the constructs this package does not know about. */
+  directives?: MawyDirectives;
   strings: MawyStrings;
   /**
    * A place the caret was left where nothing is drawn, from the last edit. See
@@ -89,6 +91,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       placeholder,
       parse,
       html,
+      directives,
       strings,
       room,
       aim,
@@ -117,8 +120,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       [document_]
     );
     const context: RenderContext = React.useMemo(
-      () => ({ html, strings, footnotes }),
-      [html, strings, footnotes]
+      () => ({ html, strings, footnotes, directives, source: value }),
+      [html, strings, footnotes, directives, value]
     );
 
     /**

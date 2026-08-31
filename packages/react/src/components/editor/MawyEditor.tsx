@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type {
   MawyColorScheme,
+  MawyDirectives,
   MawyEditorStatusOption,
   MawyEditorToolbarItem,
   MawyEditorToolbarOption,
@@ -126,6 +127,13 @@ export interface MawyEditorProps extends Omit<
    * what the characters are.
    */
   highlight?: MawyHighlight;
+  /**
+   * What draws the directives this package does not know about, in the preview
+   * and in the drawn document alike. A name that is not here is drawn as the
+   * characters it was written with — which in the drawn document is also what
+   * makes it editable, since those characters are the source, one for one.
+   */
+  directives?: MawyDirectives;
   fonts?: readonly MawyFont[];
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
@@ -165,6 +173,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     parse,
     html = 'escape',
     highlight,
+    directives,
     fonts = MAWY_SYSTEM_FONTS,
     typography,
     defaultTypography,
@@ -938,6 +947,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               placeholder={placeholder ?? strings.editorPlaceholder}
               parse={parse}
               html={html}
+              directives={directives}
               strings={strings}
               room={room}
               aim={aim}
@@ -959,6 +969,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               parse={parse}
               html={html}
               highlight={highlight}
+              directives={directives}
               fonts={fonts}
               locale={locale}
               colorScheme={scheme}

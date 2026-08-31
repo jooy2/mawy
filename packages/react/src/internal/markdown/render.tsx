@@ -19,17 +19,22 @@ import * as React from 'react';
 import type {
   MawyCodeToken,
   MawyCodeTokenKind,
+  MawyDirectiveKind,
+  MawyDirectives,
   MawyHighlighter,
   MawyHtmlPolicy
 } from '../../types.js';
 import type {
   MdBlock,
   MdCode,
+  MdContainerDirective,
   MdFootnoteDefinition,
   MdInline,
+  MdLeafDirective,
   MdListItem,
   MdRange,
-  MdTableRow
+  MdTableRow,
+  MdTextDirective
 } from './ast.js';
 import { sanitizeHtml } from './html.js';
 import type { MawyStrings } from '../i18n.js';
@@ -58,6 +63,19 @@ export interface RenderContext {
    * knows which number it is and where its note ended up.
    */
   footnotes?: Map<string, MdFootnoteDefinition>;
+  /**
+   * What an application knows how to draw that this package does not. A name
+   * that is not here is drawn as the characters it was written with.
+   */
+  directives?: MawyDirectives;
+  /**
+   * The Markdown the document was parsed from.
+   *
+   * The one thing the renderer reads the source for, and it is there so that an
+   * unhandled directive can be shown as what the author actually typed. Every
+   * range in the tree indexes this string.
+   */
+  source?: string;
 }
 
 /**
@@ -86,6 +104,62 @@ const referenceId = (slug: string, index: number) =>
  */
 function origin(node: { range: MdRange }): { 'data-mawy-range': string } {
   return { 'data-mawy-range': `${node.range.start},${node.range.end}` };
+}
+
+/* -------------------------------------------------------------------------
+ * Directives
+ * ---------------------------------------------------------------------- */
+
+/**
+ * A directive, handed to whatever knows what it means.
+ *
+ * Nothing here decides anything about the construct: the component an
+ * application registered under the name draws it, and this only assembles what
+ * that component is given. Which keeps the safety story exactly where it was —
+ * the application composes elements, and no markup string is on the path from
+ * the document to the page.
+ *
+ * A name nobody registered is drawn as the characters it was written with, the
+ * same answer raw HTML gets by default. Showing the source is the one fallback
+ * that cannot quietly lose part of a document: an unhandled `::video{src=…}`
+ * has nothing inside it to fall back *to*, and a reader seeing the line the
+ * author wrote can tell what was meant.
+ */
+function Directive({
+  node,
+  kind,
+  context
+}: {
+  node: MdContainerDirective | MdLeafDirective | MdTextDirective;
+  kind: MawyDirectiveKind;
+  context: RenderContext;
+}): React.ReactElement | null {
+  const Component = context.directives?.[node.name];
+  const label = kind === 'container' ? (node as MdContainerDirective).label : node.children;
+  const source = context.source?.slice(node.range.start, node.range.end) ?? '';
+
+  if (!Component) {
+    const Tag = kind === 'text' ? 'span' : 'div';
+
+    return (
+      <Tag className="mawy-md-directive-source" {...origin(node)}>
+        {source}
+      </Tag>
+    );
+  }
+
+  return (
+    <Component
+      name={node.name}
+      kind={kind}
+      attributes={node.attributes}
+      label={label.length ? renderInline(label as MdInline[], context) : null}
+      range={node.range}
+      source={source}
+    >
+      {kind === 'container' ? renderBlocks((node as MdContainerDirective).children, context) : null}
+    </Component>
+  );
 }
 
 /* -------------------------------------------------------------------------
@@ -177,6 +251,9 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
 
       case 'break':
         return <br key={index} {...origin(node)} />;
+
+      case 'textDirective':
+        return <Directive key={index} node={node} kind="text" context={context} />;
 
       case 'inlineHtml':
         return (
@@ -672,6 +749,12 @@ export function renderBlocks(
 
       case 'thematicBreak':
         return <hr key={index} className="mawy-md-rule" {...origin(block)} />;
+
+      case 'containerDirective':
+        return <Directive key={index} node={block} kind="container" context={context} />;
+
+      case 'leafDirective':
+        return <Directive key={index} node={block} kind="leaf" context={context} />;
 
       case 'html':
         return <RawHtml key={index} value={block.value} context={context} marks={origin(block)} />;

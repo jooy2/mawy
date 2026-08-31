@@ -24,6 +24,18 @@ import 'dart:io';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/parse.dart';
 
+/// A directive's attributes with their keys in one order.
+///
+/// The React half sorts the keys of every object it prints, this one writes
+/// them in the order the fields are read, and attributes are the one place a
+/// document decides what the keys even are. Sorting here is what makes the two
+/// halves comparable; the parsers themselves keep the order the document wrote.
+Map<String, String> _sorted(Map<String, String> attributes) {
+  final List<String> keys = attributes.keys.toList()..sort();
+
+  return <String, String>{for (final String key in keys) key: attributes[key]!};
+}
+
 Object? clean(Object? node) {
   if (node is List) {
     return node.map(clean).toList();
@@ -106,6 +118,19 @@ Object? clean(Object? node) {
     } else if (node is MdThematicBreak) {
       put('r', <int>[node.range.start, node.range.end]);
       put('type', 'thematicBreak');
+    } else if (node is MdContainerDirective) {
+      put('attributes', _sorted(node.attributes));
+      put('children', clean(node.children));
+      put('label', clean(node.label));
+      put('name', node.name);
+      put('r', <int>[node.range.start, node.range.end]);
+      put('type', 'containerDirective');
+    } else if (node is MdLeafDirective) {
+      put('attributes', _sorted(node.attributes));
+      put('children', clean(node.children));
+      put('name', node.name);
+      put('r', <int>[node.range.start, node.range.end]);
+      put('type', 'leafDirective');
     } else if (node is MdHtmlBlock) {
       put('r', <int>[node.range.start, node.range.end]);
       put('type', 'html');
@@ -150,6 +175,12 @@ Object? clean(Object? node) {
     } else if (node is MdBreak) {
       put('r', <int>[node.range.start, node.range.end]);
       put('type', 'break');
+    } else if (node is MdTextDirective) {
+      put('attributes', _sorted(node.attributes));
+      put('children', clean(node.children));
+      put('name', node.name);
+      put('r', <int>[node.range.start, node.range.end]);
+      put('type', 'textDirective');
     } else if (node is MdInlineHtml) {
       put('r', <int>[node.range.start, node.range.end]);
       put('type', 'inlineHtml');

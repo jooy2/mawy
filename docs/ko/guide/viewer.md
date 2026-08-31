@@ -31,7 +31,7 @@ MawyViewer(value: document);
 
 :::
 
-이게 전부입니다. 채워 넣을 테마 객체도, 등록할 플러그인도, 렌더링을 맡길 두 번째 라이브러리도 없습니다.
+이게 전부입니다. 채워 넣을 테마 객체도, 문서를 그리기 전에 등록해야 할 것도, 렌더링을 맡길 두 번째 라이브러리도 없습니다.
 
 ## 왜 같은 패키지에 있나
 
@@ -189,6 +189,81 @@ const shiki: MawyHighlighter = {
 색 자체는 여덟 개의 커스텀 프로퍼티입니다 — `--mawy-hl-comment`, `--mawy-hl-string`, `--mawy-hl-number`, `--mawy-hl-keyword`, `--mawy-hl-type`, `--mawy-hl-function`, `--mawy-hl-variable`, `--mawy-hl-punctuation`. 밝은 팔레트와 어두운 팔레트 양쪽에서 `.mawy-root`에 선언되어 있고, 다시 선언하는 것은 여러분 몫입니다.
 
 :::
+
+## 디렉티브
+
+뷰어는 마크다운이 말할 수 있는 것을 그립니다. 그런데 문서는 가끔 마크다운에 낱말이 없는 것을 말하고 싶어 합니다. 영상, 수식, 사이트의 모든 페이지가 쓰는 우리 회사 알림 상자 같은 것. 혼자서 거기서 빠져나가는 길은 둘뿐이고 둘 다 나쁩니다. 원시 HTML — 안전 이야기 전체가 그것을 필요로 하지 않는 데 딛고 서 있습니다 — 아니면 영상을 아는 라이브러리, 즉 그다음엔 모든 것을 알아야 하는 라이브러리.
+
+디렉티브가 세 번째 길입니다. 파서는 **모양**을 읽고 거기서 멈춥니다. `youtube`가 무엇인지에 대해 아무 의견이 없고, 바로 그것이 문서가 그것을 실어 나를 수 있게 하는 것입니다. 그 모양이 무슨 뜻인지는 여러분이 말합니다.
+
+셋이 있고, 콜론의 개수가 그 구분입니다.
+
+```md
+:::callout[주의]{kind=warning} 블록이고, 블록으로 파싱됩니다. **강조**, 목록, 코드. :::
+
+::youtube{id=dQw4w9WgXcQ}
+
+가려면 :kbd[Ctrl]을 누르세요.
+```
+
+컨테이너는 블록을 담고 자기 길이 이상의 콜론에서 닫힙니다. 그래서 `::::`가 `:::`를 담을 수 있습니다. 리프는 한 줄이고 그 아래에 아무것도 없습니다. 텍스트 디렉티브는 문장 안에 앉습니다.
+
+::: fw react
+
+각 이름이 어떤 컴포넌트가 되는지는 프롭 하나입니다.
+
+```tsx
+const Callout = ({ attributes, label, children }: MawyDirectiveProps) => (
+  <aside className={`callout callout-${attributes.kind ?? 'note'}`}>
+    {label ? <h3>{label}</h3> : null}
+    {children}
+  </aside>
+);
+
+<MawyViewer value={document} directives={{ callout: Callout, youtube: YouTube }} />;
+```
+
+컴포넌트가 받는 것은 `name`, `attributes`, 이미 그려진 `label`, 컨테이너라면 이미 그려진 `children`, 그것이 쓰인 자리인 `range`, 그리고 쓰인 글자인 `source`입니다. 그래서 컴포넌트는 React 엘리먼트를 조립할 뿐 마크업 문자열을 볼 일이 없습니다. 확장 지점이 생겨도 안전 이야기가 그대로인 것이 그것입니다. 마크다운과 화면 사이에 여전히 `innerHTML`이 없고, 위험한 것을 그리는 디렉티브는 애플리케이션이 그것을 그린 것입니다.
+
+:::
+
+::: fw flutter
+
+각 이름이 어떤 위젯이 되는지는 인자 하나입니다.
+
+```dart
+MawyViewer(
+  value: document,
+  directives: <String, MawyDirectiveBuilder>{
+    'callout': (BuildContext context, MawyDirective directive) => Callout(
+      kind: directive.attributes['kind'] ?? 'note',
+      title: directive.label,
+      children: directive.children!,
+    ),
+  },
+);
+```
+
+빌더가 받는 것은 `name`, `attributes`, `InlineSpan`으로 이미 그려진 `label`, 컨테이너라면 위젯으로 이미 그려진 `children`, 그것이 쓰인 자리인 `range`, 그리고 쓰인 글자인 `source`입니다. 그래서 빌더는 위젯을 조립할 뿐 어떤 종류의 마크업도 볼 일이 없습니다. 텍스트 디렉티브는 문장 안에 `WidgetSpan`으로 놓이므로, 그 빌더는 글줄 위에 앉을 만한 것을 돌려주는 게 좋습니다.
+
+:::
+
+`{…}`는 이 문법을 쓰는 다른 곳과 똑같이 씁니다. `key=value`, `key="공백이 든 값"`, `#id`, `.a .b` — 각각 `id`와 `class`로 도착합니다 — 그리고 맨 `key`, 이것은 빈 문자열로 도착하며 플래그를 적는 방법입니다. 모든 값은 문자열입니다. 문서가 말한 것이 문자열뿐이기 때문입니다. 그것을 숫자로 읽는 것도, 없을 때 무슨 뜻인지 정하는 것도 컴포넌트의 몫입니다.
+
+**아무도 맡지 않은 이름은 쓰인 글자 그대로 그려집니다.** 기본 `html` 정책에서 원시 HTML이 받는 것과 같은 답이고, 같은 이유입니다. 어떤 구성이 무슨 뜻인지 들은 적 없는 뷰어라면, 문서의 일부를 조용히 버리는 대신 작성자가 쓴 것을 보여주어야 합니다. 그리고 그것은 아무것도 잃지 않는 유일한 대비책이기도 합니다. 처리되지 않은 `::youtube{id=…}` 안에는 대신 보여줄 내용이라는 것이 아예 없습니다.
+
+::: fw react
+
+`wysiwyg` 화면에서 그 글자들은 **곧** 원문이고, 하나하나 그대로입니다. 그래서 맡지 않은 디렉티브도 쓰인 자리에서 그대로 편집됩니다.
+
+:::
+
+이 문법이 온 [`remark-directive`](https://github.com/remarkjs/remark-directive) 확장보다 여기서 좁은 규칙이 둘 있고, 둘 다 문서가 이미 말한 것을 바꾸지 않기 위한 것입니다.
+
+- **콜론 바로 뒤에 이름이 옵니다.** 사이에 공백이 있는 `::: tip`은 늘 그랬듯 문단입니다. 이미 그렇게 컨테이너를 쓰고 있는 모든 문서가 여전히 뜻하는 것이 그것입니다.
+- **인라인 디렉티브는 레이블이나 속성을 답니다.** `:name` 하나로는 디렉티브가 아니어서, 문장 속의 `Note:`나 `12:30`이나 `:warning:`은 정확히 그것들 그대로 남습니다.
+
+확장이 읽는 나머지는 이것도 읽습니다. 그래서 한쪽을 위해 쓰인 문서를 다른 쪽이 읽습니다.
 
 ## 안전
 
@@ -509,7 +584,3 @@ Container(color: tokens.backgroundSunken, child: /* … */);
 React 패키지에 있고 여기에는 아직 없는 것 셋, 그리고 그것이 정직한 목록입니다. 툴바 안의 키보드 이동, 메뉴를 닫는 `Escape`, 그리고 플랫폼의 모션 줄이기 설정에서 애니메이션이 빠지는 것.
 
 :::
-
-## 아직 남은 것
-
-- 확장 지점. 이 패키지가 모르는 구성을 문서가 실어 나를 수 있도록.

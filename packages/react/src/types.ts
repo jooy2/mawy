@@ -7,6 +7,8 @@
  * own props without importing a component to get at it.
  */
 
+import type * as React from 'react';
+
 /**
  * Which surface a document is shown on.
  *
@@ -229,6 +231,71 @@ export interface MawyHighlighter {
  * pays for it, and an application that never sets the prop never ships it.
  */
 export type MawyHighlight = MawyHighlighter | (() => MawyHighlighter | Promise<MawyHighlighter>);
+
+/**
+ * Where a piece of a document was written, in the offsets of the Markdown the
+ * component was given.
+ *
+ * The same two numbers every element carries as `data-mawy-range`, handed over
+ * as numbers where a component gets them directly.
+ */
+export interface MawyRange {
+  /** Where the first character sits. */
+  start: number;
+  /** Where the last one ends. */
+  end: number;
+}
+
+/**
+ * Which of the three shapes a directive was written in.
+ *
+ * The number of colons is the difference and nothing else about it is:
+ * `:::container` holds blocks, `::leaf` is a line of its own, and `:text` sits
+ * inside a sentence.
+ */
+export type MawyDirectiveKind = 'container' | 'leaf' | 'text';
+
+/**
+ * A directive, on its way to the component that knows what it means.
+ *
+ * The library reads the shape and stops there: it has no opinion about what
+ * `youtube` or `callout` is, which is exactly what lets a document carry one.
+ * What arrives here is a name, whatever was written in `{…}`, and the pieces
+ * already drawn — so a component composes React elements rather than parsing
+ * Markdown a second time or handling a string of HTML.
+ */
+export interface MawyDirectiveProps {
+  /** The name the document wrote after the colons. */
+  name: string;
+  kind: MawyDirectiveKind;
+  /**
+   * `{key=value}`, in the order they were written. `{#id}` arrives as `id` and
+   * `{.a .b}` as `class`; a name written on its own arrives with an empty
+   * string, which is how a flag is spelled.
+   *
+   * Every value is a string, because that is all the document said. Reading one
+   * as a number or as a boolean is the component's to do, as is deciding what a
+   * missing one means.
+   */
+  attributes: Readonly<Record<string, string>>;
+  /** The `[label]`, drawn. `null` when the document wrote none. */
+  label: React.ReactNode;
+  /** A container's blocks, drawn. `null` for the other two shapes. */
+  children: React.ReactNode;
+  range: MawyRange;
+  /** The characters the directive was written with, source and all. */
+  source: string;
+}
+
+/**
+ * The directives an application knows, by name.
+ *
+ * A name that is not on the list is drawn as the characters it was written
+ * with — the same answer raw HTML gets under the default `html` policy, and for
+ * the same reason: a document should show what it says rather than quietly lose
+ * a piece of itself to a viewer that was never told what it meant.
+ */
+export type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveProps>>>;
 
 /**
  * How wide the text is allowed to run.

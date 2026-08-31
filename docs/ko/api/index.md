@@ -140,6 +140,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `{ gfm: true, breaks: false, definitionLists: true }` | 마크다운을 어떻게 읽을지. |
 | `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | 문서 안에 쓰인 원본 HTML을 어떻게 할지. |
 | `locale` | [`MawyLocale`](#mawylocale) | `'en'` | 뷰어 자신의 chrome이 쓰는 언어. 문서와는 무관합니다. |
+| `directives` | [`MawyDirectives`](#mawydirectives) | — | 이 패키지가 모르는 구성을 무엇으로 그릴지. |
 
 :::
 
@@ -150,6 +151,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `MawyParseOptions()` | 마크다운을 어떻게 읽을지. |
 | `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | 뷰어 자신의 chrome이 쓰는 언어. 문서와는 무관합니다. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | 링크를 눌렀을 때 무엇을 할지. |
+| `directives` | `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>?` | — | 이 패키지가 모르는 구성을 무엇으로 그릴지. |
 
 `html` 인자는 없고, 생기지도 않을 것입니다. 문서 안에 쓰인 원본 HTML은 쓰인 글자 그대로 보입니다. 여기에는 그것을 그릴 HTML이라는 것이 없기 때문입니다.
 
@@ -495,6 +497,142 @@ const MAWY_WEB_FONTS: readonly MawyFont[];
 ```tsx
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
 ```
+
+### `MawyDirectiveKind`
+
+::: fw react
+
+```ts
+type MawyDirectiveKind = 'container' | 'leaf' | 'text';
+```
+
+:::
+
+::: fw flutter
+
+```dart
+enum MawyDirectiveKind { container, leaf, text }
+```
+
+:::
+
+디렉티브가 세 모양 중 어느 것으로 쓰였는지. 콜론의 개수가 그 차이이고 그 밖에는 아무것도 다르지 않습니다. `:::container`는 블록을 담고, `::leaf`는 한 줄이고, `:text`는 문장 안에 앉습니다. 무엇을 위한 것인지는 [디렉티브](../guide/viewer#디렉티브)에 있습니다.
+
+### `MawyDirectives`
+
+::: fw react
+
+```ts
+type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveProps>>>;
+```
+
+애플리케이션이 아는 디렉티브를 이름별로. 목록에 없는 이름은 쓰인 글자 그대로 그려집니다. 기본 `html` 정책에서 원시 HTML이 받는 것과 같은 답입니다.
+
+:::
+
+::: fw flutter
+
+이름이 붙은 타입으로는 **React 전용입니다.** Flutter의 인자는 그냥 `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>`이고, 거기 없는 이름은 쓰인 글자 그대로 그려집니다.
+
+:::
+
+### `MawyDirectiveProps`
+
+::: fw react
+
+```ts
+interface MawyDirectiveProps {
+  name: string;
+  kind: MawyDirectiveKind;
+  attributes: Readonly<Record<string, string>>;
+  /** 그려진 `[label]`. 문서가 쓰지 않았으면 `null`. */
+  label: React.ReactNode;
+  /** 컨테이너의 블록들, 그려진 것. 나머지 두 모양에서는 `null`. */
+  children: React.ReactNode;
+  range: MawyRange;
+  /** 쓰인 글자 그대로. */
+  source: string;
+}
+```
+
+디렉티브의 컴포넌트가 받는 것. 조각들은 **이미 그려진 채로** 도착합니다. 그래서 컴포넌트는 React 엘리먼트를 조립할 뿐, 마크다운을 두 번 파싱하지도 마크업 문자열을 다루지도 않습니다.
+
+`attributes`는 `{…}`에 쓰인 것을 쓰인 순서대로 담습니다. `{#id}`는 `id`로, `{.a .b}`는 `class`로 도착하고, 맨 이름은 빈 문자열로 도착합니다. 그것이 플래그를 적는 방법입니다. 모든 값이 문자열인 것은 문서가 말한 것이 문자열뿐이기 때문입니다.
+
+:::
+
+::: fw flutter
+
+이 모양으로는 **Flutter 전용이 아닙니다** — 같은 것을 클래스로 만든 [`MawyDirective`](#mawydirective)를 보세요.
+
+:::
+
+### `MawyDirective`
+
+::: fw flutter
+
+```dart
+class MawyDirective {
+  final String name;
+  final MawyDirectiveKind kind;
+  final Map<String, String> attributes;
+  final InlineSpan? label; // 그려진 `[label]`. 문서가 쓰지 않았으면 `null`
+  final List<Widget>? children; // 컨테이너의 블록들. 나머지 두 모양에서는 `null`
+  final MdRange range;
+  final String source; // 쓰인 글자 그대로
+}
+```
+
+디렉티브의 빌더가 받는 것. 조각들은 **이미 그려진 채로** 도착합니다. 그래서 빌더는 위젯을 조립할 뿐, 마크다운을 두 번 파싱하지 않습니다.
+
+`attributes`는 `{…}`에 쓰인 것을 쓰인 순서대로 담습니다. `{#id}`는 `id`로, `{.a .b}`는 `class`로 도착하고, 맨 이름은 빈 문자열로 도착합니다. 그것이 플래그를 적는 방법입니다. 모든 값이 `String`인 것은 문서가 말한 것이 문자열뿐이기 때문입니다.
+
+:::
+
+::: fw react
+
+**Flutter 전용입니다.** React 패키지는 같은 것을 [`MawyDirectiveProps`](#mawydirectiveprops)라고 씁니다.
+
+:::
+
+### `MawyDirectiveBuilder`
+
+::: fw flutter
+
+```dart
+typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
+```
+
+디렉티브 하나를 그리는 것. `MawyDirectiveKind.text`인 것은 문장 안에 `WidgetSpan`으로 놓이므로, 인라인 디렉티브의 빌더는 글줄 위에 앉을 만한 것 — 대개는 자기 `Text.rich` — 을 돌려주는 게 좋습니다.
+
+:::
+
+::: fw react
+
+**Flutter 전용입니다.** React 패키지에서 이에 해당하는 것은 컴포넌트 타입이고, [`MawyDirectives`](#mawydirectives)로 이름을 댑니다.
+
+:::
+
+### `MawyRange`
+
+::: fw react
+
+```ts
+interface MawyRange {
+  start: number;
+  end: number;
+}
+```
+
+문서의 한 조각이 어디에 쓰였는지를, 컴포넌트가 받은 마크다운의 위치값으로. 모든 엘리먼트가 `data-mawy-range`로 들고 있는 그 두 수를, 컴포넌트가 직접 받는 자리에서는 수로 건네는 것입니다. 오늘 그런 자리는 [`MawyDirectiveProps`](#mawydirectiveprops) 하나뿐입니다.
+
+:::
+
+::: fw flutter
+
+이 이름으로는 **React 전용입니다.** Dart 쪽의 것은 `MdRange`이고, 파서에서 나와 모든 노드에 붙어 있습니다 — [`MdDocument`](#mddocument)를 보세요.
+
+:::
 
 ### `MawyMeasure`
 

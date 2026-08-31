@@ -166,6 +166,15 @@ function relocate(node: MdNode, reading: Reading): void {
     end: documentOffset(reading, node.range.end)
   };
 
+  // A container directive is the one node with two runs of children under it,
+  // its `[label]` beside its blocks, and a range that was not moved is a range
+  // into a string nobody has any more.
+  if (node.type === 'containerDirective') {
+    for (const child of node.label) {
+      relocate(child, reading);
+    }
+  }
+
   if ('children' in node) {
     for (const child of node.children) {
       relocate(child, reading);
@@ -229,6 +238,13 @@ function collectOutline(
 
         break;
 
+      // A heading inside a directive is a heading. The package has no idea what
+      // the directive means, but the outline is about the document rather than
+      // about what draws it.
+      case 'containerDirective':
+        collectOutline(block.children, taken, into);
+        break;
+
       default:
         break;
     }
@@ -281,6 +297,10 @@ function collectFootnotes(
       continue;
     }
 
+    if (node.type === 'containerDirective') {
+      collectFootnotes(node.label as MdNode[], defined, into, taken);
+    }
+
     if ('children' in node) {
       collectFootnotes(node.children as MdNode[], defined, into, taken);
     }
@@ -308,7 +328,7 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
   const labels = new Set(footnotes.keys());
 
   for (const { raw, target } of pending) {
-    target.children = parseInline(raw, { gfm, breaks, definitions, footnotes: labels });
+    target.push(...parseInline(raw, { gfm, breaks, definitions, footnotes: labels }));
   }
 
   const root: MdRoot = { type: 'root', range: { start: 0, end: reading.length }, children };

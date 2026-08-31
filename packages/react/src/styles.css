@@ -1152,9 +1152,15 @@
   background: color-mix(in srgb, var(--mawy-bg-sunken) 55%, transparent);
 }
 
-/* Raw HTML ---------------------------------------------------------------- */
+/* Raw HTML, and a directive nobody claimed ---------------------------------
+ *
+ * Both are the same answer to the same question — a document said something
+ * this page was not told how to draw — so both are shown as what the author
+ * actually typed, and they look the same because they are the same thing.
+ * -------------------------------------------------------------------------- */
 
-.mawy-root .mawy-md-html-source {
+.mawy-root .mawy-md-html-source,
+.mawy-root .mawy-md-directive-source {
   display: block;
   margin: 0 0 1em;
   padding: 0.5em 0.7em;
@@ -1168,7 +1174,8 @@
   word-break: break-all;
 }
 
-.mawy-root span.mawy-md-html-source {
+.mawy-root span.mawy-md-html-source,
+.mawy-root span.mawy-md-directive-source {
   display: inline;
   margin: 0;
   padding: 0.1em 0.3em;

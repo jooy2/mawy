@@ -6,6 +6,9 @@
 /// has read the other.
 library;
 
+import 'package:flutter/widgets.dart';
+import 'package:mawy/src/markdown/ast.dart' show MdRange;
+
 /// Which palette to draw in.
 ///
 /// [system] follows the platform's own brightness, which is the default: a
@@ -168,6 +171,77 @@ enum MawyViewerToolbarItem {
   /// A hairline, for grouping.
   separator,
 }
+
+/// Which of the three shapes a directive was written in.
+///
+/// The number of colons is the difference and nothing else about it is:
+/// `:::container` holds blocks, `::leaf` is a line of its own, and `:text` sits
+/// inside a sentence.
+enum MawyDirectiveKind {
+  /// `:::name[label]{attrs}` … `:::`, with blocks inside it.
+  container,
+
+  /// `::name[label]{attrs}` on a line of its own.
+  leaf,
+
+  /// `:name[label]{attrs}` inside a sentence.
+  text,
+}
+
+/// A directive, on its way to the builder that knows what it means.
+///
+/// The library's part is small on purpose: it reads the shape and stops there,
+/// with no opinion about what `youtube` or `callout` is — which is exactly what
+/// lets a document carry one. What arrives here is a name, whatever was written
+/// in `{…}`, and the pieces already drawn, so a builder composes widgets rather
+/// than parsing Markdown a second time.
+@immutable
+class MawyDirective {
+  /// Creates a directive for a builder.
+  const MawyDirective({
+    required this.name,
+    required this.kind,
+    required this.attributes,
+    required this.label,
+    required this.children,
+    required this.range,
+    required this.source,
+  });
+
+  /// The name the document wrote after the colons.
+  final String name;
+
+  /// Which of the three shapes it was written in.
+  final MawyDirectiveKind kind;
+
+  /// `{key=value}`, in the order they were written.
+  ///
+  /// `{#id}` arrives as `id` and `{.a .b}` as `class`; a name written on its own
+  /// arrives with an empty string, which is how a flag is spelled. Every value
+  /// is a [String], because that is all the document said — reading one as a
+  /// number or as a boolean is the builder's to do, as is deciding what a
+  /// missing one means.
+  final Map<String, String> attributes;
+
+  /// The `[label]`, drawn. `null` when the document wrote none.
+  final InlineSpan? label;
+
+  /// A container's blocks, drawn. `null` for the other two shapes.
+  final List<Widget>? children;
+
+  /// Where in the document it was written.
+  final MdRange range;
+
+  /// The characters the directive was written with, source and all.
+  final String source;
+}
+
+/// What draws one directive.
+///
+/// A [MawyDirectiveKind.text] one is placed in the sentence as a
+/// [WidgetSpan], so a builder for an inline directive should return something
+/// that sits on a line of text — a [Text.rich] of its own is usually it.
+typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
 
 /// The language the viewer's own chrome is written in.
 ///

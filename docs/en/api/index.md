@@ -140,6 +140,7 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `{ gfm: true, breaks: false, definitionLists: true }` | How the Markdown is read. |
 | `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | What becomes of raw HTML written inside the document. |
 | `locale` | [`MawyLocale`](#mawylocale) | `'en'` | The language of the viewer's own chrome. Nothing to do with the document. |
+| `directives` | [`MawyDirectives`](#mawydirectives) | — | What draws the constructs this package does not know about. |
 
 :::
 
@@ -150,6 +151,7 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `MawyParseOptions()` | How the Markdown is read. |
 | `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | The language of the viewer's own chrome. Nothing to do with the document. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | What a tapped link does. |
+| `directives` | `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>?` | — | What draws the constructs this package does not know about. |
 
 There is no `html` argument, and there will not be one: raw HTML written inside a document is shown as the characters it was written with, because there is no HTML here to draw it as.
 
@@ -495,6 +497,142 @@ Thirteen open-licensed families, ready to be offered — every one under the SIL
 ```tsx
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
 ```
+
+### `MawyDirectiveKind`
+
+::: fw react
+
+```ts
+type MawyDirectiveKind = 'container' | 'leaf' | 'text';
+```
+
+:::
+
+::: fw flutter
+
+```dart
+enum MawyDirectiveKind { container, leaf, text }
+```
+
+:::
+
+Which of the three shapes a directive was written in. The number of colons is the difference and nothing else about it is: `:::container` holds blocks, `::leaf` is a line of its own, and `:text` sits inside a sentence. See [directives](../guide/viewer#directives) for what they are for.
+
+### `MawyDirectives`
+
+::: fw react
+
+```ts
+type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveProps>>>;
+```
+
+The directives an application knows, by name. A name that is not on the list is drawn as the characters it was written with — the same answer raw HTML gets under the default `html` policy.
+
+:::
+
+::: fw flutter
+
+**React only** as a named type. The Flutter argument is a plain `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>`, and a name that is not in it is drawn as the characters it was written with.
+
+:::
+
+### `MawyDirectiveProps`
+
+::: fw react
+
+```ts
+interface MawyDirectiveProps {
+  name: string;
+  kind: MawyDirectiveKind;
+  attributes: Readonly<Record<string, string>>;
+  /** The `[label]`, drawn. `null` when the document wrote none. */
+  label: React.ReactNode;
+  /** A container's blocks, drawn. `null` for the other two shapes. */
+  children: React.ReactNode;
+  range: MawyRange;
+  /** The characters it was written with. */
+  source: string;
+}
+```
+
+What a directive's component is given. The pieces arrive **already drawn**, so a component composes React elements and never parses Markdown a second time or handles a string of markup.
+
+`attributes` is what was written in `{…}`, in the order it was written: `{#id}` arrives as `id`, `{.a .b}` as `class`, and a bare name arrives with an empty string, which is how a flag is spelled. Every value is a string, because a string is all the document said.
+
+:::
+
+::: fw flutter
+
+**Flutter only** in this shape — see [`MawyDirective`](#mawydirective), which is the same thing as a class.
+
+:::
+
+### `MawyDirective`
+
+::: fw flutter
+
+```dart
+class MawyDirective {
+  final String name;
+  final MawyDirectiveKind kind;
+  final Map<String, String> attributes;
+  final InlineSpan? label; // the `[label]`, drawn. `null` when there was none
+  final List<Widget>? children; // a container's blocks. `null` for the other two
+  final MdRange range;
+  final String source; // the characters it was written with
+}
+```
+
+What a directive's builder is given. The pieces arrive **already drawn**, so a builder composes widgets and never parses Markdown a second time.
+
+`attributes` is what was written in `{…}`, in the order it was written: `{#id}` arrives as `id`, `{.a .b}` as `class`, and a bare name arrives with an empty string, which is how a flag is spelled. Every value is a `String`, because a string is all the document said.
+
+:::
+
+::: fw react
+
+**Flutter only.** The React package spells the same thing [`MawyDirectiveProps`](#mawydirectiveprops).
+
+:::
+
+### `MawyDirectiveBuilder`
+
+::: fw flutter
+
+```dart
+typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
+```
+
+What draws one directive. A `MawyDirectiveKind.text` one is placed in the sentence as a `WidgetSpan`, so a builder for an inline directive should return something that sits on a line of text — a `Text.rich` of its own is usually it.
+
+:::
+
+::: fw react
+
+**Flutter only.** The React package's equivalent is a component type, named through [`MawyDirectives`](#mawydirectives).
+
+:::
+
+### `MawyRange`
+
+::: fw react
+
+```ts
+interface MawyRange {
+  start: number;
+  end: number;
+}
+```
+
+Where a piece of a document was written, in the offsets of the Markdown the component was given — the same two numbers every element carries as `data-mawy-range`, handed over as numbers where a component gets them directly. Today that is [`MawyDirectiveProps`](#mawydirectiveprops) and nothing else.
+
+:::
+
+::: fw flutter
+
+**React only** under this name. The Dart side's is `MdRange`, which comes out of the parser and is on every node — see [`MdDocument`](#mddocument).
+
+:::
 
 ### `MawyMeasure`
 

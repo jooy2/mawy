@@ -60,6 +60,7 @@ class MawyViewer extends StatefulWidget {
     this.toolbar = kMawyViewerToolbar,
     this.locale = MawyLocale.en,
     this.onLinkTap,
+    this.directives,
     this.padding,
     this.scrollController,
   });
@@ -102,6 +103,27 @@ class MawyViewer extends StatefulWidget {
   /// is not a decision a viewer should make. The scheme allowlist has already
   /// run — a `javascript:` never reaches here — but the rest is yours.
   final void Function(String url, String? title)? onLinkTap;
+
+  /// What draws the constructs this package does not know about.
+  ///
+  /// A directive is a name and some attributes written in the document —
+  /// `:::callout{kind=warning}` and its two shorter shapes — and the parser
+  /// reads the shape without having any opinion about what it means. Which
+  /// widget that becomes is the application's answer:
+  ///
+  /// ```dart
+  /// MawyViewer(
+  ///   value: document,
+  ///   directives: <String, MawyDirectiveBuilder>{
+  ///     'callout': (BuildContext context, MawyDirective directive) =>
+  ///         Callout(kind: directive.attributes['kind'], children: directive.children!),
+  ///   },
+  /// );
+  /// ```
+  ///
+  /// A name that is not here is drawn as the characters it was written with,
+  /// the same answer raw HTML gets.
+  final Map<String, MawyDirectiveBuilder>? directives;
 
   /// The space around the document. The React package's own numbers otherwise.
   final EdgeInsetsGeometry? padding;
@@ -244,6 +266,8 @@ class _MawyViewerState extends State<MawyViewer> {
         for (final MdFootnoteDefinition footnote in document.footnotes) footnote.label: footnote,
       },
       onLinkTap: widget.onLinkTap,
+      directives: widget.directives,
+      source: widget.value,
       recognizers: _recognizers,
     );
 

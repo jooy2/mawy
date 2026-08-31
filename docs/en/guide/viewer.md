@@ -31,7 +31,7 @@ MawyViewer(value: document);
 
 :::
 
-That is the whole of it. There is no theme object to fill in, no plugin to register and no second library to do the rendering.
+That is the whole of it. There is no theme object to fill in, nothing to register before a document renders, and no second library to do the rendering.
 
 ## Why it is in this package
 
@@ -189,6 +189,81 @@ Each coloured piece says where it came from, like everything else the viewer dra
 The colours themselves are eight custom properties — `--mawy-hl-comment`, `--mawy-hl-string`, `--mawy-hl-number`, `--mawy-hl-keyword`, `--mawy-hl-type`, `--mawy-hl-function`, `--mawy-hl-variable`, `--mawy-hl-punctuation` — declared on `.mawy-root` in both palettes and yours to redeclare.
 
 :::
+
+## Directives
+
+A viewer draws what Markdown can say, and a document sometimes wants to say something Markdown never had a word for — a video, a formula, the house callout every page on your site uses. There are only two ways out of that on your own, and both are bad: raw HTML, which is the one thing the safety story is built on not needing, or a library that knows about videos, which is a library that then has to know about everything.
+
+A directive is the third way. The parser reads a **shape** and stops there — it has no opinion about what `youtube` is, which is exactly what lets a document carry one — and what the shape means is yours to say.
+
+Three of them, and the number of colons is which:
+
+```md
+:::callout[Careful]{kind=warning} Blocks, and they are parsed as blocks: **emphasis**, lists, code. :::
+
+::youtube{id=dQw4w9WgXcQ}
+
+Press :kbd[Ctrl] to go.
+```
+
+A container holds blocks and closes on colons of its own length or more, so `::::` holds a `:::`. A leaf is a line and nothing under it. A text one sits inside a sentence.
+
+::: fw react
+
+Which component each name becomes is one prop:
+
+```tsx
+const Callout = ({ attributes, label, children }: MawyDirectiveProps) => (
+  <aside className={`callout callout-${attributes.kind ?? 'note'}`}>
+    {label ? <h3>{label}</h3> : null}
+    {children}
+  </aside>
+);
+
+<MawyViewer value={document} directives={{ callout: Callout, youtube: YouTube }} />;
+```
+
+A component is handed the `name`, the `attributes`, the `label` already drawn, a container's `children` already drawn, the `range` it was written at and the `source` it was written with — so it composes React elements and never sees a string of markup. That is the whole of the safety story surviving the extension point: there is still no `innerHTML` between the Markdown and the page, and a directive that draws something dangerous is an application that drew it.
+
+:::
+
+::: fw flutter
+
+Which widget each name becomes is one argument:
+
+```dart
+MawyViewer(
+  value: document,
+  directives: <String, MawyDirectiveBuilder>{
+    'callout': (BuildContext context, MawyDirective directive) => Callout(
+      kind: directive.attributes['kind'] ?? 'note',
+      title: directive.label,
+      children: directive.children!,
+    ),
+  },
+);
+```
+
+A builder is handed the `name`, the `attributes`, the `label` already drawn as an `InlineSpan`, a container's `children` already drawn as widgets, the `range` it was written at and the `source` it was written with — so it composes widgets and never sees markup of any kind. A text directive is placed in the sentence as a `WidgetSpan`, so a builder for one should return something that sits on a line of text.
+
+:::
+
+`{…}` is written the way it is everywhere else this syntax is: `key=value`, `key="a value with spaces"`, `#id`, `.a .b` — which arrive as `id` and `class` — and a bare `key`, which arrives with an empty string and is how a flag is spelled. Every value is a string, because a string is all the document said; reading one as a number, and deciding what a missing one means, is the component's.
+
+**A name nobody claimed is drawn as the characters it was written with.** That is the same answer raw HTML gets under the default `html` policy and it is the same reason: a viewer that was never told what a construct means should show what the author wrote rather than quietly drop part of a document. It is also the one fallback that cannot lose anything — an unhandled `::youtube{id=…}` has no content inside it to fall back _to_.
+
+::: fw react
+
+On the `wysiwyg` surface those characters **are** the source, one for one, so an unclaimed directive is editable exactly where it was typed.
+
+:::
+
+Two rules here are narrower than the [`remark-directive`](https://github.com/remarkjs/remark-directive) extension this syntax comes from, and both are about not changing what a document already said:
+
+- **The colons are followed immediately by the name.** `::: tip` with a space is the paragraph it always was, which is what every document that already writes containers that way still means.
+- **An inline directive carries a label or attributes.** `:name` on its own is not one, so `Note:` and `12:30` and `:warning:` in a sentence stay exactly what they are.
+
+Everything else the extension reads, this reads, so a document written for one is read by the other.
 
 ## Safety
 
@@ -509,7 +584,3 @@ Text is the one thing on the page with no range on it, having no attributes to p
 Three things the React package has and this one does not yet, and they are the honest list: keyboard traversal inside the toolbar, `Escape` closing a menu, and animation dropping out under the platform's reduce-motion setting.
 
 :::
-
-## Still to come
-
-- An extension point, so a document can carry a construct this package does not know about.

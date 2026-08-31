@@ -57,6 +57,20 @@ to make it otherwise: Flutter has no HTML to draw it as. That is the one place
 this package and the React one differ about a document, and it is a difference
 in what a screen can do rather than in what the document says.
 
+A document can also carry a construct this package has never heard of:
+
+```md
+:::callout[Careful]{kind=warning}
+Blocks, parsed as blocks.
+:::
+```
+
+The parser reads the shape and stops there. `directives` says what each name
+becomes, and a builder is handed the name, the attributes and the pieces already
+drawn, so it composes widgets rather than markup. A name nobody claimed is shown
+as the characters it was written with. `::name{…}` on a line of its own and
+`:name[…]` inside a sentence are the other two shapes.
+
 ## Using it
 
 ```dart
@@ -76,6 +90,7 @@ MawyViewer(
 | `toolbar`                                                 | The controls to draw, in order. `const []` for none                                   |
 | `locale`                                                  | `MawyLocale.en` or `MawyLocale.ko`, for the viewer's own chrome                       |
 | `onLinkTap`                                               | What a tapped link does. Nothing at all without it                                    |
+| `directives`                                              | What draws the constructs this package does not know about, by name                   |
 
 ## The gallery
 

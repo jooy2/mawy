@@ -66,7 +66,8 @@ export interface MawyEdit {
  * question about the boundary rather than about a character.
  */
 const BLOCKS =
-  'p, h1, h2, h3, h4, h5, h6, li, dt, dd, td, th, blockquote, pre, .mawy-md-html-source';
+  'p, h1, h2, h3, h4, h5, h6, li, dt, dd, td, th, blockquote, pre, .mawy-md-html-source, ' +
+  '.mawy-md-directive-source';
 
 /**
  * Where an edit cannot go, whatever it is.
@@ -75,6 +76,11 @@ const BLOCKS =
  * `dangerouslySetInnerHTML`, which means React does not know what is inside it
  * and cannot put it back. The markup is editable as the text it is written as —
  * that is the `escape` policy, and `.mawy-md-html-source` is on the list above.
+ *
+ * A directive nobody claimed is on that list for the same reason and with the
+ * better outcome: what is drawn is the characters of the source, one for one,
+ * so a position inside it is a position inside the document and an edit lands
+ * exactly where it was typed.
  */
 const INERT = '.mawy-md-html';
 

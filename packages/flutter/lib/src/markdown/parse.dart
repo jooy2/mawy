@@ -220,6 +220,15 @@ List<MdNode> _childrenOf(MdNode node) {
   if (node is MdLink) {
     return node.children;
   }
+  if (node is MdContainerDirective) {
+    return node.children;
+  }
+  if (node is MdLeafDirective) {
+    return node.children;
+  }
+  if (node is MdTextDirective) {
+    return node.children;
+  }
 
   return const <MdNode>[];
 }
@@ -230,6 +239,15 @@ void _relocate(MdNode node, _Reading reading) {
     _documentOffset(reading, node.range.start),
     _documentOffset(reading, node.range.end),
   );
+
+  // A container directive is the one node with two runs of children under it,
+  // its `[label]` beside its blocks, and a range that was not moved is a range
+  // into a string nobody has any more.
+  if (node is MdContainerDirective) {
+    for (final MdNode child in node.label) {
+      _relocate(child, reading);
+    }
+  }
 
   for (final MdNode child in _childrenOf(node)) {
     _relocate(child, reading);
@@ -287,6 +305,15 @@ void _collectOutline(List<MdBlock> blocks, Map<String, int> taken, List<MdOutlin
       for (final MdListItem item in block.children) {
         _collectOutline(item.children, taken, into);
       }
+
+      continue;
+    }
+
+    // A heading inside a directive is a heading. The package has no idea what
+    // the directive means, but the outline is about the document rather than
+    // about what draws it.
+    if (block is MdContainerDirective) {
+      _collectOutline(block.children, taken, into);
     }
   }
 }
@@ -335,6 +362,10 @@ void _collectFootnotes(
       }
 
       continue;
+    }
+
+    if (node is MdContainerDirective) {
+      _collectFootnotes(node.label, defined, into, taken);
     }
 
     _collectFootnotes(_childrenOf(node), defined, into, taken);

@@ -30,5 +30,20 @@
  "`` ` `` and ``a`b``",
  "# A & B\n\n## A & B",
  "- one\n\n- two\n\n- three",
- "Para\ntwo lines\n\n# Then a heading"
+ "Para\ntwo lines\n\n# Then a heading",
+ ":::note\n# Inside\n\nA paragraph with **strong**.\n:::",
+ ":::callout[Be *careful*]{kind=warning #one .a .b}\nBody.\n:::",
+ "::video{src=/a.mp4 loop poster=\"a b\"}\n\nAfter.",
+ "Press :kbd[**Ctrl**] and :icon{name=star} to go.",
+ "::: tip\nA space after the colons is a paragraph.\n:::",
+ "Note: something. See http://a:b and 12:30 and :warning: too.",
+ "::::outer\n:::inner\nDeep.\n:::\n::::",
+ ":::open\nNever closed.",
+ "Words.\n::a{b}\nMore words.",
+ "> :::quoted\n> Inside a quotation.\n> :::",
+ "- :::listed\n  Inside an item.\n  :::",
+ "::a{title=\"one \\\" two\" empty='' bare=x-y.z}",
+ "::a{ } and ::a{ }\n\n::a{}\n\n::bad{\n\n::bad[unclosed\n\n::9nope{a}",
+ ":::a[Label with [nested] brackets]{k=v}\nBody.\n:::",
+ "A directive in a heading:\n\n# Title with :kbd[Esc] in it"
 ]

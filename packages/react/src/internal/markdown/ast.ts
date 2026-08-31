@@ -212,6 +212,65 @@ export interface MdHtmlBlock {
   value: string;
 }
 
+/**
+ * A construct the parser reads and does not understand.
+ *
+ * The point of a directive is that this package has no opinion about what one
+ * means. It reads the shape — a name, an optional `[label]`, optional
+ * `{key=value}` attributes, and for a container the blocks inside it — and
+ * hands that to whatever is drawing the document. Which is what lets a document
+ * carry a video, a formula or a house callout without any of the three being
+ * something the parser had to be taught.
+ *
+ * Three forms, and the number of colons is which:
+ *
+ *     :::note[Careful]{kind=warning}
+ *     Blocks, parsed as blocks.
+ *     :::
+ *
+ *     ::video{src=/a.mp4}
+ *
+ *     Press :kbd[Ctrl] to go.
+ *
+ * The syntax is the generic directives proposal's, which is what
+ * `remark-directive` reads, so a document written for one is read by the other.
+ * Two rules here are narrower than that extension's, and both are about not
+ * changing what an existing document means: the opening colons must be followed
+ * immediately by the name, so `::: tip` with a space is a paragraph the way it
+ * always was; and a text directive must carry a label or attributes, so a `:`
+ * in the middle of a sentence stays a colon.
+ */
+export interface MdContainerDirective {
+  type: 'containerDirective';
+  range: MdRange;
+  name: string;
+  /** `{key=value}`, in the order they were written. */
+  attributes: Record<string, string>;
+  /** The `[label]` on the opening line. Empty when the document wrote none. */
+  label: MdInline[];
+  children: MdBlock[];
+}
+
+/** `::name[label]{attrs}` on a line of its own. */
+export interface MdLeafDirective {
+  type: 'leafDirective';
+  range: MdRange;
+  name: string;
+  attributes: Record<string, string>;
+  /** The `[label]`. Empty when the document wrote none. */
+  children: MdInline[];
+}
+
+/** `:name[label]{attrs}` inside a sentence. */
+export interface MdTextDirective {
+  type: 'textDirective';
+  range: MdRange;
+  name: string;
+  attributes: Record<string, string>;
+  /** The `[label]`. Empty when the document wrote none. */
+  children: MdInline[];
+}
+
 export type MdBlock =
   | MdHeading
   | MdParagraph
@@ -221,6 +280,8 @@ export type MdBlock =
   | MdTable
   | MdDefinitionList
   | MdThematicBreak
+  | MdContainerDirective
+  | MdLeafDirective
   | MdHtmlBlock;
 
 export interface MdText {
@@ -305,6 +366,7 @@ export type MdInline =
   | MdImage
   | MdFootnoteReference
   | MdBreak
+  | MdTextDirective
   | MdInlineHtml;
 
 export type MdNode =

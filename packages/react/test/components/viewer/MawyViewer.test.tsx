@@ -5,6 +5,7 @@ import {
   MAWY_WEB_FONTS,
   MawyViewer,
   type MawyCodeToken,
+  type MawyDirectiveProps,
   type MawyHighlighter
 } from 'mawy-react';
 
@@ -690,6 +691,99 @@ describe('highlighting', () => {
     );
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
+  });
+});
+
+/**
+ * Directives, which are the way a document carries something this package has
+ * never heard of.
+ *
+ * The library's part is small on purpose: read the shape, hand it over, and
+ * show the characters the author typed when nobody claimed the name. What is
+ * worth checking here is that the handing over is complete — a component gets
+ * the attributes, the label and the blocks already drawn, so it never has to
+ * parse anything or be given a string of HTML.
+ */
+describe('directives', () => {
+  const Callout = ({ attributes, label, children }: MawyDirectiveProps) => (
+    <section data-kind={attributes.kind}>
+      <h3>{label}</h3>
+      {children}
+    </section>
+  );
+
+  it('hands a container to the component registered for the name', async () => {
+    const screen = await render(
+      <MawyViewer
+        value={':::callout[Careful]{kind=warning}\nBody **text**.\n:::'}
+        toolbar={false}
+        directives={{ callout: Callout }}
+      />
+    );
+    const section = screen.container.querySelector('section') as HTMLElement;
+
+    expect(section.dataset.kind).toBe('warning');
+    expect(section.querySelector('h3')?.textContent).toBe('Careful');
+    expect(section.querySelector('p')?.textContent).toBe('Body text.');
+    expect(section.querySelector('strong')?.textContent).toBe('text');
+  });
+
+  it('draws one inside a sentence, in the sentence', async () => {
+    const Kbd = ({ label }: MawyDirectiveProps) => <kbd>{label}</kbd>;
+    const screen = await render(
+      <MawyViewer value="Press :kbd[Ctrl] to go." toolbar={false} directives={{ kbd: Kbd }} />
+    );
+
+    expect(screen.container.querySelector('p')?.textContent).toBe('Press Ctrl to go.');
+    expect(screen.container.querySelector('kbd')?.textContent).toBe('Ctrl');
+  });
+
+  it('tells the component which shape it was written in, and where', async () => {
+    const seen: MawyDirectiveProps[] = [];
+    const Spy = (props: MawyDirectiveProps) => {
+      seen.push(props);
+
+      return null;
+    };
+    const value = '::a{x=1}\n\n:::b\nBody.\n:::';
+
+    await render(<MawyViewer value={value} toolbar={false} directives={{ a: Spy, b: Spy }} />);
+
+    expect(seen.map((props) => props.kind)).toEqual(['leaf', 'container']);
+    expect(seen[0].attributes).toEqual({ x: '1' });
+    expect(seen[0].label).toBe(null);
+    expect(value.slice(seen[1].range.start, seen[1].range.end)).toBe(':::b\nBody.\n:::');
+    expect(seen[0].source).toBe('::a{x=1}');
+  });
+
+  it('shows a name nobody claimed as the characters it was written with', async () => {
+    const screen = await render(<MawyViewer value={'::video{src=/a.mp4}'} toolbar={false} />);
+    const shown = screen.container.querySelector('.mawy-md-directive-source') as HTMLElement;
+
+    expect(shown.textContent).toBe('::video{src=/a.mp4}');
+    // Nothing is lost and nothing is invented: the same answer raw HTML gets
+    // under the default policy.
+    expect(screen.container.querySelector('video')).toBe(null);
+  });
+
+  it('says where an unclaimed one came from, like everything else it draws', async () => {
+    const value = 'Before.\n\n::video{src=/a.mp4}';
+    const screen = await render(<MawyViewer value={value} toolbar={false} />);
+    const range = screen.container
+      .querySelector('.mawy-md-directive-source')
+      ?.getAttribute('data-mawy-range');
+    const [start, end] = (range ?? '').split(',').map(Number);
+
+    expect(value.slice(start, end)).toBe('::video{src=/a.mp4}');
+  });
+
+  it('cannot be used to put markup on the page', async () => {
+    const screen = await render(
+      <MawyViewer value={'::a{x="<img src=x onerror=alert(1)>"}'} toolbar={false} />
+    );
+
+    expect(screen.container.querySelector('img')).toBe(null);
+    expect(screen.container.textContent).toContain('<img src=x onerror=alert(1)>');
   });
 });
 

@@ -109,6 +109,81 @@ void main() {
     });
   });
 
+  group('directives', () {
+    test('reads the three shapes, and what each one holds', () {
+      final MdContainerDirective container =
+          first(':::note[Careful]{kind=warning}\n# In\n\nBody.\n:::') as MdContainerDirective;
+
+      expect(container.name, 'note');
+      expect(container.attributes, <String, String>{'kind': 'warning'});
+      expect((container.label.single as MdText).value, 'Careful');
+      expect(container.children.map((MdBlock block) => block.runtimeType).toList(), <Type>[
+        MdHeading,
+        MdParagraph,
+      ]);
+
+      final MdLeafDirective leaf = first('::video{src=/a.mp4}') as MdLeafDirective;
+
+      expect(leaf.name, 'video');
+      expect(leaf.attributes, <String, String>{'src': '/a.mp4'});
+
+      final MdParagraph sentence = first('Press :kbd[Ctrl] to go.') as MdParagraph;
+      final MdTextDirective text = sentence.children.whereType<MdTextDirective>().single;
+
+      expect(text.name, 'kbd');
+      expect((text.children.single as MdText).value, 'Ctrl');
+    });
+
+    test('reads every shape of attribute, in the order they were written', () {
+      final MdLeafDirective leaf =
+          first('::a{#one .two .three key=bare quoted="a b" flag}') as MdLeafDirective;
+
+      expect(leaf.attributes.keys.toList(), <String>['id', 'class', 'key', 'quoted', 'flag']);
+      expect(leaf.attributes, <String, String>{
+        'id': 'one',
+        'class': 'two three',
+        'key': 'bare',
+        'quoted': 'a b',
+        'flag': '',
+      });
+    });
+
+    test('leaves what was never a directive alone', () {
+      // A space after the colons is what every document that already writes
+      // containers that way means, and a colon in a sentence is a colon.
+      expect(first('::: tip\nBody.\n:::'), isA<MdParagraph>());
+      expect(first('::video{src=/a.mp4} and more'), isA<MdParagraph>());
+      expect(first('::a{'), isA<MdParagraph>());
+
+      final MdParagraph sentence = first('Note: something. See http://a:b too.') as MdParagraph;
+
+      expect(sentence.children.whereType<MdTextDirective>(), isEmpty);
+    });
+
+    test('closes a container on colons of its own length or more', () {
+      final MdContainerDirective outer =
+          first('::::a\n:::b\nIn.\n:::\n::::') as MdContainerDirective;
+
+      expect(outer.name, 'a');
+      expect((outer.children.single as MdContainerDirective).name, 'b');
+    });
+
+    test('points every part of one back at the characters it came from', () {
+      const String source = ':::note[Careful]{kind=warning}\nBody.\n:::';
+      final MdContainerDirective block = first(source) as MdContainerDirective;
+
+      expect(at(source, block), source);
+      expect(at(source, block.label.first), 'Careful');
+    });
+
+    test('finds a heading inside one, because the outline is about the document', () {
+      expect(
+        parseMarkdown(':::a\n# In\n:::').outline.map((MdOutlineEntry e) => e.text).toList(),
+        <String>['In'],
+      );
+    });
+  });
+
   group('the outline', () {
     test('names every heading, and keeps the names apart', () {
       final MdDocument document = parseMarkdown('# A & B\n\n## A & B\n\n### 한국어');

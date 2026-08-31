@@ -461,6 +461,142 @@ describe('safety', () => {
   });
 });
 
+/**
+ * Directives — the constructs the parser reads and does not understand.
+ *
+ * There is nothing to check about what one *means*, because nothing here has an
+ * opinion about that. What is worth checking is the shape it comes out as, and
+ * the two rules that keep this syntax from changing what documents written
+ * before it already said: colons have to be followed by the name, and an inline
+ * one has to carry a label or attributes.
+ */
+describe('directives', () => {
+  it('reads a container, with the blocks inside it parsed as blocks', () => {
+    const block = first(':::note\n# Inside\n\nA paragraph.\n:::');
+
+    expect(block).toMatchObject({ type: 'containerDirective', name: 'note', attributes: {} });
+    expect(block.type === 'containerDirective' && bare(block.label)).toEqual([]);
+    expect(
+      block.type === 'containerDirective' && block.children.map((child) => child.type)
+    ).toEqual(['heading', 'paragraph']);
+  });
+
+  it('reads a leaf, which is a line and nothing under it', () => {
+    const block = first('::video{src=/a.mp4}\n\nAfter.');
+
+    expect(bare(block)).toEqual({
+      type: 'leafDirective',
+      name: 'video',
+      attributes: { src: '/a.mp4' },
+      children: []
+    });
+  });
+
+  it('reads one inside a sentence, with its label as inline content', () => {
+    const nodes = inline(first('Press :kbd[**Ctrl**] to go.'));
+
+    expect(nodes.map((node) => node.type)).toEqual(['text', 'textDirective', 'text']);
+    expect(bare(nodes[1])).toEqual({
+      type: 'textDirective',
+      name: 'kbd',
+      attributes: {},
+      children: [{ type: 'strong', children: [{ type: 'text', value: 'Ctrl' }] }]
+    });
+  });
+
+  it('reads the label on a container from the line that opened it', () => {
+    const block = first(':::note[Be *careful*]\nBody.\n:::');
+
+    expect(block.type === 'containerDirective' && bare(block.label)).toEqual([
+      { type: 'text', value: 'Be ' },
+      { type: 'emphasis', children: [{ type: 'text', value: 'careful' }] }
+    ]);
+  });
+
+  it('reads every shape of attribute, in the order they were written', () => {
+    const block = first('::a{#one .two .three key=bare quoted="a b" flag}');
+
+    expect(block.type === 'leafDirective' && block.attributes).toEqual({
+      id: 'one',
+      class: 'two three',
+      key: 'bare',
+      quoted: 'a b',
+      flag: ''
+    });
+    expect(block.type === 'leafDirective' && Object.keys(block.attributes)).toEqual([
+      'id',
+      'class',
+      'key',
+      'quoted',
+      'flag'
+    ]);
+  });
+
+  it('takes a backslash inside a quoted value literally', () => {
+    const block = first('::a{title="one \\" two"}');
+
+    expect(block.type === 'leafDirective' && block.attributes.title).toBe('one " two');
+  });
+
+  it('leaves a line with a space after the colons as the paragraph it was', () => {
+    // Which is what every document that already writes `::: tip` containers
+    // means, and what this one meant before the syntax existed.
+    expect(first('::: tip\nBody.\n:::').type).toBe('paragraph');
+  });
+
+  it('leaves a colon in a sentence as a colon', () => {
+    expect(
+      inline(first('Note: something. See http://a:b for more.')).every(
+        (node) => node.type !== 'textDirective'
+      )
+    ).toBe(true);
+  });
+
+  it('leaves a line with anything after the head as a paragraph', () => {
+    expect(first('::video{src=/a.mp4} and more').type).toBe('paragraph');
+    expect(first('::a{').type).toBe('paragraph');
+    expect(first('::a[unclosed').type).toBe('paragraph');
+  });
+
+  it('closes a container on colons of its own length or more', () => {
+    const outer = first('::::a\n:::b\nInside.\n:::\n::::');
+
+    expect(outer).toMatchObject({ type: 'containerDirective', name: 'a' });
+    expect(outer.type === 'containerDirective' && outer.children[0]).toMatchObject({
+      type: 'containerDirective',
+      name: 'b'
+    });
+  });
+
+  it('runs a container that was never closed to the end of what holds it', () => {
+    const block = first(':::a\nInside.');
+
+    expect(block.type === 'containerDirective' && block.children).toHaveLength(1);
+  });
+
+  it('cuts a paragraph short, the way a fence or a quotation does', () => {
+    expect(blocks('Words.\n::a{b}').map((block) => block.type)).toEqual([
+      'paragraph',
+      'leafDirective'
+    ]);
+  });
+
+  it('finds a heading inside one, because the outline is about the document', () => {
+    expect(parseMarkdown(':::a\n# Inside\n:::').outline.map((entry) => entry.text)).toEqual([
+      'Inside'
+    ]);
+  });
+
+  it('points every part of one back at the characters it was written from', () => {
+    const source = ':::note[Careful]{kind=warning}\nBody.\n:::';
+    const block = first(source);
+    const label = block.type === 'containerDirective' ? block.label[0] : null;
+
+    expect(source.slice(block.range.start, block.range.end)).toBe(source);
+    expect(label && source.slice(label.range.start, label.range.end)).toBe('Careful');
+  });
+});
+
 describe('the outline', () => {
   it('slugs every heading and makes repeats unique', () => {
     const { outline } = parseMarkdown('# One\n## One\n### 두 번째');

@@ -336,6 +336,75 @@ class MdHtmlBlock extends MdBlock {
   final String value;
 }
 
+/// A construct the parser reads and does not understand.
+///
+/// The point of a directive is that this package has no opinion about what one
+/// means. It reads the shape — a name, an optional `[label]`, optional
+/// `{key=value}` attributes, and for a container the blocks inside it — and
+/// hands that to whatever is drawing the document. Which is what lets a document
+/// carry a video, a formula or a house callout without any of the three being
+/// something the parser had to be taught.
+///
+/// Three forms, and the number of colons is which:
+///
+///     :::note[Careful]{kind=warning}
+///     Blocks, parsed as blocks.
+///     :::
+///
+///     ::video{src=/a.mp4}
+///
+///     Press :kbd[Ctrl] to go.
+///
+/// The syntax is the generic directives proposal's, which is what
+/// `remark-directive` reads, so a document written for one is read by the other.
+/// Two rules here are narrower than that extension's, and both are about not
+/// changing what an existing document means: the opening colons must be followed
+/// immediately by the name, so `::: tip` with a space is a paragraph the way it
+/// always was; and a text directive must carry a label or attributes, so a `:`
+/// in the middle of a sentence stays a colon.
+class MdContainerDirective extends MdBlock {
+  /// Creates a container directive covering [range].
+  MdContainerDirective(
+    super.range, {
+    required this.name,
+    required this.attributes,
+    required this.label,
+    required this.children,
+  });
+
+  /// The name the document wrote after the colons.
+  final String name;
+
+  /// `{key=value}`, in the order they were written.
+  final Map<String, String> attributes;
+
+  /// The `[label]` on the opening line. Empty when the document wrote none.
+  final List<MdInline> label;
+
+  /// The blocks between the opening line and the closing colons.
+  final List<MdBlock> children;
+}
+
+/// `::name[label]{attrs}` on a line of its own.
+class MdLeafDirective extends MdBlock {
+  /// Creates a leaf directive covering [range].
+  MdLeafDirective(
+    super.range, {
+    required this.name,
+    required this.attributes,
+    required this.children,
+  });
+
+  /// The name the document wrote after the colons.
+  final String name;
+
+  /// `{key=value}`, in the order they were written.
+  final Map<String, String> attributes;
+
+  /// The `[label]`. Empty when the document wrote none.
+  final List<MdInline> children;
+}
+
 /* -------------------------------------------------------------------------
  * Inline
  * ---------------------------------------------------------------------- */
@@ -436,6 +505,26 @@ class MdFootnoteReference extends MdInline {
 class MdBreak extends MdInline {
   /// Creates a hard break covering [range].
   MdBreak(super.range);
+}
+
+/// `:name[label]{attrs}` inside a sentence. See [MdContainerDirective].
+class MdTextDirective extends MdInline {
+  /// Creates a text directive covering [range].
+  MdTextDirective(
+    super.range, {
+    required this.name,
+    required this.attributes,
+    required this.children,
+  });
+
+  /// The name the document wrote after the colon.
+  final String name;
+
+  /// `{key=value}`, in the order they were written.
+  final Map<String, String> attributes;
+
+  /// The `[label]`. Empty when the document wrote none.
+  final List<MdInline> children;
 }
 
 /// A run of raw HTML written inside a sentence, shown as the text it is.

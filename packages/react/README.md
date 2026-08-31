@@ -90,13 +90,23 @@ Your own fonts go in the same list: `{ id, label, stack, href }`.
 
 CommonMark, plus GitHub's additions: tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs, footnotes, and the five alert kinds — and definition lists, which GitHub does not read. Link reference definitions resolve wherever in the file they are written. Code blocks are coloured by whatever `highlight` is given — `mawy-react/highlight` is one, in a separate entry point, fetched only when a document turns out to have a language on a fence.
 
+### What it does not know about
+
+A document can carry a construct this package has never heard of, and say so in the document rather than in HTML:
+
+```md
+:::callout[Careful]{kind=warning} Blocks, parsed as blocks. :::
+```
+
+`directives` says what each name becomes — `<MawyViewer directives={{ callout: Callout }} />` — and a component is handed the name, the attributes and the pieces already drawn, so it composes elements rather than markup. A name nobody claimed is shown as the characters it was written with. `::name{…}` on a line of its own and `:name[…]` inside a sentence are the other two shapes.
+
 ### What it will not do
 
 Raw HTML inside a document is shown as text unless you ask otherwise (`html="sanitize"` or `html="raw"`), and **every URL is checked whichever you choose** — `[click](javascript:…)` is Markdown rather than HTML, so the scheme allowlist is not part of that option and is not switched off with it. A refused destination is drawn as the words the author wrote, with no link around them.
 
 ### Types
 
-`MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyViewerToolbarItem` and `MawyViewerToolbarOption`, all also available from `mawy-react/types` — so an application can name one in its own props without importing a component to get at it.
+`MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyDirectives`, `MawyDirectiveProps`, `MawyRange`, `MawyViewerToolbarItem` and `MawyViewerToolbarOption`, all also available from `mawy-react/types` — so an application can name one in its own props without importing a component to get at it.
 
 The full reference is at [mawy.cdget.com/api/](https://mawy.cdget.com/api/).
 

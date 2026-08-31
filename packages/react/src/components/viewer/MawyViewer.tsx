@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type {
   MawyColorScheme,
+  MawyDirectives,
   MawyFont,
   MawyHighlight,
   MawyHtmlPolicy,
@@ -137,6 +138,23 @@ export interface MawyViewerProps extends Omit<
    */
   highlight?: MawyHighlight;
 
+  /**
+   * What to draw for the constructs this package does not know about.
+   *
+   * A directive is a name and some attributes written in the document —
+   * `:::callout{kind=warning}` and its two shorter shapes — and the parser
+   * reads the shape without having any opinion about what it means. Which
+   * component that becomes is the application's answer:
+   *
+   * ```tsx
+   * <MawyViewer value={document} directives={{ callout: Callout }} />
+   * ```
+   *
+   * A name that is not here is drawn as the characters it was written with,
+   * the same answer raw HTML gets by default.
+   */
+  directives?: MawyDirectives;
+
   /** What to draw instead of the file picker when there is no document. */
   empty?: React.ReactNode;
 }
@@ -169,6 +187,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     fileDrop,
     accept = ACCEPT,
     highlight,
+    directives,
     empty,
     className,
     style,
@@ -238,8 +257,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     [document_]
   );
   const context = React.useMemo(
-    () => ({ html, strings, highlighter, footnotes }),
-    [html, strings, highlighter, footnotes]
+    () => ({ html, strings, highlighter, footnotes, directives, source: text }),
+    [html, strings, highlighter, footnotes, directives, text]
   );
   const content = React.useMemo(
     () => (

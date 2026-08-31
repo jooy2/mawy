@@ -21,6 +21,7 @@
 library;
 
 import 'package:mawy/src/markdown/ast.dart';
+import 'package:mawy/src/markdown/directive.dart';
 import 'package:mawy/src/markdown/inline.dart' show normalizeLabel;
 import 'package:mawy/src/markdown/source.dart';
 
@@ -92,6 +93,8 @@ final RegExp _whitespace = RegExp(r'\s+');
 /// internet, and without the space every one of them would become a definition
 /// list with the sentence above as its term.
 final RegExp _describes = RegExp(r'^ {0,3}:[ \t]+');
+final RegExp _directiveIndent = RegExp(r'^ {0,3}');
+final RegExp _trailing = RegExp(r'^[ \t]*$');
 
 /// How far a block that opened on one line has to be indented to carry on.
 const int _continuation = 4;
@@ -221,6 +224,46 @@ _Atx? _atxAt(String line) {
 /* -------------------------------------------------------------------------
  * HTML blocks
  * ---------------------------------------------------------------------- */
+
+/// A line that is a directive and nothing else.
+class _DirectiveLine {
+  const _DirectiveLine(this.colons, this.indent, this.head);
+
+  /// How many colons opened it: two is a leaf, three or more a container.
+  final int colons;
+  final int indent;
+  final DirectiveHead head;
+}
+
+/// Whether [line] is a directive on a line of its own, and which.
+///
+/// The colons have to be followed immediately by the name — `::: tip` with a
+/// space is a paragraph, which is what it was before this syntax existed and
+/// what every document that already writes containers that way still means —
+/// and nothing but whitespace may follow the head, because a line with words
+/// after it is a line of prose that happens to start with punctuation.
+_DirectiveLine? _directiveAt(String line) {
+  final int indent = _directiveIndent.firstMatch(line)![0]!.length;
+  int at = indent;
+  int colons = 0;
+
+  while (at < line.length && line[at] == ':') {
+    colons += 1;
+    at += 1;
+  }
+
+  if (colons < 2) {
+    return null;
+  }
+
+  final DirectiveHead? head = readDirectiveHead(line, at);
+
+  if (head == null || !_trailing.hasMatch(line.substring(head.end))) {
+    return null;
+  }
+
+  return _DirectiveLine(colons, indent, head);
+}
 
 final RegExp _rawText = RegExp(
   r'^ {0,3}<(script|pre|style|textarea)(?:[\s>]|$)',
@@ -502,6 +545,10 @@ bool _interrupts(String line) {
     return true;
   }
 
+  if (_directiveAt(line) != null) {
+    return true;
+  }
+
   if (_htmlStartAt(line, true) != null) {
     return true;
   }
@@ -609,6 +656,63 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
           lang: words.isNotEmpty && !words.first.contains('`') ? words.first : null,
           meta: words.length > 1 ? words.skip(1).join(' ') : null,
           value: body.map((Line each) => each.text).join('\n'),
+        ),
+      );
+      continue;
+    }
+
+    /* A directive, which is a shape rather than a meaning. */
+    final _DirectiveLine? directive = _directiveAt(line.text);
+
+    if (directive != null) {
+      final DirectiveHead head = directive.head;
+      final int opened = at;
+      final DirectiveLabel? span = head.label;
+
+      /// The `[label]`, in the document's own offsets.
+      final Sourced? label = span == null
+          ? null
+          : fromText(line.text.substring(span.start, span.end), line.start + span.start);
+
+      at += 1;
+
+      if (directive.colons == 2) {
+        blocks.add(
+          MdLeafDirective(
+            across(opened, opened),
+            name: head.name,
+            attributes: head.attributes,
+            children: label == null ? <MdInline>[] : later(label),
+          ),
+        );
+        continue;
+      }
+
+      final List<Line> body = <Line>[];
+      // At least as many colons as opened it and nothing else on the line,
+      // which is what lets `::::` hold a `:::` without being closed by it.
+      final RegExp closing = RegExp('^ {0,3}:{${directive.colons},}[ \\t]*\$');
+      int last = opened;
+
+      while (at < lines.length) {
+        last = at;
+
+        if (closing.hasMatch(lines[at].text)) {
+          at += 1;
+          break;
+        }
+
+        body.add(_unindent(lines[at], directive.indent));
+        at += 1;
+      }
+
+      blocks.add(
+        MdContainerDirective(
+          across(opened, last),
+          name: head.name,
+          attributes: head.attributes,
+          label: label == null ? <MdInline>[] : later(label),
+          children: parseBlocks(body, context),
         ),
       );
       continue;

@@ -31,6 +31,8 @@ class MawyRenderContext {
     required this.footnotes,
     this.onLinkTap,
     this.onImageError,
+    this.directives,
+    this.source,
     this.recognizers,
   });
 
@@ -57,6 +59,21 @@ class MawyRenderContext {
   /// What is drawn where a picture will not load.
   final Widget Function(String url)? onImageError;
 
+  /// What draws the constructs this package does not know about, by name.
+  ///
+  /// A name that is not here is drawn as the characters it was written with —
+  /// the same answer raw HTML gets, and for the same reason: a document should
+  /// show what it says rather than quietly lose a piece of itself to a screen
+  /// that was never told what it meant.
+  final Map<String, MawyDirectiveBuilder>? directives;
+
+  /// The Markdown the document was parsed from.
+  ///
+  /// The one thing the renderer reads the source for, and it is there so that
+  /// an unhandled directive can be shown as what the author actually typed.
+  /// Every range in the tree indexes this string.
+  final String? source;
+
   /// Where the tap recognizers a link needs are kept.
   ///
   /// A recognizer holds resources and has to be disposed, and a span cannot do
@@ -71,6 +88,113 @@ class MawyRenderContext {
 
 /// The em, in logical pixels — the unit every margin here is expressed in.
 double _em(MawyRenderContext context) => context.typography.fontSize;
+
+/* -------------------------------------------------------------------------
+ * Directives
+ * ---------------------------------------------------------------------- */
+
+/// A directive, handed to whatever knows what it means.
+///
+/// Nothing here decides anything about the construct: the builder an
+/// application registered under the name draws it, and this only assembles what
+/// that builder is given. Which keeps the safety story exactly where it was —
+/// the application composes widgets, and there is no markup on the path from
+/// the document to the screen in either direction.
+class _Directive extends StatelessWidget {
+  const _Directive({required this.directive, required this.builder});
+
+  final MawyDirective directive;
+  final MawyDirectiveBuilder builder;
+
+  @override
+  Widget build(BuildContext buildContext) => builder(buildContext, directive);
+}
+
+/// The characters a directive was written with, in the document.
+String _sourceOf(MdRange range, MawyRenderContext context) {
+  final String? source = context.source;
+
+  if (source == null || range.start < 0 || range.end > source.length) {
+    return '';
+  }
+
+  return source.substring(range.start, range.end);
+}
+
+/// What a name nobody claimed is drawn as.
+///
+/// The same answer raw HTML gets, and showing the source is the one fallback
+/// that cannot quietly lose part of a document: an unhandled `::video{src=…}`
+/// has nothing inside it to fall back *to*, and a reader seeing the line the
+/// author wrote can tell what was meant.
+TextStyle _unclaimedStyle(MawyRenderContext context, TextStyle style) {
+  return _codeStyle(context, style).copyWith(
+    color: context.tokens.foregroundMuted,
+    backgroundColor: context.tokens.backgroundSunken,
+  );
+}
+
+/// One of the two block-shaped directives, drawn.
+///
+/// Both are the same handing over with a different name for what was inside
+/// them: a container's blocks are its `children`, a leaf has none, and both
+/// carry whatever `[label]` was written on the line.
+Widget _directive(
+  MawyRenderContext context, {
+  required String name,
+  required MawyDirectiveKind kind,
+  required Map<String, String> attributes,
+  required List<MdInline> label,
+  required List<Widget>? children,
+  required MdRange range,
+}) {
+  final MawyDirectiveBuilder? builder = context.directives?[name];
+  final String source = _sourceOf(range, context);
+
+  if (builder == null) {
+    return _unclaimed(source, context);
+  }
+
+  return _Directive(
+    builder: builder,
+    directive: MawyDirective(
+      name: name,
+      kind: kind,
+      attributes: attributes,
+      label: label.isEmpty ? null : renderInline(label, context, context.body),
+      children: children,
+      range: range,
+      source: source,
+    ),
+  );
+}
+
+/// A block of characters the screen was not told how to draw.
+///
+/// Raw HTML and a directive nobody claimed are the same answer to the same
+/// question — a document said something this screen has no widget for — so both
+/// are shown as what the author actually typed, and they look the same because
+/// they are the same thing.
+Widget _unclaimed(String text, MawyRenderContext context) {
+  final double em = _em(context);
+
+  return Container(
+    width: double.infinity,
+    padding: EdgeInsets.symmetric(horizontal: em * 0.7, vertical: em * 0.5),
+    decoration: BoxDecoration(
+      color: context.tokens.backgroundSunken,
+      borderRadius: BorderRadius.circular(MawyRadius.small),
+      border: Border.all(color: context.tokens.borderStrong),
+    ),
+    child: Text(
+      text,
+      style: _codeStyle(
+        context,
+        context.body,
+      ).copyWith(backgroundColor: null, color: context.tokens.foregroundMuted, fontSize: em * 0.82),
+    ),
+  );
+}
 
 /* -------------------------------------------------------------------------
  * Inline
@@ -174,6 +298,31 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
 
   if (node is MdBreak) {
     return const TextSpan(text: '\n');
+  }
+
+  if (node is MdTextDirective) {
+    final MawyDirectiveBuilder? builder = context.directives?[node.name];
+    final String source = _sourceOf(node.range, context);
+
+    if (builder == null) {
+      return TextSpan(text: source, style: _unclaimedStyle(context, style));
+    }
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: _Directive(
+        builder: builder,
+        directive: MawyDirective(
+          name: node.name,
+          kind: MawyDirectiveKind.text,
+          attributes: node.attributes,
+          label: node.children.isEmpty ? null : renderInline(node.children, context, style),
+          children: null,
+          range: node.range,
+          source: source,
+        ),
+      ),
+    );
   }
 
   if (node is MdInlineHtml) {
@@ -368,28 +517,41 @@ Widget _block(
     );
   }
 
-  if (block is MdHtmlBlock) {
-    // The markup, as the characters it is. See `_inlineSpan`.
+  if (block is MdContainerDirective) {
     return _spaced(
-      Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(horizontal: em * 0.7, vertical: em * 0.5),
-        decoration: BoxDecoration(
-          color: tokens.backgroundSunken,
-          borderRadius: BorderRadius.circular(MawyRadius.small),
-          border: Border.all(color: tokens.borderStrong),
-        ),
-        child: Text(
-          block.value,
-          style: _codeStyle(
-            context,
-            context.body,
-          ).copyWith(backgroundColor: null, color: tokens.foregroundMuted, fontSize: em * 0.82),
-        ),
+      _directive(
+        context,
+        name: block.name,
+        kind: MawyDirectiveKind.container,
+        attributes: block.attributes,
+        label: block.label,
+        children: renderBlocks(block.children, context),
+        range: block.range,
       ),
       em,
       last: last,
     );
+  }
+
+  if (block is MdLeafDirective) {
+    return _spaced(
+      _directive(
+        context,
+        name: block.name,
+        kind: MawyDirectiveKind.leaf,
+        attributes: block.attributes,
+        label: block.children,
+        children: null,
+        range: block.range,
+      ),
+      em,
+      last: last,
+    );
+  }
+
+  if (block is MdHtmlBlock) {
+    // The markup, as the characters it is. See `_inlineSpan`.
+    return _spaced(_unclaimed(block.value, context), em, last: last);
   }
 
   return const SizedBox.shrink();

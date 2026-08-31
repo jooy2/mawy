@@ -15,6 +15,7 @@
 library;
 
 import 'package:mawy/src/markdown/ast.dart';
+import 'package:mawy/src/markdown/directive.dart';
 import 'package:mawy/src/markdown/entities.dart';
 import 'package:mawy/src/markdown/source.dart';
 import 'package:mawy/src/markdown/url.dart';
@@ -723,6 +724,11 @@ String toPlainText(List<MdInline> nodes) {
       out.write(toPlainText(node.children));
     } else if (node is MdLink) {
       out.write(toPlainText(node.children));
+    } else if (node is MdTextDirective) {
+      // What its label says is what the sentence says. The package does not
+      // know what the directive is, and a heading is slugged from the words
+      // either way.
+      out.write(toPlainText(node.children));
     }
   }
 
@@ -893,6 +899,35 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       hold(character, at);
       at += 1;
       continue;
+    }
+
+    /* A directive: a construct this parser reads and does not understand. */
+    if (character == ':' && _at(source, at - 1) != ':' && _at(source, at + 1) != ':') {
+      final DirectiveHead? head = readDirectiveHead(source, at + 1);
+      // A name on its own is not enough here. A colon is a colon in far more
+      // sentences than it is a directive — `Note:` and `see:foo` among them —
+      // so an inline one has to carry a `[label]` or `{attributes}` to be one.
+      final bool named = head != null && head.end > at + 1 + head.name.length;
+
+      if (head != null && named) {
+        final DirectiveLabel? label = head.label;
+
+        flush();
+        chunks.add(
+          _Chunk(
+            MdTextDirective(
+              span(at, head.end),
+              name: head.name,
+              attributes: head.attributes,
+              children: label == null
+                  ? <MdInline>[]
+                  : parseInline(slice(raw, label.start, label.end), options),
+            ),
+          ),
+        );
+        at = head.end;
+        continue;
+      }
     }
 
     /* A footnote, which is a label that points at a block written elsewhere. */
