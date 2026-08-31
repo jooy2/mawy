@@ -22,15 +22,10 @@ import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
 import { useHighlighter } from '../../internal/highlighter.js';
 import { DEFAULT_TYPOGRAPHY, typographyStyle } from '../../internal/typography.js';
+import { MAWY_ACCEPT, readTextFile } from '../../internal/files.js';
 import { DEFAULT_TOOLBAR, MawyViewerToolbar } from './MawyViewerToolbar.js';
 import { MawyViewerEmpty } from './MawyViewerEmpty.js';
 import { MawyViewerOutline } from './MawyViewerOutline.js';
-
-/** What a file picker offers, and what a drop is checked against. */
-const ACCEPT = '.md,.markdown,.mdown,.mkd,.mdx,.txt,text/markdown,text/plain';
-
-/** Five megabytes of Markdown is about a million words. */
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export interface MawyViewerProps extends Omit<
   React.ComponentPropsWithoutRef<'div'>,
@@ -185,7 +180,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     html = 'escape',
     locale = 'en',
     fileDrop,
-    accept = ACCEPT,
+    accept = MAWY_ACCEPT,
     highlight,
     directives,
     empty,
@@ -291,18 +286,18 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
   const read = React.useCallback(
     async (file: File) => {
-      setReadError(null);
+      const answer = await readTextFile(file);
 
-      if (file.size > MAX_FILE_SIZE) {
-        setReadError(strings.fileTooLarge);
+      setReadError(
+        'failed' in answer
+          ? answer.failed === 'tooLarge'
+            ? strings.fileTooLarge
+            : strings.readFailed
+          : null
+      );
 
-        return;
-      }
-
-      try {
-        load(await file.text(), file);
-      } catch {
-        setReadError(strings.readFailed);
+      if ('text' in answer) {
+        load(answer.text, file);
       }
     },
     [load, strings]

@@ -137,6 +137,7 @@ Every button on the toolbar runs a command that also has a keyboard shortcut, an
 | `Mod` + `1` / `2` / `3` | Heading 1, 2, 3                        |
 | `Mod` + `0`             | Body text                              |
 | `Mod` + `F`             | Find and replace                       |
+| `Mod` + `S`             | Save                                   |
 | `Tab` / `Shift` + `Tab` | Indent, outdent                        |
 | `Mod` + `Z`             | Undo                                   |
 | `Mod` + `Shift` + `Z`   | Redo, and `Ctrl` + `Y` as well         |
@@ -162,6 +163,8 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | `'heading'` | A menu of heading 1, 2, 3 and body text |
 | `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
+| `'find'` | Opens the find bar — see [finding](#finding) |
+| `'open'`, `'save'` | A Markdown file in, and out — see [opening and saving](#opening-and-saving) |
 | `'colorScheme'` | Light, dark, or whatever the system says |
 | `'separator'` | A hairline, for grouping |
 
@@ -204,6 +207,25 @@ Where the image lands is where it was put: a drop goes to the point the pointer 
 ```
 
 The **drawn document is not coloured**, and will not be. The source surface has a highlighter of its own for the Markdown; the drawn one is a place where every caret has to find its way back into the source, and a second opinion about what the characters inside a code block are is not worth what it would cost there.
+
+## Opening and saving
+
+`open` reads a Markdown file into the editor. `save` writes the document back out — `Mod`+`S` as well, because the browser's own `Mod`+`S` saves the page and that is never what somebody writing in an editor meant by it.
+
+```tsx
+<MawyEditor
+  defaultValue={document}
+  onSave={(value, name) => api.put(`/documents/${name}`, value)}
+/>
+```
+
+Without `onSave` the text is handed to the browser as a download. An anchor with a `download` on it rather than the File System Access API, which only Chromium has: a save that works in one browser and silently does nothing in another is worse than one that always does the same thing. With `onSave`, nothing is downloaded and the application is given the document and the name it would have been saved as.
+
+The name is the file's own, when one was opened. Otherwise it is **the document's first heading** — that is what the document calls itself and what somebody looking through a folder of these would want to read — with the characters no filesystem will take dropped, and `document.md` when there is no heading to take it from.
+
+`open` has no shortcut on purpose. The browser's own `Mod`+`O` is a reasonable thing to leave alone, and opening a file is a rare and deliberate act rather than one done mid-flow.
+
+**A file dropped on the editor is an image, never a document.** The drop is already the way an image gets in, and that is the smaller half of it: replacing a document somebody has been writing because a file landed on it is how work is lost. The viewer opens what is dropped on it because a viewer has nothing to lose; an editor asks to be asked.
 
 ## Finding
 

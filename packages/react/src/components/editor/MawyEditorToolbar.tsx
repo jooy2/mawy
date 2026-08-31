@@ -21,11 +21,13 @@ import {
   ItalicIcon,
   LightIcon,
   LinkIcon,
+  OpenFileIcon,
   OrderedListIcon,
   ParagraphIcon,
   PreviewIcon,
   QuoteIcon,
   RuleIcon,
+  SaveIcon,
   SourceIcon,
   SplitIcon,
   StrikethroughIcon,
@@ -50,6 +52,9 @@ export interface MawyEditorToolbarProps {
   /** Opens the find bar. Absent in the modes that have no source to search. */
   onFind?: () => void;
   finding: boolean;
+  /** Absent while the document cannot be replaced. */
+  onOpen?: () => void;
+  onSave: () => void;
 }
 
 const MODE_ICONS: Record<MawyMode, typeof SourceIcon> = {
@@ -110,7 +115,9 @@ export function MawyEditorToolbar({
   active,
   editable,
   onFind,
-  finding
+  finding,
+  onOpen,
+  onSave
 }: MawyEditorToolbarProps): React.ReactElement {
   const { onKeyDown, itemProps } = useRoving();
   const order = tabStops(items, (item) =>
@@ -208,6 +215,28 @@ export function MawyEditorToolbar({
       );
     }
 
+    if (item === 'open' || item === 'save') {
+      const opening = item === 'open';
+
+      return (
+        <IconButton
+          key={key}
+          label={opening ? strings.openFile : strings.saveFile}
+          icon={
+            opening ? (
+              <OpenFileIcon className="mawy-icon" aria-hidden="true" />
+            ) : (
+              <SaveIcon className="mawy-icon" aria-hidden="true" />
+            )
+          }
+          disabled={opening && !onOpen}
+          data-mawy-toolbar-item=""
+          onClick={opening ? onOpen : onSave}
+          {...itemProps(at)}
+        />
+      );
+    }
+
     if (item === 'colorScheme') {
       const Icon =
         colorScheme === 'light' ? LightIcon : colorScheme === 'dark' ? DarkIcon : SystemThemeIcon;
@@ -296,5 +325,7 @@ export const DEFAULT_EDITOR_TOOLBAR: readonly MawyEditorToolbarItem[] = [
   'rule',
   'separator',
   'find',
+  'open',
+  'save',
   'colorScheme'
 ];

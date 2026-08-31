@@ -611,6 +611,90 @@ describe('finding', () => {
   });
 });
 
+/**
+ * Opening a file, and saving one.
+ *
+ * The naming and the reading are pure functions with a file of their own. What
+ * is left here is the wiring: the picker reaching the document, and `onSave`
+ * being handed the text and the name rather than the browser being handed a
+ * download.
+ */
+describe('files', () => {
+  it('opens a file into the document, and offers its name back when saving', async () => {
+    const saved: [string, string][] = [];
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onSave={(value, name) => saved.push([value, name])}
+      />
+    );
+    const picker = screen.container.querySelector('input[type="file"]') as HTMLInputElement;
+    const transfer = new DataTransfer();
+
+    transfer.items.add(new File(['# Opened'], 'notes.md', { type: 'text/markdown' }));
+    picker.files = transfer.files;
+    picker.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await vi.waitFor(() => expect(sourceOf(screen).value).toBe('# Opened'));
+
+    (screen.container.querySelector('button[title="Save"]') as HTMLButtonElement).click();
+
+    expect(saved).toEqual([['# Opened', 'notes.md']]);
+  });
+
+  it('names a document nobody opened after its first heading', async () => {
+    const saved: string[] = [];
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'# Getting started\n\nWords.'}
+        modes={['plain']}
+        onSave={(_, name) => saved.push(name)}
+      />
+    );
+
+    (screen.container.querySelector('button[title="Save"]') as HTMLButtonElement).click();
+
+    expect(saved).toEqual(['Getting started.md']);
+  });
+
+  it('reaches saving from the keyboard, where the browser would have saved the page', async () => {
+    const saved: string[] = [];
+    const screen = await render(
+      <MawyEditor defaultValue="Words." modes={['plain']} onSave={(value) => saved.push(value)} />
+    );
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+
+    sourceOf(screen).focus();
+    sourceOf(screen).dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(saved).toEqual(['Words.']);
+  });
+
+  it('says so about a file it will not read, rather than reading it', async () => {
+    const screen = await render(<MawyEditor defaultValue="Before." modes={['plain']} />);
+    const picker = screen.container.querySelector('input[type="file"]') as HTMLInputElement;
+    const huge = new File(['x'], 'big.md');
+    const transfer = new DataTransfer();
+
+    Object.defineProperty(huge, 'size', { value: 6 * 1024 * 1024 });
+    transfer.items.add(huge);
+    picker.files = transfer.files;
+    picker.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-editor-note')?.textContent).toContain('large')
+    );
+    expect(sourceOf(screen).value).toBe('Before.');
+  });
+});
+
 describe('the status bar', () => {
   it('counts lines, words, characters and bytes', async () => {
     const screen = await render(

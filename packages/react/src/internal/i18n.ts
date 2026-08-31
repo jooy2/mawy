@@ -104,6 +104,9 @@ export interface MawyStrings {
   findNoMatches: string;
   replaceOne: string;
   replaceAll: string;
+  openFile: string;
+  saveFile: string;
+  saved: string;
   dropImage: string;
   uploading: string;
   uploadFailed: string;
@@ -192,6 +195,9 @@ const en: MawyStrings = {
   findNoMatches: 'No matches',
   replaceOne: 'Replace',
   replaceAll: 'Replace all',
+  openFile: 'Open a file',
+  saveFile: 'Save',
+  saved: 'Saved as %N',
   dropImage: 'Drop to add',
   uploading: 'Adding the image…',
   uploadFailed: 'That image could not be added.'
@@ -280,6 +286,9 @@ const ko: MawyStrings = {
   findNoMatches: '결과 없음',
   replaceOne: '바꾸기',
   replaceAll: '모두 바꾸기',
+  openFile: '파일 열기',
+  saveFile: '저장',
+  saved: '%N(으)로 저장했습니다',
   dropImage: '놓으면 넣습니다',
   uploading: '이미지를 넣는 중…',
   uploadFailed: '이미지를 넣지 못했습니다.'

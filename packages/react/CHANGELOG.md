@@ -19,6 +19,15 @@
   The Dart parser reads the same syntax into the same tree, and `tool/parity.dart` diffs the two over the awkward cases and every Markdown file in the repository, as it does for everything else the parser reads.
 
 - **`MawyDirectives`, `MawyDirectiveProps`, `MawyDirectiveKind` and `MawyRange`**, exported from `mawy-react` and `mawy-react/types` like the rest of the vocabulary.
+- **A Markdown file in, and out.** `open` reads one into the editor and `save` writes the document back — `Mod`+`S` as well, because the browser's own `Mod`+`S` saves the page and that is never what somebody writing in an editor meant by it. Both are on the toolbar, before `colorScheme`.
+
+  Without `onSave` the text is handed to the browser as a download: an anchor with a `download` on it rather than the File System Access API, which only Chromium has — a save that works in one browser and silently does nothing in another is worse than one that always does the same thing. `onSave(value, name)` takes it over entirely, which is what an application saving to a server wants instead.
+
+  The name is the opened file's, or **the document's first heading** with the characters no filesystem will take dropped, or `document.md`. `open` has no shortcut on purpose: the browser's own `Mod`+`O` is a reasonable thing to leave alone, and opening a file is a rare and deliberate act.
+
+  **A file dropped on the editor is still an image, never a document.** The drop is already how an image gets in, and replacing a document somebody has been writing because a file landed on it is how work is lost.
+
+- **`'open'` and `'save'` on the editor's toolbar**, and `accept` beside them for what the picker offers.
 - **Find and replace, on the source surface.** `Mod`+`F` opens a bar over the source and the toolbar's new `find` button does the same; `Enter` and `Shift`+`Enter` walk the matches, `Escape` closes it and gives the focus back to the document. Whatever was selected is already in the box when it opens, as long as it was on one line. Replace and replace all are on the second row, and replace all is one pass over the document as it was, so replacing `a` with `aa` does not find its own replacement for ever.
 
   It exists because the browser's own find cannot reach here: **no browser searches the text inside a `<textarea>`**, and the source surface is one. Everywhere else in this library a thing the platform already does is left to the platform, and this is the place the platform does not.

@@ -58,6 +58,7 @@ export {
   X as CloseIcon,
   CaseSensitive as CaseSensitiveIcon,
   ChevronUp as PreviousMatchIcon,
+  Download as SaveIcon,
   Replace as ReplaceIcon,
   ReplaceAll as ReplaceAllIcon,
   Search as FindIcon

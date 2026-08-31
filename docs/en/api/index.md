@@ -74,9 +74,18 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 | `status` | [`MawyEditorStatusOption`](#mawyeditorstatusoption) | `true` | What the status bar counts. |
 | `lineNumbers` | `boolean` | `true` | The gutter down the left of the source. |
 
+#### Opening and saving
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `onSave` | `(value: string, name: string) => void` | — | Where a saved document goes. Without it the browser is handed a download. |
+| `accept` | `string` | every Markdown and text extension | What the file picker offers. |
+
+The name is the file's own when one was opened, and the document's first heading otherwise. A file dropped on the editor is an image rather than a document — see [opening and saving](../guide/editor#opening-and-saving) for why.
+
 #### The preview, and the palette
 
-`parse`, `html`, `fonts`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first five are passed straight through to the preview.
+`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first six are passed straight through to the preview. `directives` reaches the drawn document as well.
 
 ### `MawyViewer`
 
@@ -279,11 +288,13 @@ type MawyEditorToolbarItem =
   | 'codeBlock'
   | 'rule'
   | 'find'
+  | 'open'
+  | 'save'
   | 'colorScheme'
   | 'separator';
 ```
 
-One control on the editor's toolbar. Everything except `mode`, `find`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them. `find` has one too, `Mod`+`F`, which works whether or not the button is on the toolbar.
+One control on the editor's toolbar. Everything except `mode`, `find`, `open`, `save`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them. `find` and `save` have one too, `Mod`+`F` and `Mod`+`S`, and both work whether or not the button is drawn. `open` has none: the browser's own `Mod`+`O` is a reasonable thing to leave alone, and opening a file is a rare and deliberate act rather than one done mid-flow.
 
 ### `MawyEditorToolbarOption`
 

@@ -74,9 +74,18 @@ import { MawyEditor } from 'mawy-react';
 | `status` | [`MawyEditorStatusOption`](#mawyeditorstatusoption) | `true` | 상태 표시줄이 세는 것. |
 | `lineNumbers` | `boolean` | `true` | 원문 왼쪽의 줄 번호 거터. |
 
+#### 열기와 저장
+
+| 프롭 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `onSave` | `(value: string, name: string) => void` | — | 저장한 문서가 가는 곳. 없으면 브라우저에 다운로드로 넘깁니다. |
+| `accept` | `string` | 마크다운·텍스트 확장자 전부 | 파일 선택기가 제시할 것. |
+
+이름은 파일을 열었다면 그 파일의 것이고, 아니면 문서의 첫 제목입니다. 에디터에 놓은 파일은 문서가 아니라 이미지입니다 — 이유는 [열기와 저장](../guide/editor#열기와-저장)에 있습니다.
+
 #### 미리보기와 팔레트
 
-`parse`, `html`, `fonts`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`, `locale`은 [`MawyViewer`](#mawyviewer)에서와 정확히 같은 의미이고, 앞의 다섯은 미리보기로 그대로 전달됩니다.
+`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`, `locale`은 [`MawyViewer`](#mawyviewer)에서와 정확히 같은 의미이고, 앞의 여섯은 미리보기로 그대로 전달됩니다. `directives`는 그려진 문서에도 닿습니다.
 
 ### `MawyViewer`
 
@@ -279,11 +288,13 @@ type MawyEditorToolbarItem =
   | 'codeBlock'
   | 'rule'
   | 'find'
+  | 'open'
+  | 'save'
   | 'colorScheme'
   | 'separator';
 ```
 
-에디터 툴바의 컨트롤 하나. `mode`·`find`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다. `find`에도 `Mod`+`F`가 있고, 버튼이 툴바에 있든 없든 동작합니다.
+에디터 툴바의 컨트롤 하나. `mode`·`find`·`open`·`save`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다. `find`와 `save`에도 `Mod`+`F`와 `Mod`+`S`가 있고, 버튼이 그려지든 아니든 동작합니다. `open`에는 없습니다. 브라우저 자신의 `Mod`+`O`는 그냥 두는 편이 합당하고, 파일을 여는 것은 흐름 중간에 하는 일이 아니라 드물고 분명한 행동입니다.
 
 ### `MawyEditorToolbarOption`
 

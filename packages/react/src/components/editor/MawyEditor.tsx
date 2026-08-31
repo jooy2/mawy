@@ -45,6 +45,7 @@ import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
 import { MawyEditorFind } from './MawyEditorFind.js';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../../internal/search.js';
+import { MAWY_ACCEPT, fileNameFor, readTextFile, saveTextFile } from '../../internal/files.js';
 import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
 import { MawyEditorDocument } from './MawyEditorDocument.js';
 import { MawyEditorSource } from './MawyEditorSource.js';
@@ -120,6 +121,19 @@ export interface MawyEditorProps extends Omit<
    */
   onUploadImage?: MawyImageUpload;
 
+  /**
+   * Where a saved document goes, when the application would rather say.
+   *
+   * Without it, `save` hands the text to the browser as a download. With it,
+   * nothing is downloaded and this is called with the document and the name it
+   * would have been saved as — which is what an application saving to a server,
+   * or to a file handle it is already holding, wants instead.
+   */
+  onSave?: (value: string, name: string) => void;
+
+  /** What the file picker offers. @default every Markdown and text extension */
+  accept?: string;
+
   /* The preview's half of the props, passed straight through to the viewer. */
   parse?: MawyParseOptions;
   html?: MawyHtmlPolicy;
@@ -177,6 +191,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     html = 'escape',
     highlight,
     directives,
+    onSave,
+    accept = MAWY_ACCEPT,
     fonts = MAWY_SYSTEM_FONTS,
     typography,
     defaultTypography,
@@ -242,6 +258,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * is the place the platform does not.
    */
   const [finding, setFinding] = React.useState(false);
+  const picker = React.useRef<HTMLInputElement>(null);
+  /** What the document was opened as, so saving it offers the same name back. */
+  const [fileName, setFileName] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
   const [replacement, setReplacement] = React.useState('');
   const [matchCase, setMatchCase] = React.useState(false);
@@ -793,6 +812,15 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    if (key === 's' && !event.shiftKey) {
+      // The browser's own `Cmd`+`S` saves the page, which is never what
+      // somebody writing in an editor meant by it.
+      event.preventDefault();
+      save();
+
+      return;
+    }
+
     if (key === 'y' && !event.shiftKey) {
       event.preventDefault();
       travel(false);
@@ -1015,6 +1043,52 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   }, []);
 
   /* ---------------------------------------------------------------------
+   * Opening, and saving
+   * ------------------------------------------------------------------ */
+
+  /**
+   * A file dropped on the editor is an image, never a document.
+   *
+   * The drop is already claimed, and that is the smaller half of it: replacing
+   * a document somebody has been writing because a file landed on it is how
+   * work is lost. Opening is a button, which is a thing done on purpose.
+   */
+  const openFile = React.useCallback(() => picker.current?.click(), []);
+
+  const read = React.useCallback(
+    async (file: File) => {
+      const answer = await readTextFile(file);
+
+      if ('failed' in answer) {
+        setNote({
+          text: answer.failed === 'tooLarge' ? strings.fileTooLarge : strings.readFailed,
+          failed: true
+        });
+
+        return;
+      }
+
+      setNote(null);
+      setFileName(file.name);
+      write(answer.text);
+    },
+    [strings, write]
+  );
+
+  const save = React.useCallback(() => {
+    const name = fileName ?? fileNameFor(text);
+
+    if (onSave) {
+      onSave(text, name);
+
+      return;
+    }
+
+    saveTextFile(text, name);
+    setNote({ text: strings.saved.replace('%N', name), failed: false });
+  }, [fileName, onSave, strings, text]);
+
+  /* ---------------------------------------------------------------------
    * Drawing
    * ------------------------------------------------------------------ */
 
@@ -1045,6 +1119,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           editable={editable}
           onFind={showSource ? openFind : undefined}
           finding={finding && showSource}
+          onOpen={readOnly ? undefined : openFile}
+          onSave={save}
         />
       ) : null}
 
@@ -1173,6 +1249,26 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           {note.text}
         </p>
       ) : null}
+
+      <input
+        ref={picker}
+        type="file"
+        className="mawy-file-input"
+        accept={accept}
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0];
+
+          if (file) {
+            void read(file);
+          }
+
+          // Cleared, so that choosing the same file twice in a row is two
+          // events rather than one.
+          event.currentTarget.value = '';
+        }}
+      />
 
       {statusItems.length && (showSource || showDocument) ? (
         <MawyEditorStatus
