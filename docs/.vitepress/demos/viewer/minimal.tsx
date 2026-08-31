@@ -12,11 +12,12 @@ a viewer that only needs a text size gets a toolbar with a text size on it.
 `;
 
 /** One control, and nothing else. */
-export default function ViewerMinimal({ colorScheme, locale }: DemoProps) {
+export default function ViewerMinimal({ colorScheme, onColorSchemeChange, locale }: DemoProps) {
   return (
     <MawyViewer
       value={DOCUMENT}
       colorScheme={colorScheme}
+      onColorSchemeChange={onColorSchemeChange}
       locale={locale}
       toolbar={['fontSize']}
       style={{ height: '20rem' }}

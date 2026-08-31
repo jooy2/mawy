@@ -305,6 +305,12 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+  /* A list of three does not need this; a list of sixteen typefaces does, and
+   * it is the same control. `vh` rather than a fixed height so the panel is
+   * never taller than the window it opened in. */
+  max-height: min(19rem, 55vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .mawy-root .mawy-choice-option {
@@ -329,6 +335,13 @@
   background: var(--mawy-accent-soft);
   color: var(--mawy-accent);
   font-weight: 550;
+}
+
+/* A typeface is shown in itself, so the row has to hold a line of it without
+ * the list jumping while the web fonts arrive one at a time. */
+.mawy-root .mawy-choice-option {
+  min-height: 32px;
+  font-size: 14px;
 }
 
 .mawy-root .mawy-slider {
@@ -666,6 +679,27 @@
 
 .mawy-root .mawy-md p {
   margin: 0 0 1em;
+}
+
+/*
+ * The document's own type, said again on the elements that carry text.
+ *
+ * `line-height` and `letter-spacing` are inherited, so setting them on
+ * `.mawy-md` should be enough — and it is not. Inheritance is what an element
+ * falls back to when *nothing* declares the property on it, and it loses to any
+ * declaration at all: a host page with `article p { line-height: 28px }` pins
+ * every paragraph at 28px however specific the container's rule is. The
+ * toolbar's line-height and letter-spacing controls then move a number that
+ * changes nothing a reader can see.
+ *
+ * `inherit` rather than the token, so this stays one source of truth and a
+ * nested list or a table cell still takes it from the block above it. Headings
+ * are not in the list: they carry their own line height, declared later and
+ * more specifically, and a heading at 2.4 is not what the control is for.
+ */
+.mawy-root .mawy-md :is(p, li, blockquote, dd, dt, td, th, figcaption, summary, div) {
+  line-height: inherit;
+  letter-spacing: inherit;
 }
 
 /* Headings ---------------------------------------------------------------- */

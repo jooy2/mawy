@@ -16,6 +16,7 @@ import { onBeforeUnmount, onMounted, watch, useTemplateRef } from 'vue';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useData } from 'vitepress';
+import type { MawyColorScheme } from 'mawy';
 import type { DemoProps } from '../../demos/types.js';
 
 const props = defineProps<{ name: string }>();
@@ -32,6 +33,17 @@ const host = useTemplateRef<HTMLDivElement>('host');
 const { isDark, lang } = useData();
 let root: Root | undefined;
 
+/**
+ * The theme the reader chose *inside* a demo, if they have chosen one.
+ *
+ * The demos take `colorScheme` as a controlled prop so the site's own dark
+ * switch drives them — and a controlled prop with nothing listening is a
+ * control that does nothing, which is what the viewer's own theme switch was
+ * until this existed. So the two are layered: the site sets the theme, a reader
+ * may override it, and moving the site switch takes the override back.
+ */
+let override: MawyColorScheme | null = null;
+
 function paint() {
   const demo = demos[`../../demos/${props.name}.tsx`];
 
@@ -42,14 +54,22 @@ function paint() {
   root ??= createRoot(host.value);
   root.render(
     createElement(demo.default as never, {
-      colorScheme: isDark.value ? 'dark' : 'light',
+      colorScheme: override ?? (isDark.value ? 'dark' : 'light'),
+      onColorSchemeChange: (next: MawyColorScheme) => {
+        override = next;
+        paint();
+      },
       locale: lang.value.startsWith('ko') ? 'ko' : 'en'
     })
   );
 }
 
 onMounted(paint);
-watch([isDark, lang, () => props.name], paint);
+
+watch([isDark, lang, () => props.name], () => {
+  override = null;
+  paint();
+});
 
 onBeforeUnmount(() => {
   root?.unmount();
