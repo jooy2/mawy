@@ -1,4 +1,4 @@
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 import type { DemoProps } from '../types.js';
 
 const DOCUMENT = `## A viewer with almost no chrome

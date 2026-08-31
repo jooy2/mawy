@@ -22,7 +22,7 @@ Mawy ships as one package per language. React is the one that exists today; Flut
 ## Install
 
 ```bash
-npm install mawy
+npm install mawy-react
 ```
 
 `react` and `react-dom` are peer dependencies. If your project already has one of them, that is the copy Mawy uses.
@@ -34,7 +34,7 @@ The one runtime dependency is [`lucide-react`](https://lucide.dev), which is whe
 Add one line to your application's CSS entry point:
 
 ```css
-@import 'mawy/styles.css';
+@import 'mawy-react/styles.css';
 ```
 
 The stylesheet is finished CSS — no build-side setup, no plugin, no configuration. Everything the library draws goes through `--mawy-*` custom properties, so theming is a matter of redeclaring a token rather than out-specifying a rule. Tokens cascade, which means one declaration on a wrapping element reaches every Mawy surface inside it.
@@ -42,7 +42,7 @@ The stylesheet is finished CSS — no build-side setup, no plugin, no configurat
 ## Writing a document
 
 ```tsx
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 
 export function Page() {
   return <MawyEditor defaultValue="# Hello" onChange={save} />;
@@ -54,7 +54,7 @@ The Markdown source with its syntax coloured, a live preview beside it, a format
 ## Showing a document
 
 ```tsx
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 export function Page({ document }: { document: string }) {
   return <MawyViewer value={document} />;

@@ -27,7 +27,7 @@ The repository holds one library, shipped per language, and one documentation si
 
 | Path             | What it is                                       | How it is run                                                                        |
 | ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `packages/react` | The npm package, `mawy`                          | `cd packages/react && npm install`, then `npm test`, `npm run lint`, `npm run build` |
+| `packages/react` | The npm package, `mawy-react`                    | `cd packages/react && npm install`, then `npm test`, `npm run lint`, `npm run build` |
 | `docs`           | The documentation site, shared by every language | `cd docs && npm install`, then `npm run dev`                                          |
 
 There is no install at the repository root, and no root `package.json` — each folder is entered and run on its own.

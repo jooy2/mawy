@@ -34,7 +34,7 @@ Flutter support is planned and will land as `packages/flutter`. Each language's 
 ## Install
 
 ```bash
-npm install mawy
+npm install mawy-react
 ```
 
 `react` and `react-dom` are peer dependencies — React 18 or 19.

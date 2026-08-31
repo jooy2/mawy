@@ -14,7 +14,7 @@ describe('reading source as text', () => {
   it('ignores an import written inside a comment', () => {
     const source = [
       '/**',
-      " * Applications write `import { A } from 'mawy'` to get at this.",
+      " * Applications write `import { A } from 'mawy-react'` to get at this.",
       ' */',
       "import { b } from './b.js'; // and not from 'elsewhere'",
       "export * from './c.js';"

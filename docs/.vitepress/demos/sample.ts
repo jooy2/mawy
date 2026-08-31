@@ -35,7 +35,7 @@ Emphasis and **strong**, ~~struck through~~, \`inline code\`, and a [link](https
 ### And code
 
 \`\`\`ts
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 export function Page({ document }: { document: string }) {
   return <MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />;

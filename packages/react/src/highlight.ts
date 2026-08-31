@@ -430,7 +430,7 @@ export const MAWY_HIGHLIGHT_LANGUAGES: readonly string[] = Object.keys(LANGUAGES
  * ```tsx
  * <MawyViewer
  *   value={document}
- *   highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+ *   highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
  * />
  * ```
  */

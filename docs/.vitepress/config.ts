@@ -333,7 +333,7 @@ const vitePressConfig: UserConfig = {
    * hands it to `createRoot()`. This is the half of that arrangement that is
    * about the build.
    *
-   * `mawy` points at `packages/react/src` rather than at its `dist/`, and that
+   * `mawy-react` points at `packages/react/src` rather than at its `dist/`, and that
    * is the point: an edit to the viewer is on the page when it is saved, with
    * nothing to rebuild in between. Nothing on this site ever reads `dist/`.
    * ---------------------------------------------------------------------- */
@@ -341,9 +341,15 @@ const vitePressConfig: UserConfig = {
     plugins: [ReactPlugin()],
     resolve: {
       alias: [
-        { find: /^mawy\/styles\.css$/, replacement: resolve(reactPackageDir, 'src/styles.css') },
-        { find: /^mawy\/highlight$/, replacement: resolve(reactPackageDir, 'src/highlight.ts') },
-        { find: /^mawy$/, replacement: resolve(reactPackageDir, 'src/index.ts') }
+        {
+          find: /^mawy-react\/styles\.css$/,
+          replacement: resolve(reactPackageDir, 'src/styles.css')
+        },
+        {
+          find: /^mawy-react\/highlight$/,
+          replacement: resolve(reactPackageDir, 'src/highlight.ts')
+        },
+        { find: /^mawy-react$/, replacement: resolve(reactPackageDir, 'src/index.ts') }
       ],
       /*
        * What the aliased source is allowed to import.

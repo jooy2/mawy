@@ -223,7 +223,7 @@ export interface MawyHighlighter {
  * A highlighter, or the way to get one.
  *
  * A function is what makes it lazy, and lazy is the point: pass
- * `() => import('mawy/highlight').then((module) => module.mawyHighlighter())`
+ * `() => import('mawy-react/highlight').then((module) => module.mawyHighlighter())`
  * and nothing is fetched until a document with a fenced code block *and* a
  * language on the fence is actually drawn. A reader who never opens one never
  * pays for it, and an application that never sets the prop never ships it.

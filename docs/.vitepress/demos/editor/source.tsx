@@ -1,4 +1,4 @@
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 import type { DemoProps } from '../types.js';
 
 const DOCUMENT = `# A source editor and nothing else

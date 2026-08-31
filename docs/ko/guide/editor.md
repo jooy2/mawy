@@ -10,7 +10,7 @@ Mawy의 에디터는 여러 화면을 가진 하나의 컴포넌트입니다. `p
 <MawyDemo name="editor/basic" />
 
 ```tsx
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 
 export function Page() {
   return <MawyEditor defaultValue="# 안녕하세요" onChange={save} />;
@@ -189,7 +189,7 @@ export function Page() {
 ```tsx
 <MawyEditor
   defaultValue={document}
-  highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+  highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
 />
 ```
 

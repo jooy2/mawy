@@ -28,8 +28,8 @@
      * Both have to be told, and anything added to one belongs in the other.
      */
     "paths": {
-      "mawy": ["../packages/react/src/index.ts"],
-      "mawy/highlight": ["../packages/react/src/highlight.ts"],
+      "mawy-react": ["../packages/react/src/index.ts"],
+      "mawy-react/highlight": ["../packages/react/src/highlight.ts"],
       "react": ["./node_modules/@types/react"],
       "react/*": ["./node_modules/@types/react/*"],
       "react-dom": ["./node_modules/@types/react-dom"],

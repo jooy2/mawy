@@ -1,4 +1,4 @@
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 import type { DemoProps } from '../types.js';
 
 /**

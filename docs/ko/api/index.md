@@ -20,7 +20,7 @@ order: 2
 뷰어를 옆에 둔 마크다운 에디터입니다. [에디터](../guide/editor)를 보세요.
 
 ```tsx
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 
 <MawyEditor defaultValue="# 안녕하세요" onChange={save} />;
 ```
@@ -65,7 +65,7 @@ import { MawyEditor } from 'mawy';
 마크다운 문서를 그리고, 편집하지는 않습니다. 무엇을 왜 하는지는 [뷰어](../guide/viewer)에 있습니다.
 
 ```tsx
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 <MawyViewer value={document} />;
 ```

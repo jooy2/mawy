@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 import { sourceAt } from '../../src/internal/position.js';
 
 /**

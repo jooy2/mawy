@@ -126,7 +126,7 @@ export interface MawyViewerProps extends Omit<
    * is fetched the first time a document with a language on a fence is drawn:
    *
    * ```tsx
-   * import { mawyHighlighter } from 'mawy/highlight';
+   * import { mawyHighlighter } from 'mawy-react/highlight';
    *
    * <MawyViewer value={document} highlight={mawyHighlighter} />
    * ```

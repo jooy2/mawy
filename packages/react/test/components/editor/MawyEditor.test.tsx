@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 // The one test file that needs the real stylesheet. The source surface is two
 // layers that have to lay out identically, and without the CSS there is only
 // one layout to check against itself.

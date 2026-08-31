@@ -42,8 +42,8 @@ export default defineConfig({
   plugins: [ReactPlugin()],
   resolve: {
     alias: {
-      // Tests import from 'mawy' exactly as a consumer would.
-      mawy: resolve(rootDir, 'src/index.ts')
+      // Tests import from 'mawy-react' exactly as a consumer would.
+      'mawy-react': resolve(rootDir, 'src/index.ts')
     },
     // One React, however many packages ask for it. Two copies is not a bigger
     // bundle, it is a null hook dispatcher the moment a second package renders.

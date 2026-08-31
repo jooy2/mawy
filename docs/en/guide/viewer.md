@@ -10,7 +10,7 @@ The viewer renders a Markdown document and does not edit it. It is the same pars
 <MawyDemo name="viewer/basic" />
 
 ```tsx
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 export function Page({ document }: { document: string }) {
   return <MawyViewer value={document} />;
@@ -112,7 +112,7 @@ Nothing is coloured by default, and that is not an omission. A highlighter is th
 ```tsx
 <MawyViewer
   value={document}
-  highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+  highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
 />
 ```
 
@@ -191,7 +191,7 @@ By default the menu offers three, and they are roles rather than font names: `sa
 Real web fonts are one prop away, and they are a prop rather than a default on purpose. A viewer is a component inside somebody else's page, and a component that opens a connection to a font CDN on its own has made a decision — about privacy, about working offline, about a request the page's own content policy may refuse — that was never its to make. So the library ships the list and the application says yes:
 
 ```tsx
-import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />;
 ```

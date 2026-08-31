@@ -5,7 +5,7 @@ import './custom.css';
 // The library's own stylesheet, imported exactly the way a consuming
 // application imports it — through the package specifier, which the Vite alias
 // points at `packages/react/src`. Nothing here reads `dist/`.
-import 'mawy/styles.css';
+import 'mawy-react/styles.css';
 
 /**
  * The default theme, with this site's palette over it and one component

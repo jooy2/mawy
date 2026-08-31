@@ -22,7 +22,7 @@ Mawy는 언어별로 하나의 패키지로 배포됩니다. 지금 존재하는
 ## 설치
 
 ```bash
-npm install mawy
+npm install mawy-react
 ```
 
 `react`와 `react-dom`은 peer dependency입니다. 프로젝트에 이미 있다면 Mawy는 그 사본을 그대로 씁니다.
@@ -34,7 +34,7 @@ npm install mawy
 애플리케이션의 CSS 진입점에 한 줄을 더합니다.
 
 ```css
-@import 'mawy/styles.css';
+@import 'mawy-react/styles.css';
 ```
 
 이 스타일시트는 완성된 CSS입니다. 빌드 쪽 설정도, 플러그인도, 구성 파일도 필요 없습니다. 라이브러리가 그리는 모든 값은 `--mawy-*` 커스텀 속성을 거치므로, 테마를 바꾼다는 것은 규칙을 더 높은 우선순위로 덮어쓰는 일이 아니라 토큰을 다시 선언하는 일입니다. 토큰은 상속되므로 바깥 요소에 한 번 선언하면 그 안의 모든 Mawy 화면에 닿습니다.
@@ -42,7 +42,7 @@ npm install mawy
 ## 문서 쓰기
 
 ```tsx
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 
 export function Page() {
   return <MawyEditor defaultValue="# 안녕하세요" onChange={save} />;
@@ -54,7 +54,7 @@ export function Page() {
 ## 문서 보여주기
 
 ```tsx
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 export function Page({ document }: { document: string }) {
   return <MawyViewer value={document} />;

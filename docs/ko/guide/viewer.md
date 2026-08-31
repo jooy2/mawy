@@ -10,7 +10,7 @@ order: 3
 <MawyDemo name="viewer/basic" />
 
 ```tsx
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 export function Page({ document }: { document: string }) {
   return <MawyViewer value={document} />;
@@ -112,7 +112,7 @@ Mawy : 이것. : 그리고 그 옆의 에디터.
 ```tsx
 <MawyViewer
   value={document}
-  highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+  highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
 />
 ```
 
@@ -191,7 +191,7 @@ const shiki: MawyHighlighter = {
 진짜 웹폰트는 프롭 하나 차이인데, 기본값이 아니라 프롭인 것은 의도적입니다. 뷰어는 남의 페이지 안에 들어가는 컴포넌트이고, 폰트 CDN에 스스로 연결을 여는 컴포넌트는 애초에 자기 것이 아닌 결정 — 프라이버시, 오프라인 동작, 그 페이지의 콘텐츠 정책이 거부할 수도 있는 요청 — 을 내린 것입니다. 그래서 목록은 라이브러리가 싣고, 승낙은 애플리케이션이 합니다.
 
 ```tsx
-import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />;
 ```

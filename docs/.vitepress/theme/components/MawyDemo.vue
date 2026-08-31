@@ -16,7 +16,7 @@ import { onBeforeUnmount, onMounted, watch, useTemplateRef } from 'vue';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useData } from 'vitepress';
-import type { MawyColorScheme } from 'mawy';
+import type { MawyColorScheme } from 'mawy-react';
 import type { DemoProps } from '../../demos/types.js';
 
 const props = defineProps<{ name: string }>();

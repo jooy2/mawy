@@ -20,7 +20,7 @@ Nothing is published to npm yet and the API is not stable. The `wysiwyg` surface
 A Markdown editor with the viewer beside it. See [the editor](../guide/editor).
 
 ```tsx
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 
 <MawyEditor defaultValue="# Hello" onChange={save} />;
 ```
@@ -65,7 +65,7 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 A Markdown document, rendered and not editable. See [the viewer](../guide/viewer) for what it does and why.
 
 ```tsx
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 <MawyViewer value={document} />;
 ```

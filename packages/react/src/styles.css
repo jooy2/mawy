@@ -1,7 +1,7 @@
 /**
  * Mawy's stylesheet, imported once by the embedding application:
  *
- *     @import 'mawy/styles.css';
+ *     @import 'mawy-react/styles.css';
  *
  * Everything the library draws is expressed through the custom properties
  * declared here, so a host application themes the editor by redeclaring a token

@@ -1,4 +1,4 @@
-import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 import { SAMPLE } from '../sample.js';
 import type { DemoProps } from '../types.js';
 
@@ -23,7 +23,7 @@ export default function ViewerBasic({ colorScheme, onColorSchemeChange, locale }
       onColorSchemeChange={onColorSchemeChange}
       locale={locale}
       fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]}
-      highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+      highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
       defaultTypography={{ measure: 'wide' }}
       style={{ height: '32rem' }}
     />

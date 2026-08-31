@@ -23,7 +23,7 @@ Guides and the full API, in English and Korean. This README is just the quick st
 ## Install
 
 ```bash
-npm install mawy
+npm install mawy-react
 ```
 
 `react` and `react-dom` are peer dependencies — **React 18 or 19**. Node.js 20.19 or later.
@@ -33,7 +33,7 @@ npm install mawy
 Add one line to your app's CSS entry point:
 
 ```css
-@import 'mawy/styles.css';
+@import 'mawy-react/styles.css';
 ```
 
 The stylesheet is finished CSS. Everything the library draws goes through `--mawy-*` custom properties, so theming is a matter of redeclaring a token — which cascades, so one declaration on a wrapping element reaches every Mawy surface inside it — rather than out-specifying a rule.
@@ -41,7 +41,7 @@ The stylesheet is finished CSS. Everything the library draws goes through `--maw
 ## Usage
 
 ```tsx
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 
 export function Write() {
   return <MawyEditor defaultValue="# Hello" onChange={save} />;
@@ -53,7 +53,7 @@ The Markdown source with its syntax coloured, a live preview beside it, a format
 And the read-only half:
 
 ```tsx
-import { MawyViewer } from 'mawy';
+import { MawyViewer } from 'mawy-react';
 
 export function Page({ document }: { document: string }) {
   return <MawyViewer value={document} />;
@@ -79,7 +79,7 @@ Pick what the toolbar has, and in what order:
 By default the typeface menu offers three roles — sans, serif, mono — drawn with whatever the reader's machine already has, and **nothing is fetched**. A catalogue of thirteen open-licensed families (all SIL OFL, five of them Korean) ships with the package and is opted into rather than assumed, because opening a connection to a font CDN is the embedding page's decision and not a component's:
 
 ```tsx
-import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />;
 ```

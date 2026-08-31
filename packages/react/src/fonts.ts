@@ -8,7 +8,7 @@ import type { MawyFont } from './types.js';
  * nothing can fail. `MAWY_WEB_FONTS` names real families that have to be
  * downloaded, and **it is never used unless an application passes it in**:
  *
- *     import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy';
+ *     import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
  *
  *     <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
  *

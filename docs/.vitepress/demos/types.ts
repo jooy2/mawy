@@ -1,4 +1,4 @@
-import type { MawyColorScheme, MawyLocale } from 'mawy';
+import type { MawyColorScheme, MawyLocale } from 'mawy-react';
 
 /**
  * What every demo is handed.

@@ -6,7 +6,7 @@ import {
   MawyViewer,
   type MawyCodeToken,
   type MawyHighlighter
-} from 'mawy';
+} from 'mawy-react';
 
 /**
  * The viewer, as a reader meets it.

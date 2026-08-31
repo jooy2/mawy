@@ -10,7 +10,7 @@ Mawy's editor is one component with several surfaces. `plain` edits the Markdown
 <MawyDemo name="editor/basic" />
 
 ```tsx
-import { MawyEditor } from 'mawy';
+import { MawyEditor } from 'mawy-react';
 
 export function Page() {
   return <MawyEditor defaultValue="# Hello" onChange={save} />;
@@ -189,7 +189,7 @@ Where the image lands is where it was put: a drop goes to the point the pointer 
 ```tsx
 <MawyEditor
   defaultValue={document}
-  highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+  highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
 />
 ```
 

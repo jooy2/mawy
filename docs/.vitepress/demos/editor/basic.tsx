@@ -1,4 +1,4 @@
-import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyEditor } from 'mawy';
+import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyEditor } from 'mawy-react';
 import { SAMPLE } from '../sample.js';
 import type { DemoProps } from '../types.js';
 
@@ -16,7 +16,7 @@ export default function EditorBasic({ colorScheme, onColorSchemeChange, locale }
       onColorSchemeChange={onColorSchemeChange}
       locale={locale}
       fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]}
-      highlight={() => import('mawy/highlight').then((module) => module.mawyHighlighter)}
+      highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
       style={{ height: '34rem' }}
     />
   );
