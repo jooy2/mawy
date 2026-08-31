@@ -93,6 +93,17 @@ export interface MawyStrings {
    * exist for the person who needed it.
    */
   sourceEscape: string;
+  find: string;
+  replace: string;
+  findMatchCase: string;
+  findPrevious: string;
+  findNext: string;
+  findClose: string;
+  /** `%N` of `%T`, which is the count and the one the caret is on. */
+  findMatches: string;
+  findNoMatches: string;
+  replaceOne: string;
+  replaceAll: string;
   dropImage: string;
   uploading: string;
   uploadFailed: string;
@@ -171,6 +182,16 @@ const en: MawyStrings = {
   statusCharacters: 'characters',
   editorPlaceholder: 'Write in Markdown…',
   sourceEscape: 'Tab indents. Press Escape and then Tab to move on.',
+  find: 'Find',
+  replace: 'Replace',
+  findMatchCase: 'Match case',
+  findPrevious: 'Previous match',
+  findNext: 'Next match',
+  findClose: 'Close find',
+  findMatches: '%N of %T',
+  findNoMatches: 'No matches',
+  replaceOne: 'Replace',
+  replaceAll: 'Replace all',
   dropImage: 'Drop to add',
   uploading: 'Adding the image…',
   uploadFailed: 'That image could not be added.'
@@ -249,6 +270,16 @@ const ko: MawyStrings = {
   statusCharacters: '자',
   editorPlaceholder: '마크다운으로 쓰세요…',
   sourceEscape: 'Tab은 들여쓰기입니다. 빠져나가려면 Escape를 누른 다음 Tab을 누르세요.',
+  find: '찾기',
+  replace: '바꾸기',
+  findMatchCase: '대소문자 구분',
+  findPrevious: '이전 결과',
+  findNext: '다음 결과',
+  findClose: '찾기 닫기',
+  findMatches: '%T개 중 %N번째',
+  findNoMatches: '결과 없음',
+  replaceOne: '바꾸기',
+  replaceAll: '모두 바꾸기',
   dropImage: '놓으면 넣습니다',
   uploading: '이미지를 넣는 중…',
   uploadFailed: '이미지를 넣지 못했습니다.'

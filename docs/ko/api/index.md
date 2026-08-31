@@ -270,6 +270,7 @@ type MawyEditorToolbarItem =
   | 'strikethrough'
   | 'code'
   | 'link'
+  | 'image'
   | 'heading'
   | 'quote'
   | 'bulletList'
@@ -277,11 +278,12 @@ type MawyEditorToolbarItem =
   | 'taskList'
   | 'codeBlock'
   | 'rule'
+  | 'find'
   | 'colorScheme'
   | 'separator';
 ```
 
-에디터 툴바의 컨트롤 하나. `mode`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다.
+에디터 툴바의 컨트롤 하나. `mode`·`find`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다. `find`에도 `Mod`+`F`가 있고, 버튼이 툴바에 있든 없든 동작합니다.
 
 ### `MawyEditorToolbarOption`
 

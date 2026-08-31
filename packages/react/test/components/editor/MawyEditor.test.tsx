@@ -488,6 +488,129 @@ describe('the toolbar and the keyboard', () => {
   });
 });
 
+/**
+ * Finding and replacing.
+ *
+ * The arithmetic has its own file. What is left for a browser is the part that
+ * only exists once there is a surface: the bar taking the focus, the selection
+ * landing on the match, and `Escape` giving the focus back to the document
+ * rather than dropping it on the page.
+ */
+describe('finding', () => {
+  const open = async (screen: { container: HTMLElement }) => {
+    sourceOf(screen).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true, cancelable: true })
+    );
+
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-find')).not.toBe(null));
+  };
+
+  const findField = (screen: { container: HTMLElement }) =>
+    screen.container.querySelector('.mawy-find-input') as HTMLInputElement;
+
+  /**
+   * Typed into, rather than assigned to.
+   *
+   * React watches a controlled input through its own `value` setter, so writing
+   * to the property directly tells the tracker the value is already what it is
+   * and `onChange` never fires — the next render puts the old value back. Going
+   * through the prototype's setter is what leaves the tracker behind.
+   */
+  const type = (field: HTMLInputElement, text: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+
+    setter?.call(field, text);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  it('opens on the shortcut, takes the focus, and counts what it found', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
+
+    await open(screen);
+
+    const field = findField(screen);
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(field));
+
+    type(field, 'one');
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('1 of 2')
+    );
+  });
+
+  it('selects the match it went to, in the source', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    await open(screen);
+
+    const field = findField(screen);
+
+    type(field, 'one');
+
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    );
+
+    await vi.waitFor(() => expect([input.selectionStart, input.selectionEnd]).toEqual([8, 11]));
+  });
+
+  it('opens with what was selected already in it', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(4, 7);
+    await open(screen);
+
+    await vi.waitFor(() => expect(findField(screen).value).toBe('two'));
+  });
+
+  it('replaces the one it is on, and then all of them', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
+
+    await open(screen);
+
+    const field = findField(screen);
+
+    type(field, 'one');
+
+    const replacement = screen.container.querySelectorAll(
+      '.mawy-find-input'
+    )[1] as HTMLInputElement;
+
+    type(replacement, 'ONE');
+
+    (screen.container.querySelector('button[title="Replace"]') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => expect(sourceOf(screen).value).toBe('ONE two one'));
+
+    (screen.container.querySelector('button[title="Replace all"]') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => expect(sourceOf(screen).value).toBe('ONE two ONE'));
+  });
+
+  it('closes on Escape and gives the focus back to the source', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
+
+    await open(screen);
+
+    findField(screen).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    );
+
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-find')).toBe(null));
+    expect(document.activeElement).toBe(sourceOf(screen));
+  });
+
+  it('is not offered where there is no source to search', async () => {
+    const screen = await render(<MawyEditor defaultValue="one" modes={['preview']} />);
+
+    expect(screen.container.querySelector('.mawy-find')).toBe(null);
+  });
+});
+
 describe('the status bar', () => {
   it('counts lines, words, characters and bytes', async () => {
     const screen = await render(

@@ -12,6 +12,7 @@ import {
   CodeBlockIcon,
   CodeIcon,
   DarkIcon,
+  FindIcon,
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
@@ -46,6 +47,9 @@ export interface MawyEditorToolbarProps {
   active: (command: MawyCommand) => boolean;
   /** Off in the modes that have nothing to format. */
   editable: boolean;
+  /** Opens the find bar. Absent in the modes that have no source to search. */
+  onFind?: () => void;
+  finding: boolean;
 }
 
 const MODE_ICONS: Record<MawyMode, typeof SourceIcon> = {
@@ -104,7 +108,9 @@ export function MawyEditorToolbar({
   onColorSchemeChange,
   onCommand,
   active,
-  editable
+  editable,
+  onFind,
+  finding
 }: MawyEditorToolbarProps): React.ReactElement {
   const { onKeyDown, itemProps } = useRoving();
   const order = tabStops(items, (item) =>
@@ -183,6 +189,22 @@ export function MawyEditorToolbar({
             ]}
           />
         </Menu>
+      );
+    }
+
+    if (item === 'find') {
+      return (
+        <IconButton
+          key={key}
+          label={strings.find}
+          icon={<FindIcon className="mawy-icon" aria-hidden="true" />}
+          pressed={finding}
+          aria-pressed={finding}
+          disabled={!onFind}
+          data-mawy-toolbar-item=""
+          onClick={onFind}
+          {...itemProps(at)}
+        />
       );
     }
 
@@ -273,5 +295,6 @@ export const DEFAULT_EDITOR_TOOLBAR: readonly MawyEditorToolbarItem[] = [
   'codeBlock',
   'rule',
   'separator',
+  'find',
   'colorScheme'
 ];

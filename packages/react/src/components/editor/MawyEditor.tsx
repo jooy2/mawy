@@ -43,6 +43,8 @@ import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
+import { MawyEditorFind } from './MawyEditorFind.js';
+import { findMatches, matchFrom, replaceAll, replaceMatch } from '../../internal/search.js';
 import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
 import { MawyEditorDocument } from './MawyEditorDocument.js';
 import { MawyEditorSource } from './MawyEditorSource.js';
@@ -231,6 +233,18 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const running = React.useRef(0);
   /** Enters and leaves counted, rather than trusted one at a time. */
   const depth = React.useRef(0);
+  /**
+   * The find bar, which is closed until somebody asks for it.
+   *
+   * It exists because the browser's own find cannot reach the source: no
+   * browser searches the text inside a `<textarea>`. Everywhere else in this
+   * library a thing the platform already does is left to the platform, and this
+   * is the place the platform does not.
+   */
+  const [finding, setFinding] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const [replacement, setReplacement] = React.useState('');
+  const [matchCase, setMatchCase] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
   /** What the editor is saying about an upload, under the document. */
   const [note, setNote] = React.useState<{ text: string; failed: boolean } | null>(null);
@@ -770,6 +784,15 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    // Before the shift branch, because `Cmd`+`Shift`+`F` is not a shifted
+    // shortcut of anything and should open the same bar.
+    if (key === 'f' && showSource) {
+      event.preventDefault();
+      openFind();
+
+      return;
+    }
+
     if (key === 'y' && !event.shiftKey) {
       event.preventDefault();
       travel(false);
@@ -922,6 +945,76 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   );
 
   /* ---------------------------------------------------------------------
+   * Finding, and replacing
+   * ------------------------------------------------------------------ */
+
+  const matches = React.useMemo(
+    () => (finding ? findMatches(text, query, matchCase) : []),
+    [finding, text, query, matchCase]
+  );
+
+  /**
+   * Which match the caret is sitting on, or the one it is nearest.
+   *
+   * Read from the caret rather than held in a state of its own, so that
+   * clicking somewhere in the document and pressing next goes to the match
+   * after where you clicked. A number that walked on its own would go back to
+   * wherever the last press left it, which is not where anybody is looking.
+   */
+  const on = matches.findIndex(
+    (match) => match.start <= selection.start && selection.start <= match.end
+  );
+  const currentMatch = on === -1 ? matchFrom(matches, selection.start, true) : on;
+
+  /** A match, selected on the surface it can be selected on. */
+  const goTo = React.useCallback(
+    (index: number) => {
+      const match = matches[index];
+      const element = source.current;
+
+      if (!match) {
+        return;
+      }
+
+      if (element) {
+        element.focus({ preventScroll: true });
+        element.setSelectionRange(match.start, match.end);
+        readSelection();
+      }
+    },
+    [matches, readSelection]
+  );
+
+  const step = React.useCallback(
+    (forwards: boolean) => {
+      // From the end of the match the caret is on rather than from the caret
+      // itself, so pressing next twice does not find the same one twice.
+      const from = on === -1 ? selection.start : forwards ? matches[on].end : matches[on].start;
+
+      goTo(matchFrom(matches, from, forwards));
+    },
+    [goTo, matches, on, selection.start]
+  );
+
+  const openFind = React.useCallback(() => {
+    const element = source.current;
+    const selected = element ? text.slice(element.selectionStart, element.selectionEnd) : '';
+
+    // What is selected is nearly always what somebody is about to look for, and
+    // a selection that spans lines is nearly always not.
+    if (selected && !selected.includes('\n')) {
+      setQuery(selected);
+    }
+
+    setFinding(true);
+  }, [text]);
+
+  const closeFind = React.useCallback(() => {
+    setFinding(false);
+    source.current?.focus();
+  }, []);
+
+  /* ---------------------------------------------------------------------
    * Drawing
    * ------------------------------------------------------------------ */
 
@@ -950,6 +1043,57 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           onCommand={command}
           active={(name) => commandActive(name, { value: text, ...selection })}
           editable={editable}
+          onFind={showSource ? openFind : undefined}
+          finding={finding && showSource}
+        />
+      ) : null}
+
+      {finding && showSource ? (
+        <MawyEditorFind
+          query={query}
+          onQueryChange={setQuery}
+          replacement={replacement}
+          onReplacementChange={setReplacement}
+          matchCase={matchCase}
+          onMatchCaseChange={setMatchCase}
+          total={matches.length}
+          current={currentMatch}
+          onStep={step}
+          onReplace={() => {
+            const match = matches[currentMatch];
+
+            if (!match) {
+              return;
+            }
+
+            const next = replaceMatch(text, match, replacement);
+
+            apply(
+              { value: text, ...selection },
+              {
+                value: next.value,
+                start: match.start,
+                end: next.caret
+              }
+            );
+          }}
+          onReplaceAll={() => {
+            const next = replaceAll(text, query, replacement, matchCase);
+
+            if (next.count) {
+              apply(
+                { value: text, ...selection },
+                {
+                  value: next.value,
+                  start: selection.start,
+                  end: selection.start
+                }
+              );
+            }
+          }}
+          onClose={closeFind}
+          editable={editable}
+          strings={strings}
         />
       ) : null}
 

@@ -136,6 +136,8 @@ Every button on the toolbar runs a command that also has a keyboard shortcut, an
 | `Mod` + `K`             | Link                                   |
 | `Mod` + `1` / `2` / `3` | Heading 1, 2, 3                        |
 | `Mod` + `0`             | Body text                              |
+| `Mod` + `F`             | Find and replace                       |
+| `Tab` / `Shift` + `Tab` | Indent, outdent                        |
 | `Mod` + `Z`             | Undo                                   |
 | `Mod` + `Shift` + `Z`   | Redo, and `Ctrl` + `Y` as well         |
 | `Enter`                 | Carries a list marker to the next line |
@@ -202,6 +204,20 @@ Where the image lands is where it was put: a drop goes to the point the pointer 
 ```
 
 The **drawn document is not coloured**, and will not be. The source surface has a highlighter of its own for the Markdown; the drawn one is a place where every caret has to find its way back into the source, and a second opinion about what the characters inside a code block are is not worth what it would cost there.
+
+## Finding
+
+`Mod`+`F` opens the find bar over the source, and the toolbar's `find` button does the same thing. `Enter` goes to the next match, `Shift`+`Enter` to the one before, and `Escape` closes the bar and gives the focus back to the document.
+
+It exists because the browser's own find cannot reach here: **no browser searches the text inside a `<textarea>`**, and the source surface is one. That is the whole justification. Everywhere else in this library a thing the platform already does is left to the platform, and this is the place the platform does not.
+
+Whatever was selected is already in the box when it opens, as long as it was on one line — that is nearly always what somebody is about to look for.
+
+**Plain text, never a regular expression.** A Markdown document is full of `*`, `[`, `.` and `+`, and a find box that quietly compiled `(` into a syntax error is one a writer cannot trust with a document. The switch that is there instead is case sensitivity, which is the one people reach for.
+
+Replace and replace all are on the second row. Replace all is one pass over the document as it was, so replacing `a` with `aa` replaces each `a` once rather than finding its own replacement for ever.
+
+The bar is only offered where there is a source to search — `plain` and `split`. In `preview` and `wysiwyg` the document is drawn as elements, and the browser's own find works on it.
 
 ## Indenting
 

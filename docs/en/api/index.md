@@ -270,6 +270,7 @@ type MawyEditorToolbarItem =
   | 'strikethrough'
   | 'code'
   | 'link'
+  | 'image'
   | 'heading'
   | 'quote'
   | 'bulletList'
@@ -277,11 +278,12 @@ type MawyEditorToolbarItem =
   | 'taskList'
   | 'codeBlock'
   | 'rule'
+  | 'find'
   | 'colorScheme'
   | 'separator';
 ```
 
-One control on the editor's toolbar. Everything except `mode`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them.
+One control on the editor's toolbar. Everything except `mode`, `find`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them. `find` has one too, `Mod`+`F`, which works whether or not the button is on the toolbar.
 
 ### `MawyEditorToolbarOption`
 

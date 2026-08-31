@@ -1234,6 +1234,59 @@
   min-height: 0;
 }
 
+/* The find bar ------------------------------------------------------------
+ *
+ * Under the toolbar and above the panes, across the whole width, because in
+ * `split` it searches the source and the source is only half of what is on
+ * screen — a bar sitting over one pane would look like it belonged to that
+ * pane's scroll rather than to the document.
+ * -------------------------------------------------------------------------- */
+
+.mawy-root .mawy-find {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--mawy-border);
+  background: var(--mawy-bg-sunken);
+}
+
+.mawy-root .mawy-find-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mawy-root .mawy-find-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--mawy-border-strong);
+  border-radius: var(--mawy-radius-md);
+  background: var(--mawy-bg);
+  color: var(--mawy-fg);
+  font: inherit;
+  font-size: 0.9em;
+}
+
+.mawy-root .mawy-find-input:focus-visible {
+  border-color: var(--mawy-accent);
+  outline: 2px solid var(--mawy-accent-soft);
+  outline-offset: 0;
+}
+
+.mawy-root .mawy-find-count {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  color: var(--mawy-fg-muted);
+  font-size: 0.82em;
+  font-variant-numeric: tabular-nums;
+  /* Wide enough for "12 of 340" so the buttons beside it do not move as the
+     count changes under somebody's pointer. */
+  min-width: 6ch;
+  text-align: end;
+}
+
 .mawy-root .mawy-editor-pane {
   display: flex;
   flex: 1 1 0;

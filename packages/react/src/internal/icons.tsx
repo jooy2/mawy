@@ -55,5 +55,14 @@ export {
   UnfoldHorizontal as LetterSpacingIcon,
   UnfoldVertical as LineHeightIcon,
   Upload as UploadIcon,
-  X as CloseIcon
+  X as CloseIcon,
+  CaseSensitive as CaseSensitiveIcon,
+  ChevronUp as PreviousMatchIcon,
+  Replace as ReplaceIcon,
+  ReplaceAll as ReplaceAllIcon,
+  Search as FindIcon
 } from 'lucide-react';
+
+// `ChevronDown` is already the glyph a menu opens with, and it is the one that
+// means "the next one down" here too. Named twice rather than drawn twice.
+export { ChevronDown as NextMatchIcon } from 'lucide-react';
