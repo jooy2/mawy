@@ -24,7 +24,7 @@ import {
   type EditState,
   type MawyCommand
 } from '../../internal/commands.js';
-import type { MawyEdit } from '../../internal/editing.js';
+import type { MawyAim, MawyEdit } from '../../internal/editing.js';
 import { markdownFromHtml } from '../../internal/markdown/paste.js';
 import {
   difference,
@@ -171,6 +171,13 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const pending = React.useRef<[number, number] | null>(null);
   /** Where an empty paragraph is being drawn, because the caret is in it. */
   const [room, setRoom] = React.useState<number | null>(null);
+  /**
+   * Where the last edit meant to leave the caret, when the page had nowhere to
+   * draw it — a space at the end of a paragraph being the everyday one, since
+   * Markdown does not keep the whitespace at the end of a line. `MawyAim` has
+   * the whole of why.
+   */
+  const aim = React.useRef<MawyAim | null>(null);
 
   const notify = React.useRef(onChange);
   const history = React.useRef(emptyHistory());
@@ -286,6 +293,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       range.setEnd(tail.node, tail.offset);
       selection_?.removeAllRanges();
       selection_?.addRange(range);
+
+      // Whether the page could put the caret where the edit asked. When it
+      // could not, where it was asked for is kept, or the next thing typed
+      // lands wherever the caret had to settle for instead.
+      const settled = sourceAt(element, head.node, head.offset, text);
+
+      aim.current =
+        start === end && settled !== start
+          ? { value: text, at: start, node: head.node, offset: head.offset }
+          : null;
       pending.current = null;
 
       return;
@@ -707,6 +724,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               html={html}
               strings={strings}
               room={room}
+              aim={aim}
             />
           </div>
         ) : null}

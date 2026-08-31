@@ -21,6 +21,29 @@ import { markdownFromHtml } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
 import { ruleFor } from './rules.js';
 
+/**
+ * A caret the page had nowhere to draw, and the place it settled for.
+ *
+ * Markdown does not keep the whitespace at the end of a line, so a space typed
+ * at the end of a paragraph is in the file and is drawn nowhere at all. The
+ * caret comes back in front of it, because in front of it is the only place on
+ * the page there is — and read back from there, the next thing typed goes in
+ * front of the space as well, which leaves the space at the end for good and
+ * makes `One two` impossible to type a word at a time.
+ *
+ * So the place the caret was *meant* to be is kept beside the place it went,
+ * and is answered with instead for as long as the caret has not moved off that
+ * spot and the document is still the one it was measured against.
+ */
+export interface MawyAim {
+  /** The document this was measured against. */
+  value: string;
+  /** Where the caret was meant to be, in that document. */
+  at: number;
+  node: Node;
+  offset: number;
+}
+
 /** A document after an edit, and where the caret goes once it is drawn again. */
 export interface MawyEdit {
   value: string;
@@ -192,6 +215,16 @@ function deleteBefore(
   offset: number,
   caret: number
 ): MawyEdit | null {
+  const drawn = sourceAt(root, node, offset, value);
+
+  if (drawn !== null && drawn < caret) {
+    // The caret is past the last character the page can draw — the whitespace
+    // at the end of a line, which Markdown does not keep and which is therefore
+    // in the file and nowhere else. There is no drawn character to take, so the
+    // written one goes. See `MawyAim`.
+    return splice(value, caret - 1, caret, '');
+  }
+
   const atom = atomAt(root, node, offset, true);
 
   if (atom) {
@@ -348,10 +381,27 @@ function breakAt(
  * have its way with the tree whenever it met something new would be a surface
  * whose document and drawing quietly stopped being the same thing.
  */
+/**
+ * Where a place on the page is in the document, preferring the caret's own
+ * answer over the page's wherever it has one. See `MawyAim`.
+ */
+export function documentAt(
+  root: HTMLElement,
+  node: Node,
+  offset: number,
+  value: string,
+  aim: MawyAim | null
+): number | null {
+  return aim && aim.value === value && aim.node === node && aim.offset === offset
+    ? aim.at
+    : sourceAt(root, node, offset, value);
+}
+
 /** Where the caret is, in the document and on the page, or `null` for nowhere. */
 function placeOf(
   root: HTMLElement,
-  value: string
+  value: string,
+  aim: MawyAim | null
 ): { start: number; end: number; node: Node; offset: number } | null {
   const selection = root.ownerDocument.getSelection();
 
@@ -370,8 +420,8 @@ function placeOf(
     return null;
   }
 
-  const head = sourceAt(root, range.startContainer, range.startOffset, value);
-  const tail = sourceAt(root, range.endContainer, range.endOffset, value);
+  const head = documentAt(root, range.startContainer, range.startOffset, value, aim);
+  const tail = documentAt(root, range.endContainer, range.endOffset, value, aim);
 
   if (head === null || tail === null) {
     return null;
@@ -411,14 +461,24 @@ export function markdownFor(
  * A paste arrives as its own event rather than through `beforeinput`, because
  * that is the one every browser puts the clipboard on.
  */
-export function editForText(root: HTMLElement, value: string, text: string): MawyEdit | null {
-  const place = placeOf(root, value);
+export function editForText(
+  root: HTMLElement,
+  value: string,
+  text: string,
+  aim: MawyAim | null
+): MawyEdit | null {
+  const place = placeOf(root, value, aim);
 
   return place && text ? splice(value, place.start, place.end, text) : null;
 }
 
-export function editFor(event: InputEvent, root: HTMLElement, value: string): MawyEdit | null {
-  const place = placeOf(root, value);
+export function editFor(
+  event: InputEvent,
+  root: HTMLElement,
+  value: string,
+  aim: MawyAim | null
+): MawyEdit | null {
+  const place = placeOf(root, value, aim);
 
   if (!place) {
     return null;

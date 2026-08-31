@@ -40,6 +40,7 @@
 
 ### Fixed
 
+- **A space typed at the end of a block never landed**, on the drawn document, which made `One two` impossible to write a word at a time. Markdown does not keep the whitespace at the end of a line, so the space went into the file and was drawn nowhere; the caret came back in front of it because in front of it was the only place on the page there was; and read back from there, the next letter went in front of it too. Where the caret was _meant_ to be is now kept beside the place it settled for, and answered with until the caret moves or the document changes. `Backspace` there takes the space rather than the letter in front of it, for the same reason: there is no drawn character to take.
 - **The two panes of `split` never scrolled together at all.** The handler was on the pane around the textarea rather than on the textarea, and a `scroll` event does not bubble — so nothing was ever heard and the preview never moved.
 - **The line-height and letter-spacing controls moved a number and changed nothing** in a page that declares either property on `p` — which VitePress does, and which is not unusual. Both are inherited, and an inherited value loses to _any_ declaration on the element however specific the container's rule is, so the document's own type is now declared on the elements that carry text as well as on the block around them.
 

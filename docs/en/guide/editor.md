@@ -76,6 +76,8 @@ What works: typing and deleting **anywhere there is text to type in** — a para
 
 Edits land on the **drawn** character rather than the written one, and that is the difference the whole surface turns on. The caret after `bold` in `**bold**` has an asterisk in front of it in the file and a `d` in front of it on the page. `Backspace` there takes the `d`. An image and a hard break come out in one piece, because each of them is one character to a reader and none at all to a walk over the runs of text.
 
+The other half of that is a caret in a place the page cannot draw. Markdown does not keep the whitespace at the end of a line, so a space typed at the end of a paragraph is in the file and drawn nowhere at all, and the caret can only come back in front of it. Where it was **meant** to be is kept beside the place it settled for, so the next letter goes after the space rather than in front of it — without which `One two` could not be typed a word at a time. `Backspace` there takes the space, for the same reason: there is no drawn character in front of the caret to take.
+
 `Enter` is a different thing in every container it is pressed in, because a blank line means something different in each:
 
 | Where           | What `Enter` does                                                             |

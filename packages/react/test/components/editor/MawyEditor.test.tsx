@@ -914,6 +914,58 @@ describe('the document surface', () => {
     });
   });
 
+  it('types a space at the end of a block, where the page has nowhere to draw one', async () => {
+    // Markdown does not keep the whitespace at the end of a line, so the space
+    // is in the file and drawn nowhere: the caret comes back in front of it,
+    // and without remembering where it meant to be, every word after it would
+    // go in front of it too and `One two` could not be typed a letter at a
+    // time at all.
+    for (const [before, after] of [
+      ['One', 'One two'],
+      ['# One', '# One two'],
+      ['- One', '- One two'],
+      ['> One', '> One two']
+    ]) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={before} mode="wysiwyg" onChange={onChange} />
+      );
+
+      put(bodyOf(screen), 'One', 3);
+
+      let written = before;
+
+      for (const character of ' two') {
+        written += character;
+        type(bodyOf(screen), 'insertText', character);
+
+        // The space changes the file and changes nothing on the page, so what
+        // there is to wait for is the document coming back, not the drawing.
+        await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(written));
+      }
+
+      expect(onChange).toHaveBeenLastCalledWith(after);
+    }
+  });
+
+  it('takes the space back off the end again, rather than the letter in front of it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One" mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'One', 3);
+    type(bodyOf(screen), 'insertText', ' ');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One '));
+
+    type(bodyOf(screen), 'deleteContentBackward');
+
+    // There is no drawn character in front of the caret to take — the space is
+    // in the file and nowhere else — so the written one goes.
+    expect(onChange).toHaveBeenLastCalledWith('One');
+  });
+
   it('does not change a read-only document', async () => {
     const onChange = vi.fn();
     const screen = await render(

@@ -8,9 +8,11 @@ import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { renderBlocks, type RenderContext } from '../../internal/markdown/render.js';
 import {
   blockAt,
+  documentAt,
   editFor,
   editForText,
   markdownFor,
+  type MawyAim,
   type MawyEdit
 } from '../../internal/editing.js';
 import { sourceAt } from '../../internal/position.js';
@@ -32,6 +34,12 @@ export interface MawyEditorDocumentProps {
    * `withRoom` below for what is done about it.
    */
   room: number | null;
+  /**
+   * Where the last edit meant to leave the caret, when the page had nowhere to
+   * draw it. A ref rather than a value: it is settled after the drawing, in a
+   * layout effect, and what reads it is an event handler rather than a render.
+   */
+  aim: React.RefObject<MawyAim | null>;
 }
 
 /**
@@ -71,7 +79,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       parse,
       html,
       strings,
-      room
+      room,
+      aim
     },
     ref
   ) {
@@ -119,7 +128,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
-        const edit = editFor(event as InputEvent, element, value);
+        const edit = editFor(event as InputEvent, element, value, aim.current);
 
         if (edit) {
           onEdit(edit);
@@ -140,7 +149,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
         const where = element.ownerDocument.getSelection()?.anchorNode;
         const literal = Boolean(where && blockAt(element, where)?.tagName === 'PRE');
-        const edit = editForText(element, value, markdownFor(event.clipboardData, literal));
+        const edit = editForText(
+          element,
+          value,
+          markdownFor(event.clipboardData, literal),
+          aim.current
+        );
 
         if (edit) {
           onEdit(edit);
@@ -154,7 +168,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('beforeinput', refuse);
         element.removeEventListener('paste', paste);
       };
-    }, [value, readOnly, onEdit]);
+    }, [value, readOnly, onEdit, aim]);
 
     /**
      * `selectionchange` on the document rather than anything on the element:
@@ -184,8 +198,14 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
-        const start = sourceAt(element, range.startContainer, range.startOffset, value);
-        const end = sourceAt(element, range.endContainer, range.endOffset, value);
+        const start = documentAt(
+          element,
+          range.startContainer,
+          range.startOffset,
+          value,
+          aim.current
+        );
+        const end = documentAt(element, range.endContainer, range.endOffset, value, aim.current);
 
         if (start !== null && end !== null) {
           onSelect({ start: Math.min(start, end), end: Math.max(start, end) });
@@ -195,7 +215,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       owner.addEventListener('selectionchange', read);
 
       return () => owner.removeEventListener('selectionchange', read);
-    }, [value, onSelect]);
+    }, [value, onSelect, aim]);
 
     /**
      * A composition, from the outside.
@@ -231,6 +251,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        // Where the run of text starts rather than where the caret is, so the
+        // caret's own answer is not the one being asked for here.
         const start = sourceAt(element, host, 0, value);
 
         if (start !== null) {
@@ -292,7 +314,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('compositionstart', opened);
         element.removeEventListener('compositionend', closed);
       };
-    }, [value, readOnly, onEdit]);
+    }, [value, readOnly, onEdit, aim]);
 
     return (
       <div className="mawy-document">
