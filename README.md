@@ -2,7 +2,7 @@
 
 # Mawy
 
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/mawy/blob/main/LICENSE) [![npm latest package](https://img.shields.io/npm/v/mawy/latest.svg)](https://www.npmjs.com/package/mawy) [![npm downloads](https://img.shields.io/npm/dm/mawy.svg)](https://www.npmjs.com/package/mawy) [![run-test-react](https://github.com/jooy2/mawy/actions/workflows/run-test-react.yml/badge.svg)](https://github.com/jooy2/mawy/actions/workflows/run-test-react.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/jooy2/mawy/blob/main/LICENSE) [![npm latest package](https://img.shields.io/npm/v/mawy-react/latest.svg)](https://www.npmjs.com/package/mawy-react) [![npm downloads](https://img.shields.io/npm/dm/mawy-react.svg)](https://www.npmjs.com/package/mawy-react) [![pub latest package](https://img.shields.io/pub/v/mawy.svg)](https://pub.dev/packages/mawy) [![run-test-react](https://github.com/jooy2/mawy/actions/workflows/run-test-react.yml/badge.svg)](https://github.com/jooy2/mawy/actions/workflows/run-test-react.yml) [![run-test-flutter](https://github.com/jooy2/mawy/actions/workflows/run-test-flutter.yml/badge.svg)](https://github.com/jooy2/mawy/actions/workflows/run-test-flutter.yml)
 
 ### 📘 [**mawy.cdget.com**](https://mawy.cdget.com)
 
@@ -26,11 +26,12 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 
 ## Packages
 
-| Package                            | Registry                                        | Requires                               | Quick start                        |
-| ---------------------------------- | ----------------------------------------------- | -------------------------------------- | ---------------------------------- |
-| [`packages/react`](packages/react) | [npm: `mawy`](https://www.npmjs.com/package/mawy) | React 18 or 19, Node.js 20.19 or later | [README](packages/react/README.md) |
+| Package                                | Registry                                                       | Requires                               | Ships                | Quick start                          |
+| -------------------------------------- | -------------------------------------------------------------- | -------------------------------------- | -------------------- | ------------------------------------ |
+| [`packages/react`](packages/react)     | [npm: `mawy-react`](https://www.npmjs.com/package/mawy-react)  | React 18 or 19, Node.js 20.19 or later | Viewer and editor    | [README](packages/react/README.md)   |
+| [`packages/flutter`](packages/flutter) | [pub.dev: `mawy`](https://pub.dev/packages/mawy)               | Flutter 3.32 or later, Dart 3.8        | Viewer, for now      | [README](packages/flutter/README.md) |
 
-Flutter support is planned and will land as `packages/flutter`. Each language's package **versions independently and keeps its own changelog** beside its own manifest — [`packages/react/CHANGELOG.md`](packages/react/CHANGELOG.md) is the React package's — so a release on one side is not a release on the other and the numbers will not always agree.
+Each language's package **versions independently and keeps its own changelog** beside its own manifest — [`packages/react/CHANGELOG.md`](packages/react/CHANGELOG.md) and [`packages/flutter/CHANGELOG.md`](packages/flutter/CHANGELOG.md) — so a release on one side is not a release on the other and the numbers will not always agree.
 
 ## Install
 
@@ -40,14 +41,21 @@ npm install mawy-react
 
 `react` and `react-dom` are peer dependencies — React 18 or 19.
 
+```bash
+flutter pub add mawy
+```
+
+No Flutter dependency beyond the SDK itself, apart from the toolbar's icons.
+
 ## Repository layout
 
-| Path             | What it is                                | How it is run                                                                    |
-| ---------------- | ----------------------------------------- | -------------------------------------------------------------------------------- |
-| `packages/react` | The npm package, `mawy`                   | `cd packages/react && npm install`, then `npm test`, `npm run lint`, `npm run build` |
-| `docs`           | The documentation site, shared by every language | `cd docs && npm install`, then `npm run dev`                                  |
+| Path               | What it is                                         | How it is run                                                                        |
+| ------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `packages/react`   | The npm package, `mawy-react`                      | `cd packages/react && npm install`, then `npm test`, `npm run lint`, `npm run build` |
+| `packages/flutter` | The pub.dev package, `mawy`                        | `cd packages/flutter && flutter pub get`, then `flutter test`, `dart analyze`        |
+| `docs`             | The documentation site, shared by both packages    | `cd docs && npm install`, then `npm run dev`                                          |
 
-There is no install at the repository root and no root `package.json` — each folder is entered and run on its own. [CONTRIBUTING.md](CONTRIBUTING.md) has the rest.
+There is no install at the repository root and no root manifest of any kind — each folder is entered and run on its own. [CONTRIBUTING.md](CONTRIBUTING.md) has the rest.
 
 ## Documentation
 

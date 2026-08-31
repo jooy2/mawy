@@ -30,7 +30,7 @@ export const sources: Record<string, string> = Object.fromEntries(
  * A documentation comment that shows how to import something contains the
  * word `import` and a specifier in quotes, and to a regular expression that is
  * indistinguishable from the real thing — which made `src/fonts.ts` look like
- * it imported `mawy` because it explains, in prose, that an application does.
+ * it imported `mawy-react` because it explains, in prose, that an application does.
  *
  * Strings are tracked as well as comments, and not for tidiness: half the
  * specifiers in this package are URLs, and `https://…` inside a string literal

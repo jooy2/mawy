@@ -7,11 +7,23 @@ order: 2
 
 Everything the package exports. Each entry says what it is, what it takes and what it gives back.
 
-::: warning Early
+:::: warning Early
 
-Nothing is published to npm yet and the API is not stable. The `wysiwyg` surface is partly built — see [the editor](../guide/editor#the-document-surface) for exactly which part. Everything else on this page exists and runs.
+Both packages are published at `0.1.0`. They are a `0.x`, which means the API can still change between minor versions — pin the version if that matters to you.
+
+::: fw react
+
+The `wysiwyg` surface is partly built — see [the editor](../guide/editor#the-document-surface) for exactly which part. Everything else on this page exists and runs.
 
 :::
+
+::: fw flutter
+
+The Flutter package is the viewer alone for now; the editor is the React package's. Everything on this page that is marked Flutter exists and runs.
+
+:::
+
+::::
 
 ## Components
 
@@ -117,7 +129,7 @@ A file larger than five megabytes is refused rather than read.
 
 ## Types
 
-Exported from `mawy` and from `mawy/types`. The second entry point exists so an application can name one of these in its own props without importing a component to get at it.
+Exported from `mawy-react` and from `mawy-react/types`. The second entry point exists so an application can name one of these in its own props without importing a component to get at it.
 
 ### `MawyMode`
 
@@ -319,7 +331,7 @@ type MawyViewerToolbarOption = boolean | readonly MawyViewerToolbarItem[];
 
 ## Stylesheet
 
-### `mawy/styles.css`
+### `mawy-react/styles.css`
 
 The finished stylesheet, imported once by the embedding application. Every value the library draws with is a `--mawy-*` custom property, and that namespace is the entire supported surface for theming.
 

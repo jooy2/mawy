@@ -1,7 +1,7 @@
 /**
  * Mawy's own syntax highlighter, for the languages a document usually shows.
  *
- * It is a separate entry point — `mawy/highlight` — and nothing in the main one
+ * It is a separate entry point — `mawy-react/highlight` — and nothing in the main one
  * reaches it, so an application that never mentions it never ships it. That is
  * the whole reason it is over here rather than inside the viewer: a highlighter
  * is the largest thing a Markdown renderer can be made to carry, and most

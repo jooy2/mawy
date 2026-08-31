@@ -88,7 +88,7 @@ Your own fonts go in the same list: `{ id, label, stack, href }`.
 
 ### What it reads
 
-CommonMark, plus GitHub's additions: tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs, footnotes, and the five alert kinds — and definition lists, which GitHub does not read. Link reference definitions resolve wherever in the file they are written. Code blocks are coloured by whatever `highlight` is given — `mawy/highlight` is one, in a separate entry point, fetched only when a document turns out to have a language on a fence.
+CommonMark, plus GitHub's additions: tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs, footnotes, and the five alert kinds — and definition lists, which GitHub does not read. Link reference definitions resolve wherever in the file they are written. Code blocks are coloured by whatever `highlight` is given — `mawy-react/highlight` is one, in a separate entry point, fetched only when a document turns out to have a language on a fence.
 
 ### What it will not do
 
@@ -96,7 +96,7 @@ Raw HTML inside a document is shown as text unless you ask otherwise (`html="san
 
 ### Types
 
-`MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyViewerToolbarItem` and `MawyViewerToolbarOption`, all also available from `mawy/types` — so an application can name one in its own props without importing a component to get at it.
+`MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyViewerToolbarItem` and `MawyViewerToolbarOption`, all also available from `mawy-react/types` — so an application can name one in its own props without importing a component to get at it.
 
 The full reference is at [mawy.cdget.com/api/](https://mawy.cdget.com/api/).
 

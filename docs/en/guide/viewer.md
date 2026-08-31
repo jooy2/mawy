@@ -148,7 +148,7 @@ Nothing is coloured by default, and that is not an omission. A highlighter is th
 />
 ```
 
-`mawy/highlight` is a separate entry point, so an application that never mentions it never ships it. What is in it is Mawy's own highlighter, for the languages a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
+`mawy-react/highlight` is a separate entry point, so an application that never mentions it never ships it. What is in it is Mawy's own highlighter, for the languages a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
 
 For anything more than that, `MawyHighlighter` is the whole interface and Shiki or Prism behind it is a few lines:
 

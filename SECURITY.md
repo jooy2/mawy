@@ -4,10 +4,12 @@
 
 Mawy has not had a stable release yet. Until `1.0.0`, only the **latest published version** of each package receives security fixes; there are no maintained release branches behind it.
 
-| Package | Version         | Supported |
-| ------- | --------------- | --------- |
-| `mawy`  | Latest release  | ✅        |
-| `mawy`  | Anything older  | ❌        |
+| Package                        | Version        | Supported |
+| ------------------------------ | -------------- | --------- |
+| `mawy-react` (npm)             | Latest release | ✅        |
+| `mawy-react` (npm)             | Anything older | ❌        |
+| `mawy` (pub.dev)               | Latest release | ✅        |
+| `mawy` (pub.dev)               | Anything older | ❌        |
 
 Once `1.0.0` ships, this table will name the release lines that are still maintained.
 

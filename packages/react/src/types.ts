@@ -3,7 +3,7 @@
  *
  * These are the types that more than one component needs, which is why they sit
  * here rather than beside whichever component introduced them — and why they
- * are also exported from `mawy/types`, so an application can name one in its
+ * are also exported from `mawy-react/types`, so an application can name one in its
  * own props without importing a component to get at it.
  */
 
