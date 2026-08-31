@@ -9,7 +9,7 @@ Mawy ships as one package per language. React is the one that exists today; Flut
 
 ::: warning Not published yet
 
-This page describes the package as it is being built. `npm install mawy` does not resolve to anything yet, and the API below is the part that exists — the shared type vocabulary. The editor components land with the first release; follow the [changelog](../changelog).
+`npm install mawy` does not resolve to anything yet. Everything on this page is real and runs — the viewer exists and this site draws it — but it is reached by building the repository rather than by installing it. The editor lands next; follow the [changelog](../changelog).
 
 :::
 
@@ -27,6 +27,8 @@ npm install mawy
 
 `react` and `react-dom` are peer dependencies. If your project already has one of them, that is the copy Mawy uses.
 
+The one runtime dependency is [`lucide-react`](https://lucide.dev), which is where the toolbar's icons come from. It is ISC-licensed, brings nothing else with it, and is tree-shaken down to the dozen glyphs actually drawn.
+
 ## Wiring up the stylesheet
 
 Add one line to your application's CSS entry point:
@@ -37,21 +39,45 @@ Add one line to your application's CSS entry point:
 
 The stylesheet is finished CSS — no build-side setup, no plugin, no configuration. Everything the library draws goes through `--mawy-*` custom properties, so theming is a matter of redeclaring a token rather than out-specifying a rule. Tokens cascade, which means one declaration on a wrapping element reaches every Mawy surface inside it.
 
-## What the package exports today
+## Showing a document
 
-The type vocabulary every component will be written in:
+```tsx
+import { MawyViewer } from 'mawy';
 
-```ts
-import type { MawyColorScheme, MawyLocale, MawyMode } from 'mawy';
+export function Page({ document }: { document: string }) {
+  return <MawyViewer value={document} />;
+}
 ```
 
-| Type | Values | What it is |
-| --- | --- | --- |
-| `MawyMode` | `'wysiwyg'`, `'plain'`, `'preview'` | Which surface a document is shown on. See [the editor](./editor). |
-| `MawyColorScheme` | `'light'`, `'dark'`, `'system'` | Which palette to draw in. `system` follows `prefers-color-scheme`. |
-| `MawyLocale` | `'en'`, `'ko'` | The language of the editor's own chrome — not of the document. |
+That is a finished reader: the document rendered, and a toolbar for the things a reader wants to change about it — the text size, the line height, the theme, the width of the column. None of it touches the document.
 
-The same types are available from `mawy/types`, so an application can name one in its own props without importing a component to get at it.
+## Or no document at all
+
+`value` is optional, and leaving it out is not an empty state — it is the other half of the component. With nothing to show, the viewer **is** a file picker: drop a `.md` file on it, or choose one.
+
+```tsx
+<MawyViewer onValueChange={(markdown, file) => save(file?.name, markdown)} />
+```
+
+## Choosing what the toolbar has
+
+```tsx
+<MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />
+```
+
+`true` is all of it, `false` is none of it, and an array is exactly those controls in exactly that order. [The viewer](./viewer#the-toolbar) lists them.
+
+## What the package exports today
+
+|  |  |
+| --- | --- |
+| `MawyViewer` | The read-only viewer. [Guide](./viewer), [API](../api/#mawyviewer). |
+| `mawy/styles.css` | The stylesheet, above. |
+| Types | `MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyViewerToolbarItem`, `MawyViewerToolbarOption` |
+
+The types are also available from `mawy/types`, so an application can name one in its own props without importing a component to get at it.
+
+`MawyEditor` is not here yet — [the editor](./editor) is the shape it is being built to.
 
 ## Next
 

@@ -12,11 +12,12 @@ Guides and the full API, in English and Korean. This README is just the quick st
 
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
-> [!IMPORTANT] **Not published yet.** This package is the scaffolding for the editor rather than the editor: it builds, it lints, it typechecks and its tests run in three real browsers, and the components are being written on top of it. The API below is what exists today, which is the shared type vocabulary and nothing else.
+> [!IMPORTANT] **Not published yet.** `MawyViewer` and the Markdown parser behind it are written and tested; `MawyEditor` is being built on top of them. `npm install mawy` does not resolve to anything yet and the API is not stable.
 
 - **Editor and viewer are the same library.** They share the parser and the renderer, so what was typed is what a reader sees — rather than what a second, separately maintained renderer makes of it.
 - **WYSIWYG and source are two views, not two editors.** Toggling does not round-trip through another implementation and does not lose what the other view could not express.
-- **Close to zero dependencies.** The package declares none, and a test in the suite fails the build if a source file imports something that is not declared. Anything added later has to earn it and has to be permissively licensed.
+- **The document becomes React elements, not a string of HTML.** There is no `innerHTML` on the path from Markdown to the page, so the safe default costs nothing: escaping has nothing to do.
+- **One runtime dependency.** [`lucide-react`](https://lucide.dev), for the toolbar's icons. A test in the suite fails the build if a source file imports anything that is not declared; anything added later has to earn it and has to be permissively licensed.
 - **ESM only, types in the box.** TypeScript declarations ship with the package.
 
 ## Install
@@ -39,13 +40,41 @@ The stylesheet is finished CSS. Everything the library draws goes through `--maw
 
 ## Usage
 
-The components land with the next release. What the package exports today is the type vocabulary they are written in:
+```tsx
+import { MawyViewer } from 'mawy';
 
-```ts
-import type { MawyColorScheme, MawyLocale, MawyMode } from 'mawy';
+export function Page({ document }: { document: string }) {
+  return <MawyViewer value={document} />;
+}
 ```
 
-`MawyMode` is `'wysiwyg' | 'plain' | 'preview'` — the three views of one document. The same types are also available from `mawy/types`, so an application can name one in its own props without importing a component to get at it.
+That is a finished reader: the document rendered, and a toolbar for the things a reader wants to change about it — typeface, text size, line height, letter spacing, column width, light or dark, an outline of the headings. None of it touches the document.
+
+`value` is optional, and leaving it out is not an empty state. With nothing to show, the viewer **is** a file picker — drop a `.md` file on it, or choose one:
+
+```tsx
+<MawyViewer onValueChange={(markdown, file) => save(file?.name, markdown)} />
+```
+
+Pick what the toolbar has, and in what order:
+
+```tsx
+<MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />
+```
+
+### What it reads
+
+CommonMark, plus GitHub's additions: tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs, and the five alert kinds. Link reference definitions resolve wherever in the file they are written. Syntax highlighting is not here yet.
+
+### What it will not do
+
+Raw HTML inside a document is shown as text unless you ask otherwise (`html="sanitize"` or `html="raw"`), and **every URL is checked whichever you choose** — `[click](javascript:…)` is Markdown rather than HTML, so the scheme allowlist is not part of that option and is not switched off with it. A refused destination is drawn as the words the author wrote, with no link around them.
+
+### Types
+
+`MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyViewerToolbarItem` and `MawyViewerToolbarOption`, all also available from `mawy/types` — so an application can name one in its own props without importing a component to get at it.
+
+The full reference is at [mawy.cdget.com/api/](https://mawy.cdget.com/api/).
 
 ## Development
 
@@ -66,6 +95,8 @@ npx playwright install --with-deps chromium
 ```
 
 It runs in a real browser rather than a DOM emulator on purpose. Selection ranges, `contenteditable` and `beforeinput` are what this library is made of, and jsdom implements none of them faithfully enough for a passing test to mean anything — `test/environment.test.tsx` is the file that says so and fails first if the harness is wrong. Locally the suite runs in Chromium alone; CI fans it out across Chromium, Firefox and WebKit on Linux, Windows and macOS. Set `VITEST_BROWSER` to pick another engine yourself.
+
+The live previews are the documentation site: `cd ../../docs && npm install && npm run dev` renders the real components from `src/` through a Vite alias, so an edit is on screen without a rebuild.
 
 [CONTRIBUTING.md](../../CONTRIBUTING.md) has the rest.
 

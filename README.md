@@ -13,13 +13,14 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
 > [!IMPORTANT]
-> **Mawy is in early development.** The repository is the scaffolding — packaging, tests, linting, CI and the documentation site — and the editor itself is being built on top of it. Nothing is published to npm yet, and the API is not stable.
+> **Mawy is in early development, and the first half of it works.** The Markdown parser and `MawyViewer` are written and tested; `MawyEditor` is being built on top of them. Nothing is published to npm yet, and the API is not stable.
 
 ## Why Mawy
 
 - **Editor and viewer are the same library.** A viewer that renders differently from the editor that produced the document is the bug every "editor plus separate renderer" setup eventually ships. Here they share the parser and the renderer, so what you typed is what a reader sees.
 - **WYSIWYG and source are two views, not two editors.** Toggling does not round-trip through a second implementation and does not lose what the other view could not express.
-- **Close to zero dependencies.** The parser, the document model and the editing surface are ours. A third-party library is brought in only where writing it ourselves would be worse than depending on it — syntax highlighting is the standing example — and only under a permissive licence.
+- **Close to zero dependencies.** The parser, the document model and the editing surface are ours. A third-party library is brought in only where writing it ourselves would be worse than depending on it: today that is [`lucide-react`](https://lucide.dev) for the toolbar's icons, and syntax highlighting will be the next one. Only under a permissive licence, and a test in the suite fails the build if a source file imports something undeclared.
+- **The document becomes React elements, not a string of HTML.** There is no `innerHTML` between Markdown and the page, which is what makes the viewer's safe default free rather than careful.
 - **Types in the box.** TypeScript declarations ship with the package, so your editor knows the prop names and the values they take before you do.
 
 ## Packages
@@ -53,7 +54,7 @@ There is no install at the repository root and no root `package.json` — each f
 | --------------------------------------------------------------- | ------------------------------------------------------ |
 | [**Getting started**](https://mawy.cdget.com/guide/getting-started) | Install and setup, end to end.                     |
 | [**Editor**](https://mawy.cdget.com/guide/editor)               | The WYSIWYG and plain surfaces, and switching between them. |
-| [**Viewer**](https://mawy.cdget.com/guide/viewer)               | Rendering a document without editing it.               |
+| [**Viewer**](https://mawy.cdget.com/guide/viewer)               | Rendering a document without editing it — with live demos. |
 | [**API**](https://mawy.cdget.com/api/)                          | Every component and every option.                      |
 | [**Changelog**](https://mawy.cdget.com/changelog)               | What changed in each release.                          |
 

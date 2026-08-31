@@ -46,6 +46,8 @@ features:
 
 ## Where this is
 
-Mawy is in early development. The repository scaffolding is in place — packaging, linting, tests in three real browsers, CI and this site — and the editor is being built on top of it. Nothing is published to npm yet, and the API is not stable.
+Mawy is in early development, and the first half of it works: **the parser and the viewer are here.** CommonMark and GitHub's additions are read by a parser of ours, and `MawyViewer` draws the result — with a toolbar for the type, a headings panel, light and dark, and a file picker for when it has been given no document at all. The demos on [the viewer page](./guide/viewer) are that component, running.
 
-[Getting started](./guide/getting-started) has what exists today. The [changelog](./changelog) is where each release will be written down.
+The editor is next. Nothing is published to npm yet and the API is not stable.
+
+[Getting started](./guide/getting-started) has what exists today. The [changelog](./changelog) is where each release is written down.

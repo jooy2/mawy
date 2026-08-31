@@ -34,13 +34,13 @@ Switching changes which surface is mounted. It does not re-serialise the documen
 | `'plain'`   | Yes      | The Markdown source   |
 | `'preview'` | No       | The rendered document |
 
-`preview` is the [viewer](./viewer) reached through the editor's own prop, for the common case of a toolbar that toggles between writing and reading.
+`preview` is the [viewer](./viewer) reached through the editor's own prop, for the common case of a toolbar that toggles between writing and reading. The viewer itself is finished and can be used on its own today; `preview` will be the same component, mounted from here.
 
 ## Planned
 
-What the first release is aiming at, in the order it is being built:
+What the first release is aiming at, in the order it is being built. The parser and the renderer are already done — the [viewer](./viewer) is what they add up to — so what is left here is the editing surface.
 
-- The controlled and uncontrolled value contract — `value` / `defaultValue` / `onChange`.
+- The controlled and uncontrolled value contract — `value` / `defaultValue` / `onChange`, the shape the viewer already has.
 - The two editing surfaces and the switch between them.
 - The toolbar, and doing without it: every command reachable from the keyboard first.
 - Input rules — the Markdown you type turning into what it means as you type it.

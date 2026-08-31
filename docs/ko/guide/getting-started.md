@@ -9,7 +9,7 @@ Mawy는 언어별로 하나의 패키지로 배포됩니다. 지금 존재하는
 
 ::: warning 아직 배포 전입니다
 
-이 페이지는 만들어지는 중인 패키지를 설명합니다. `npm install mawy`는 아직 아무것도 받아오지 못하고, 아래 API는 현재 존재하는 부분 — 공용 타입 어휘 — 입니다. 에디터 컴포넌트는 첫 릴리스와 함께 들어옵니다. [변경 기록](../changelog)을 확인하세요.
+`npm install mawy`는 아직 아무것도 받아오지 못합니다. 이 페이지의 내용은 전부 실제로 동작합니다 — 뷰어는 존재하고 이 사이트가 그것을 그리고 있습니다 — 다만 설치가 아니라 저장소를 빌드해서 닿습니다. 에디터가 다음입니다. [변경 기록](../changelog)을 확인하세요.
 
 :::
 
@@ -27,6 +27,8 @@ npm install mawy
 
 `react`와 `react-dom`은 peer dependency입니다. 프로젝트에 이미 있다면 Mawy는 그 사본을 그대로 씁니다.
 
+런타임 의존성은 [`lucide-react`](https://lucide.dev) 하나뿐이고, 툴바 아이콘이 여기서 옵니다. ISC 라이선스이고, 딸려 오는 것이 없으며, 실제로 그리는 열몇 개의 글리프만 남기고 트리셰이킹됩니다.
+
 ## 스타일시트 연결
 
 애플리케이션의 CSS 진입점에 한 줄을 더합니다.
@@ -37,21 +39,45 @@ npm install mawy
 
 이 스타일시트는 완성된 CSS입니다. 빌드 쪽 설정도, 플러그인도, 구성 파일도 필요 없습니다. 라이브러리가 그리는 모든 값은 `--mawy-*` 커스텀 속성을 거치므로, 테마를 바꾼다는 것은 규칙을 더 높은 우선순위로 덮어쓰는 일이 아니라 토큰을 다시 선언하는 일입니다. 토큰은 상속되므로 바깥 요소에 한 번 선언하면 그 안의 모든 Mawy 화면에 닿습니다.
 
-## 지금 패키지가 내보내는 것
+## 문서 보여주기
 
-모든 컴포넌트가 쓰게 될 타입 어휘입니다.
+```tsx
+import { MawyViewer } from 'mawy';
 
-```ts
-import type { MawyColorScheme, MawyLocale, MawyMode } from 'mawy';
+export function Page({ document }: { document: string }) {
+  return <MawyViewer value={document} />;
+}
 ```
 
-| 타입 | 값 | 무엇인가 |
-| --- | --- | --- |
-| `MawyMode` | `'wysiwyg'`, `'plain'`, `'preview'` | 문서를 어느 화면으로 보여줄지. [에디터](./editor) 참고. |
-| `MawyColorScheme` | `'light'`, `'dark'`, `'system'` | 어느 팔레트로 그릴지. `system`은 `prefers-color-scheme`를 따릅니다. |
-| `MawyLocale` | `'en'`, `'ko'` | 에디터 UI 자체의 언어. 문서의 언어가 아닙니다. |
+이것으로 완성된 읽기 화면입니다. 문서가 그려지고, 독자가 바꾸고 싶어 하는 것들 — 글자 크기, 줄 간격, 테마, 본문 폭 — 을 위한 툴바가 함께 옵니다. 그 어느 것도 문서를 건드리지 않습니다.
 
-같은 타입을 `mawy/types`에서도 가져올 수 있습니다. 컴포넌트를 import하지 않고도 애플리케이션의 props에 이 타입을 쓸 수 있게 하기 위한 진입점입니다.
+## 또는 문서 없이
+
+`value`는 선택입니다. 빼는 것은 빈 상태가 아니라 이 컴포넌트의 나머지 절반입니다. 보여줄 것이 없으면 뷰어 자체가 **파일 선택기**가 됩니다. `.md` 파일을 끌어다 놓거나, 골라서 열면 됩니다.
+
+```tsx
+<MawyViewer onValueChange={(markdown, file) => save(file?.name, markdown)} />
+```
+
+## 툴바에 무엇을 둘지 고르기
+
+```tsx
+<MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />
+```
+
+`true`는 전부, `false`는 없음, 배열은 정확히 그 컨트롤들을 정확히 그 순서로. 목록은 [뷰어](./viewer#툴바)에 있습니다.
+
+## 지금 패키지가 내보내는 것
+
+|  |  |
+| --- | --- |
+| `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer), [API](../api/#mawyviewer). |
+| `mawy/styles.css` | 위의 스타일시트. |
+| 타입 | `MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyViewerToolbarItem`, `MawyViewerToolbarOption` |
+
+타입은 `mawy/types`에서도 가져올 수 있습니다. 컴포넌트를 import하지 않고도 애플리케이션의 props에 이 타입을 쓸 수 있게 하기 위한 진입점입니다.
+
+`MawyEditor`는 아직 없습니다 — [에디터](./editor)가 그것이 만들어질 형태입니다.
 
 ## 다음
 

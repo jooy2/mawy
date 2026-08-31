@@ -40,6 +40,8 @@ A few notes that are easy to trip over:
 - **A change usually means a change to the docs in _both_ languages.** `docs/en` and `docs/ko` mirror each other page for page. If you cannot write the Korean, write the English and say so in the pull request; a maintainer will follow up rather than let the two drift.
 - **A `:::` block needs a blank line on each side of its body.** Prettier runs with `proseWrap: "never"` and has never heard of VitePress's custom containers, so a `::: warning` written tight against its text is joined into one line — which stops it being a container at all and spills the rest of the page into the box. The blank lines are what keep the two apart.
 - **The editing surfaces are tested in a real browser.** Selection, ranges, `beforeinput` and `contenteditable` are what this library is made of, and a DOM emulator does not implement them faithfully enough for a passing test to mean anything. See below.
+- **Every rule in `src/styles.css` is scoped under `.mawy-root`.** A viewer is dropped into somebody else's page, and that page has an `article h2` or a `table { display: block }` of its own — both (0,1,1), both enough to beat a single class. The `:where()` resets at the top of the file are the deliberate exception: a reset should be the weakest thing in the room.
+- **The documentation site is where components are looked at.** `docs/.vitepress/theme/components/MawyDemo.vue` mounts a React root inside a Vue page, and `docs/.vitepress/demos/**/*.tsx` are real, runnable components rendered straight from `packages/react/src` through a Vite alias. Nothing on the site reads `dist/`, so an edit to a component is on the page as soon as it is saved. There is no separate demo application.
 
 ## Running the checks
 
@@ -67,15 +69,21 @@ For the documentation site:
 ```bash
 cd docs
 npm ci
-npm run dev          # local preview
+npm run dev          # local preview, and the develop-and-eyeball loop
 npm run build        # what the deploy workflow runs
 npm run lint
 npm run typecheck
 ```
 
+The site pins `vite` to the version VitePress itself runs. Two copies of Vite in `docs/node_modules` is not a bigger install, it is a `@vitejs/plugin-react` compiled against a Vite that is not the one loading it.
+
 ## Third-party dependencies
 
-Mawy aims at close to zero runtime dependencies, and that is a design goal rather than a slogan: a Markdown editor is a component inside somebody else's application, and every package it drags in is one they did not choose. A pull request that adds a runtime dependency should say, in the description:
+Mawy aims at close to zero runtime dependencies, and that is a design goal rather than a slogan: a Markdown editor is a component inside somebody else's application, and every package it drags in is one they did not choose.
+
+The React package has **one**: [`lucide-react`](https://lucide.dev) (ISC), which is where the toolbar's icons come from. It brings nothing else with it and tree-shakes to the glyphs actually drawn. `test/package/dependencies.test.ts` fails the build if a source file imports anything that is not declared as a dependency or a peer, so the count cannot creep up by accident.
+
+A pull request that adds a runtime dependency should say, in the description:
 
 - **What it does that we would otherwise write.** Syntax highlighting is the standing example of a fair one — a correct highlighter for dozens of languages is not something to reimplement.
 - **Its licence.** MIT, ISC, BSD and Apache-2.0 are fine. Copyleft licences (GPL, LGPL, AGPL) are not, because they would reach into the applications that embed this one.
