@@ -64,6 +64,7 @@ export interface MawyStrings {
   strikethrough: string;
   codeSpan: string;
   link: string;
+  image: string;
   heading: string;
   heading1: string;
   heading2: string;
@@ -82,6 +83,9 @@ export interface MawyStrings {
   statusWords: string;
   statusCharacters: string;
   editorPlaceholder: string;
+  dropImage: string;
+  uploading: string;
+  uploadFailed: string;
 }
 
 const en: MawyStrings = {
@@ -135,6 +139,7 @@ const en: MawyStrings = {
   strikethrough: 'Strikethrough',
   codeSpan: 'Code',
   link: 'Link',
+  image: 'Image',
   heading: 'Heading',
   heading1: 'Heading 1',
   heading2: 'Heading 2',
@@ -152,7 +157,10 @@ const en: MawyStrings = {
   statusLines: 'lines',
   statusWords: 'words',
   statusCharacters: 'characters',
-  editorPlaceholder: 'Write in Markdown…'
+  editorPlaceholder: 'Write in Markdown…',
+  dropImage: 'Drop to add',
+  uploading: 'Adding the image…',
+  uploadFailed: 'That image could not be added.'
 };
 
 const ko: MawyStrings = {
@@ -206,6 +214,7 @@ const ko: MawyStrings = {
   strikethrough: '취소선',
   codeSpan: '코드',
   link: '링크',
+  image: '이미지',
   heading: '제목',
   heading1: '제목 1',
   heading2: '제목 2',
@@ -223,7 +232,10 @@ const ko: MawyStrings = {
   statusLines: '줄',
   statusWords: '단어',
   statusCharacters: '자',
-  editorPlaceholder: '마크다운으로 쓰세요…'
+  editorPlaceholder: '마크다운으로 쓰세요…',
+  dropImage: '놓으면 넣습니다',
+  uploading: '이미지를 넣는 중…',
+  uploadFailed: '이미지를 넣지 못했습니다.'
 };
 
 const STRINGS: Record<MawyLocale, MawyStrings> = { en, ko };

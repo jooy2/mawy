@@ -1184,6 +1184,263 @@ describe('pasting', () => {
 });
 
 /**
+ * Putting an image in.
+ *
+ * The toolbar's button writes `![](url)` and needs nothing from anybody. A file
+ * dropped or pasted needs somewhere for its bytes to go, and where that is is
+ * the application's answer through `onUploadImage` — so with no answer, nothing
+ * happens at all, which is half of what these check.
+ */
+describe('images', () => {
+  const png = (name = 'A photo.png') =>
+    new File([new Uint8Array([137, 80, 78, 71])], name, { type: 'image/png' });
+
+  /** A transfer carrying files, and whatever else was asked for. */
+  function carrying(files: File[], kinds: Record<string, string> = {}): DataTransfer {
+    const data = new DataTransfer();
+
+    for (const file of files) {
+      data.items.add(file);
+    }
+
+    for (const [kind, value] of Object.entries(kinds)) {
+      data.setData(kind, value);
+    }
+
+    return data;
+  }
+
+  function drop(element: HTMLElement, files: File[]): DragEvent {
+    const data = carrying(files);
+
+    element.dispatchEvent(
+      new DragEvent('dragenter', { dataTransfer: data, bubbles: true, cancelable: true })
+    );
+
+    const event = new DragEvent('drop', {
+      dataTransfer: data,
+      bubbles: true,
+      cancelable: true
+    });
+
+    element.dispatchEvent(event);
+
+    return event;
+  }
+
+  function pasteFiles(element: HTMLElement, files: File[], kinds: Record<string, string> = {}) {
+    const event = new ClipboardEvent('paste', {
+      clipboardData: carrying(files, kinds),
+      bubbles: true,
+      cancelable: true
+    });
+
+    element.dispatchEvent(event);
+
+    return event;
+  }
+
+  it('writes an image the toolbar button was pressed for', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Look: " modes={['plain']} onChange={onChange} />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(6, 6);
+    (screen.container.querySelector('button[aria-label="Image"]') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => expect(input.value).toBe('Look: ![](url)'));
+  });
+
+  it('uploads a dropped file and writes what came back', async () => {
+    const onChange = vi.fn();
+    const onUploadImage = vi.fn(async () => '/uploads/a.png');
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onChange={onChange}
+        onUploadImage={onUploadImage}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    const event = drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
+
+    expect(event.defaultPrevented).toBe(true);
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Before.![A photo](/uploads/a.png)')
+    );
+    expect(onUploadImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts a file dropped on the drawn document where it was let go', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'First.\n\nSecond.'}
+        mode="wysiwyg"
+        onChange={onChange}
+        onUploadImage={async () => '/a.png'}
+        // Tall enough that the document is under the toolbar rather than
+        // behind it: the browser is being asked what is at a point, and it
+        // answers about whatever is drawn on top.
+        style={{ height: '22rem' }}
+      />
+    );
+
+    const second = bodyOf(screen).querySelectorAll('p')[1];
+    const box = second.getBoundingClientRect();
+    const data = new DataTransfer();
+
+    data.items.add(png('cat.png'));
+    bodyOf(screen).dispatchEvent(
+      new DragEvent('dragenter', { dataTransfer: data, bubbles: true, cancelable: true })
+    );
+    second.dispatchEvent(
+      new DragEvent('drop', {
+        dataTransfer: data,
+        clientX: box.left + 1,
+        clientY: box.top + box.height / 2,
+        bubbles: true,
+        cancelable: true
+      })
+    );
+
+    // In the second paragraph, where the pointer was — not at the caret, which
+    // never went anywhere.
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('First.\n\n![cat](/a.png)Second.')
+    );
+  });
+
+  it('does nothing at all with a file when nobody said where an image goes', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Before." modes={['plain']} onChange={onChange} />
+    );
+
+    const event = drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
+
+    // Not even refused: Mawy has nowhere to put bytes, so the drop is not one
+    // it is taking, and the page is left to do whatever it was going to.
+    expect(event.defaultPrevented).toBe(false);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('takes a screenshot off the clipboard, on both surfaces', async () => {
+    for (const modes of [['plain'], ['wysiwyg']] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Before."
+          modes={modes}
+          onChange={onChange}
+          onUploadImage={async () => ({ url: '/s.png', alt: 'A screenshot' })}
+        />
+      );
+
+      if (modes[0] === 'plain') {
+        const input = sourceOf(screen);
+
+        input.focus();
+        input.setSelectionRange(7, 7);
+        pasteFiles(input, [png()]);
+      } else {
+        put(bodyOf(screen), 'Before.', 7);
+        pasteFiles(bodyOf(screen), [png()]);
+      }
+
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith('Before.![A screenshot](/s.png)')
+      );
+    }
+  });
+
+  it('leaves a clipboard that has markup on it to the markup', async () => {
+    const onChange = vi.fn();
+    const onUploadImage = vi.fn(async () => '/never.png');
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onChange={onChange}
+        onUploadImage={onUploadImage}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    pasteFiles(input, [png()], {
+      'text/html': '<p>A <img src="/already.png" alt="cat"> here</p>'
+    });
+
+    // The image is already on the web and the page said what it was called.
+    await vi.waitFor(() => expect(input.value).toContain('![cat](/already.png)'));
+    expect(onUploadImage).not.toHaveBeenCalled();
+  });
+
+  it('says so while it is uploading, and says so when it could not', async () => {
+    let settle: (url: string) => void = () => {};
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onUploadImage={() => new Promise<string>((resolve) => (settle = resolve))}
+      />
+    );
+    const editor = screen.container.querySelector('.mawy-editor') as HTMLElement;
+
+    drop(editor, [png()]);
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-editor-note')?.textContent).toBe(
+        'Adding the image…'
+      )
+    );
+
+    settle('/a.png');
+
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-editor-note')).toBe(null));
+
+    const failing = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onUploadImage={() => {
+          throw new Error('nope');
+        }}
+      />
+    );
+
+    drop(failing.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
+
+    await vi.waitFor(() => {
+      const note = failing.container.querySelector('.mawy-editor-note');
+
+      expect(note?.textContent).toBe('That image could not be added.');
+      expect(note?.getAttribute('data-mawy-failed')).toBe('true');
+    });
+  });
+
+  it('does not upload into a read-only editor', async () => {
+    const onUploadImage = vi.fn(async () => '/a.png');
+    const screen = await render(
+      <MawyEditor defaultValue="Before." modes={['plain']} readOnly onUploadImage={onUploadImage} />
+    );
+
+    drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
+
+    expect(onUploadImage).not.toHaveBeenCalled();
+  });
+});
+
+/**
  * Undo, over the document rather than over a surface.
  *
  * The source surface has the browser's own stack and the drawn one has nothing

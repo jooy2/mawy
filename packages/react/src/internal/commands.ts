@@ -22,6 +22,7 @@ export type MawyCommand =
   | 'strikethrough'
   | 'code'
   | 'link'
+  | 'image'
   | 'heading1'
   | 'heading2'
   | 'heading3'
@@ -177,21 +178,32 @@ function toggleWrap(state: EditState, marker: string): EditState {
   };
 }
 
-function insertLink(state: EditState): EditState {
+/**
+ * A link, or an image, which is a link written with a `!` in front of it.
+ *
+ * The same command twice over rather than two of them, because the only
+ * difference between what they write is that one character — and the halves
+ * mean the same things: a URL selected becomes the destination, and anything
+ * else becomes the words, or the description a reader who cannot see the
+ * image is given.
+ */
+function insertLink(state: EditState, image: boolean): EditState {
   const { value, start, end } = state;
   const selected = value.slice(start, end);
   const isUrl = /^(?:https?:\/\/|mailto:|\/|\.\/|#)\S*$/.test(selected.trim());
 
+  const mark = image ? '!' : '';
   const label = isUrl ? '' : selected;
   const url = isUrl ? selected.trim() : 'url';
-  const text = `[${label}](${url})`;
+  const text = `${mark}[${label}](${url})`;
+  // Whichever half is the placeholder is what comes out selected, so the next
+  // thing typed replaces it.
+  const at = start + mark.length + (isUrl ? 1 : label.length + 3);
 
   return {
     value: value.slice(0, start) + text + value.slice(end),
-    // Whichever half is the placeholder is what comes out selected, so the
-    // next thing typed replaces it.
-    start: isUrl ? start + 1 : start + label.length + 3,
-    end: isUrl ? start + 1 : start + label.length + 3 + url.length
+    start: at,
+    end: isUrl ? at : at + url.length
   };
 }
 
@@ -238,7 +250,9 @@ export function runCommand(command: MawyCommand, state: EditState): EditState {
     case 'code':
       return toggleWrap(state, '`');
     case 'link':
-      return insertLink(state);
+      return insertLink(state, false);
+    case 'image':
+      return insertLink(state, true);
     case 'heading1':
       return toggleHeading(state, 1);
     case 'heading2':

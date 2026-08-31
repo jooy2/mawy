@@ -42,6 +42,7 @@ export type MawyEditorToolbarItem =
   | 'strikethrough'
   | 'code'
   | 'link'
+  | 'image'
   | 'heading'
   | 'quote'
   | 'bulletList'
@@ -58,6 +59,41 @@ export type MawyEditorToolbarItem =
  * this order.
  */
 export type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
+
+/**
+ * Where an image ends up, once one has been dropped on the editor or pasted
+ * into it.
+ *
+ * This is a prop rather than a behaviour because Mawy has nowhere to put bytes.
+ * It is a component inside somebody else's application, and whether an image
+ * belongs in an object store, behind an upload endpoint, or inline as a `data:`
+ * URI is that application's decision — one with a bill attached, and not one a
+ * text editor should make on its own. With no `onUploadImage`, a dropped file
+ * does nothing: an image *already on the web*, pasted as part of a page, still
+ * arrives as the URL it already had.
+ *
+ * What comes back is the URL to write, or the URL with what to write beside it:
+ *
+ * ```tsx
+ * <MawyEditor onUploadImage={async (file) => (await save(file)).url} />
+ * ```
+ *
+ * Throwing, or coming back with nothing, is how an upload says it failed, and
+ * the editor says so and writes nothing.
+ */
+export type MawyImageUpload = (
+  file: File
+) => MawyImageSource | null | Promise<MawyImageSource | null>;
+
+/** A URL, or a URL with the words that go around it in the Markdown. */
+export type MawyImageSource =
+  | string
+  | {
+      url: string;
+      /** What the image is, for a reader who is not seeing it. */
+      alt?: string;
+      title?: string;
+    };
 
 /**
  * What the editor counts and shows along its bottom edge.

@@ -82,6 +82,16 @@ describe('links', () => {
   it('recognises a selected URL as the destination rather than the label', () => {
     expect(run('link', 'see «https://a.example» here')).toBe('see [|](https://a.example) here');
   });
+
+  it('writes an image as the same thing with a `!` in front of it', () => {
+    // The halves mean the same things: a URL selected is where it lives, and
+    // anything else is what a reader who is not seeing it is told instead.
+    expect(run('image', 'see «a cat» here')).toBe('see ![a cat](«url») here');
+    expect(run('image', 'see «https://a.example/c.png» here')).toBe(
+      'see ![|](https://a.example/c.png) here'
+    );
+    expect(run('image', 'here |')).toBe('here ![](«url»)');
+  });
 });
 
 describe('line markers', () => {

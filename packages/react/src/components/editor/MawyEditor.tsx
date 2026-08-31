@@ -9,6 +9,7 @@ import type {
   MawyEditorStatusItem,
   MawyFont,
   MawyHtmlPolicy,
+  MawyImageUpload,
   MawyLocale,
   MawyMode,
   MawyParseOptions,
@@ -25,6 +26,7 @@ import {
   type MawyCommand
 } from '../../internal/commands.js';
 import type { MawyAim, MawyEdit } from '../../internal/editing.js';
+import { imageFilesIn, markdownForImage, pastedImagesIn } from '../../internal/images.js';
 import { markdownFromHtml } from '../../internal/markdown/paste.js';
 import {
   difference,
@@ -99,6 +101,20 @@ export interface MawyEditorProps extends Omit<
   /** @default true */
   status?: MawyEditorStatusOption;
 
+  /**
+   * Where an image goes, when one is dropped on the editor or pasted into it as
+   * a file. Called once per file, and answered with the URL to write.
+   *
+   * Without it a dropped file does nothing at all, which is the honest default:
+   * Mawy has nowhere to put bytes and the place they belong is the
+   * application's decision. `MawyImageUpload` has the rest of why. Nothing here
+   * touches an image that is already on the web — one pasted as part of a page
+   * arrives as the URL it already had, upload or no upload — and nothing here
+   * touches the toolbar's image button, which writes `![](url)` for you to fill
+   * in.
+   */
+  onUploadImage?: MawyImageUpload;
+
   /* The preview's half of the props, passed straight through to the viewer. */
   parse?: MawyParseOptions;
   html?: MawyHtmlPolicy;
@@ -137,6 +153,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     lineNumbers = true,
     toolbar = true,
     status = true,
+    onUploadImage,
     parse,
     html = 'escape',
     fonts = MAWY_SYSTEM_FONTS,
@@ -184,9 +201,19 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const restoring = React.useRef(false);
   /** The document and the caret as they were drawn, which is what undo stores. */
   const drew = React.useRef<MawyStep>({ value: text, start: 0, end: 0 });
+  /** Held in a ref because an upload finishes several renders after it began. */
+  const upload = React.useRef(onUploadImage);
+  /** How many drops or pastes are still uploading, so one note covers them all. */
+  const running = React.useRef(0);
+  /** Enters and leaves counted, rather than trusted one at a time. */
+  const depth = React.useRef(0);
+  const [dragging, setDragging] = React.useState(false);
+  /** What the editor is saying about an upload, under the document. */
+  const [note, setNote] = React.useState<{ text: string; failed: boolean } | null>(null);
 
   React.useEffect(() => {
     notify.current = onChange;
+    upload.current = onUploadImage;
     drew.current = { value: text, ...selection };
   });
 
@@ -443,6 +470,167 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [readOnly, run, stateNow]
   );
 
+  /* ---------------------------------------------------------------------
+   * Putting an image in
+   * ------------------------------------------------------------------ */
+
+  /**
+   * The document with something written into it at a place that was decided
+   * earlier — where a file was dropped, or where the caret was when it was
+   * pasted. An upload finishes several renders after it began, so the offset is
+   * clamped to whatever the document has become in the meantime rather than
+   * trusted.
+   */
+  const insertAt = React.useCallback(
+    (offset: number, markdown: string) => {
+      const value = drew.current.value;
+      const at = Math.max(0, Math.min(offset, value.length));
+
+      run(
+        { value, start: at, end: at },
+        {
+          value: value.slice(0, at) + markdown + value.slice(at),
+          start: at + markdown.length,
+          end: at + markdown.length
+        }
+      );
+    },
+    [run]
+  );
+
+  /**
+   * Files put into the document as images, one upload at a time.
+   *
+   * One edit at the end rather than one per file: it is one thing the writer
+   * did, so it is one step to take back — and an offset that has to survive
+   * several awaits is an offset that goes wrong the moment anything else is
+   * typed.
+   */
+  const addImages = React.useCallback(
+    async (files: readonly File[], at: number) => {
+      const hook = upload.current;
+
+      if (!hook || readOnly || !files.length) {
+        return;
+      }
+
+      running.current += 1;
+      setNote({ text: strings.uploading, failed: false });
+
+      const written: string[] = [];
+      let failed = false;
+
+      for (const file of files) {
+        try {
+          const source = await hook(file);
+
+          if (source) {
+            written.push(markdownForImage(source, file));
+          } else {
+            // Nothing back is how an upload says no without saying why.
+            failed = true;
+          }
+        } catch {
+          failed = true;
+        }
+      }
+
+      running.current -= 1;
+
+      if (written.length) {
+        insertAt(at, written.join('\n\n'));
+      }
+
+      if (failed) {
+        setNote({ text: strings.uploadFailed, failed: true });
+      } else if (running.current === 0) {
+        setNote(null);
+      }
+    },
+    [insertAt, readOnly, strings]
+  );
+
+  /**
+   * Where a file was dropped, in the document's own offsets.
+   *
+   * On the drawn document that is the point it was let go over, read back
+   * through the same machinery a click in the preview uses. In a textarea the
+   * browser has already moved the caret there while the file was being dragged,
+   * which is the only answer that surface has and is the right one.
+   */
+  const dropPoint = React.useCallback(
+    (event: React.DragEvent): number => {
+      const element = drawn.current;
+
+      if (showDocument && element) {
+        const point = caretFromPoint(event.clientX, event.clientY);
+        const at = point && sourceAt(element, point.node, point.offset, text);
+
+        if (at !== null && at !== undefined) {
+          return at;
+        }
+      }
+
+      return source.current?.selectionStart ?? selection.start;
+    },
+    [showDocument, text, selection.start]
+  );
+
+  const carriesImage = (event: React.DragEvent) =>
+    Boolean(upload.current) && editable && [...event.dataTransfer.types].includes('Files');
+
+  const onDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!carriesImage(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    depth.current += 1;
+    setDragging(true);
+  };
+
+  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!carriesImage(event)) {
+      return;
+    }
+
+    // Without this the browser opens the file itself, replacing the page.
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const onDragLeave = () => {
+    // Dragging across a child fires leave on the parent, so the enters and the
+    // leaves are counted rather than trusted one at a time.
+    depth.current = Math.max(depth.current - 1, 0);
+
+    if (depth.current === 0) {
+      setDragging(false);
+    }
+  };
+
+  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!carriesImage(event)) {
+      return;
+    }
+
+    const files = imageFilesIn(event.dataTransfer);
+    const at = dropPoint(event);
+
+    depth.current = 0;
+    setDragging(false);
+
+    // Only a drop that is being taken is refused to the browser. Everything
+    // else — a run of text dragged from another window — is still the surface's
+    // own business, and it has rules for that already.
+    if (!files.length) {
+      return;
+    }
+
+    event.preventDefault();
+    void addImages(files, at);
+  };
+
   /**
    * A paste into the source, read back as Markdown where there is any to read.
    *
@@ -453,9 +641,23 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const onPaste = React.useCallback(
     (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const state = readOnly ? null : stateNow();
-      const markdown = state ? markdownFromHtml(event.clipboardData.getData('text/html')) : '';
 
-      if (!state || !markdown) {
+      if (!state) {
+        return;
+      }
+
+      const images = upload.current ? pastedImagesIn(event.clipboardData) : [];
+
+      if (images.length) {
+        event.preventDefault();
+        void addImages(images, state.start);
+
+        return;
+      }
+
+      const markdown = markdownFromHtml(event.clipboardData.getData('text/html'));
+
+      if (!markdown) {
         return;
       }
 
@@ -466,7 +668,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         end: state.start + markdown.length
       });
     },
-    [readOnly, run, stateNow]
+    [addImages, readOnly, run, stateNow]
   );
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
@@ -673,6 +875,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       className={['mawy-root', 'mawy-editor', className].filter(Boolean).join(' ')}
       data-mawy-color-scheme={scheme}
       data-mawy-mode={current}
+      data-mawy-dragging={dragging ? 'true' : undefined}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
     >
       {items.length ? (
         <MawyEditorToolbar
@@ -725,6 +932,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               strings={strings}
               room={room}
               aim={aim}
+              onImages={onUploadImage ? addImages : undefined}
             />
           </div>
         ) : null}
@@ -751,6 +959,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         ) : null}
       </div>
 
+      {note ? (
+        // `status` rather than `alert`: an upload finishing is not an
+        // interruption, and a screen reader is told at the next pause either
+        // way. The failure keeps the line until the next attempt, the way the
+        // viewer keeps a file it could not read.
+        <p className="mawy-editor-note" role="status" data-mawy-failed={note.failed || undefined}>
+          {note.text}
+        </p>
+      ) : null}
+
       {statusItems.length && (showSource || showDocument) ? (
         <MawyEditorStatus
           value={text}
@@ -759,6 +977,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           strings={strings}
           locale={locale}
         />
+      ) : null}
+
+      {dragging ? (
+        <div className="mawy-drop-veil" aria-hidden="true">
+          <span>{strings.dropImage}</span>
+        </div>
       ) : null}
     </div>
   );

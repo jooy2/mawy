@@ -1311,6 +1311,20 @@
 
 /* The status bar ---------------------------------------------------------- */
 
+/* What the editor says about an upload, between the document and the counts. */
+.mawy-root .mawy-editor-note {
+  margin: 0;
+  padding: 6px 12px;
+  border-top: 1px solid var(--mawy-border);
+  background: var(--mawy-chrome);
+  color: var(--mawy-fg-muted);
+  font-size: 12px;
+}
+
+.mawy-root .mawy-editor-note[data-mawy-failed] {
+  color: var(--mawy-caution);
+}
+
 .mawy-root .mawy-status {
   display: flex;
   flex-wrap: wrap;

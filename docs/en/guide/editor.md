@@ -96,10 +96,7 @@ An input method is the one thing that **cannot** be refused, and it is handled t
 
 Refusing a composition is refusing the composition. Korean is composed a jamo at a time, and an editor that answers each of them with "no" cannot write Korean at all. Pressing `Enter` and composing straight into the empty paragraph works too, because with no run of text to be in yet it is the block itself that is remembered.
 
-What does not work yet, and does nothing at all rather than something half-right:
-
-- **Raw HTML that is being drawn rather than shown.** Under `sanitize` and `raw` the markup reached the page through `dangerouslySetInnerHTML`, which means React does not know what is inside it and could not put it back. Under `escape` — the default — it is text like any other text, and edits like any other.
-- **Putting an image in.** One pasted or dropped as part of a web page arrives as an image, because that is markup; one on the clipboard as a _file_ — a screenshot — does not, because there is nowhere for the bytes to go until an application says where.
+One thing does not work yet, and does nothing at all rather than something half-right: **raw HTML that is being drawn rather than shown.** Under `sanitize` and `raw` the markup reached the page through `dangerouslySetInnerHTML`, which means React does not know what is inside it and could not put it back. Under `escape` — the default — it is text like any other text, and edits like any other.
 
 ## Input rules
 
@@ -153,10 +150,37 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | --- | --- |
 | `'mode'` | The surface switch |
 | `'heading'` | A menu of heading 1, 2, 3 and body text |
-| `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'` | Inline formatting |
+| `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
 | `'colorScheme'` | Light, dark, or whatever the system says |
 | `'separator'` | A hairline, for grouping |
+
+## Images
+
+Three ways in, and they are three because an image can arrive already having a URL, or not having one yet.
+
+**The toolbar's image button** writes `![](url)` with the destination selected, ready to be typed over — the link button with a `!` in front of it, and the same rules: select a URL first and it becomes the destination, select anything else and it becomes the description a reader who is not seeing the image is given. It needs nothing from the application and is always there.
+
+**An image pasted or dropped as part of a web page** arrives as the URL it already had. That is not an image feature at all — it is markup, and [pasting](#pasting) reads markup. Nothing is uploaded, because there is nothing to upload: the picture is already on the web.
+
+**A file** — a screenshot on the clipboard, an image dragged in from the desktop — needs somewhere for its bytes to go, and that is the one thing this library cannot decide. Whether an image belongs in an object store, behind an upload endpoint, or inline as a `data:` URI is a question with a bill attached, and a text editor should not answer it on somebody else's behalf. So it is a prop:
+
+```tsx
+<MawyEditor
+  defaultValue={document}
+  onUploadImage={async (file) => {
+    const { url } = await save(file);
+
+    return url;
+  }}
+/>
+```
+
+Answer with the URL to write, or with `{ url, alt, title }` to say what goes around it — the file's own name, without its extension, is the description otherwise. Throw, or answer with nothing, and the editor says the image could not be added and writes nothing at all.
+
+**Without `onUploadImage`, a dropped file does nothing.** Not refused, not half-inserted: the drop is simply not one the editor is taking. That is the honest default rather than a gap — the alternative is quietly turning a two-megabyte screenshot into a `data:` URI inside somebody's document.
+
+Where the image lands is where it was put: a drop goes to the point the pointer let go of it, and a paste goes to the caret. Several files dropped together are one upload after another and then **one** edit, so `Mod`+`Z` takes back the thing you did rather than the last file of it.
 
 ## Undo
 
@@ -190,7 +214,6 @@ Two of those count more carefully than they look. **Characters** are code points
 
 ## Still to come
 
-- Images.
 - The extension point, so a document can carry a construct this package does not know about.
 
 ## Accessibility

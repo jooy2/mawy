@@ -24,6 +24,7 @@ export {
   Heading2 as Heading2Icon,
   Heading3 as Heading3Icon,
   Heading as HeadingIcon,
+  Image as ImageIcon,
   Italic as ItalicIcon,
   Link as LinkIcon,
   List as BulletListIcon,

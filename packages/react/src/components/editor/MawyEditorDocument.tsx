@@ -15,6 +15,7 @@ import {
   type MawyAim,
   type MawyEdit
 } from '../../internal/editing.js';
+import { pastedImagesIn } from '../../internal/images.js';
 import { sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
@@ -40,6 +41,12 @@ export interface MawyEditorDocumentProps {
    * layout effect, and what reads it is an event handler rather than a render.
    */
   aim: React.RefObject<MawyAim | null>;
+  /**
+   * Files on the clipboard, put in as images. Absent when the application has
+   * not said where an image goes, which is when there is nothing to be done
+   * with one — see `MawyImageUpload`.
+   */
+  onImages?: (files: readonly File[], at: number) => void;
 }
 
 /**
@@ -80,7 +87,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       html,
       strings,
       room,
-      aim
+      aim,
+      onImages
     },
     ref
   ) {
@@ -147,8 +155,24 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
-        const where = element.ownerDocument.getSelection()?.anchorNode;
+        const selection = element.ownerDocument.getSelection();
+        const where = selection?.anchorNode;
         const literal = Boolean(where && blockAt(element, where)?.tagName === 'PRE');
+        const images = onImages ? pastedImagesIn(event.clipboardData) : [];
+
+        if (images.length && !literal) {
+          // A file on the clipboard with no markup beside it is a screenshot.
+          // Inside a code block it is not one, because everything in there is
+          // the characters it is.
+          const at = where
+            ? documentAt(element, where, selection?.anchorOffset ?? 0, value, aim.current)
+            : null;
+
+          onImages?.(images, at ?? value.length);
+
+          return;
+        }
+
         const edit = editForText(
           element,
           value,
@@ -168,7 +192,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('beforeinput', refuse);
         element.removeEventListener('paste', paste);
       };
-    }, [value, readOnly, onEdit, aim]);
+    }, [value, readOnly, onEdit, onImages, aim]);
 
     /**
      * `selectionchange` on the document rather than anything on the element:
