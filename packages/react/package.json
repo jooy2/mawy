@@ -1,5 +1,5 @@
 {
-  "name": "mawy",
+  "name": "mawy-react",
   "version": "0.1.0",
   "description": "A Markdown editor that also does the reading — write in WYSIWYG or in the source, switch freely, and show the finished document through a read-only viewer.",
   "type": "module",
@@ -19,7 +19,7 @@
     "url": "https://github.com/jooy2/mawy/issues"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.prod.json && node scripts/build-styles.mjs",
+    "build": "node scripts/clean.mjs && tsc --project tsconfig.prod.json && node scripts/build-styles.mjs",
     "lint": "eslint . --report-unused-disable-directives",
     "lint:fix": "eslint . --report-unused-disable-directives --fix",
     "prepare": "npm run build",
