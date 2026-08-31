@@ -3,12 +3,21 @@ import { writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ReactPlugin from '@vitejs/plugin-react';
+import container from 'markdown-it-container';
 import { withSidebar } from 'vitepress-sidebar';
 import packageJson from '../../packages/react/package.json' with { type: 'json' };
-import { defineConfig, HeadConfig, SiteData, TransformContext, UserConfig } from 'vitepress';
+import {
+  defineConfig,
+  HeadConfig,
+  MarkdownRenderer,
+  SiteData,
+  TransformContext,
+  UserConfig
+} from 'vitepress';
 import { withI18n } from 'vitepress-i18n';
 import type { VitePressI18nOptions } from 'vitepress-i18n/types';
 import type { VitePressSidebarOptions } from 'vitepress-sidebar/types';
+import { FRAMEWORK_HEAD_SCRIPT, FRAMEWORK_IDS } from './data/frameworks';
 
 const vitePressDir = dirname(fileURLToPath(import.meta.url));
 /** `docs/`, which is where the locale folders live and what VitePress serves. */
@@ -320,10 +329,46 @@ const vitePressConfig: UserConfig = {
     // `summary` and not `summary_large_image`: the image is a square mark, and
     // a wide card would letterbox it into a strip of background.
     ['meta', { name: 'twitter:card', content: 'summary' }],
-    ['meta', { name: 'twitter:image', content: socialImage }]
+    ['meta', { name: 'twitter:image', content: socialImage }],
+    // Which package's half of every page is displayed, applied to `<html>`
+    // before the first paint. See `data/frameworks.ts`.
+    ['script', {}, FRAMEWORK_HEAD_SCRIPT]
   ],
   sitemap: {
     hostname: packageJson.homepage
+  },
+  /**
+   * `::: fw react` … `:::` — the block that only one package's readers see.
+   *
+   * Both halves are in the document and CSS displays one of them, which is what
+   * makes the switch instant and what keeps the two from being two pages that
+   * drift apart. It also means the search index carries both, so a reader
+   * looking up `onLinkTap` finds the viewer page whichever package they had
+   * selected.
+   */
+  markdown: {
+    config(md: MarkdownRenderer) {
+      md.use(container, 'fw', {
+        validate: (params: string) => /^fw(\s+\S+)+$/.test(params.trim()),
+        render(tokens: { nesting: number; info: string }[], index: number) {
+          const token = tokens[index];
+
+          if (token.nesting !== 1) {
+            return '</div>\n';
+          }
+
+          // `::: fw flutter`, and `::: fw react flutter` for a block both of
+          // them want but nobody else does.
+          const wanted = token.info
+            .trim()
+            .split(/\s+/)
+            .slice(1)
+            .filter((id) => FRAMEWORK_IDS.includes(id));
+
+          return `<div class="mawy-fw" data-fw="${wanted.join(' ')}">\n`;
+        }
+      });
+    }
   },
   /* -------------------------------------------------------------------------
    * The live demos

@@ -1,0 +1,239 @@
+/**
+ * The framework switch.
+ *
+ * Every `::: fw` block and every `<Fw>` phrase is in the document at once; this
+ * file is what displays one of them. Doing it in CSS rather than with `v-if`
+ * buys three things at the cost of some page weight:
+ *
+ * - **No flash.** The inline script in `<head>` writes `data-fw` on `<html>`
+ *   before the first paint, so the wrong half is never drawn. A `v-if` cannot
+ *   run before hydration.
+ * - **No hydration mismatch.** The server renders both halves, which is what
+ *   the client renders too.
+ * - **Both halves are searchable.** VitePress builds its index from the
+ *   rendered page, so a reader looking up `onLinkTap` finds the viewer page
+ *   whichever framework they had selected.
+ *
+ * `data-fw` on a block holds a space-separated list, because a block that two
+ * frameworks want and a third does not is a real case — hence `~=` rather than
+ * `=`.
+ */
+
+/*
+ * Written as "hide the other one" rather than "hide everything, then show this
+ * one", because the second shape has to name a `display` value to come back to
+ * — and a `::: fw` block is a `<div>` while an `<Fw>` phrase is a `<span>` or a
+ * `<code>`. The half that is displayed is left with no `display` declaration
+ * from this file at all, so whatever it would otherwise be, it stays.
+ *
+ * One rule per framework — there is no way to write this once for a list.
+ */
+html[data-fw='react'] .mawy-fw[data-fw]:not([data-fw~='react']),
+html[data-fw='flutter'] .mawy-fw[data-fw]:not([data-fw~='flutter']) {
+  display: none;
+}
+
+/*
+ * The first block in a fold has the margin the paragraph above it already
+ * spent, so a `::: fw` wrapper must not add one of its own — it is a bracket
+ * around content, not a section.
+ */
+.vp-doc .mawy-fw > :first-child {
+  margin-top: 0;
+}
+
+.vp-doc .mawy-fw > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * The switch itself, at the top of the sidebar
+ *
+ * Drawn from VitePress's own variables rather than the library's: it is part of
+ * the site's chrome and it sits among the site's navigation, so it should look
+ * like the sidebar it is in rather than like the components it is about.
+ *
+ * The one exception is the marks, which carry their products' own colours —
+ * see `FrameworkMark.vue`.
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Pinned to the top of the sidebar's own scroller.
+ *
+ * The menu is fifty entries long and the switch decides what every one of them
+ * will say, so a reader four groups down who wants the other framework should
+ * not have to scroll back up to a control they can no longer see. It is the one
+ * thing in the sidebar that is not a link, which is also what makes it safe to
+ * pin: nothing is hidden behind it that the reader was on their way to.
+ *
+ * `top: 0` is the scrollport's own top, above the sidebar's 64px of top
+ * padding, so the switch comes to rest tight under the navbar — its own 12px is
+ * the gap. It needs the sidebar's background to be opaque, and a z-index over
+ * VitePress's `.curtain`, which is the sticky band already masking that padding.
+ */
+.mawy-fw-switch {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  /* The sidebar hands its content the top edge, and a control pressed against
+     it reads as part of the header above rather than as the first thing in the
+     menu. The gap below the rule is padding rather than margin, because a
+     margin is transparent — and 4px of transparency on a pinned strip is 4px of
+     the menu sliding through it. */
+  padding: 12px 0 24px;
+  border-bottom: 1px solid var(--vp-c-divider);
+  background-color: var(--vp-sidebar-bg-color);
+}
+
+.mawy-fw-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--vp-c-text-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A track with the options laid side by side, so both are always readable and
+   the selected one is a position rather than a word you have to go and find. */
+.mawy-fw-track {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background-color: var(--vp-c-bg-alt);
+}
+
+.mawy-fw-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  border-radius: 7px;
+  color: var(--vp-c-text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color 0.16s,
+    background-color 0.16s,
+    box-shadow 0.16s;
+}
+
+/* Present to every other kind of reader, and to the arrow keys, but not drawn:
+   the `<label>` around it is the control as far as the eye is concerned. */
+.mawy-fw-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.mawy-fw-option:hover {
+  color: var(--vp-c-text-1);
+}
+
+/*
+ * The chosen option, read off `<html>` rather than off a class the component
+ * writes.
+ *
+ * Which is a detour, and it is the same detour the top of this file takes for
+ * the `::: fw` blocks, for the same reason: `data-fw` is set by the inline head
+ * script before the first paint, and a class is set by Vue after hydration. A
+ * pre-rendered page whose switch is drawn from a class shows the *default*
+ * highlighted for as long as it takes the bundle to arrive — on the one control
+ * whose whole job is to say which of the two you are reading.
+ *
+ * One rule per framework, since a child cannot be matched against an ancestor's
+ * attribute value in CSS. See `FrameworkSelect.vue` for the half of this that
+ * keeps the radio itself honest.
+ */
+html[data-fw='react'] .mawy-fw-option[data-fw='react'],
+html[data-fw='flutter'] .mawy-fw-option[data-fw='flutter'] {
+  background-color: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  box-shadow:
+    0 0 0 1px var(--vp-c-divider),
+    0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+/* On the label, because the input it belongs to has no box to draw one on. */
+.mawy-fw-option:has(input:focus-visible) {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+/* Quiet on the option that is not chosen, so the row reads as one selected
+   thing rather than two competing ones. */
+.mawy-fw-mark {
+  flex: none;
+  opacity: 0.5;
+  transition: opacity 0.16s;
+}
+
+html[data-fw='react'] .mawy-fw-option[data-fw='react'] .mawy-fw-mark,
+html[data-fw='flutter'] .mawy-fw-option[data-fw='flutter'] .mawy-fw-mark,
+.mawy-fw-option:hover .mawy-fw-mark {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * When a page has nothing to say for the selected framework
+ * ------------------------------------------------------------------------- */
+
+.mawy-fw-missing {
+  padding: 14px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background-color: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/*
+ * An outline entry for a heading the selected framework cannot see.
+ *
+ * Set by `Layout.vue`, which is the only thing that can match an outline link
+ * to the block its heading sits in — the outline is built from the Markdown,
+ * and the blocks only exist in the DOM.
+ */
+.mawy-fw-hidden {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * A preview, in whichever package the reader picked
+ * ------------------------------------------------------------------------- */
+
+/*
+ * The Flutter half is a frame, so it needs a height of its own: an `<iframe>`
+ * has no content this page can measure.
+ */
+.mawy-demo-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: inherit;
+}
+
+/* Said once, above the React half that is being shown instead. */
+.mawy-demo-missing {
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--vp-c-divider);
+  background-color: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}

@@ -25,19 +25,34 @@ When creating an issue, keep the following in mind:
 
 The repository holds one library, shipped per language, and one documentation site shared by all of them:
 
-| Path             | What it is                                       | How it is run                                                                        |
-| ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `packages/react` | The npm package, `mawy-react`                    | `cd packages/react && npm install`, then `npm test`, `npm run lint`, `npm run build` |
-| `docs`           | The documentation site, shared by every language | `cd docs && npm install`, then `npm run dev`                                          |
+| Path               | What it is                                          | How it is run                                                                        |
+| ------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `packages/react`   | The npm package, `mawy-react`                       | `cd packages/react && npm install`, then `npm test`, `npm run lint`, `npm run build` |
+| `packages/flutter` | The pub.dev package, `mawy`                         | `cd packages/flutter && flutter pub get`, then `flutter test`, `dart analyze`        |
+| `docs`             | The documentation site, shared by every framework   | `cd docs && npm install`, then `npm run dev`                                          |
 
-There is no install at the repository root, and no root `package.json` — each folder is entered and run on its own.
+There is no install at the repository root, and no root manifest of any kind — each folder is entered and run on its own.
 
-A Flutter package is planned and will arrive as `packages/flutter`, with a changelog of its own beside its own manifest. Until then, "the package" means the React one.
+## One library, shipped twice
+
+The two packages are one library. Not "similar", not "ported in spirit": the Dart parser is the TypeScript parser, file for file and function for function, and the palette is `styles.css`'s custom properties value for value.
+
+That is a claim, so it is checked. `packages/flutter/tool/parity.dart` and `packages/react/scripts/parity.mjs` print both parsers' trees in one shape, over the awkward cases written down in `tool/corpus.json` plus **every Markdown file in the repository**, and the two are diffed:
+
+```bash
+cd packages/react && npm run parity > /tmp/react.json
+cd ../flutter && dart run tool/parity.dart > /tmp/flutter.json
+diff /tmp/react.json /tmp/flutter.json
+```
+
+CI runs it on every change to either parser. Two implementations of CommonMark drift the moment nobody is comparing them, and a document that means one thing in a browser and another in an app is the bug this whole library exists to not have. **A change to one parser is a change to both**, and the diff is how you find out you forgot.
 
 A few notes that are easy to trip over:
 
 - **Each package keeps its own `CHANGELOG.md`,** beside its manifest, where npm and a reader browsing that package expect to find it. The documentation site's copy is generated from it by `docs/scripts/copy-changelog.mjs` and is git-ignored — edit the package's file, never the one under `docs/`.
 - **A change usually means a change to the docs in _both_ languages.** `docs/en` and `docs/ko` mirror each other page for page. If you cannot write the Korean, write the English and say so in the pull request; a maintainer will follow up rather than let the two drift.
+- **And, where the two packages differ, in _both_ frameworks.** The site is one page per subject with the parts that differ marked up — `::: fw react` and `::: fw flutter` — rather than two folders that agree until they do not. `docs/.vitepress/data/frameworks.ts` is the whole list; the switch is above the sidebar menu. A block that both want and nobody else does is `::: fw react flutter`, and a phrase in the middle of a sentence is `<Fw react="…" flutter="…" />`.
+- **The Flutter previews are the real Flutter build.** The gallery under `packages/flutter/example` is compiled into `docs/public/flutter` by `npm run flutter --prefix docs`, and the previews frame it. Without that build they say so and show the React half, so a Flutter SDK is only needed by somebody who wants to look at the Flutter half.
 - **A `:::` block needs a blank line on each side of its body.** Prettier runs with `proseWrap: "never"` and has never heard of VitePress's custom containers, so a `::: warning` written tight against its text is joined into one line — which stops it being a container at all and spills the rest of the page into the box. The blank lines are what keep the two apart.
 - **The editing surfaces are tested in a real browser.** Selection, ranges, `beforeinput` and `contenteditable` are what this library is made of, and a DOM emulator does not implement them faithfully enough for a passing test to mean anything. See below.
 - **Every rule in `src/styles.css` is scoped under `.mawy-root`.** A viewer is dropped into somebody else's page, and that page has an `article h2` or a `table { display: block }` of its own — both (0,1,1), both enough to beat a single class. The `:where()` resets at the top of the file are the deliberate exception: a reset should be the weakest thing in the room.
@@ -55,6 +70,17 @@ npm run lint         # ESLint
 npx prettier . --check
 npm run typecheck    # tsc, source and tests
 npm test             # Vitest, in a real browser
+```
+
+For the Flutter package:
+
+```bash
+cd packages/flutter
+flutter pub get
+dart analyze
+dart format --set-exit-if-changed lib test tool example/lib
+flutter test
+dart pub publish --dry-run   # pub.dev scores against this
 ```
 
 `npm test` drives [Playwright](https://playwright.dev). The first run needs a browser installed:
@@ -82,7 +108,9 @@ The site pins `vite` to the version VitePress itself runs. Two copies of Vite in
 
 Mawy aims at close to zero runtime dependencies, and that is a design goal rather than a slogan: a Markdown editor is a component inside somebody else's application, and every package it drags in is one they did not choose.
 
-The React package has **one**: [`lucide-react`](https://lucide.dev) (ISC), which is where the toolbar's icons come from. It brings nothing else with it and tree-shakes to the glyphs actually drawn. `test/package/dependencies.test.ts` fails the build if a source file imports anything that is not declared as a dependency or a peer, so the count cannot creep up by accident.
+Each package has **one**, and it is the same one twice: the toolbar's icons. [`lucide-react`](https://lucide.dev) (ISC) for React and [`lucide_icons_flutter`](https://pub.dev/packages/lucide_icons_flutter) (MIT) for Flutter — the same icon set, which is what makes the two toolbars the same toolbar rather than two that resemble each other.
+
+`lucide-react` brings nothing else with it and tree-shakes to the glyphs actually drawn; `packages/react/test/package/dependencies.test.ts` fails the build if a source file imports anything that is not declared as a dependency or a peer, so the count cannot creep up by accident. `lucide_icons_flutter` is the one thing in either package that is not small — it ships its variable faces whole and Flutter's icon tree-shaking barely dents a variable font, so it is about 3 MB in a build. Ordinary in an app bundle; worth knowing about on the web.
 
 **A runtime dependency has to be added in two places.** The documentation site renders the library from `packages/react/src` through an alias, and it installs only its own `node_modules` — so a package the library imports has to be a devDependency of `docs` as well, listed in `resolve.dedupe` in `docs/.vitepress/config.ts` and in `paths` in `docs/tsconfig.json`. Miss any of that and the site still builds on your machine, because `packages/react/node_modules` is sitting there; CI installs one folder at a time and does not have it. To check the way CI sees it, move the package's `node_modules` out of the way and build the site:
 

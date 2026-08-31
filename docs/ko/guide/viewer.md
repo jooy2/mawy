@@ -7,7 +7,9 @@ order: 3
 
 뷰어는 마크다운 문서를 그리고, 편집하지는 않습니다. 에디터가 쓰는 것과 같은 파서, 같은 렌더러를 씁니다. 이것이 뷰어가 남의 라이브러리가 아니라 이 패키지 안에 있는 이유입니다.
 
-<MawyDemo name="viewer/basic" />
+<MawyDemo name="viewer/basic" flutter="viewer/basic" :height="520" />
+
+::: fw react
 
 ```tsx
 import { MawyViewer } from 'mawy-react';
@@ -17,15 +19,39 @@ export function Page({ document }: { document: string }) {
 }
 ```
 
+:::
+
+::: fw flutter
+
+```dart
+import 'package:mawy/mawy.dart';
+
+MawyViewer(value: document);
+```
+
+:::
+
 이게 전부입니다. 채워 넣을 테마 객체도, 등록할 플러그인도, 렌더링을 맡길 두 번째 라이브러리도 없습니다.
 
 ## 왜 같은 패키지에 있나
+
+::: fw flutter
+
+그것은 두 패키지 사이에서도 성립하고, 주장이 아니라 검증됩니다. Dart 파서가 곧 TypeScript 파서입니다 — 같은 파일, 같은 함수, 같은 규칙 — 그리고 `packages/flutter/tool/parity.dart`가 저장소의 모든 마크다운 파일을 둘 다에 통과시켜 트리를 비교합니다. 브라우저에서 한 뜻인 문서는 앱에서도 같은 뜻입니다.
+
+:::
 
 "이걸로 쓰고 저걸로 보여주는" 구성에는 나중에 반박하기 어려운 실패가 하나 있습니다. 작성자가 에디터에서 문서를 쓰고, 화면에서 멀쩡해 보이고, 독자에게는 다르게 그려지는 것입니다. 두 마크다운 구현 사이의 모든 차이 — 목록이 어떻게 중첩되는지, 줄바꿈이 줄바꿈인지, 닫히지 않은 강조가 어떻게 되는지 — 가 전부 그 기회입니다.
 
 파서와 렌더러를 공유하면 이 범주 자체가 사라집니다. 작성자가 `preview`에서 본 것이 곧 뷰어가 그리는 것입니다. 같은 코드 경로이기 때문입니다.
 
 ## 문서는 선택입니다
+
+::: fw flutter
+
+Flutter 패키지에서는 `value`가 필수입니다. 파일을 여는 것은 파일 선택기를 뜻하고, 그것은 플러그인을 뜻합니다. 이 패키지에는 없고 애플리케이션에는 대개 이미 있는 의존성이죠. 그래서 파일을 읽는 것은 여러분의 몫이고 그리는 것이 Mawy의 몫입니다.
+
+:::
 
 `value`는 필수가 아니라 프롭입니다. 편의를 위해서가 아니라, 그것이 이 컴포넌트의 형태이기 때문입니다. 문서가 없으면 뷰어 자체가 **파일 선택기**가 됩니다. `.md` 파일을 끌어다 놓거나, 골라서 열면 됩니다.
 
@@ -107,6 +133,12 @@ Mawy : 이것. : 그리고 그 옆의 에디터.
 
 ## 코드 블록에 색 입히기
 
+::: fw flutter
+
+Flutter 패키지는 지금 코드 블록을 색 없이 그립니다. `MawyHighlighter`는 React의 타입이고, Dart 쪽은 그것을 번역한 것이 아니라 자기 모양을 갖게 될 것입니다.
+
+:::
+
 기본값은 색이 없는 것이고, 빠뜨린 것이 아닙니다. 하이라이터는 마크다운 렌더러가 지고 갈 수 있는 것 중 가장 큰 것이고, 대부분의 문서에는 색을 입힐 것이 없습니다. 그래서 프롭이고, 그 프롭은 **함수**를 받습니다. 펜스에 언어가 적힌 문서를 실제로 그리기 전까지는 가져오지도 않도록.
 
 ```tsx
@@ -143,6 +175,16 @@ const shiki: MawyHighlighter = {
 
 **모든 URL은 HTML 못지않게 마크다운에서도 검사합니다.** `[click](javascript:…)`은 HTML이 하나도 없는 순수 마크다운이므로, 스킴 허용 목록은 HTML 옵션의 일부가 아니고 그것과 함께 꺼지지도 않습니다. 거절된 대상은 작성자가 쓴 낱말 그대로, 링크 없이 그려집니다. 독자는 아무 일도 하지 않는 컨트롤 대신 문장을 봅니다.
 
+::: fw flutter
+
+**원시 HTML은 쓰인 글자 그대로 보이고, 다르게 만들 방법은 없습니다.** Flutter에는 그것을 그릴 HTML이 없으니 다른 것일 수가 없습니다. Flutter 패키지에 `html` 프롭이 아예 없는 이유가 그것입니다. 이 절의 나머지는 React 패키지의 것입니다.
+
+**그리고 아무것도 열지 않습니다.** 탭한 링크는 `onLinkTap`으로 애플리케이션이 "연다"는 것이 무엇인지 말하기 전까지 아무 일도 하지 않습니다. URL을 플랫폼에 넘기는 것은 뷰어가 할 결정이 아닙니다. 스킴 허용목록은 이미 돌았고, 나머지는 여러분 몫입니다.
+
+:::
+
+::: fw react
+
 **문서 안의 원본 HTML은 요청하기 전까지 아무 일도 하지 않습니다.** 그것을 바꿀 수 있는 프롭은 `html` 하나입니다.
 
 | `html`                | 문서 안의 `<div>`는                                                    |
@@ -155,15 +197,35 @@ const shiki: MawyHighlighter = {
 
 `'raw'`는 내용에 대한 책임을 호출자에게 넘깁니다. 이것을 켠 채 신뢰할 수 없는 마크다운을 그린 경우는 취약점 신고의 [범위 밖](https://github.com/jooy2/mawy/blob/main/SECURITY.md)입니다. 그것이 그 값의 문서화된 의미이기 때문입니다.
 
+:::
+
 ## 툴바
 
 툴바는 문서가 무엇을 말하는지가 아니라 문서가 어떻게 **조판되는지**에 대한 것입니다. 독자가 글자를 키우고, 숨 쉴 자리를 넓히고, 명조로 바꿔도 아래의 문서는 그대로입니다.
+
+::: fw react
 
 ```tsx
 <MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />
 ```
 
-<MawyDemo name="viewer/minimal" />
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(
+  value: document,
+  toolbar: const <MawyViewerToolbarItem>[
+    MawyViewerToolbarItem.fontSize,
+    MawyViewerToolbarItem.colorScheme,
+  ],
+);
+```
+
+:::
+
+<MawyDemo name="viewer/minimal" flutter="viewer/minimal" :height="360" />
 
 `toolbar`는 전부를 뜻하는 `true`, 아무것도 없음을 뜻하는 `false`, 또는 그릴 컨트롤과 그릴 순서를 받습니다.
 
@@ -267,6 +329,12 @@ import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 라이트와 다크 중 어느 팔레트를 쓸지는 `colorScheme`이 정하고, 따로 말하지 않으면 `'system'`입니다. `'system'`은 `prefers-color-scheme`을 따르고 `'light'`·`'dark'`는 따르지 않습니다. 그래서 자체 스위치가 있는 애플리케이션은 그것으로 뷰어를 몰 수 있고, 어두운 기기를 쓰는 독자도 요청한 대로 밝은 문서를 받습니다.
 
 ## 페이지의 각 조각이 어디서 왔나
+
+::: fw flutter
+
+범위는 Dart 트리에도 있습니다. 모든 `MdNode`가 하나씩 갖고 있고, 같은 위치값입니다. 없는 것은 그것을 붙일 엘리먼트입니다. DOM이 없으니 범위는 화면에서 읽는 것이 아니라 `parseMarkdown`에서 읽는 것입니다.
+
+:::
 
 뷰어가 그린 모든 엘리먼트는 `data-mawy-range="start,end"`를 갖습니다. 넘겨받은 마크다운에서 그 조각의 첫 글자와 마지막 글자 다음의 위치입니다. 블록, 목록 항목, 표의 행과 셀, 그리고 그 안의 인라인 엘리먼트 — 강조, 링크, 코드 스팬, 이미지까지.
 

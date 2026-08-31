@@ -25,4 +25,4 @@ The first release. Everything in it is new, so each entry says what a thing is r
 
 ### Dependencies
 
-- [`lucide_icons_flutter`](https://pub.dev/packages/lucide_icons_flutter) (MIT), for the toolbar's icons. It is the same icon set `lucide-react` draws, which is what makes the two toolbars the same toolbar. It brings nothing else with it.
+- [`lucide_icons_flutter`](https://pub.dev/packages/lucide_icons_flutter) (MIT), for the toolbar's icons. It is the same icon set `lucide-react` draws, which is what makes the two toolbars the same toolbar, and it brings nothing else with it. It is also the one thing here that is not small: it ships its variable faces whole and Flutter's icon tree-shaking barely dents a variable font, so it is about 3 MB in a build. Ordinary in an app bundle; worth knowing about on the web.

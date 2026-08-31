@@ -1,5 +1,9 @@
 dist/
 ../docs-dist/
+
+# The Flutter gallery, compiled into the site by `npm run flutter`. It is
+# Dart's output rather than anybody's source.
+public/flutter/
 .idea/
 .vscode/
 .vitepress/cache

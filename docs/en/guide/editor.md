@@ -5,6 +5,14 @@ order: 2
 
 # The editor
 
+::: fw flutter
+
+**There is no editor in the Flutter package yet**, and the reason is not that nobody has got to it. Everything below is built on `contenteditable`, `beforeinput` and a DOM selection — every keystroke refused, turned into an edit to the Markdown, and the document drawn again — and none of those three has a Flutter equivalent a port would find. It will be built rather than translated.
+
+The page is still worth reading in Flutter: it is what the viewer has to be able to draw, and the two read a document the same way.
+
+:::
+
 Mawy's editor is one component with several surfaces. `plain` edits the Markdown source as text, `preview` shows the rendered document, and `split` shows both at once. They are views of one value rather than several editors, which is the decision the whole design turns on.
 
 <MawyDemo name="editor/basic" />

@@ -19,6 +19,9 @@ export default pluginTypeScriptESLint.config(
     // and neither ours to lint.
     '**/.vitepress/cache',
     '../docs-dist',
+    // The Flutter gallery, compiled into the site by `npm run flutter`. It is
+    // Dart's output rather than anybody's source.
+    'public/flutter',
     '**/*-lock.json',
     '**/*-lock.yaml'
   ]),

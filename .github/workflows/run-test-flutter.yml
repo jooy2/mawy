@@ -1,0 +1,86 @@
+name: run-test-flutter
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/flutter/**
+      # The parity check reads the React parser, so a change to it can break
+      # this job and nothing else.
+      - packages/react/src/internal/markdown/**
+      - packages/react/scripts/parity.mjs
+      - .github/workflows/run-test-flutter.yml
+  workflow_dispatch:
+
+jobs:
+  run-test-flutter:
+    runs-on: ubuntu-latest
+    name: Analyse and test
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./packages/flutter
+
+      - name: Analyse
+        run: dart analyze
+        working-directory: ./packages/flutter
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed lib test tool example/lib
+        working-directory: ./packages/flutter
+
+      - name: Test
+        run: flutter test
+        working-directory: ./packages/flutter
+
+      # pub.dev scores against this, and a package that would not publish is one
+      # nobody finds out about until release day.
+      - name: Check the package would publish
+        run: dart pub publish --dry-run
+        working-directory: ./packages/flutter
+
+  parity:
+    runs-on: ubuntu-latest
+    name: The two parsers agree
+
+    # The one job that needs both toolchains, and the only thing that makes
+    # "one parser shipped twice" a fact rather than an intention. Two
+    # implementations of CommonMark drift the moment nobody is comparing them.
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./packages/react
+
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./packages/flutter
+
+      - name: Print the React parser's trees
+        run: npm run parity > /tmp/react.json
+        working-directory: ./packages/react
+
+      - name: Print the Dart parser's trees
+        run: dart run tool/parity.dart > /tmp/flutter.json
+        working-directory: ./packages/flutter
+
+      - name: Diff them
+        run: diff /tmp/react.json /tmp/flutter.json

@@ -86,6 +86,16 @@ cd packages/flutter/example
 flutter run
 ```
 
+## A note on size
+
+The icon font is the one thing this package adds that is not small:
+`lucide_icons_flutter` ships its variable faces whole, and Flutter's icon
+tree-shaking barely dents a variable font — about 3 MB in a build. In an app
+bundle that is ordinary and it buys the same icons the React package draws. On
+the web it is 3 MB somebody downloads, so a web build that cares should say so
+with `--no-tree-shake-icons` off the list of things to try and a different icon
+source on it.
+
 ## Related
 
 - [`mawy-react`](https://www.npmjs.com/package/mawy-react) — the same library for

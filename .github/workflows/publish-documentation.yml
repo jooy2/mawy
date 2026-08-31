@@ -45,6 +45,20 @@ jobs:
         run: npm install
         working-directory: ./docs
 
+      # The Flutter previews on the site are the real Flutter build rather than
+      # a screenshot, so the gallery is compiled into `public/flutter` first.
+      # Without this step the previews say so and show the React half — which is
+      # honest, and not what a deployed site should be saying.
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build the Flutter gallery
+        run: npm run flutter
+        working-directory: ./docs
+
       # `build` copies each package's changelog into every locale before
       # VitePress runs.
       - name: Build VitePress site

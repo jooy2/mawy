@@ -5,9 +5,11 @@ order: 3
 
 # The viewer
 
-The viewer renders a Markdown document and does not edit it. It is the same parser and the same renderer the editor uses, which is the point of it being in this package rather than being somebody else's library.
+The viewer renders a Markdown document and does not edit it.
 
-<MawyDemo name="viewer/basic" />
+<MawyDemo name="viewer/basic" flutter="viewer/basic" :height="520" />
+
+::: fw react
 
 ```tsx
 import { MawyViewer } from 'mawy-react';
@@ -17,15 +19,39 @@ export function Page({ document }: { document: string }) {
 }
 ```
 
+:::
+
+::: fw flutter
+
+```dart
+import 'package:mawy/mawy.dart';
+
+MawyViewer(value: document);
+```
+
+:::
+
 That is the whole of it. There is no theme object to fill in, no plugin to register and no second library to do the rendering.
 
 ## Why it is in this package
 
 A written-with-one-thing, displayed-with-another setup has a failure mode that is hard to argue with after the fact: an author writes a document in the editor, it looks right, and it renders differently for the reader. Every difference between two Markdown implementations — how a list nests, whether a line break is a break, what an unclosed emphasis does — is a chance for that.
 
-Sharing the parser and the renderer removes the category. What the author saw in `preview` is what the viewer draws, because they are the same code path.
+Sharing the parser removes the category. What the author saw in `preview` is what the viewer draws, because they are the same code path.
+
+::: fw flutter
+
+That holds across the two packages as well, and it is checked rather than claimed. The Dart parser is the TypeScript one — the same files, the same functions, the same rules — and `packages/flutter/tool/parity.dart` runs both over every Markdown file in the repository and diffs the trees. A document that means one thing in a browser means the same thing in an app.
+
+:::
 
 ## A document is optional
+
+::: fw flutter
+
+`value` is required in the Flutter package. Opening a file means a file picker, which means a plugin — a dependency this package does not have and an application usually already does. So reading the file is yours and drawing it is Mawy's.
+
+:::
 
 `value` is a prop rather than a requirement, and that is the shape of the component rather than a convenience. With no document the viewer **is** the file picker: drop a `.md` file on it, or choose one.
 
@@ -107,6 +133,12 @@ Pass `definitionLists: false` in `parse` to turn it off, for a document that has
 
 ## Colouring a code block
 
+::: fw flutter
+
+The Flutter package draws code blocks plain for now. `MawyHighlighter` is a React type, and the Dart side will want a shape of its own rather than the same one translated.
+
+:::
+
 Nothing is coloured by default, and that is not an omission. A highlighter is the largest thing a Markdown renderer can be made to carry, and most documents have nothing in them to colour — so it is a prop, and the prop takes a **function** so that nothing is even fetched until a document with a language on a fence is drawn:
 
 ```tsx
@@ -143,6 +175,16 @@ A viewer renders content that the person running it did not write, so the defaul
 
 **Every URL is checked, in Markdown as much as in HTML.** `[click](javascript:…)` is plain Markdown with no HTML anywhere near it, so the scheme allowlist is not part of the HTML option and is not switched off with it. A refused destination is drawn as the words the author wrote, with no link around them — a reader sees the sentence rather than a control that does nothing.
 
+::: fw flutter
+
+**Raw HTML is shown as the characters it was written with, and there is no option to make it otherwise.** Flutter has no HTML to draw it as, so there is nothing else it could be — which is why the Flutter package has no `html` prop to choose between. The rest of this section is the React package's.
+
+**And nothing is opened.** A tapped link does nothing at all until an application says what opening one means, through `onLinkTap`. Handing a URL to the platform is not a viewer's decision to make; the scheme allowlist has already run, and the rest is yours.
+
+:::
+
+::: fw react
+
 **Raw HTML inside a document is inert until you ask for it.** `html` is the one prop that can change that:
 
 | `html` | What a `<div>` in the document becomes |
@@ -155,15 +197,35 @@ A viewer renders content that the person running it did not write, so the defaul
 
 `'raw'` makes the caller responsible for the content. A report about rendering untrusted Markdown with it set is [out of scope](https://github.com/jooy2/mawy/blob/main/SECURITY.md) as a vulnerability, because it is the documented meaning of the value.
 
+:::
+
 ## The toolbar
 
 The toolbar is about how the document is **set**, not about what it says. A reader turns the text up, gives it more room to breathe, or moves it to a serif — and the document underneath is untouched.
+
+::: fw react
 
 ```tsx
 <MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />
 ```
 
-<MawyDemo name="viewer/minimal" />
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(
+  value: document,
+  toolbar: const <MawyViewerToolbarItem>[
+    MawyViewerToolbarItem.fontSize,
+    MawyViewerToolbarItem.colorScheme,
+  ],
+);
+```
+
+:::
+
+<MawyDemo name="viewer/minimal" flutter="viewer/minimal" :height="360" />
 
 `toolbar` takes `true` for all of it, `false` for none, or the controls to draw and the order to draw them in:
 
@@ -267,6 +329,12 @@ They are on `.mawy-root` rather than on `:root` on purpose. A component library 
 The light and dark palettes are chosen by `colorScheme`, which is `'system'` unless you say otherwise. `'system'` follows `prefers-color-scheme`; `'light'` and `'dark'` do not, so an application with its own switch drives the viewer from it and a reader on a dark machine still gets the light document you asked for.
 
 ## Where a piece of the page came from
+
+::: fw flutter
+
+The ranges are in the Dart tree too — every `MdNode` carries one, and they are the same offsets. What is not there is an element to put them on: there is no DOM, so a range is something an application reads off `parseMarkdown` rather than off the screen.
+
+:::
 
 Every element the viewer draws carries `data-mawy-range="start,end"` — the offsets, in the Markdown it was given, of that piece's first character and of the one after its last. Blocks, list items, table rows and cells, and the inline elements inside them: emphasis, links, code spans, images.
 

@@ -48,6 +48,8 @@ features:
 
 Mawy는 아직 초기 개발 단계이고, 대부분은 동작합니다. 직접 만든 파서가 CommonMark와 GitHub의 확장을 읽고, `MawyViewer`가 그 결과를 그리며, `MawyEditor`가 같은 문자열 주위에 마크다운 원문과 실시간 미리보기와 서식 툴바를 둘러 놓습니다. [에디터](./guide/editor)와 [뷰어](./guide/viewer) 페이지의 데모가 바로 그 컴포넌트들이 도는 모습입니다.
 
+두 번 배포됩니다. npm의 [`mawy-react`](https://www.npmjs.com/package/mawy-react)와 pub.dev의 [`mawy`](https://pub.dev/packages/mawy). 둘은 두 개의 라이브러리가 아니라 하나입니다 — Dart 파서가 곧 TypeScript 파서이고, 저장소의 검사가 찾을 수 있는 모든 문서에 대해 두 파서의 트리를 비교합니다. Flutter 패키지는 지금은 뷰어뿐입니다. 사이드바에서 쓰실 것을 고르세요. 여기 모든 페이지의 내용이 그에 따라 바뀝니다.
+
 `wysiwyg` 화면 — 그려진 문서를 그 자리에서 편집하는 것 — 은 일부만 만들어졌습니다. 글자가 들어갈 수 있는 곳이면 어디서나 입력할 수 있고, 보여주는 대신 그려지는 원시 HTML만 어설프게 되는 대신 거절됩니다. npm에 `0.1.0`이 올라가 있고, `0.x`입니다. 마이너 버전 사이에서도 API가 바뀔 수 있습니다.
 
 지금 존재하는 것은 [시작하기](./guide/getting-started)에 있습니다. 릴리스마다 무엇이 바뀌었는지는 [변경 기록](./changelog)에 적힙니다.
