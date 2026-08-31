@@ -38,6 +38,7 @@ A few notes that are easy to trip over:
 
 - **Each package keeps its own `CHANGELOG.md`,** beside its manifest, where npm and a reader browsing that package expect to find it. The documentation site's copy is generated from it by `docs/scripts/copy-changelog.mjs` and is git-ignored — edit the package's file, never the one under `docs/`.
 - **A change usually means a change to the docs in _both_ languages.** `docs/en` and `docs/ko` mirror each other page for page. If you cannot write the Korean, write the English and say so in the pull request; a maintainer will follow up rather than let the two drift.
+- **A `:::` block needs a blank line on each side of its body.** Prettier runs with `proseWrap: "never"` and has never heard of VitePress's custom containers, so a `::: warning` written tight against its text is joined into one line — which stops it being a container at all and spills the rest of the page into the box. The blank lines are what keep the two apart.
 - **The editing surfaces are tested in a real browser.** Selection, ranges, `beforeinput` and `contenteditable` are what this library is made of, and a DOM emulator does not implement them faithfully enough for a passing test to mean anything. See below.
 
 ## Running the checks

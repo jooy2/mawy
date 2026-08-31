@@ -7,7 +7,11 @@ order: 1
 
 Mawy ships as one package per language. React is the one that exists today; Flutter is planned, and will be documented on these same pages when it arrives.
 
-::: warning Not published yet This page describes the package as it is being built. `npm install mawy` does not resolve to anything yet, and the API below is the part that exists — the shared type vocabulary. The editor components land with the first release; follow the [changelog](../changelog). :::
+::: warning Not published yet
+
+This page describes the package as it is being built. `npm install mawy` does not resolve to anything yet, and the API below is the part that exists — the shared type vocabulary. The editor components land with the first release; follow the [changelog](../changelog).
+
+:::
 
 ## Requirements
 

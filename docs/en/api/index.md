@@ -7,7 +7,11 @@ order: 2
 
 Everything the package exports. Each entry says what it is, what it takes and what it gives back.
 
-::: warning Early The components are being built and are not here yet. What follows is the whole public surface of the package today. :::
+::: warning Early
+
+The components are being built and are not here yet. What follows is the whole public surface of the package today.
+
+:::
 
 ## Types
 

@@ -7,7 +7,11 @@ order: 2
 
 Mawy's editor is one component with two surfaces. `wysiwyg` edits the rendered document in place; `plain` edits the Markdown source as text. They are two views of one value rather than two editors, which is the decision the whole design turns on.
 
-::: warning Being built The component described here is not written yet. This page is the shape it is being built to, so that what it does and why is decided before the code rather than after it. Follow the [changelog](../changelog). :::
+::: warning Being built
+
+The component described here is not written yet. This page is the shape it is being built to, so that what it does and why is decided before the code rather than after it. Follow the [changelog](../changelog).
+
+:::
 
 ## Two views, one value
 

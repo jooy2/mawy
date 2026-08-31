@@ -7,7 +7,11 @@ order: 3
 
 The viewer renders a Markdown document and does not edit it. It is the same parser and the same renderer the editor uses, which is the point of it being in this package rather than being somebody else's library.
 
-::: warning Being built The component described here is not written yet. This page is the shape it is being built to. Follow the [changelog](../changelog). :::
+::: warning Being built
+
+The component described here is not written yet. This page is the shape it is being built to. Follow the [changelog](../changelog).
+
+:::
 
 ## Why it is in this package
 
