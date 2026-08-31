@@ -72,7 +72,7 @@ It is not on `modes` by default. An application asks for it:
 <MawyEditor defaultValue={document} modes={['wysiwyg', 'plain']} />
 ```
 
-What works: typing and deleting **anywhere there is text to type in** — a paragraph, a heading, a list item, a quotation, a table cell, a code block — replacing a selection, `Shift`+`Enter` for a hard break, and every command on the toolbar. Those last needed nothing new: they are pure functions of the source and its selection and neither surface is mentioned anywhere in them.
+What works: typing and deleting **anywhere there is text to type in** — a paragraph, a heading, a list item, a quotation, a table cell, a code block — replacing a selection, `Shift`+`Enter` for a hard break, the shorthands that turn into formatting as they are typed, and every command on the toolbar. Those last needed nothing new: they are pure functions of the source and its selection and neither surface is mentioned anywhere in them.
 
 Edits land on the **drawn** character rather than the written one, and that is the difference the whole surface turns on. The caret after `bold` in `**bold**` has an asterisk in front of it in the file and a `d` in front of it on the page. `Backspace` there takes the `d`. An image and a hard break come out in one piece, because each of them is one character to a reader and none at all to a walk over the runs of text.
 
@@ -98,6 +98,23 @@ What does not work yet, and does nothing at all rather than something half-right
 
 - **Raw HTML that is being drawn rather than shown.** Under `sanitize` and `raw` the markup reached the page through `dangerouslySetInnerHTML`, which means React does not know what is inside it and could not put it back. Under `escape` — the default — it is text like any other text, and edits like any other.
 - **Putting an image in.** One pasted or dropped as part of a web page arrives as an image, because that is markup; one on the clipboard as a _file_ — a screenshot — does not, because there is nowhere for the bytes to go until an application says where.
+
+## Input rules
+
+On the drawn document the shorthand you type becomes the formatting it is shorthand for, where you typed it. `# ` is a heading, `- ` and `* ` a bullet, `1. ` a number, `> ` a quotation, `- [ ] ` a task box.
+
+**Most of that is not a feature.** The document is drawn again from the Markdown after every keystroke, so `# ` at the start of a paragraph _is_ a heading the moment the space lands — the parser had already said so and the drawing only caught up. There is nothing to configure and nothing to turn off, because there is nothing there.
+
+Two are written down, and they are the two where the marker changes the meaning of text nobody is typing:
+
+- **Three backticks open a fence, and a fence runs until one closes it.** Typed halfway down a document they would put everything under them inside a code block and leave it there until the closing fence was typed. So a fence is opened _closed_: the caret goes between the two and whatever was on the line goes inside, which is the same thing the code-block button does. Inside a list item or a quotation the two lines it adds carry that container's own prefix, or the fence would close outside the item it opened in.
+- **A thematic break has no text in it.** `---` on its own line is a break the moment the third dash lands, and the caret is then in a block that draws no characters at all, with nowhere on the page to be. So a break is given a blank line under it to carry on typing on. `***`, `___` and `- - -` are the same. `---` under a line that is still going is left alone: there it is that paragraph's underline — a setext heading — and the parser is right about that.
+
+Inside a code block none of it happens, because everything in there is the characters it is.
+
+A rule that writes a line ending is its own step on the undo stack, so `Mod`+`Z` straight after one gives back the characters that set it off rather than the whole run of typing around it.
+
+The source surface has no input rules, and nothing is missing there: the characters typed are the document, and `# ` at the start of a line is already a heading in the only sense that surface has.
 
 ## Formatting
 
@@ -171,7 +188,6 @@ Two of those count more carefully than they look. **Characters** are code points
 
 ## Still to come
 
-- Input rules: the Markdown you type turning into what it means as you type it.
 - Images.
 - The extension point, so a document can carry a construct this package does not know about.
 

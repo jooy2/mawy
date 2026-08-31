@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseMarkdown } from '../../../src/internal/markdown/parse.js';
-import type { MdBlock, MdInline, MdNode, MdRange } from '../../../src/internal/markdown/ast.js';
+import type {
+  MdBlock,
+  MdCode,
+  MdInline,
+  MdNode,
+  MdRange
+} from '../../../src/internal/markdown/ast.js';
 
 /**
  * The parser, read back as a tree.
@@ -20,7 +26,8 @@ function inline(block: MdBlock): MdInline[] {
 }
 
 /**
- * The same tree with every `range` taken off.
+ * The same tree with every range taken off — a node's own, and the `content`
+ * range a code block carries as well.
  *
  * The assertions about shape are read far more often than they are written, and
  * a range in each of them would bury what any one is checking. The ranges have
@@ -34,7 +41,7 @@ function bare<T>(node: T): T {
   if (node && typeof node === 'object') {
     return Object.fromEntries(
       Object.entries(node)
-        .filter(([key]) => key !== 'range')
+        .filter(([key]) => key !== 'range' && key !== 'content')
         .map(([key, value]) => [key, bare(value)])
     ) as T;
   }
@@ -401,6 +408,32 @@ describe('source positions', () => {
     expect(at(fenced, first(fenced))).toBe('```ts\nconst a = 1;\n```');
     expect(at(indented, blocks(indented)[1])).toBe('    one\n    two');
     expect(at(setext, first(setext))).toBe('Title\n=====');
+  });
+
+  it('points a code block at the code, as well as at the fences round it', () => {
+    // The block's own range holds the fences, the info string and the indent.
+    // The code inside is a second answer, and the one an editor needs: it is
+    // the part a caret can be in.
+    const inside = (source: string): string => {
+      const code = first(source) as MdCode;
+
+      return source.slice(code.content.start, code.content.end);
+    };
+
+    expect(inside('```ts\nconst a = 1;\nconst b = 2;\n```')).toBe('const a = 1;\nconst b = 2;');
+    expect(inside('  ```\n  one\n  ```')).toBe('one');
+    expect(inside('    one\n    two')).toBe('one\n    two');
+
+    // Nothing between the fences is still a place, and the empty one just past
+    // the opening fence is the only one it can be.
+    const empty = first('```\n```') as MdCode;
+
+    expect(empty.content).toEqual({ start: 4, end: 4 });
+
+    // An unclosed fence with nothing after it has no line at all to point at.
+    const alone = first('```') as MdCode;
+
+    expect(alone.content).toEqual({ start: 3, end: 3 });
   });
 
   it('reaches inside a paragraph', () => {

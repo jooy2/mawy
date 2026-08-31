@@ -19,6 +19,7 @@
 import { continueList } from './commands.js';
 import { markdownFromHtml } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
+import { ruleFor } from './rules.js';
 
 /** A document after an edit, and where the caret goes once it is drawn again. */
 export interface MawyEdit {
@@ -427,7 +428,23 @@ export function editFor(event: InputEvent, root: HTMLElement, value: string): Ma
   const range = { startContainer: place.node, startOffset: place.offset };
 
   switch (event.inputType) {
-    case 'insertText':
+    case 'insertText': {
+      if (event.data === null) {
+        return null;
+      }
+
+      // A shorthand only means what it says where the line it is on is a line
+      // of Markdown. Inside a code block every character is the character it
+      // is, and a table cell has no room for a block of any kind.
+      const tag = blockAt(root, range.startContainer)?.tagName;
+      const rule =
+        start === end && tag !== 'PRE' && tag !== 'TD' && tag !== 'TH'
+          ? ruleFor(value, start, event.data)
+          : null;
+
+      return rule ?? splice(value, start, end, event.data);
+    }
+
     case 'insertReplacementText':
       return event.data === null ? null : splice(value, start, end, event.data);
 

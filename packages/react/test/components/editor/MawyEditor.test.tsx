@@ -931,6 +931,128 @@ describe('the document surface', () => {
 });
 
 /**
+ * Input rules: the shorthand typed at the start of a line becoming what it is
+ * shorthand for, on the spot.
+ *
+ * Most of them are not rules at all, and that is the thing worth pinning down:
+ * the document is drawn again from the Markdown after every keystroke, so `# `
+ * *is* a heading the moment the space lands. Two need writing down, and they
+ * are the two where the marker changes the meaning of text nobody is typing.
+ */
+describe('input rules', () => {
+  /**
+   * A run of characters, one keystroke at a time, with the document drawn again
+   * in between — which is the whole point. A rule fires on one keystroke, and
+   * the keystroke after it lands on whatever that left behind.
+   */
+  async function typing(body: () => HTMLElement, text: string): Promise<void> {
+    for (const character of text) {
+      const before = body().innerHTML;
+
+      type(body(), 'insertText', character);
+
+      await vi.waitFor(() => expect(body().innerHTML).not.toBe(before));
+    }
+  }
+
+  it('makes the formatting the shorthand is shorthand for, as it is typed', async () => {
+    const shorthands: [string, string, string][] = [
+      ['# ', '# Hello', 'h1'],
+      ['- ', '- Hello', 'li'],
+      ['1. ', '1. Hello', 'ol li'],
+      ['> ', '> Hello', 'blockquote p']
+    ];
+
+    for (const [shorthand, written, drawn] of shorthands) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue="Hello" mode="wysiwyg" onChange={onChange} />
+      );
+      const body = () => bodyOf(screen);
+
+      put(body(), 'Hello', 0);
+      await typing(body, shorthand);
+
+      expect(onChange).toHaveBeenLastCalledWith(written);
+      // The marker is written in the file and drawn nowhere: what is on the
+      // page is a heading saying `Hello`, not a paragraph saying `# Hello`.
+      expect(body().querySelector(drawn)?.textContent).toBe('Hello');
+    }
+  });
+
+  it('opens a fence closed, so it does not swallow the document under it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'Above.\n\nBelow.'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = () => bodyOf(screen);
+
+    put(body(), 'Above.', 6);
+    type(body(), 'insertParagraph');
+    await vi.waitFor(() => expect(body().children).toHaveLength(3));
+    await typing(body, '```');
+
+    expect(onChange).toHaveBeenLastCalledWith('Above.\n\n```\n\n```\n\nBelow.');
+
+    // And the caret is between the fences, in a code block with nothing in it —
+    // which is a place only because the `code` element says which offsets it
+    // stands for.
+    await typing(body, 'ab');
+
+    expect(onChange).toHaveBeenLastCalledWith('Above.\n\n```\nab\n```\n\nBelow.');
+  });
+
+  it('carries a list item down onto the lines the fence adds', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'- one\n- two'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = () => bodyOf(screen);
+
+    put(body(), 'two', 0);
+    await typing(body, '```');
+
+    // Without the indent the closing fence is outside the item that opened it.
+    expect(onChange).toHaveBeenLastCalledWith('- one\n- ```\n  two\n  ```');
+  });
+
+  it('gives a thematic break a line under it to carry on typing on', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Above." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = () => bodyOf(screen);
+
+    put(body(), 'Above.', 6);
+    type(body(), 'insertParagraph');
+    await vi.waitFor(() => expect(body().children).toHaveLength(2));
+    await typing(body, '---');
+
+    expect(onChange).toHaveBeenLastCalledWith('Above.\n\n---\n\n');
+    expect(body().querySelector('hr')).toBeTruthy();
+
+    // A break draws no characters of its own, so a caret left on one would have
+    // nowhere on the page to be.
+    await typing(body, 'X');
+
+    expect(onChange).toHaveBeenLastCalledWith('Above.\n\n---\n\nX');
+  });
+
+  it('leaves a shorthand alone inside a code block, where it is the characters it is', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'```\nx\n```'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = () => bodyOf(screen);
+
+    put(body(), 'x', 0);
+    await typing(body, '```');
+
+    expect(onChange).toHaveBeenLastCalledWith('```\n```x\n```');
+  });
+});
+
+/**
  * Pasting, on both surfaces.
  *
  * What is on a clipboard as HTML is read back as Markdown — a heading copied
@@ -1049,6 +1171,34 @@ describe('undo', () => {
     keys(bodyOf(screen), 'z');
 
     await vi.waitFor(() => expect(bodyOf(screen).textContent).toBe('One two.'));
+  });
+
+  it('takes a rule back in one step, because the line it added closed the run', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Hello" mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'Hello', 5);
+    type(bodyOf(screen), 'insertParagraph');
+
+    await vi.waitFor(() => expect(bodyOf(screen).children).toHaveLength(2));
+
+    for (const character of '---') {
+      const before = bodyOf(screen).innerHTML;
+
+      type(bodyOf(screen), 'insertText', character);
+
+      await vi.waitFor(() => expect(bodyOf(screen).innerHTML).not.toBe(before));
+    }
+
+    expect(onChange).toHaveBeenLastCalledWith('Hello\n\n---\n\n');
+
+    keys(bodyOf(screen), 'z');
+
+    // Back to the two dashes rather than back to before the whole run: a rule
+    // writes a line ending, and a line ending closes the run behind it.
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\n--'));
   });
 
   it('takes back on one surface what was done on the other', async () => {

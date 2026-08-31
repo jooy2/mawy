@@ -44,11 +44,13 @@ export interface MawyEditorDocumentProps {
  * them. `internal/editing.ts` holds the rules and `internal/position.ts` moves
  * between the two ways of saying where something is.
  *
- * What this surface can edit so far is the text of paragraphs and headings:
- * typing, deleting, joining and splitting them. Everything else is refused
- * rather than half-done — a list, a quotation, a table or a code block still
- * draws and still reads, and typing in one does nothing at all until the rules
- * for putting that edit back are written.
+ * What this surface can edit is anywhere there is text to type in — a
+ * paragraph, a heading, a list item, a quotation, a table cell, a code block —
+ * along with the shorthands that turn into formatting as they are typed.
+ * `internal/rules.ts` holds the two of those that are not simply the parser
+ * keeping up. What is refused rather than half-done is an image, which has
+ * nowhere for its bytes to go yet, and raw HTML being *drawn* rather than
+ * shown, which React did not put on the page and could not put back.
  *
  * An input method is the one thing that cannot be refused, and it is handled
  * the other way round: the browser is left alone for the length of a

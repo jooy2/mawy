@@ -69,6 +69,12 @@ export interface MdParagraph {
 export interface MdCode {
   type: 'code';
   range: MdRange;
+  /**
+   * Where the code itself sits — inside the fences, or past the four spaces of
+   * an indented block. Empty and equal to each other for a block with nothing
+   * in it, which is still a place a caret can be and so still needs an answer.
+   */
+  content: MdRange;
   /** The first word of the info string — `ts` in ```` ```ts twoslash ````. */
   lang: string | null;
   /** Everything after it, untouched. Nothing reads this yet. */

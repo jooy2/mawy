@@ -74,8 +74,8 @@ export interface MawyEditorProps extends Omit<
   onChange?: (value: string) => void;
 
   /**
-   * Which surface the document is on. `wysiwyg` is not built yet and falls
-   * back to `plain`.
+   * Which surface the document is on. `wysiwyg` is not on the default list of
+   * them — an application asks for it by name while it is this new.
    * @default the first of `modes`
    */
   mode?: MawyMode;
@@ -120,8 +120,8 @@ export interface MawyEditorProps extends Omit<
  * The document is Markdown and every surface is a way of looking at that one
  * string — switching does not serialise out of one model and parse into
  * another, so nothing is lost in the move and a document that came in
- * unchanged goes out unchanged. Today that is the source surface and the
- * preview; `wysiwyg` is the one still to be built.
+ * unchanged goes out unchanged. That is the source surface, the preview, the
+ * two of them side by side, and the document edited where it is drawn.
  */
 export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(function MawyEditor(
   {
@@ -465,8 +465,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey) {
       // Carrying a list marker down is a thing done to a line of Markdown. In
-      // the drawn document `Enter` is an `insertParagraph` the surface answers
-      // for, and a list is not something it can edit yet either way.
+      // the drawn document `Enter` is an `insertParagraph`, which the surface
+      // answers for in the container it was pressed in — this one is a list,
+      // and that one is every one of them.
       const next = showDocument ? null : continueList(state);
 
       if (next) {

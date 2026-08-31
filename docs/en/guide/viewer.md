@@ -208,6 +208,8 @@ The light and dark palettes are chosen by `colorScheme`, which is `'system'` unl
 
 Every element the viewer draws carries `data-mawy-range="start,end"` — the offsets, in the Markdown it was given, of that piece's first character and of the one after its last. Blocks, list items, table rows and cells, and the inline elements inside them: emphasis, links, code spans, images.
 
+A code block says it twice. The box around it stands for the whole thing, fences and info string and indent; the `code` element inside stands for the code alone, which is the part a caret can be in — and it is a place even with nothing between the fences, where the two offsets are the same number.
+
 In a document that reads `# Title`, a blank line, `## Second`, that second heading is drawn as:
 
 ```html

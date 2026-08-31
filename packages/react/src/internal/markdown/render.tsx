@@ -195,7 +195,15 @@ function CodeBlock({
   return (
     <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined} {...origin(block)}>
       <pre>
-        <code className={lang ? `mawy-md-lang language-${lang}` : 'mawy-md-lang'}>{value}</code>
+        {/* The range on the `code` rather than only on the box around it: the
+            box holds the fences and the copy button as well, and a caret in an
+            empty block would otherwise have the backticks for an address. */}
+        <code
+          className={lang ? `mawy-md-lang language-${lang}` : 'mawy-md-lang'}
+          {...origin({ range: block.content })}
+        >
+          {value}
+        </code>
       </pre>
       <button
         type="button"

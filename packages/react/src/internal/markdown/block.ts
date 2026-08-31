@@ -439,9 +439,16 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
       const words = info.trim().split(/\s+/);
 
+      const range = across(opened, last);
+      // With nothing between the fences there is no line to point at, so the
+      // content is the empty place just past the opening one — which is where
+      // a caret typing into an empty code block has to land.
+      const from = body[0]?.start ?? Math.min(lineEnd(lines[opened]) + 1, range.end);
+
       blocks.push({
         type: 'code',
-        range: across(opened, last),
+        range,
+        content: { start: from, end: body.length ? lineEnd(body[body.length - 1]) : from },
         // A backtick in an info string is not a language, it is an unclosed
         // span that happens to sit on the fence line.
         lang: words[0] && !words[0].includes('`') ? words[0] : null,
@@ -639,6 +646,11 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         type: 'code',
         range: {
           start: lines[opened].start,
+          end: lineEnd(body[body.length - 1] ?? lines[opened])
+        },
+        // An indented block is its own content, four spaces in.
+        content: {
+          start: body[0]?.start ?? lines[opened].start,
           end: lineEnd(body[body.length - 1] ?? lines[opened])
         },
         lang: null,
