@@ -48,6 +48,6 @@ features:
 
 Mawy is in early development, and most of it works. A parser of ours reads CommonMark and GitHub's additions; `MawyViewer` draws the result; and `MawyEditor` puts the Markdown source, a live preview and a formatting toolbar around the same string. The demos on [the editor](./guide/editor) and [the viewer](./guide/viewer) pages are those components, running.
 
-The `wysiwyg` surface — editing the drawn document in place — is partly built: anywhere there is text to type in can be typed in, and raw HTML being drawn rather than shown is refused rather than half-done. Nothing is published to npm yet and the API is not stable.
+The `wysiwyg` surface — editing the drawn document in place — is partly built: anywhere there is text to type in can be typed in, and raw HTML being drawn rather than shown is refused rather than half-done. `0.1.0` is on npm, and it is a `0.x`: the API can still change between minor versions.
 
 [Getting started](./guide/getting-started) has what exists today. The [changelog](./changelog) is where each release is written down.

@@ -7,9 +7,9 @@ order: 1
 
 Mawy ships as one package per language. React is the one that exists today; Flutter is planned, and will be documented on these same pages when it arrives.
 
-::: warning Not published yet
+::: warning Early, and versioned as such
 
-`npm install mawy` does not resolve to anything yet. Everything on this page is real and runs — this site draws both components — but it is reached by building the repository rather than by installing it. Follow the [changelog](../changelog).
+`0.1.0` is the first release. Everything on this page is real and runs — this site draws both components from the same source you install — but a `0.x` may change its API between minor versions. Pin the version if that matters, and follow the [changelog](../changelog).
 
 :::
 

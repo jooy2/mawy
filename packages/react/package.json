@@ -1,6 +1,6 @@
 {
   "name": "mawy",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A Markdown editor that also does the reading — write in WYSIWYG or in the source, switch freely, and show the finished document through a read-only viewer.",
   "type": "module",
   "types": "dist/index.d.ts",
@@ -83,7 +83,6 @@
     "typescript",
     "tsx",
     "esm",
-    "zero-dependency",
     "accessible",
     "accessibility",
     "a11y",
