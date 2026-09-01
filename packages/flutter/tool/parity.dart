@@ -22,8 +22,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:mawy/src/code.dart';
+import 'package:mawy/src/editor/commands.dart';
 import 'package:mawy/src/highlight.dart';
 import 'package:mawy/src/markdown/ast.dart';
+import 'package:mawy/src/markdown/highlight.dart';
 import 'package:mawy/src/markdown/parse.dart';
 
 /// A directive's attributes with their keys in one order.
@@ -264,10 +266,36 @@ void main() {
   }
 
   stdout.write(
-    const JsonEncoder.withIndent(
-      ' ',
-    ).convert(<String, Object?>{'trees': out, 'highlights': _highlights()}),
+    const JsonEncoder.withIndent(' ').convert(<String, Object?>{
+      'trees': out,
+      'highlights': _highlights(),
+      'source': _source(),
+      'edits': _edits(),
+    }),
   );
+}
+
+/// And the source highlighter, which is a third thing written twice.
+///
+/// Over the same documents the parsers are compared on, because what it has to
+/// get right is real Markdown rather than invented Markdown — and because it is
+/// allowed to be *wrong* in ways the parser must not be, which makes "wrong the
+/// same way in both" the only statement worth making about it.
+List<Object?> _source() {
+  return corpus()
+      .map(
+        (String document) => highlightMarkdown(document)
+            .map(
+              (MdHighlightedLine line) => <Object?>[
+                line.text,
+                line.tokens
+                    .map((MdToken token) => <Object?>[token.start, token.end, token.kind.name])
+                    .toList(),
+              ],
+            )
+            .toList(),
+      )
+      .toList();
 }
 
 /// The highlighter's half of the same question.
@@ -299,5 +327,48 @@ List<Object?> _highlights() {
           )
           .toList(),
     };
+  }).toList();
+}
+
+/// And the editing commands, which are a fourth thing written twice.
+///
+/// They are pure functions of a string and two offsets, which makes them the
+/// easiest half of this to compare and the easiest to let drift: nothing about
+/// them is visible until somebody presses a button, and then it is visible in
+/// one package and not the other.
+List<Object?> _edits() {
+  final Directory tool = File(Platform.script.toFilePath()).parent;
+  final List<Object?> cases =
+      jsonDecode(File('${tool.path}/edits.json').readAsStringSync()) as List<Object?>;
+
+  return cases.map((Object? entry) {
+    final List<Object?> triple = entry! as List<Object?>;
+    final EditState state = EditState(triple[0]! as String, triple[1]! as int, triple[2]! as int);
+    final Map<String, Object?> out = <String, Object?>{
+      'state': <Object?>[state.value, state.start, state.end],
+    };
+
+    for (final MawyCommand command in MawyCommand.values) {
+      final EditState after = runCommand(command, state);
+
+      out[command.name] = <Object?>[
+        after.value,
+        after.start,
+        after.end,
+        commandActive(command, state),
+      ];
+    }
+
+    final EditState? carried = continueList(state);
+    final EditState indented = indent(state, out: false);
+    final EditState outdented = indent(state, out: true);
+
+    out['continueList'] = carried == null
+        ? null
+        : <Object?>[carried.value, carried.start, carried.end];
+    out['indent'] = <Object?>[indented.value, indented.start, indented.end];
+    out['outdent'] = <Object?>[outdented.value, outdented.start, outdented.end];
+
+    return out;
   }).toList();
 }

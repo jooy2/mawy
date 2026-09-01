@@ -26,6 +26,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseMarkdown } from '../src/internal/markdown/parse.ts';
 import { mawyHighlighter } from '../src/highlight.ts';
+import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
+import { commandActive, continueList, indent, runCommand } from '../src/internal/commands.ts';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptsDir, '../../..');
@@ -122,4 +124,70 @@ const highlights = JSON.parse(
   tokens: mawyHighlighter.highlight(code, language).map((token) => [token.kind ?? '', token.text])
 }));
 
-process.stdout.write(JSON.stringify({ trees, highlights }, null, 1));
+/**
+ * And the source highlighter, which is a third thing written twice.
+ *
+ * Over the same documents the parsers are compared on, because what it has to
+ * get right is real Markdown rather than invented Markdown — and because it is
+ * allowed to be *wrong* in ways the parser must not be, which makes "wrong the
+ * same way in both" the only statement worth making about it.
+ */
+const source = corpus().map((document) =>
+  highlightMarkdown(document).map((line) => [
+    line.text,
+    line.tokens.map((token) => [token.start, token.end, token.kind])
+  ])
+);
+
+/** Every command, over every case, and the two things that are not commands. */
+const COMMANDS = [
+  'bold',
+  'italic',
+  'strikethrough',
+  'code',
+  'link',
+  'image',
+  'heading1',
+  'heading2',
+  'heading3',
+  'paragraph',
+  'quote',
+  'bulletList',
+  'orderedList',
+  'taskList',
+  'codeBlock',
+  'rule'
+];
+
+/**
+ * And the editing commands, which are a fourth thing written twice.
+ *
+ * They are pure functions of a string and two offsets, which makes them the
+ * easiest half of this to compare and the easiest to let drift: nothing about
+ * them is visible until somebody presses a button, and then it is visible in
+ * one package and not the other.
+ */
+const edits = JSON.parse(
+  readFileSync(resolve(rootDir, 'packages/flutter/tool/edits.json'), 'utf8')
+).map(([value, start, end]) => {
+  const state = { value, start, end };
+  const out = { state: [value, start, end] };
+
+  for (const command of COMMANDS) {
+    const after = runCommand(command, state);
+
+    out[command] = [after.value, after.start, after.end, commandActive(command, state)];
+  }
+
+  const carried = continueList(state);
+  const indented = indent(state, false);
+  const outdented = indent(state, true);
+
+  out.continueList = carried && [carried.value, carried.start, carried.end];
+  out.indent = [indented.value, indented.start, indented.end];
+  out.outdent = [outdented.value, outdented.start, outdented.end];
+
+  return out;
+});
+
+process.stdout.write(JSON.stringify({ trees, highlights, source, edits }, null, 1));

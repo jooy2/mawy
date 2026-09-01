@@ -1,0 +1,122 @@
+[
+ [
+  "Some words here.",
+  5,
+  10
+ ],
+ [
+  "Some words here.",
+  0,
+  0
+ ],
+ [
+  "**already bold**",
+  0,
+  16
+ ],
+ [
+  "**already bold**",
+  2,
+  13
+ ],
+ [
+  "a `code` span",
+  3,
+  9
+ ],
+ [
+  "https://example.com",
+  0,
+  19
+ ],
+ [
+  "- one\n- two\n- three",
+  0,
+  19
+ ],
+ [
+  "- [x] done\n- [ ] not",
+  0,
+  20
+ ],
+ [
+  "1. one\n2. two",
+  0,
+  13
+ ],
+ [
+  "# Heading\n\nWords.",
+  0,
+  9
+ ],
+ [
+  "> quoted\n> lines",
+  0,
+  16
+ ],
+ [
+  "```\ncode\n```",
+  0,
+  12
+ ],
+ [
+  "  indented line",
+  5,
+  5
+ ],
+ [
+  "\tone\n\ttwo",
+  0,
+  9
+ ],
+ [
+  "Term\n: what it means",
+  0,
+  20
+ ],
+ [
+  "one\n\ntwo",
+  4,
+  4
+ ],
+ [
+  "- item\n",
+  7,
+  7
+ ],
+ [
+  "- \n",
+  2,
+  2
+ ],
+ [
+  "3) third\n",
+  9,
+  9
+ ],
+ [
+  "- [x] done\n",
+  11,
+  11
+ ],
+ [
+  "",
+  0,
+  0
+ ],
+ [
+  "no newline at all",
+  17,
+  17
+ ],
+ [
+  "a\n\nb",
+  0,
+  4
+ ],
+ [
+  "  - nested\n  - items",
+  0,
+  20
+ ]
+]

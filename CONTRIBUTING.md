@@ -45,7 +45,11 @@ cd ../flutter && dart run tool/parity.dart > /tmp/flutter.json
 diff /tmp/react.json /tmp/flutter.json
 ```
 
-The highlighter goes through the same check in the same run: `src/highlight.ts` and `lib/src/highlight.dart` are one grammar written twice, diffed over `tool/code.json`, which holds a piece of every language either of them claims to know.
+Three more things go through the same check in the same run, because each of them is one thing written twice and each of them drifts for the reason the parsers do:
+
+- **The code highlighter.** `src/highlight.ts` and `lib/src/highlight.dart`, over `tool/code.json` — a piece of every language either of them claims to know, plus two nobody does.
+- **The source highlighter**, which marks up Markdown for the editor to colour: `src/internal/markdown/highlight.ts` and `lib/src/markdown/highlight.dart`, over the same documents the parsers are compared on. It is allowed to be *wrong* in ways the parser must not be, which makes "wrong the same way in both" the only statement worth making about it.
+- **The editing commands.** `src/internal/commands.ts` and `lib/src/editor/commands.dart`, over `tool/edits.json` — every command, every case, and `continueList` and `indent` with them. They are pure functions of a string and two offsets, which makes them the easiest half of this to compare and the easiest to let drift: nothing about them is visible until somebody presses a button, and then it is visible in one package and not the other.
 
 CI runs it on every change to either parser. Two implementations of CommonMark drift the moment nobody is comparing them, and a document that means one thing in a browser and another in an app is the bug this whole library exists to not have. **A change to one parser is a change to both**, and the diff is how you find out you forgot.
 
