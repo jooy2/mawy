@@ -182,9 +182,13 @@ The Markdown source with its syntax coloured, a live preview beside it, a format
 
 ::: fw flutter
 
-There is no editor in the Flutter package yet, and the reason is not that nobody has got to it. The React editor is built on `contenteditable`, `beforeinput` and a DOM selection — every keystroke is refused, turned into an edit to the Markdown, and the document is drawn again — and none of those three has a Flutter equivalent a port would find. It will be built rather than translated.
+The Markdown source with its syntax coloured, a live preview beside it, a formatting toolbar and a status bar that counts:
 
-The viewer is the whole package for now, and it reads exactly what the editor writes.
+```dart
+MawyEditor(defaultValue: '# Hello', onChange: save);
+```
+
+Three surfaces rather than the React package's four — `plain`, `split` and `preview`. The one that is missing is `wysiwyg`, which edits the document where it is drawn and rests entirely on `contenteditable`; Flutter has nothing of the kind, and the drawn surface here stays a viewer. [The editor](./editor) has the reasoning.
 
 :::
 
@@ -227,6 +231,7 @@ The types are also available from `mawy-react/types`, so an application can name
 |  |  |
 | --- | --- |
 | `MawyViewer` | The read-only viewer. [Guide](./viewer) |
+| `MawyEditor` | The editor: source, preview, and a switch. [Guide](./editor) |
 | `parseMarkdown` | The parser, and the whole `Md*` tree it produces |
 | `MawyTokens` | The palette, as `MawyTokens.light` and `MawyTokens.dark` |
 | `mawyHighlighter` | The syntax highlighter, which a build keeps only if you name it |

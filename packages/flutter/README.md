@@ -45,6 +45,21 @@ MawyViewer(value: '# Hello\n\nSome **Markdown**.')
   the line height, the letter spacing and how wide the column runs, and reports
   what they chose so an application can remember it.
 
+## The editor
+
+The Markdown source with its syntax coloured, a live preview beside it, a
+formatting toolbar and a status bar that counts:
+
+```dart
+MawyEditor(defaultValue: '# Hello', onChange: save);
+```
+
+Three surfaces rather than the React package's four — `plain`, `split` and
+`preview`. `wysiwyg` there edits the document where it is drawn and rests
+entirely on `contenteditable`, which Flutter has nothing of; the drawn surface
+here stays a viewer. Everything else is the same functions under the same names,
+diffed against the React package's by `tool/parity.dart`.
+
 ## What it reads
 
 CommonMark, plus GitHub's additions: tables with per-column alignment, task

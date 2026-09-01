@@ -7,15 +7,22 @@ order: 2
 
 ::: fw flutter
 
-**There is no editor in the Flutter package yet**, and the reason is not that nobody has got to it. Everything below is built on `contenteditable`, `beforeinput` and a DOM selection — every keystroke refused, turned into an edit to the Markdown, and the document drawn again — and none of those three has a Flutter equivalent a port would find. It will be built rather than translated.
+**Three surfaces here rather than four**, and the missing one is worth saying out loud. `wysiwyg` draws the document and edits it where it is drawn, which rests entirely on `contenteditable`: a browser telling a component what somebody tried to do to a tree, so the component can refuse it and change the Markdown instead. Flutter has no such thing — an `EditableText` owns a string — and drawing a document that is also a text field would mean a second model of what the document is. A second model is a second opinion about what a document means, and the two disagree the first time anybody writes something unusual.
 
-The page is still worth reading in Flutter: it is what the viewer has to be able to draw, and the two read a document the same way.
+So `plain`, `split` and `preview`, and the drawn surface stays a viewer. Everything else on this page is here, and provably so: the commands, the colouring of the source and the counts along the bottom are the same functions under the same names, and the parity check diffs all three against the React package's on every change.
+
+```dart
+MawyEditor(
+  defaultValue: '# Hello',
+  onChange: save,
+);
+```
 
 :::
 
 Mawy's editor is one component with several surfaces. `plain` edits the Markdown source as text, `preview` shows the rendered document, and `split` shows both at once. They are views of one value rather than several editors, which is the decision the whole design turns on.
 
-<MawyDemo name="editor/basic" />
+<MawyDemo name="editor/basic" flutter="editor/basic" :height="520" />
 
 ```tsx
 import { MawyEditor } from 'mawy-react';

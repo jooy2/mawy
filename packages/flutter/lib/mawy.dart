@@ -24,6 +24,17 @@
 library;
 
 export 'src/code.dart';
+export 'src/editor/commands.dart'
+    show EditState, MawyCommand, commandActive, continueList, indent, runCommand;
+export 'src/editor/mawy_editor.dart'
+    show
+        MawyEditor,
+        MawyEditorMode,
+        MawyEditorStatusItem,
+        MawyEditorToolbarItem,
+        kMawyEditorModes,
+        kMawyEditorStatus,
+        kMawyEditorToolbar;
 export 'src/highlight.dart' show kMawyHighlightLanguages, mawyHighlighter;
 export 'src/markdown/ast.dart';
 export 'src/markdown/parse.dart' show MawyParseOptions, parseMarkdown, slugify;

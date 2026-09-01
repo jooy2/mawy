@@ -3,43 +3,15 @@
 import * as React from 'react';
 import type { MawyEditorStatusItem, MawyLocale } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
+import {
+  caretAt,
+  countBytes,
+  countCharacters,
+  countLines,
+  countWords
+} from '../../internal/status.js';
 
-export interface MawyEditorStatusProps {
-  value: string;
-  selection: { start: number; end: number };
-  items: readonly MawyEditorStatusItem[];
-  strings: MawyStrings;
-  locale: MawyLocale;
-}
-
-/**
- * Han, hiragana and katakana, which are written without spaces between words.
- *
- * Hangul is deliberately not here. Korean *is* spaced, so an eojeol is a word
- * and splitting on whitespace is right; counting each syllable would report a
- * short paragraph as a few hundred words.
- */
-const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu;
-
-/**
- * A word count that is not simply wrong outside English.
- *
- * Whitespace alone counts a page of Chinese as one word. Counting characters
- * alone counts an English sentence as forty. So the two are added: every dense
- * character is a word, and what is left over is split on spaces.
- */
-function countWords(text: string): number {
-  const dense = text.match(DENSE)?.length ?? 0;
-  const rest = text.replace(DENSE, ' ').trim();
-
-  return dense + (rest ? rest.split(/\s+/).length : 0);
-}
-
-/** Bytes on disk, which is not the number of characters the moment anything is not ASCII. */
-function countBytes(text: string): number {
-  return new TextEncoder().encode(text).length;
-}
-
+/** A byte count, as a size somebody reads rather than as a number. */
 function formatBytes(bytes: number, format: Intl.NumberFormat): string {
   if (bytes < 1024) {
     return `${format.format(bytes)} B`;
@@ -50,6 +22,14 @@ function formatBytes(bytes: number, format: Intl.NumberFormat): string {
   return kilobytes < 1024
     ? `${format.format(Math.round(kilobytes * 10) / 10)} KB`
     : `${format.format(Math.round((kilobytes / 1024) * 100) / 100)} MB`;
+}
+
+export interface MawyEditorStatusProps {
+  value: string;
+  selection: { start: number; end: number };
+  items: readonly MawyEditorStatusItem[];
+  strings: MawyStrings;
+  locale: MawyLocale;
 }
 
 /**
@@ -70,26 +50,18 @@ export function MawyEditorStatus({
 
   const counts = React.useMemo(
     () => ({
-      lines: value.split('\n').length,
+      lines: countLines(value),
       words: countWords(value),
-      // Code points rather than UTF-16 units: an emoji is one character to
-      // everyone except a `.length`.
-      characters: [...value].length,
+      characters: countCharacters(value),
       bytes: countBytes(value)
     }),
     [value]
   );
 
-  const at = React.useMemo(() => {
-    const before = value.slice(0, selection.start);
-    const line = before.split('\n');
-
-    return {
-      line: line.length,
-      column: (line[line.length - 1]?.length ?? 0) + 1,
-      selected: [...value.slice(selection.start, selection.end)].length
-    };
-  }, [value, selection.start, selection.end]);
+  const at = React.useMemo(
+    () => caretAt(value, selection.start, selection.end),
+    [value, selection.start, selection.end]
+  );
 
   const cells: React.ReactNode[] = [];
 

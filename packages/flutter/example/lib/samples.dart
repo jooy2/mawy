@@ -137,10 +137,31 @@ raw HTML gets, and for the same reason.
 ::youtube{id=dQw4w9WgXcQ}
 ''';
 
+const String _editor = '''
+# Writing, not just reading
+
+The source is on one side and the document on the other, and they are two views
+of one string rather than two editors. Type in the source and the preview keeps
+up; press a button on the toolbar and the *source* is what changes.
+
+- a list, where `Enter` carries the bullet down
+- and `Enter` on the empty item that follows gives it up again
+
+`Tab` indents by two spaces, which is what a nested item needs and not one more.
+
+```dart
+MawyEditor(defaultValue: document, onChange: save);
+```
+
+There is no `wysiwyg` here. That surface edits the document where it is drawn,
+which rests entirely on `contenteditable` — and Flutter has nothing of the kind.
+''';
+
 /// Everything the gallery can show.
 const List<Sample> samples = <Sample>[
   Sample('viewer/basic', 'Everything', _everything),
   Sample('viewer/minimal', 'Minimal', _minimal),
   Sample('viewer/prose', '한국어', _prose),
   Sample('viewer/directives', 'Directives', _directives),
+  Sample('editor/basic', 'Editor', _editor),
 ];

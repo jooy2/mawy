@@ -23,6 +23,7 @@ import 'dart:io';
 
 import 'package:mawy/src/code.dart';
 import 'package:mawy/src/editor/commands.dart';
+import 'package:mawy/src/editor/status.dart';
 import 'package:mawy/src/highlight.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/highlight.dart';
@@ -358,6 +359,18 @@ List<Object?> _edits() {
         commandActive(command, state),
       ];
     }
+
+    final MawyCaretAt caret = caretAt(state.value, state.start, state.end);
+
+    out['counts'] = <Object?>[
+      countLines(state.value),
+      countWords(state.value),
+      countCharacters(state.value),
+      countBytes(state.value),
+      caret.line,
+      caret.column,
+      caret.selected,
+    ];
 
     final EditState? carried = continueList(state);
     final EditState indented = indent(state, out: false);

@@ -42,6 +42,36 @@ class MawyStrings {
     required this.reset,
     required this.footnotes,
     required this.footnoteBack,
+    required this.editor,
+    required this.source,
+    required this.mode,
+    required this.modePlain,
+    required this.modePreview,
+    required this.modeSplit,
+    required this.bold,
+    required this.italic,
+    required this.strikethrough,
+    required this.codeSpan,
+    required this.link,
+    required this.image,
+    required this.heading,
+    required this.heading1,
+    required this.heading2,
+    required this.heading3,
+    required this.paragraph,
+    required this.quote,
+    required this.bulletList,
+    required this.orderedList,
+    required this.taskList,
+    required this.codeBlock,
+    required this.thematicBreak,
+    required this.status,
+    required this.statusPosition,
+    required this.statusSelected,
+    required this.statusLines,
+    required this.statusWords,
+    required this.statusCharacters,
+    required this.editorPlaceholder,
     required this.alertNote,
     required this.alertTip,
     required this.alertImportant,
@@ -130,6 +160,96 @@ class MawyStrings {
   /// The link from a note back to the sentence that mentioned it.
   final String footnoteBack;
 
+  /// The editor: Document.
+  final String editor;
+
+  /// The editor: Markdown source.
+  final String source;
+
+  /// The editor: View.
+  final String mode;
+
+  /// The editor: Source.
+  final String modePlain;
+
+  /// The editor: Preview.
+  final String modePreview;
+
+  /// The editor: Side by side.
+  final String modeSplit;
+
+  /// The editor: Bold.
+  final String bold;
+
+  /// The editor: Italic.
+  final String italic;
+
+  /// The editor: Strikethrough.
+  final String strikethrough;
+
+  /// The editor: Code.
+  final String codeSpan;
+
+  /// The editor: Link.
+  final String link;
+
+  /// The editor: Image.
+  final String image;
+
+  /// The editor: Heading.
+  final String heading;
+
+  /// The editor: Heading 1.
+  final String heading1;
+
+  /// The editor: Heading 2.
+  final String heading2;
+
+  /// The editor: Heading 3.
+  final String heading3;
+
+  /// The editor: Body text.
+  final String paragraph;
+
+  /// The editor: Quotation.
+  final String quote;
+
+  /// The editor: Bulleted list.
+  final String bulletList;
+
+  /// The editor: Numbered list.
+  final String orderedList;
+
+  /// The editor: Task list.
+  final String taskList;
+
+  /// The editor: Code block.
+  final String codeBlock;
+
+  /// The editor: Divider.
+  final String thematicBreak;
+
+  /// The editor: Document statistics.
+  final String status;
+
+  /// The editor: Ln %L, Col %C.
+  final String statusPosition;
+
+  /// The editor: %N selected.
+  final String statusSelected;
+
+  /// The editor: lines.
+  final String statusLines;
+
+  /// The editor: words.
+  final String statusWords;
+
+  /// The editor: characters.
+  final String statusCharacters;
+
+  /// The editor: Write in Markdown….
+  final String editorPlaceholder;
+
   /// `> [!NOTE]`.
   final String alertNote;
 
@@ -174,6 +294,36 @@ const MawyStrings _en = MawyStrings(
   reset: 'Back to the defaults',
   footnotes: 'Footnotes',
   footnoteBack: 'Back to where this was mentioned',
+  editor: 'Document',
+  source: 'Markdown source',
+  mode: 'View',
+  modePlain: 'Source',
+  modePreview: 'Preview',
+  modeSplit: 'Side by side',
+  bold: 'Bold',
+  italic: 'Italic',
+  strikethrough: 'Strikethrough',
+  codeSpan: 'Code',
+  link: 'Link',
+  image: 'Image',
+  heading: 'Heading',
+  heading1: 'Heading 1',
+  heading2: 'Heading 2',
+  heading3: 'Heading 3',
+  paragraph: 'Body text',
+  quote: 'Quotation',
+  bulletList: 'Bulleted list',
+  orderedList: 'Numbered list',
+  taskList: 'Task list',
+  codeBlock: 'Code block',
+  thematicBreak: 'Divider',
+  status: 'Document statistics',
+  statusPosition: 'Ln %L, Col %C',
+  statusSelected: '%N selected',
+  statusLines: 'lines',
+  statusWords: 'words',
+  statusCharacters: 'characters',
+  editorPlaceholder: 'Write in Markdown…',
   alertNote: 'Note',
   alertTip: 'Tip',
   alertImportant: 'Important',
@@ -209,6 +359,36 @@ const MawyStrings _ko = MawyStrings(
   reset: '기본값으로',
   footnotes: '각주',
   footnoteBack: '언급된 자리로 돌아가기',
+  editor: '문서',
+  source: '마크다운 원문',
+  mode: '보기',
+  modePlain: '원문',
+  modePreview: '미리보기',
+  modeSplit: '나란히',
+  bold: '굵게',
+  italic: '기울임',
+  strikethrough: '취소선',
+  codeSpan: '코드',
+  link: '링크',
+  image: '이미지',
+  heading: '제목',
+  heading1: '제목 1',
+  heading2: '제목 2',
+  heading3: '제목 3',
+  paragraph: '본문',
+  quote: '인용',
+  bulletList: '순서 없는 목록',
+  orderedList: '순서 있는 목록',
+  taskList: '체크 목록',
+  codeBlock: '코드 블록',
+  thematicBreak: '구분선',
+  status: '문서 통계',
+  statusPosition: '%L행 %C열',
+  statusSelected: '%N자 선택',
+  statusLines: '줄',
+  statusWords: '단어',
+  statusCharacters: '자',
+  editorPlaceholder: '마크다운으로 쓰세요…',
   alertNote: '참고',
   alertTip: '도움말',
   alertImportant: '중요',

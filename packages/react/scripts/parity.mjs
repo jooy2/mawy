@@ -28,6 +28,7 @@ import { parseMarkdown } from '../src/internal/markdown/parse.ts';
 import { mawyHighlighter } from '../src/highlight.ts';
 import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
 import { commandActive, continueList, indent, runCommand } from '../src/internal/commands.ts';
+import { caretAt, countBytes, countLines, countWords } from '../src/internal/status.ts';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptsDir, '../../..');
@@ -178,6 +179,14 @@ const edits = JSON.parse(
 
     out[command] = [after.value, after.start, after.end, commandActive(command, state)];
   }
+
+  out.counts = [
+    countLines(value),
+    countWords(value),
+    [...value].length,
+    countBytes(value),
+    ...(({ line, column, selected }) => [line, column, selected])(caretAt(value, start, end))
+  ];
 
   const carried = continueList(state);
   const indented = indent(state, false);

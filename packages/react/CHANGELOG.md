@@ -6,6 +6,8 @@
 
 ### Added
 
+- **The status bar's counts are their own module**, `src/internal/status.ts`, rather than functions inside the component that draws them — which is what lets the parity check diff them against the Dart ones. Nothing about the numbers changed; a count written twice is a count that reports two different answers for the same document the first time nobody is comparing them.
+
 - **Raw HTML is editable on the `wysiwyg` surface**, under `sanitize` and `raw` as well as under `escape`, and it is editable the same way a link's destination is: markup the caret is inside is written out as the characters it was written with, and drawn back as markup when the caret leaves. That was the last thing the surface could not do — what `dangerouslySetInnerHTML` puts on the page is markup React does not know the inside of, so there was nothing in the drawn form for a caret to be inside. Written out, there is, and every rule the surface already has applies to it unchanged.
 
   The writing-out now happens only while the editor has the focus. A document that opens with a link would otherwise show its brackets to a reader who has not touched it, and "the thing the caret is inside" is not a question an editor nobody is typing in has an answer to. The editor rather than the drawn surface, because pressing a button on the toolbar takes the focus out of the document and the caret it is about to act on is still the caret.

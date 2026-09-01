@@ -6,6 +6,20 @@
 
 ### Added
 
+- **An editor.** The Markdown source with its syntax coloured, a live preview beside it, a formatting toolbar and a status bar that counts:
+
+  ```dart
+  MawyEditor(defaultValue: '# Hello', onChange: save);
+  ```
+
+  **Three surfaces rather than the React package's four**, and the missing one is worth saying out loud. `wysiwyg` there draws the document and edits it where it is drawn, which rests entirely on `contenteditable`: a browser telling a component what somebody tried to do to a tree, so the component can refuse it and change the Markdown instead. Flutter has no such thing — an `EditableText` owns a string — and drawing a document that is also a text field would mean a second model of what the document is. A second model is a second opinion about what a document means, and the two disagree the first time anybody writes something unusual. So `plain`, `split` and `preview`, and the drawn surface stays a viewer.
+
+  Everything else is the React package's, and provably: the formatting commands, the colouring of the source and the counts along the bottom are the same functions under the same names, and `tool/parity.dart` diffs all three on every change. `Enter` on a list item carries the marker down and gives it up on an item still empty; `Tab` and `Shift`+`Tab` indent by the two spaces a nested item needs.
+
+  Colouring the source is the one place this package has the easier job. The React editor lays a transparent `<textarea>` over a coloured copy of the same text and keeps the two in step, because a browser gives no way to colour what is inside a text field; a `TextEditingController` is simply asked for the spans it wants drawn.
+
+- **`MawyEditor`, `MawyEditorMode`, `MawyEditorToolbarItem` and `MawyEditorStatusItem`**, along with `kMawyEditorModes`, `kMawyEditorToolbar` and `kMawyEditorStatus` — and the commands themselves as `runCommand`, `commandActive`, `continueList`, `indent` and `EditState`, for an application that would rather drive them from its own chrome.
+
 - **Six more of CommonMark, and the number moved from 612 to 618.** The React package's parser change, mirrored here in the same commit: all six are about which lists are loose — an empty item does not loosen its list, an item may begin with at most one blank line, and a blank line loosens the list it is in rather than every list around it.
 
 - **A syntax highlighter, and a code block that uses it.** `mawyHighlighter` is the React package's `src/highlight.ts` in Dart — the same grammars, the same rules, the same approximations — and `tool/parity.dart` now diffs every token the two produce over a piece of every language either of them claims. A code block coloured in a browser is coloured the same way in an app, which is the promise the parser already made and the one this makes now.

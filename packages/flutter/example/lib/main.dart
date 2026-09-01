@@ -72,6 +72,27 @@ class _GalleryAppState extends State<GalleryApp> {
         // which is a `MediaQuery` and only exists under the app.
         final MawyTokens tokens = MawyTokens.of(_brightness(context));
 
+        // The one sample that is not a document to read but a document to
+        // write, so it is the editor rather than the viewer.
+        if (sample.id == 'editor/basic') {
+          final Widget editor = MawyEditor(
+            key: ValueKey<String>(sample.id),
+            defaultValue: sample.value,
+            colorScheme: _scheme,
+            onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
+            highlight: mawyHighlighter,
+          );
+
+          return embedded
+              ? editor
+              : Column(
+                  children: <Widget>[
+                    _Switch(sample: sample, onChange: _choose),
+                    Expanded(child: editor),
+                  ],
+                );
+        }
+
         final Widget viewer = MawyViewer(
           // A key on the document, so switching samples starts a fresh viewer
           // rather than one that remembers the last one's scroll position.

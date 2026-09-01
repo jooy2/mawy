@@ -182,9 +182,13 @@ export function Page() {
 
 ::: fw flutter
 
-Flutter 패키지에는 아직 에디터가 없고, 이유는 아무도 손을 못 댔기 때문이 아닙니다. React 에디터는 `contenteditable`과 `beforeinput`, 그리고 DOM 선택 위에 서 있습니다. 모든 키 입력을 거절하고, 마크다운에 대한 편집으로 바꾸고, 문서를 다시 그립니다. 그 셋 중 어느 것도 옮겨 심을 Flutter 대응물이 없습니다. 번역하는 대신 만들 것입니다.
+문법에 색이 입혀진 마크다운 원문, 그 옆의 실시간 미리보기, 서식 툴바, 그리고 세어 주는 상태 표시줄.
 
-지금은 뷰어가 패키지의 전부이고, 에디터가 쓰는 것을 정확히 그대로 읽습니다.
+```dart
+MawyEditor(defaultValue: '# Hello', onChange: save);
+```
+
+React 패키지의 넷이 아니라 화면은 셋입니다. `plain`, `split`, `preview`. 빠진 하나는 `wysiwyg`이고, 그것은 그려진 자리에서 문서를 편집하며 전적으로 `contenteditable` 위에 서 있습니다. Flutter에는 그런 것이 없고, 여기서 그려지는 화면은 뷰어로 남습니다. 이유는 [에디터](./editor)에 있습니다.
 
 :::
 
@@ -227,6 +231,7 @@ Flutter 패키지에는 아직 에디터가 없고, 이유는 아무도 손을 �
 |  |  |
 | --- | --- |
 | `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer) |
+| `MawyEditor` | 에디터. 원문과 미리보기, 그 사이의 전환. [가이드](./editor) |
 | `parseMarkdown` | 파서, 그리고 그것이 만드는 `Md*` 트리 전부 |
 | `MawyTokens` | 팔레트. `MawyTokens.light`와 `MawyTokens.dark` |
 | `mawyHighlighter` | 신택스 하이라이터. 지목해야만 빌드에 남습니다 |
