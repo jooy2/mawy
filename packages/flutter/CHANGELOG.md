@@ -12,6 +12,8 @@
 
   Following an entry now moves the focus as well as the scroll, so the next `Tab` carries on from the heading rather than from the panel. The heading is `skipTraversal`, which is the web's `tabIndex = -1` said the other way round: somewhere the focus can be put, and not somewhere `Tab` stops on the way past. That was the last thing the viewer guide said this package did not do yet, and the sentence is gone.
 
+- **One more of CommonMark, and the number moved from 638 to 639.** The React package's parser change, mirrored here in the same commit: a lazily taken line cannot cut its paragraph short. A container hands one over with its indentation gone, and a bullet four columns in — not a marker where it was written — used to open a list nobody wrote.
+
 - **Three more of CommonMark, and the number moved from 635 to 638.** The React package's parser change, mirrored here in the same commit: all three are the lazy continuation. Only a paragraph is continued across a line that forgot its `>` — a fence the quotation opened, or code it indented, is waiting for nothing — and a line taken that way is the paragraph's next line and not a setext underline.
 
 - **One more of CommonMark, and the number moved from 634 to 635.** The React package's parser change, mirrored here in the same commit: a document that ends in a newline has that many lines and not one more, and the blank line the reader used to invent at the end of one made a fence the document never closed a line taller than its code is.

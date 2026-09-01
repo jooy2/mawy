@@ -6,6 +6,10 @@
 
 ### Added
 
+- **One more of CommonMark, and the number moved from 638 to 639.** The last of the lazy continuation, and the same rule from the other side: a lazily taken line cannot cut its paragraph short any more than it can underline it. It is there _because_ the paragraph is open, so whatever it looks like once it arrives, it is that paragraph's next line.
+
+  What it looks like is the point. A container hands a lazy line over with its indentation gone, and `    - e` under a list item four columns in is not a marker where it was written — three spaces is as far in as one goes — and is a marker by the time the item's paragraph sees it. It used to open a list nobody wrote.
+
 - **Three more of CommonMark, and the number moved from 635 to 638.** All three are the lazy continuation — the line under `> foo` that forgot its own `>` and is part of the quotation anyway.
 
   **Only a paragraph is continued that way.** A line belongs to the quotation above it because there is a paragraph up there still waiting for its next line, and for no other reason: a fence the quotation opened, or code it indented four columns, is waiting for nothing, and the line below it belongs to whatever is beside the quotation rather than inside it. A quotation whose one line opens a fence, followed by an unquoted line, is an unclosed code block and then a paragraph; it used to be a code block with that line inside it.

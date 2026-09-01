@@ -1281,7 +1281,12 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         break;
       }
 
-      if (interrupts(next.text)) {
+      // A lazily taken line cannot cut the paragraph short either, for the
+      // same reason it cannot underline it: it is here *because* the paragraph
+      // is open, and a container hands it over with its indentation gone —
+      // which is how ` - e`, four columns in and not a marker where it was
+      // written, arrives looking like one.
+      if (!next.lazy && interrupts(next.text)) {
         break;
       }
 

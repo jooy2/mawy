@@ -6,8 +6,8 @@ import { specExamples, writeHtml } from '../../support/commonmark.js';
  * The parser, against the specification it claims to read.
  *
  * "CommonMark" is written in the README, on the site and in the changelog, and
- * until this file existed it was a word rather than a number. It is 638 of the
- * specification's 652 examples — the other 14 are below, each one with the
+ * until this file existed it was a word rather than a number. It is 639 of the
+ * specification's 652 examples — the other 13 are below, each one with the
  * reason it is there, so that the claim is checkable and a change to it is
  * deliberate.
  *
@@ -76,9 +76,6 @@ const DEVIATIONS = new Map<number, string>([
   /* A label is folded by case rather than by Unicode case folding. */
   [540, '`ẞ` and `SS` are one label to the specification and two here'],
 
-  /* One more about where a container ends. */
-  [312, 'a fifth level of indentation opens a list rather than continuing one'],
-
   /*
    * And three that are a decision rather than a shortfall. Every URL is checked
    * against a scheme allowlist, in Markdown as much as in HTML, and a refused
@@ -128,7 +125,7 @@ describe('CommonMark', () => {
     expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
   });
 
-  it('reads 638 of the 652', () => {
-    expect(examples.length - differing.length).toBe(638);
+  it('reads 639 of the 652', () => {
+    expect(examples.length - differing.length).toBe(639);
   });
 });
