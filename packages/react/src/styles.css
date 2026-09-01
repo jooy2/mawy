@@ -1328,9 +1328,39 @@
   min-height: 0;
 }
 
+/* One row and one row only. What does not fit goes into the menu at the end of
+ * it — see `useOverflow` in `MawyEditorToolbar`. Wrapping was what happened
+ * before, and a wrapped toolbar is a second row the layout above it did not
+ * make room for: the buttons went on and the bar did not grow. */
 .mawy-root .mawy-toolbar-editor {
-  flex-wrap: wrap;
+  /* Grows to the whole bar rather than shrinking to its contents, because its
+   * own width is the room the measuring reads. A row sized by what is in it
+   * reports the collapsed width once it has collapsed, and never expands
+   * again. */
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
   margin-inline-start: 0;
+}
+
+.mawy-root .mawy-toolbar-group,
+.mawy-root .mawy-toolbar-more {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The groups inside the menu, one row each, in the order they left the bar. */
+.mawy-root .mawy-toolbar-overflow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mawy-root .mawy-toolbar-overflow .mawy-toolbar-group + .mawy-toolbar-group {
+  padding-top: 4px;
+  border-top: 1px solid var(--mawy-border);
 }
 
 .mawy-root .mawy-segmented {

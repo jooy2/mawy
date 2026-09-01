@@ -6,6 +6,14 @@
 
 ### Added
 
+- **A toolbar too narrow for its buttons keeps what fits and puts the rest in a menu at the end of it.** What happened before was a wrap: the buttons went on to a second row and the bar did not grow, because the layout above it had made room for one. The lower row left the bar.
+
+  Whole groups at a time and from the end. The separators an application already writes are the grouping — the surface switch, then what marks up a run of text, then what makes a block of one, then the file and the palette — so reordering `toolbar` reorders what goes first, and there is no second list here saying what belongs with what. The first group never leaves.
+
+  The measuring is one layout effect and a `ResizeObserver`: every group is shown, measured and put back before the browser paints, because a group that has been taken out of the row has no width to read. Hiding a child does not change the width of the row that holds it, so the observer cannot set itself off.
+
+  `strings.more` is new, and the menu is a `dialog` with the groups inside it in the order they left. 0.6 kB gzipped on the editor, and the viewer's 0.1 kB is the stylesheet it shares.
+
 - **`wysiwyg` keeps a marker on the page until it is the block it looks like.** Typing `#` used to make an empty heading, and an empty heading draws no characters at all — so the character somebody had just typed disappeared as they typed it, and somebody who wanted a `#` in a sentence had a heading to undo.
 
   The parser is not what changed and is not what was wrong: `#` on a line of its own is an empty ATX heading, CommonMark says so in as many words, and the viewer should go on drawing one. What changed is the surface that is being typed into, which already writes a link, an image and a piece of raw HTML out as their own characters when the caret is inside them, for exactly this reason — there is nothing of the document on the page for a caret to sit in. A block written so far as its marker and nothing else is the same thing said about a whole line.

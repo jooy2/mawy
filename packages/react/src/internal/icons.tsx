@@ -30,6 +30,7 @@ export {
   List as BulletListIcon,
   ListChecks as TaskListIcon,
   ListOrdered as OrderedListIcon,
+  Ellipsis as MoreIcon,
   Minus as RuleIcon,
   PencilLine as SourceIcon,
   Pilcrow as ParagraphIcon,

@@ -21,6 +21,7 @@ import {
   ItalicIcon,
   LightIcon,
   LinkIcon,
+  MoreIcon,
   OpenFileIcon,
   OrderedListIcon,
   ParagraphIcon,
@@ -103,6 +104,104 @@ const COMMANDS: Partial<
  * Like the viewer's, it is a real `toolbar` — one tab stop, arrows inside —
  * and it draws only the controls it was given.
  */
+/**
+ * How many of a toolbar's groups fit across it, and what to do with the rest.
+ *
+ * A toolbar is a row and a row has a width, and eighteen buttons is wider than
+ * a narrow editor. Wrapping was what happened before, and a wrapped toolbar is
+ * a second row the layout above it did not make room for — the buttons went on
+ * and the bar did not grow.
+ *
+ * So the row keeps what fits and the rest goes into one menu at the end. Whole
+ * groups at a time, in the order they were asked for: `toolbar` is already
+ * "exactly these controls in exactly this order", and the order an application
+ * wrote is the order it would want them to go in. The first group never leaves
+ * — the surface switch is the control a writer reaches for most, and a control
+ * hidden behind a menu at every width is one that should not have been on the
+ * list.
+ *
+ * The measuring is the awkward half. A group that has been taken out of the row
+ * has no width to read, so every group is shown, measured and put back inside
+ * one layout effect — the browser paints once, at the end, with the answer
+ * already applied. Hiding a child does not change the width of the row that
+ * holds it, so the observer cannot set itself off.
+ */
+function useOverflow(groups: number): {
+  row: React.RefObject<HTMLDivElement | null>;
+  shown: number;
+} {
+  const row = React.useRef<HTMLDivElement>(null);
+  const [shown, setShown] = React.useState(groups);
+
+  React.useLayoutEffect(() => {
+    const element = row.current;
+
+    if (!element || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const measure = () => {
+      const all = [...element.querySelectorAll<HTMLElement>('[data-mawy-toolbar-group]')];
+      const more = element.querySelector<HTMLElement>('[data-mawy-toolbar-more]');
+      const was = all.map((group) => group.style.display);
+      const wasMore = more?.style.display ?? '';
+
+      for (const group of all) {
+        group.style.display = '';
+      }
+
+      if (more) {
+        more.style.display = '';
+      }
+
+      const room = element.clientWidth;
+      const menu = more?.offsetWidth ?? 0;
+      const widths = all.map((group) => group.offsetWidth);
+      const total = widths.reduce((sum, width) => sum + width, 0);
+
+      let fits = all.length;
+
+      if (total > room) {
+        let used = menu;
+
+        fits = 0;
+
+        for (const width of widths) {
+          if (used + width > room) {
+            break;
+          }
+
+          used += width;
+          fits += 1;
+        }
+      }
+
+      all.forEach((group, index) => {
+        group.style.display = was[index];
+      });
+
+      if (more) {
+        more.style.display = wasMore;
+      }
+
+      // At least the first: a row too narrow for it is a row too narrow for
+      // anything, and an empty toolbar beside a menu is worse than one that
+      // overflows its own edge.
+      setShown(Math.max(1, fits));
+    };
+
+    measure();
+
+    const observer = new ResizeObserver(measure);
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [groups]);
+
+  return { row, shown };
+}
+
 export function MawyEditorToolbar({
   items,
   strings,
@@ -122,6 +221,48 @@ export function MawyEditorToolbar({
   const { onKeyDown, itemProps } = useRoving();
   const order = tabStops(items, (item) =>
     item === 'separator' ? 0 : item === 'mode' ? modes.length : 1
+  );
+
+  /**
+   * The controls, cut into groups at the separators an application wrote.
+   *
+   * The separators are already the grouping — `mode`, then what marks up a run
+   * of text, then what makes a block of one, then the file and the palette —
+   * and reading them is a great deal better than a second list here saying what
+   * belongs with what. An application that reorders `toolbar` reorders the
+   * groups with it, which is the behaviour it would expect.
+   */
+  const groups = React.useMemo(() => {
+    const out: { item: MawyEditorToolbarItem; key: number }[][] = [];
+    let current: { item: MawyEditorToolbarItem; key: number }[] = [];
+
+    items.forEach((item, key) => {
+      if (item === 'separator') {
+        if (current.length) {
+          out.push(current);
+          current = [];
+        }
+
+        return;
+      }
+
+      current.push({ item, key });
+    });
+
+    if (current.length) {
+      out.push(current);
+    }
+
+    return out;
+  }, [items]);
+
+  const { row, shown } = useOverflow(groups.length);
+  const hidden = groups.slice(shown);
+
+  /** The stop after every control's, which is where the overflow menu goes. */
+  const lastStop = items.reduce(
+    (count, item) => count + (item === 'separator' ? 0 : item === 'mode' ? modes.length : 1),
+    0
   );
 
   const control = (item: MawyEditorToolbarItem, key: number): React.ReactNode => {
@@ -300,7 +441,45 @@ export function MawyEditorToolbar({
 
   return (
     <div className="mawy-toolbar" role="toolbar" aria-label={strings.editor} onKeyDown={onKeyDown}>
-      <div className="mawy-toolbar-controls mawy-toolbar-editor">{items.map(control)}</div>
+      <div className="mawy-toolbar-controls mawy-toolbar-editor" ref={row}>
+        {groups.map((group, index) => (
+          <React.Fragment key={index}>
+            {index > 0 ? (
+              <span
+                className="mawy-toolbar-separator"
+                aria-hidden="true"
+                style={index < shown ? undefined : { display: 'none' }}
+              />
+            ) : null}
+            <span
+              className="mawy-toolbar-group"
+              data-mawy-toolbar-group=""
+              style={index < shown ? undefined : { display: 'none' }}
+            >
+              {group.map(({ item, key }) => control(item, key))}
+            </span>
+          </React.Fragment>
+        ))}
+        <span
+          className="mawy-toolbar-more"
+          data-mawy-toolbar-more=""
+          style={hidden.length ? undefined : { display: 'none' }}
+        >
+          <Menu
+            label={strings.more}
+            icon={<MoreIcon className="mawy-icon" aria-hidden="true" />}
+            {...itemProps(lastStop)}
+          >
+            <div className="mawy-toolbar-overflow">
+              {hidden.map((group, index) => (
+                <div className="mawy-toolbar-group" key={index}>
+                  {group.map(({ item, key }) => control(item, key))}
+                </div>
+              ))}
+            </div>
+          </Menu>
+        </span>
+      </div>
     </div>
   );
 }

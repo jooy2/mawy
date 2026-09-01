@@ -18,14 +18,6 @@ Two rules keep it honest:
 
 ## Confirmed
 
-- **The editor's toolbar wraps to a second row and spills out of it.**
-  `.mawy-toolbar-editor` in `packages/react/src/styles.css` is `flex-wrap: wrap`
-  inside a `.mawy-toolbar` that is laid out as one row, so a narrow editor gets
-  two rows of buttons and the lower one leaves the bar. What is wanted is
-  grouping by what the buttons are for and an overflow menu for whatever does
-  not fit, rather than a wrap. The Flutter toolbar has not been looked at for
-  the same thing.
-
 - **Nothing in the documentation lets a reader type into either package.** A
   demo page, one per framework, with the editor and the viewer live and most of
   what they do switched on — enough to find the next four items on this list by

@@ -488,11 +488,96 @@ describe('the toolbar and the keyboard', () => {
     const screen = await render(
       <MawyEditor defaultValue={DOCUMENT} toolbar={['bold', 'italic']} modes={['plain']} />
     );
-    const labels = [...screen.container.querySelectorAll('.mawy-toolbar .mawy-button')].map(
-      (button) => button.getAttribute('aria-label')
+    const labels = [...screen.container.querySelectorAll<HTMLElement>('.mawy-toolbar .mawy-button')]
+      .filter((button) => button.offsetParent !== null)
+      .map((button) => button.getAttribute('aria-label'));
+
+    // Two controls fit anywhere, so the overflow menu is not drawn either.
+    expect(labels).toEqual(['Bold', 'Italic']);
+  });
+
+  /**
+   * The toolbar in a bar too narrow for it.
+   *
+   * Eighteen buttons is wider than a narrow editor, and what used to happen was
+   * a second row the layout above had made no room for — the buttons went on
+   * and the bar did not grow. Now the row keeps what fits and the rest is one
+   * menu at the end, whole groups at a time and from the end, so the order an
+   * application wrote is the order they go in.
+   */
+  it('puts what does not fit into a menu, and gives it all back', async () => {
+    const wide = { width: 900, height: 400 };
+    const narrow = { width: 380, height: 400 };
+    const screen = await render(
+      <div style={wide}>
+        <MawyEditor defaultValue={DOCUMENT} modes={['plain']} />
+      </div>
     );
 
-    expect(labels).toEqual(['Bold', 'Italic']);
+    // In the row itself: a control the menu is holding is on the page too once
+    // the menu is open, and being open is the state this asks questions in.
+    const inRow = () =>
+      [...screen.container.querySelectorAll<HTMLElement>('.mawy-toolbar .mawy-button')]
+        .filter((button) => button.offsetParent !== null && !button.closest('.mawy-menu-panel'))
+        .map((button) => button.getAttribute('aria-label'));
+
+    await vi.waitFor(() => expect(inRow()).toContain('Bold'));
+
+    expect(inRow()).toContain('Find');
+    expect(inRow()).not.toContain('More controls');
+
+    const box = screen.container.firstElementChild as HTMLElement;
+
+    box.style.width = `${narrow.width}px`;
+
+    await vi.waitFor(() => expect(inRow()).toContain('More controls'));
+
+    // From the end: the surface switch is still there and the file controls are
+    // the first to go.
+    expect(inRow()).toContain('Source');
+    expect(inRow()).not.toContain('Find');
+
+    // And in the menu, which is where the row said they were.
+    await screen.getByRole('button', { name: 'More controls' }).click();
+    await expect.element(screen.getByRole('button', { name: 'Find' })).toBeInTheDocument();
+
+    box.style.width = `${wide.width}px`;
+
+    await vi.waitFor(() => expect(inRow()).toContain('Find'));
+    expect(inRow()).not.toContain('More controls');
+  });
+
+  it('stays one row where even a single group cannot fit', async () => {
+    // One group, and nothing for the menu to take that would help: what is left
+    // when a bar is narrower than the smallest thing it can show. It clips
+    // rather than wrapping, because a second row is one the layout above the
+    // toolbar made no room for and the buttons on it leave the bar.
+    const screen = await render(
+      <div style={{ width: 200, height: 400 }}>
+        <MawyEditor
+          defaultValue={DOCUMENT}
+          modes={['plain']}
+          toolbar={[
+            'bold',
+            'italic',
+            'strikethrough',
+            'code',
+            'link',
+            'image',
+            'quote',
+            'codeBlock'
+          ]}
+        />
+      </div>
+    );
+
+    const bar = screen.container.querySelector('.mawy-toolbar') as HTMLElement;
+    const button = screen.container.querySelector('.mawy-toolbar .mawy-button') as HTMLElement;
+
+    await vi.waitFor(() => expect(button.offsetHeight).toBeGreaterThan(0));
+
+    // One row of buttons and the bar's own padding, and nothing like two.
+    expect(bar.offsetHeight).toBeLessThan(button.offsetHeight * 2);
   });
 });
 

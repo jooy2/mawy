@@ -56,6 +56,8 @@ export interface MawyStrings {
   alertWarning: string;
   alertCaution: string;
   editor: string;
+  /** The toolbar's overflow menu, where what did not fit is kept. */
+  more: string;
   source: string;
   mode: string;
   modeWysiwyg: string;
@@ -156,6 +158,7 @@ const en: MawyStrings = {
   alertWarning: 'Warning',
   alertCaution: 'Caution',
   editor: 'Document',
+  more: 'More controls',
   source: 'Markdown source',
   mode: 'View',
   modeWysiwyg: 'Formatted',
@@ -248,6 +251,7 @@ const ko: MawyStrings = {
   alertWarning: '주의',
   alertCaution: '경고',
   editor: '문서',
+  more: '더 보기',
   source: '마크다운 원문',
   mode: '보기',
   modeWysiwyg: '서식',

@@ -138,10 +138,24 @@ describe('the editor', () => {
   }
 
   it('has nothing to answer for with find and replace open', async () => {
-    const screen = await render(<MawyEditor defaultValue={SAMPLE} mode="plain" />);
+    // A short toolbar, so that `find` is a button in the row rather than one of
+    // the controls the overflow menu is holding at this width. The menu has an
+    // audit of its own below.
+    const screen = await render(
+      <MawyEditor defaultValue={SAMPLE} mode="plain" toolbar={['find']} />
+    );
 
     await screen.getByRole('button', { name: 'Find' }).click();
     await expect.element(screen.getByRole('search', { name: 'Find' })).toBeInTheDocument();
+
+    expect(await violations(screen.container)).toEqual([]);
+  });
+
+  it('has nothing to answer for with the overflow menu open', async () => {
+    const screen = await render(<MawyEditor defaultValue={SAMPLE} mode="plain" />);
+
+    await screen.getByRole('button', { name: 'More controls' }).click();
+    await expect.element(screen.getByRole('dialog', { name: 'More controls' })).toBeInTheDocument();
 
     expect(await violations(screen.container)).toEqual([]);
   });

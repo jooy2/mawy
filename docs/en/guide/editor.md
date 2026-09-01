@@ -203,6 +203,22 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | `'colorScheme'` | Light, dark, or whatever the system says |
 | `'separator'` | A hairline, for grouping |
 
+::: fw react
+
+**A bar too narrow for its buttons keeps what fits and puts the rest in a menu at the end of it.** Whole groups at a time, and from the end — the separators are the grouping, so an application that reorders `toolbar` reorders what goes first. The surface switch never leaves: it is the control a writer reaches for most, and one hidden behind a menu at every width should not have been on the list.
+
+That is a decision the toolbar makes by measuring itself, not one to configure. What it replaced was a second row, and a second row is one the layout above the toolbar made no room for — the buttons went on and the bar did not grow, so the lower row left the bar.
+
+:::
+
+::: fw flutter
+
+**A bar too narrow for its buttons scrolls sideways.** No menu and nothing hidden: the row is inside a `SingleChildScrollView`, so what does not fit is a drag away, and the arrows that move the focus along the row scroll it into view as they go.
+
+The React package answers the same question with a menu at the end of the bar, and the difference is the platforms rather than a preference. A row that scrolls under a finger is what a toolbar does on a touch screen; a menu is what one does on a page with a pointer and no obvious way to drag a bar sideways.
+
+:::
+
 ## Images
 
 Three ways in, and they are three because an image can arrive already having a URL, or not having one yet.
