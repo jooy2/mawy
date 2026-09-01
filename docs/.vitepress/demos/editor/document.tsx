@@ -1,5 +1,6 @@
 import { MawyEditor } from 'mawy-react';
 import type { DemoProps } from '../types.js';
+import { readAsDataUrl } from '../upload.js';
 
 const DOCUMENT = `# Editing the document itself
 
@@ -43,22 +44,6 @@ Drop an image file here, or paste a screenshot. This demo answers
 \`onUploadImage\` with a \`data:\` URI so that the page needs no server; a real
 application answers with wherever it put the bytes.
 `;
-
-/**
- * Where an image goes, for a documentation page with nothing behind it.
- *
- * A `data:` URI is exactly what the prop exists to avoid doing on anyone's
- * behalf — it puts the whole file inside the document — and it is the right
- * answer here, where there is nowhere else for it to go and nothing to keep.
- */
-const readAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.addEventListener('load', () => resolve(String(reader.result)));
-    reader.addEventListener('error', () => reject(new Error('unreadable')));
-    reader.readAsDataURL(file);
-  });
 
 /** The `wysiwyg` surface: the drawn document, edited in place. */
 export default function EditorDocument({ colorScheme, onColorSchemeChange, locale }: DemoProps) {
