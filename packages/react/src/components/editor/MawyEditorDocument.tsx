@@ -3,7 +3,7 @@
 import * as React from 'react';
 import type { MawyDirectives, MawyHtmlPolicy, MawyParseOptions } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
-import type { MdBlock } from '../../internal/markdown/ast.js';
+import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import {
   renderBlocks,
@@ -20,13 +20,18 @@ import {
   type MawyEdit
 } from '../../internal/editing.js';
 import { pastedImagesIn } from '../../internal/images.js';
-import { sourceAt } from '../../internal/position.js';
+import { domAt, sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
   value: string;
   onEdit: (edit: MawyEdit) => void;
   /** Where the caret is, in the document's own offsets. */
   onSelect: (selection: { start: number; end: number }) => void;
+  /**
+   * Where the caret is now, as the editor has it. Read to decide which link or
+   * image, if any, is drawn as its own source — see `revealedIn` below.
+   */
+  selection: { start: number; end: number };
   onKeyDown: React.KeyboardEventHandler<HTMLElement>;
   readOnly: boolean;
   label: string;
@@ -53,6 +58,39 @@ export interface MawyEditorDocumentProps {
    * with one — see `MawyImageUpload`.
    */
   onImages?: (files: readonly File[], at: number) => void;
+}
+
+/**
+ * The range of the innermost link or image a selection falls entirely inside,
+ * or `null`.
+ *
+ * Entirely inside, so that a range dragged across half a document does not turn
+ * every link under it into markup — and so that the toolbar's `[](url)`, which
+ * arrives with the placeholder already selected, is written out with it.
+ *
+ * A walk over the tree on every caret move, which sounds worse than it is: a
+ * block whose range cannot hold the selection is skipped without being
+ * descended into, so a caret in a long document reads one paragraph.
+ */
+function revealedIn(nodes: readonly MdNode[], start: number, end: number): MdRange | null {
+  for (const node of nodes) {
+    if (start < node.range.start || end > node.range.end) {
+      continue;
+    }
+
+    if (node.type === 'link' || node.type === 'image') {
+      return { start: node.range.start, end: node.range.end };
+    }
+
+    const children = 'children' in node ? (node.children as MdNode[]) : [];
+    const inside = revealedIn(children, start, end);
+
+    if (inside) {
+      return inside;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -85,6 +123,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       value,
       onEdit,
       onSelect,
+      selection,
       onKeyDown,
       readOnly,
       label,
@@ -119,10 +158,71 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
       [document_]
     );
-    const context: RenderContext = React.useMemo(
-      () => ({ html, strings, footnotes, directives, source: value }),
-      [html, strings, footnotes, directives, value]
+    /**
+     * The link or image the caret is inside, which is drawn as its own
+     * characters rather than as what it means.
+     *
+     * A drawn `<a>` puts its words on the page and never its `(url)`, so a
+     * destination has nowhere for a caret to be and nothing for a keystroke to
+     * land on — which is why `[](url)` from the toolbar could not be typed
+     * over. Written out, it is the source one character for one, and every rule
+     * this surface already has works on it unchanged.
+     *
+     * Only the one the selection is entirely inside — a range dragged across
+     * half a document turns nothing into markup under the pointer.
+     */
+    const reveal = React.useMemo(
+      () => revealedIn(document_.root.children, selection.start, selection.end),
+      [document_, selection.start, selection.end]
     );
+    const context: RenderContext = React.useMemo(
+      () => ({ html, strings, footnotes, directives, source: value, reveal }),
+      [html, strings, footnotes, directives, value, reveal]
+    );
+
+    /**
+     * The caret, put back after a reveal changed what is under it.
+     *
+     * Drawing a link as markup and drawing it back again both replace the nodes
+     * the selection was anchored in, and a selection whose nodes are gone is a
+     * caret that has left the surface. Nothing was edited, so the editor's own
+     * restoring — which runs after an edit — has nothing to run for; this is the
+     * same job for the other reason.
+     */
+    const drawnReveal = React.useRef(reveal);
+
+    React.useLayoutEffect(() => {
+      const element = root.current;
+      const was = drawnReveal.current;
+
+      drawnReveal.current = reveal;
+
+      if (!element || was === reveal || composing.current) {
+        return;
+      }
+
+      const owner = element.ownerDocument;
+
+      // Only when the caret was in here to begin with. A reveal that changed
+      // because the document did, with the focus somewhere else entirely, has
+      // no caret of ours to put back.
+      if (!element.contains(owner.getSelection()?.anchorNode ?? null)) {
+        return;
+      }
+
+      const at = domAt(element, selection.start, value);
+
+      if (!at) {
+        return;
+      }
+
+      const range = owner.createRange();
+
+      range.setStart(at.node, at.offset);
+      range.collapse(true);
+      owner.getSelection()?.removeAllRanges();
+      owner.getSelection()?.addRange(range);
+    }, [reveal, selection.start, value]);
 
     /**
      * `beforeinput` rather than React's `onBeforeInput`, and a listener of our

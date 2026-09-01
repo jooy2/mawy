@@ -77,6 +77,29 @@ export interface RenderContext {
    * range in the tree indexes this string.
    */
   source?: string;
+  /**
+   * A run of the document to draw as the characters it was written with rather
+   * than as what it means.
+   *
+   * The editor's drawn surface sets this to the link or image the caret is
+   * inside, and that is the whole of how a destination gets edited: a `<a>`
+   * draws its words and never its `(url)`, so there is nothing on the page for
+   * a caret to sit in and nothing for a keystroke to land on. Written out, the
+   * characters *are* the source, one for one, and every rule the surface
+   * already has applies to them unchanged.
+   *
+   * Unset everywhere else. A viewer has no caret and nothing to reveal.
+   */
+  reveal?: MdRange | null;
+}
+
+/** Whether a node is inside the run being shown as its own source. */
+function revealed(node: { range: MdRange }, context: RenderContext): boolean {
+  const at = context.reveal;
+
+  return (
+    at !== null && at !== undefined && at.start === node.range.start && at.end === node.range.end
+  );
 }
 
 /**
@@ -202,7 +225,11 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
         );
 
       case 'link':
-        return (
+        return revealed(node, context) ? (
+          <span key={index} className="mawy-md-source" {...origin(node)}>
+            {context.source?.slice(node.range.start, node.range.end)}
+          </span>
+        ) : (
           <a
             key={index}
             className="mawy-md-link"
@@ -237,7 +264,11 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
       }
 
       case 'image':
-        return (
+        return revealed(node, context) ? (
+          <span key={index} className="mawy-md-source" {...origin(node)}>
+            {context.source?.slice(node.range.start, node.range.end)}
+          </span>
+        ) : (
           <img
             key={index}
             className="mawy-md-image"

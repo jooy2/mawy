@@ -6,6 +6,12 @@
 
 ### Added
 
+- **A link or an image the caret is inside is written out as its own characters** on the `wysiwyg` surface, destination and all, and drawn back as itself when the caret leaves.
+
+  This is the destination becoming editable, which it was not. A drawn `<a>` puts its words on the page and never its `(url)`, so there was nowhere on the page for an address to be and nothing for a keystroke to land on — the toolbar's `[](url)` arrived with a placeholder that could not be typed over, and an existing link's destination could only be changed on the source surface. Written out it is the source one character for one, and every rule the surface already has applies to it unchanged: there is no link editor, no popover and no second way to type.
+
+  It follows the caret rather than a mode, and only where the whole selection sits inside one link — a range dragged across half a document turns nothing into markup under the pointer. What is revealed is marked rather than disguised, because text that has stopped being a link and started being the text that makes one is a difference worth being able to see.
+
 - **A print stylesheet.** A viewer on paper is the document and nothing else — the toolbar, the outline, the status bar, the find box and a footnote's link back to where it was mentioned are all things to press, and paper cannot be pressed. Three more things change because a page is not a screen: a viewer given a height is as tall as its document instead of printing one boxful, the palette goes dark-on-light whatever the reader chose, and a link's destination is written out after it. In the editor the drawn document prints — `split` drops the source pane, and `plain` prints the source as text rather than as a `<textarea>`, which would put only its own boxful on the page. Nothing to switch on: it is `@media print` in the stylesheet that was already imported.
 
 - **An accessibility pass, run by [axe](https://github.com/dequelabs/axe-core) rather than by opinion**, over every surface in both palettes — the viewer with a document and as the file picker, all four editor modes, the outline open, a menu open, find and replace open. Four things it found, all fixed:
@@ -17,7 +23,7 @@
 
 - **A size budget, and a stylesheet with its prose taken out.** `npm run size` bundles the published files for real and compares the result to `size-budget.json`, which CI now fails a change for going over. What it measures is what a consumer's bundler produces: React external because an application already has it, `lucide-react` counted because it arrives with this, and gzip because every server on the path compresses.
 
-  Gzipped, that is **22.0 kB for `MawyViewer`, 37.5 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.5 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
+  Gzipped, that is **22.1 kB for `MawyViewer`, 37.8 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.5 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
 
   The stylesheet is now minified on its way into `dist/`. Two fifths of `styles.css` is prose written for somebody reading the source, and a reader of a page was paying 3.7 kB gzipped for comments they cannot see; `src/styles.css` is still the file to read and to edit, and what ships is the same rules in the same order. The build checks the two things that would make that a bad trade: every `--mawy-*` custom property still declared, and every `:where()` still a `:where()`, because those are the resets and a reset that gained specificity is one that starts beating the page it was dropped into.
 

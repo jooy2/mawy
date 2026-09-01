@@ -1187,6 +1187,25 @@
   white-space: normal;
 }
 
+/*
+ * A link or an image the caret is inside, on the drawn surface, written out as
+ * the characters it was written with.
+ *
+ * Marked rather than disguised: what is under the caret has stopped being a
+ * link and started being the text that makes one, and a reader who cannot see
+ * that difference is a reader about to wonder why their typing went somewhere
+ * strange. Monospace and a faint ground say "this is the file" the same way
+ * they do for a directive nobody claimed.
+ */
+.mawy-root .mawy-md-source {
+  border-radius: var(--mawy-radius-sm);
+  background: var(--mawy-bg-sunken);
+  color: var(--mawy-fg-muted);
+  font-family: var(--mawy-font-mono);
+  font-size: 0.9em;
+  white-space: pre-wrap;
+}
+
 .mawy-root .mawy-md-html img {
   max-width: 100%;
   height: auto;

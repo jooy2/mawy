@@ -349,6 +349,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     (edit: MawyEdit) => {
       pending.current = [edit.caret, edit.caret];
       setRoom(edit.betweenBlocks ? edit.caret : null);
+      // Where the caret is going, said before the drawing rather than after it.
+      // The drawn surface writes out the link or image the caret is inside, and
+      // it decides that while rendering — so a caret told afterwards is a link
+      // that closes on the keystroke that was being typed into it.
+      setSelection({ start: edit.caret, end: edit.caret });
       write(edit.value);
     },
     [write]
@@ -468,6 +473,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       pending.current = [after.start, after.end];
       setRoom(null);
+      setSelection({ start: after.start, end: after.end });
       write(after.value);
     },
     [apply, showDocument, write]
@@ -1201,6 +1207,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               value={text}
               onEdit={applyEdit}
               onSelect={readDrawnSelection}
+              selection={selection}
               onKeyDown={onKeyDown}
               readOnly={readOnly}
               label={strings.document}

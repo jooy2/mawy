@@ -104,6 +104,8 @@ An input method is the one thing that **cannot** be refused, and it is handled t
 
 Refusing a composition is refusing the composition. Korean is composed a jamo at a time, and an editor that answers each of them with "no" cannot write Korean at all. Pressing `Enter` and composing straight into the empty paragraph works too, because with no run of text to be in yet it is the block itself that is remembered.
 
+**A link or an image the caret is inside is written out as its own characters**, destination and all, and drawn back as itself when the caret leaves. That is not a flourish: a drawn `<a>` puts its words on the page and never its `(url)`, so before this there was nowhere on the page for a destination to be and nothing for a keystroke to land on — `[](url)` from the toolbar arrived with a placeholder nobody could type over. Written out, it is the source one character for one, and every rule this surface already has works on it unchanged. What is under the caret is marked rather than disguised, because text that has stopped being a link and started being the text that makes one is a difference worth seeing.
+
 One thing does not work yet, and does nothing at all rather than something half-right: **raw HTML that is being drawn rather than shown.** Under `sanitize` and `raw` the markup reached the page through `dangerouslySetInnerHTML`, which means React does not know what is inside it and could not put it back. Under `escape` — the default — it is text like any other text, and edits like any other.
 
 ## Input rules

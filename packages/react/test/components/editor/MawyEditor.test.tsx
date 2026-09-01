@@ -786,6 +786,111 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('One and two.\n\nA **boLDld** word.');
   });
 
+  it('writes a link out as its own characters when the caret is inside it', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue="See [the docs](/guide) for more." mode="wysiwyg" />
+    );
+
+    // Drawn as a link until something is in it.
+    expect(bodyOf(screen).querySelector('a')?.textContent).toBe('the docs');
+
+    put(bodyOf(screen), 'the docs', 3);
+
+    // And then as the source, one character for one — which is the only way
+    // there is anywhere on the page for `/guide` to be typed over.
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe(
+        '[the docs](/guide)'
+      );
+    });
+    expect(bodyOf(screen).querySelector('a')).toBeNull();
+  });
+
+  it('draws it as a link again once the caret has left', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue="See [the docs](/guide) for more." mode="wysiwyg" />
+    );
+
+    put(bodyOf(screen), 'the docs', 3);
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).not.toBeNull());
+
+    put(bodyOf(screen), 'See ', 1);
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull());
+
+    expect(bodyOf(screen).querySelector('a')?.textContent).toBe('the docs');
+  });
+
+  it('types into a destination, which is the whole point of writing it out', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="See [the docs](/guide) for more."
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+
+    put(bodyOf(screen), 'the docs', 3);
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).not.toBeNull());
+
+    // Inside `(/guide)`, after the `e`, where before this there was no
+    // character on the page at all.
+    put(bodyOf(screen), '[the docs](/guide)', 17);
+    type(bodyOf(screen), 'insertText', '/2');
+
+    expect(onChange).toHaveBeenLastCalledWith('See [the docs](/guide/2) for more.');
+
+    // And again, which is the half that is not obvious: the link's range grew
+    // under the caret, and it has to still be the one being written out or the
+    // second keystroke lands somewhere else entirely.
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe(
+        '[the docs](/guide/2)'
+      );
+    });
+
+    type(bodyOf(screen), 'insertText', '3');
+
+    expect(onChange).toHaveBeenLastCalledWith('See [the docs](/guide/23) for more.');
+  });
+
+  it('writes an image out too, since its destination is drawn even less', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue="Before ![a](/i.png) after." mode="wysiwyg" />
+    );
+
+    expect(bodyOf(screen).querySelector('img')).not.toBeNull();
+
+    put(bodyOf(screen), 'Before ', 7);
+
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('![a](/i.png)');
+    });
+  });
+
+  it('leaves the toolbar link placeholder where it can be typed over', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Words." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'Words.', 6);
+    await screen.getByRole('button', { name: 'Link' }).click();
+
+    expect(onChange).toHaveBeenLastCalledWith('Words.[](url)');
+
+    // The placeholder is on the page, and it is what is selected — so the next
+    // thing typed replaces it rather than landing in the words.
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('[](url)');
+    });
+    expect(document.getSelection()?.getRangeAt(0).toString()).toBe('url');
+
+    type(bodyOf(screen), 'insertText', '/a');
+
+    expect(onChange).toHaveBeenLastCalledWith('Words.[](/a)');
+  });
+
   it('replaces what was selected', async () => {
     const onChange = vi.fn();
     const screen = await render(

@@ -34,6 +34,11 @@ const code = 'a code block, where a newline is a newline';
 An image or a hard break comes out in one piece, because each of them is one
 character to a reader and none at all to a walk over the text.
 
+Put the caret in [this link](https://mawy.cdget.com) and it is written out as
+the characters that make it, destination and all, until the caret leaves again.
+That is the only place there is for a URL to be typed: a drawn link puts its
+words on the page and never its address.
+
 Drop an image file here, or paste a screenshot. This demo answers
 \`onUploadImage\` with a \`data:\` URI so that the page needs no server; a real
 application answers with wherever it put the bytes.
