@@ -6,6 +6,8 @@
 
 ### Added
 
+- **One more of CommonMark, and the number moved from 629 to 630.** A numeric character reference is at most seven digits, or six in hexadecimal, which is the specification's own limit. `&#87654321;` was being read as a reference to a code point that does not exist and drawn as U+FFFD; it is not a reference at all, and is the eleven characters somebody typed.
+
 - **Two more of CommonMark, and the number moved from 627 to 629.**
 
   **A no-break space is not whitespace**, as the specification counts it — the five characters it means by the word are space, tab, newline, form feed and carriage return, and a regular expression's `\s` is every Unicode space there is. So `[link](/url\u00a0"title")` has a destination of `/url\u00a0"title"` and no title, because nothing separated the two. The emphasis rules still use `\s`, and correctly: those are written in terms of Unicode whitespace.

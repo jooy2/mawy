@@ -104,7 +104,13 @@ String _fromCodePoint(int code) {
   return String.fromCharCode(code);
 }
 
-final RegExp _reference = RegExp(r'&(?:#[Xx]([\da-fA-F]+)|#(\d+)|([A-Za-z][A-Za-z\d]{1,31}));');
+// Seven digits and six hex digits, which are the specification's limits and
+// not an arbitrary guard: `&#87654321;` is not a reference at all — it is nine
+// characters an author wrote — rather than a reference to a code point that
+// does not exist.
+final RegExp _reference = RegExp(
+  r'&(?:#[Xx]([\da-fA-F]{1,6})|#(\d{1,7})|([A-Za-z][A-Za-z\d]{1,31}));',
+);
 
 /// Every character reference in [text], replaced by what it stands for.
 ///

@@ -6,7 +6,7 @@ import { specExamples, writeHtml } from '../../support/commonmark.js';
  * The parser, against the specification it claims to read.
  *
  * "CommonMark" is written in the README, on the site and in the changelog, and
- * until this file existed it was a word rather than a number. It is 629 of the
+ * until this file existed it was a word rather than a number. It is 630 of the
  * specification's 652 examples — the other 34 are below, each one with the
  * reason it is there, so that the claim is checkable and a change to it is
  * deliberate.
@@ -51,7 +51,6 @@ const DEVIATIONS = new Map<number, string>([
    * title, a reference label and a fence's info string.
    */
   [25, 'a character reference outside the common names'],
-  [28, 'a numeric reference past the last code point is drawn as U+FFFD'],
   [32, '`&ouml;` is outside the table, in a destination and a title'],
   [33, '`&ouml;` is outside the table, in a reference definition'],
   [34, '`&ouml;` is outside the table, in a fence info string'],
@@ -138,7 +137,7 @@ describe('CommonMark', () => {
     expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
   });
 
-  it('reads 629 of the 652', () => {
-    expect(examples.length - differing.length).toBe(629);
+  it('reads 630 of the 652', () => {
+    expect(examples.length - differing.length).toBe(630);
   });
 });

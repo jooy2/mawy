@@ -6,6 +6,8 @@
 
 ### Added
 
+- **One more of CommonMark, and the number moved from 629 to 630.** The React package's parser change, mirrored here in the same commit: a numeric character reference is at most seven digits, or six in hexadecimal, so `&#87654321;` is text rather than a reference to a code point that does not exist.
+
 - **Two more of CommonMark, and the number moved from 627 to 629.** The React package's parser change, mirrored here in the same commit: a no-break space is not one of the five characters the specification calls whitespace, so it does not separate a destination from a title; and a thematic break wins over a list item inside a list as much as outside one.
 
 - **Two more of CommonMark, and the number moved from 625 to 627.** The React package's parser change, mirrored here in the same commit: closing a link deactivates the `[` openers to its left and no longer the `![` ones, so `![foo [bar](/url)](/url2)` is an image whose alt text is `foo bar` rather than a sentence with a link in it.
