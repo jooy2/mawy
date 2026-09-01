@@ -118,6 +118,14 @@ MawyViewer(
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. Markdown says it is not. Chat clients and issue trackers say it is, which is what a reader who has never written Markdown expects, and the reason this is an option rather than a decision.
 - **`definitionLists`** (default `true`) — whether `: ` under a line of text is a term and what it means. See below.
 
+### How much of it
+
+**605 of the specification's 652 examples**, run against the parser on every change. CommonMark is a document with a test suite in it, so "reads CommonMark" is a number rather than a claim, and the number is in `packages/react/test/internal/markdown/commonmark.test.ts` beside the list of what the other 47 are.
+
+Three of those are a decision rather than a shortfall: every URL is checked against a scheme allowlist, so `<made-up-scheme://foo>` is drawn as the words the author wrote. Most of the rest are edges — a tab inside a list item, a character reference in a link destination, a list counted loose where the specification counts it tight — and each one is written down with the reason it is there, so the list can only get shorter deliberately.
+
+The Dart parser is not run against the suite and does not need to be: the two parsers' trees are diffed over every awkward case and every Markdown file in the repository, so a tree that is right in one is the tree the other produces.
+
 ### Footnotes
 
 A `[^label]` in a sentence is a number, and the note it points at is drawn under the document with a link back to where it was mentioned:

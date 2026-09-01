@@ -52,6 +52,13 @@ lists, `~~strikethrough~~`, bare URLs, footnotes, and the five alert kinds — a
 definition lists, which GitHub does not read. Link reference definitions resolve
 wherever in the file they are written.
 
+This is the React package's parser, function for function, and it answers 605 of
+the CommonMark specification's 652 examples. That suite is run over there rather
+than here, and it does not need running twice: `tool/parity.dart` diffs the two
+parsers' trees over every awkward case and every Markdown file in the
+repository, so a tree that is right in TypeScript is the tree this one
+produces.
+
 Raw HTML is shown as the characters it was written with, and there is no option
 to make it otherwise: Flutter has no HTML to draw it as. That is the one place
 this package and the React one differ about a document, and it is a difference

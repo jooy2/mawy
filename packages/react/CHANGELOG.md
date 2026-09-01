@@ -6,6 +6,12 @@
 
 ### Added
 
+- **How much CommonMark, as a number.** The specification's own 652 examples are run at the parser on every change, and it answers 605 of them. The other 47 are written down in `test/internal/markdown/commonmark.test.ts`, one line each with the reason it is there, so the list can only get shorter deliberately — and a fix that is not recorded fails the same test.
+
+  Three of them are a decision rather than a shortfall: every URL is checked against a scheme allowlist, so `<made-up-scheme://foo>` is drawn as the words the author wrote rather than as a link. The rest are edges — a tab inside a list item, a character reference in a link destination, a list counted loose where the specification counts it tight, a fence whose info string holds a backtick.
+
+  The library renders to React elements and has no HTML serialiser to measure, so the test has one of its own in `test/support/commonmark.ts`. It is a test file rather than something shipped, and the safety story is unchanged: there is still nothing between a document and the page that is a string of markup.
+
 - **Directives — a way for a document to carry a construct this package does not know about.** The parser reads a shape and stops there: `:::name[label]{key=value}` … `:::` around blocks, `::name[label]{attrs}` on a line of its own, and `:name[label]{attrs}` inside a sentence. What each one _means_ is the application's, through `directives`:
 
   ```tsx

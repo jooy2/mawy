@@ -1,0 +1,175 @@
+import { describe, expect, it } from 'vitest';
+import specText from 'commonmark-spec/spec.txt?raw';
+import { specExamples, writeHtml } from '../../support/commonmark.js';
+
+/**
+ * The parser, against the specification it claims to read.
+ *
+ * "CommonMark" is written in the README, on the site and in the changelog, and
+ * until this file existed it was a word rather than a number. It is 605 of the
+ * specification's 652 examples — the other 47 are below, each one with the
+ * reason it is there, so that the claim is checkable and a change to it is
+ * deliberate.
+ *
+ * The examples come from `commonmark-spec`, which is the specification document
+ * itself; `test/support/commonmark.ts` reads the examples out of it and writes
+ * the parsed tree back out as HTML, because this library renders to React
+ * elements and has no serialiser of its own to measure. Anything the writer
+ * gets wrong lands here as a deviation that is not one, which is worth
+ * remembering before reading the list as a list of bugs.
+ *
+ * The Dart parser is not run here and does not need to be: `tool/parity.dart`
+ * diffs the two parsers' trees over every awkward case and every Markdown file
+ * in the repository, so a tree that is right in TypeScript is the tree Dart
+ * produces or the parity check is already red.
+ */
+
+const examples = specExamples(specText);
+
+/**
+ * Every example the parser does not answer the way the specification does, and
+ * why.
+ *
+ * A line removed from here is a fix, and the test below fails if one is removed
+ * without the parser having actually changed — so this list can only get
+ * shorter on purpose.
+ */
+const DEVIATIONS = new Map<number, string>([
+  /*
+   * A tab is four columns of indentation to every rule that measures one, and
+   * is otherwise left as the character it is. The specification expands it to
+   * the next stop against the content of whatever contains it.
+   */
+  [6, 'a tab inside a block quote is not expanded to the next stop'],
+  [7, 'a tab inside a list item is not expanded to the next stop'],
+
+  /*
+   * Backslash escapes and character references are resolved in text. A
+   * destination, a title and a fence's info string are taken as the characters
+   * they were written with.
+   */
+  [23, 'an escape in a reference definition destination or title'],
+  [24, 'an escape in a fence info string'],
+  [32, 'a character reference in a destination or title'],
+  [33, 'a character reference in a reference definition'],
+  [34, 'a character reference in a fence info string'],
+  [194, 'an escape in a reference definition label'],
+  [202, 'an escape in a reference definition destination or title'],
+  [503, 'a character reference in a destination'],
+
+  /*
+   * The character reference table is the names documents actually use rather
+   * than all 2231 of HTML5's, which is a hundred kilobytes shipped to every
+   * page for `&DifferentialD;`.
+   */
+  [25, 'a character reference outside the common names'],
+  [28, 'a numeric reference past the last code point is drawn as U+FFFD'],
+
+  /* A fence's info string may not hold a backtick. Here it may. */
+  [138, '``` ``` ``` is read as a fence rather than as a code span'],
+  [145, '``` aa ``` is read as a fence rather than as a code span'],
+  [347, '```foo`` is read as an unclosed fence rather than as text'],
+
+  /*
+   * Looseness. A list is loose when blank lines separate its items or the
+   * blocks inside one of them — and the parser reads that more widely than the
+   * specification does, so a `<p>` appears where the specification has none.
+   */
+  [280, 'an item with nothing in it takes the paragraph under the blank line'],
+  [281, 'an item with nothing in it makes the list loose'],
+  [282, 'an item with only spaces in it makes the list loose'],
+  [283, 'an item with nothing in it makes the list loose'],
+  [307, 'a blank line inside a nested item makes its ancestors loose'],
+  [317, 'a reference definition alone in an item does not make the list loose'],
+  [319, 'a blank line inside a nested item makes its ancestor loose'],
+
+  /* An empty destination is no destination, so nothing becomes a link. */
+  [200, '[foo]: <> defines nothing'],
+  [485, '[link]() is not a link'],
+  [486, '[link](<>) is not a link'],
+  [487, '[]() is not a link'],
+  [567, 'an empty destination does not shadow a definition of the same label'],
+
+  /* What a reference definition's label may be written as. */
+  [208, 'a label written over more than one line'],
+  [216, 'a definition is read where a setext underline should have ended it'],
+  [540, 'labels are folded by case rather than by Unicode case folding'],
+  [541, 'a label written over more than one line'],
+  [546, 'a label with an unmatched bracket in it'],
+
+  /* A link inside an image's description. */
+  [520, 'a link inside an image description'],
+  [575, 'a link inside an image description'],
+
+  /* A line that continues a paragraph inside a container. */
+  [60, '`* * *` inside a list is an item rather than a thematic break'],
+  [93, 'a setext underline on a lazy continuation line'],
+  [236, 'an indented line after a quoted indented code block'],
+  [237, 'a line after an unclosed fence inside a quotation'],
+
+  /* Two more about where a container ends. */
+  [312, 'a fifth level of indentation opens a list rather than continuing one'],
+  [318, 'blank lines before a fence closing inside an item'],
+  [507, 'a non-breaking space does not separate a destination from a title'],
+
+  /*
+   * Raw HTML. The parser takes a tag as a tag more readily than the
+   * specification does, which draws as markup what would otherwise be text.
+   */
+  [619, 'an attribute name the specification would refuse'],
+  [621, 'an unquoted attribute value over two lines'],
+  [626, '`<!-->` is read as a comment'],
+
+  /*
+   * And three that are a decision rather than a shortfall. Every URL is checked
+   * against a scheme allowlist, in Markdown as much as in HTML, and a refused
+   * destination is drawn as the words the author wrote. That is the whole of
+   * the safety story and it is not going to be given up for three examples.
+   */
+  [598, 'the scheme allowlist refuses `a+b+c:`'],
+  [599, 'the scheme allowlist refuses `made-up-scheme:`'],
+  [601, 'the scheme allowlist refuses `localhost:`']
+]);
+
+/** An example that came out wrong, in a shape somebody can read in a report. */
+function report(example: {
+  number: number;
+  section: string;
+  markdown: string;
+  html: string;
+}): string {
+  return [
+    `#${example.number} (${example.section})`,
+    `  source:   ${JSON.stringify(example.markdown)}`,
+    `  expected: ${JSON.stringify(example.html)}`,
+    `  actual:   ${JSON.stringify(writeHtml(example.markdown))}`
+  ].join('\n');
+}
+
+describe('CommonMark', () => {
+  const differing = examples.filter((example) => writeHtml(example.markdown) !== example.html);
+
+  it('reads the specification as one document of examples', () => {
+    expect(examples.length).toBe(652);
+    expect(examples.map((example) => example.number)).toEqual(
+      Array.from({ length: examples.length }, (_, index) => index + 1)
+    );
+  });
+
+  it('answers every example it does not deliberately differ on', () => {
+    expect(differing.filter((example) => !DEVIATIONS.has(example.number)).map(report)).toEqual([]);
+  });
+
+  it('still differs on every example written down as a deviation', () => {
+    const numbers = new Set(differing.map((example) => example.number));
+
+    // A deviation that has been fixed is a line to delete rather than one to
+    // leave lying, since what is left is the answer to "what does this parser
+    // not do", and an answer with stale rows in it is not one.
+    expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
+  });
+
+  it('reads 605 of the 652', () => {
+    expect(examples.length - differing.length).toBe(605);
+  });
+});
