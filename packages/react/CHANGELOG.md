@@ -6,6 +6,10 @@
 
 ### Added
 
+- **The whole Latin-1 block of character references**, which is four more of CommonMark and takes the number from 630 to 634. `&ouml;`, `&eacute;`, `&szlig;`, `&frac12;` — what a document written in a European language reaches for, and what an author who typed `Fr&ouml;hlich` meant a word by. Ninety-seven names, read everywhere the specification asks for a reference: in a destination, a title, a reference definition's label and a fence's info string.
+
+  It costs 0.6 kB gzipped, and the viewer is 22.8 kB. The table is still the names documents actually use rather than all 2,231 of HTML5's, which would be a hundred kilobytes on every page for `&DifferentialD;`.
+
 - **One more of CommonMark, and the number moved from 629 to 630.** A numeric character reference is at most seven digits, or six in hexadecimal, which is the specification's own limit. `&#87654321;` was being read as a reference to a code point that does not exist and drawn as U+FFFD; it is not a reference at all, and is the eleven characters somebody typed.
 
 - **Two more of CommonMark, and the number moved from 627 to 629.**

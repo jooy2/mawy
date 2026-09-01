@@ -6,6 +6,8 @@
 
 ### Added
 
+- **The whole Latin-1 block of character references**, which is four more of CommonMark and takes the number from 630 to 634. The React package's table change, mirrored here in the same commit: ninety-seven names — `&ouml;`, `&eacute;`, `&szlig;`, `&frac12;` and the rest — read everywhere the specification asks for a reference.
+
 - **One more of CommonMark, and the number moved from 629 to 630.** The React package's parser change, mirrored here in the same commit: a numeric character reference is at most seven digits, or six in hexadecimal, so `&#87654321;` is text rather than a reference to a code point that does not exist.
 
 - **Two more of CommonMark, and the number moved from 627 to 629.** The React package's parser change, mirrored here in the same commit: a no-break space is not one of the five characters the specification calls whitespace, so it does not separate a destination from a title; and a thematic break wins over a list item inside a list as much as outside one.

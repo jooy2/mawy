@@ -88,7 +88,7 @@ Your own fonts go in the same list: `{ id, label, stack, href }`.
 
 ### What it reads
 
-CommonMark — 630 of the specification's 652 examples, which the test suite runs on every change and which is the number rather than the word — plus GitHub's additions: tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs, footnotes, and the five alert kinds — and definition lists, which GitHub does not read. Link reference definitions resolve wherever in the file they are written. Code blocks are coloured by whatever `highlight` is given — `mawy-react/highlight` is one, in a separate entry point, fetched only when a document turns out to have a language on a fence.
+CommonMark — 634 of the specification's 652 examples, which the test suite runs on every change and which is the number rather than the word — plus GitHub's additions: tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs, footnotes, and the five alert kinds — and definition lists, which GitHub does not read. Link reference definitions resolve wherever in the file they are written. Code blocks are coloured by whatever `highlight` is given — `mawy-react/highlight` is one, in a separate entry point, fetched only when a document turns out to have a language on a fence.
 
 ### What it does not know about
 
