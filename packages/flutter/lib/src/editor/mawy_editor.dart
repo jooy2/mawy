@@ -22,6 +22,7 @@ import 'package:mawy/src/editor/commands.dart';
 import 'package:mawy/src/editor/source_field.dart';
 import 'package:mawy/src/editor/status.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/markdown/parse.dart' show MawyParseOptions;
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
@@ -444,7 +445,7 @@ class _MawyEditorState extends State<MawyEditor> {
  * The toolbar
  * ---------------------------------------------------------------------- */
 
-class _Toolbar extends StatelessWidget {
+class _Toolbar extends StatefulWidget {
   const _Toolbar({
     required this.items,
     required this.tokens,
@@ -468,6 +469,19 @@ class _Toolbar extends StatelessWidget {
   final MawyColorScheme colorScheme;
   final ValueChanged<MawyColorScheme>? onColorScheme;
   final ValueChanged<MawyCommand>? onCommand;
+
+  @override
+  State<_Toolbar> createState() => _ToolbarState();
+}
+
+class _ToolbarState extends State<_Toolbar> {
+  final MawyRoving _roving = MawyRoving();
+
+  @override
+  void dispose() {
+    _roving.dispose();
+    super.dispose();
+  }
 
   static const Map<MawyEditorToolbarItem, MawyCommand> _commands =
       <MawyEditorToolbarItem, MawyCommand>{
@@ -501,25 +515,25 @@ class _Toolbar extends StatelessWidget {
   };
 
   String _labelFor(MawyEditorToolbarItem item) => switch (item) {
-    MawyEditorToolbarItem.bold => strings.bold,
-    MawyEditorToolbarItem.italic => strings.italic,
-    MawyEditorToolbarItem.strikethrough => strings.strikethrough,
-    MawyEditorToolbarItem.code => strings.codeSpan,
-    MawyEditorToolbarItem.link => strings.link,
-    MawyEditorToolbarItem.image => strings.image,
-    MawyEditorToolbarItem.quote => strings.quote,
-    MawyEditorToolbarItem.bulletList => strings.bulletList,
-    MawyEditorToolbarItem.orderedList => strings.orderedList,
-    MawyEditorToolbarItem.taskList => strings.taskList,
-    MawyEditorToolbarItem.codeBlock => strings.codeBlock,
-    MawyEditorToolbarItem.rule => strings.thematicBreak,
+    MawyEditorToolbarItem.bold => widget.strings.bold,
+    MawyEditorToolbarItem.italic => widget.strings.italic,
+    MawyEditorToolbarItem.strikethrough => widget.strings.strikethrough,
+    MawyEditorToolbarItem.code => widget.strings.codeSpan,
+    MawyEditorToolbarItem.link => widget.strings.link,
+    MawyEditorToolbarItem.image => widget.strings.image,
+    MawyEditorToolbarItem.quote => widget.strings.quote,
+    MawyEditorToolbarItem.bulletList => widget.strings.bulletList,
+    MawyEditorToolbarItem.orderedList => widget.strings.orderedList,
+    MawyEditorToolbarItem.taskList => widget.strings.taskList,
+    MawyEditorToolbarItem.codeBlock => widget.strings.codeBlock,
+    MawyEditorToolbarItem.rule => widget.strings.thematicBreak,
     _ => '',
   };
 
   String _modeLabel(MawyEditorMode value) => switch (value) {
-    MawyEditorMode.plain => strings.modePlain,
-    MawyEditorMode.split => strings.modeSplit,
-    MawyEditorMode.preview => strings.modePreview,
+    MawyEditorMode.plain => widget.strings.modePlain,
+    MawyEditorMode.split => widget.strings.modeSplit,
+    MawyEditorMode.preview => widget.strings.modePreview,
   };
 
   IconData _modeIcon(MawyEditorMode value) => switch (value) {
@@ -532,28 +546,41 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Widget> children = <Widget>[];
 
-    for (final MawyEditorToolbarItem item in items) {
+    // The row's places, counted over the controls: a separator is drawn and is
+    // not one of them, and an item like `mode` is several.
+    int stop = 0;
+
+    FocusNode next() {
+      final FocusNode node = _roving.nodeFor(stop);
+
+      stop += 1;
+
+      return node;
+    }
+
+    for (final MawyEditorToolbarItem item in widget.items) {
       if (item == MawyEditorToolbarItem.separator) {
         children.add(
           Container(
             width: 1,
             height: 18,
             margin: const EdgeInsets.symmetric(horizontal: 5),
-            color: tokens.border,
+            color: widget.tokens.border,
           ),
         );
         continue;
       }
 
       if (item == MawyEditorToolbarItem.mode) {
-        for (final MawyEditorMode option in modes) {
+        for (final MawyEditorMode option in widget.modes) {
           children.add(
             MawyToolbarButton(
               icon: _modeIcon(option),
               label: _modeLabel(option),
-              tokens: tokens,
-              pressed: option == mode,
-              onPressed: () => onMode(option),
+              tokens: widget.tokens,
+              focusNode: next(),
+              pressed: option == widget.mode,
+              onPressed: () => widget.onMode(option),
             ),
           );
         }
@@ -562,20 +589,21 @@ class _Toolbar extends StatelessWidget {
       }
 
       if (item == MawyEditorToolbarItem.colorScheme) {
-        if (onColorScheme == null) {
+        if (widget.onColorScheme == null) {
           continue;
         }
 
         children.add(
           MawyToolbarButton(
-            icon: switch (colorScheme) {
+            icon: switch (widget.colorScheme) {
               MawyColorScheme.light => LucideIcons.sun,
               MawyColorScheme.dark => LucideIcons.moon,
               MawyColorScheme.system => LucideIcons.sunMoon,
             },
-            label: strings.colorScheme,
-            tokens: tokens,
-            onPressed: () => onColorScheme!(switch (colorScheme) {
+            label: widget.strings.colorScheme,
+            tokens: widget.tokens,
+            focusNode: next(),
+            onPressed: () => widget.onColorScheme!(switch (widget.colorScheme) {
               MawyColorScheme.light => MawyColorScheme.dark,
               MawyColorScheme.dark => MawyColorScheme.system,
               MawyColorScheme.system => MawyColorScheme.light,
@@ -596,13 +624,14 @@ class _Toolbar extends StatelessWidget {
             MawyToolbarButton(
               icon: each.value,
               label: switch (each.key) {
-                MawyCommand.heading1 => strings.heading1,
-                MawyCommand.heading2 => strings.heading2,
-                _ => strings.heading3,
+                MawyCommand.heading1 => widget.strings.heading1,
+                MawyCommand.heading2 => widget.strings.heading2,
+                _ => widget.strings.heading3,
               },
-              tokens: tokens,
-              pressed: commandActive(each.key, state),
-              onPressed: () => onCommand?.call(each.key),
+              tokens: widget.tokens,
+              focusNode: next(),
+              pressed: commandActive(each.key, widget.state),
+              onPressed: () => widget.onCommand?.call(each.key),
             ),
           );
         }
@@ -620,9 +649,10 @@ class _Toolbar extends StatelessWidget {
         MawyToolbarButton(
           icon: _icons[item]!,
           label: _labelFor(item),
-          tokens: tokens,
-          pressed: commandActive(command, state),
-          onPressed: () => onCommand?.call(command),
+          tokens: widget.tokens,
+          focusNode: next(),
+          pressed: commandActive(command, widget.state),
+          onPressed: () => widget.onCommand?.call(command),
         ),
       );
     }
@@ -631,15 +661,18 @@ class _Toolbar extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 44),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: tokens.chrome,
-        border: Border(bottom: BorderSide(color: tokens.border)),
+        color: widget.tokens.chrome,
+        border: Border(bottom: BorderSide(color: widget.tokens.border)),
       ),
       child: Semantics(
         container: true,
-        label: strings.toolbar,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: children),
+        label: widget.strings.toolbar,
+        child: MawyRovingRow(
+          roving: _roving,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: children),
+          ),
         ),
       ),
     );

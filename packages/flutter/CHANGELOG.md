@@ -6,6 +6,14 @@
 
 ### Added
 
+- **The three pieces of accessibility this package was missing**, and they were the three the React package had:
+
+  **The toolbar is one tab stop.** A keyboard enters it once, leaves it once, and moves between the controls inside it with the arrows — `Home` and `End` for the ends of the row, `Enter` and the space bar for whichever control the focus is on. Eleven buttons above a document used to be eleven things to step over on the way to reading it, and now they are one. It is `src/internal/roving.ts` in Dart, in `src/internal/roving.dart`, because there are two toolbars here and two copies of a focus model drift into two different keyboards.
+
+  **A menu closes on `Escape`** and gives the focus back to the button it came from. It also opens with the focus already in it, which is the one place this differs from the React package and is not a preference: a panel there is the next element after its own button, and a panel here is put up through the `Overlay`, which is nowhere near that button in the order `Tab` walks.
+
+  **Animation is dropped where the platform asks for less of it** — `MediaQuery.disableAnimationsOf`, which is the same setting the stylesheet reads as `prefers-reduced-motion`. The toolbar's and the outline's transitions become instant, and following an outline entry puts the reader at the heading rather than travelling there.
+
 - **An editor.** The Markdown source with its syntax coloured, a live preview beside it, a formatting toolbar and a status bar that counts:
 
   ```dart

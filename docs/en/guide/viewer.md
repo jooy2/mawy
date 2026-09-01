@@ -414,7 +414,7 @@ It is a real `toolbar` rather than a row of buttons. One Tab enters it and one T
 
 ::: fw flutter
 
-Every control is a named `Semantics` button that says whether it is pressed, so a screen reader reads the toolbar rather than a row of shapes. Keyboard traversal is not built yet — see [accessibility](#accessibility) below.
+Every control is a named `Semantics` button that says whether it is pressed, so a screen reader reads the toolbar rather than a row of shapes. It is one tab stop, like the React package's, and the arrows move between the controls inside it — see [accessibility](#accessibility) below.
 
 :::
 
@@ -624,10 +624,13 @@ An automated pass is a floor rather than a ceiling. The things above it — arro
 ::: fw flutter
 
 - Every control is a `Semantics` button with a name and, where it toggles, a state — so a screen reader reads the toolbar rather than a row of shapes.
+- The toolbar is one tab stop, and the arrows move between the controls inside it. `Home` and `End` go to the ends of the row, and `Enter` and the space bar press whichever control the focus is on.
+- A menu opens with the focus already in it, closes on `Escape`, and gives the focus back to the button it came from. It has to open that way rather than the React package's: the panel is put up through the `Overlay`, so it is nowhere near its own button in the order `Tab` walks, and a keyboard that had to travel the whole document to reach it would not.
 - Headings, links and images carry their own semantics through the document, and following an outline entry scrolls to the heading it names.
 - Text scales with the platform's own text size, because the sizes are logical pixels through `MawyTypography` rather than anything baked in.
+- Animation is dropped where the platform's reduce-motion setting asks for it. That is `MediaQuery.disableAnimationsOf`, which is the same question the stylesheet asks as `prefers-reduced-motion` — and a reader who turned it on is asked for the same thing by both packages.
 
-Three things the React package has and this one does not yet, and they are the honest list: keyboard traversal inside the toolbar, `Escape` closing a menu, and animation dropping out under the platform's reduce-motion setting.
+One thing the React package does and this one does not yet: following an outline entry moves the scroll and not the focus, so the next `Tab` carries on from the panel rather than from the heading.
 
 :::
 

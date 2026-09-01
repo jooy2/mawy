@@ -241,7 +241,12 @@ class _MawyViewerState extends State<MawyViewer> {
     unawaited(
       Scrollable.ensureVisible(
         target,
-        duration: const Duration(milliseconds: 260),
+        // A reader who asked the platform for less movement asked to be at the
+        // heading rather than to be taken to it: this is the stylesheet's
+        // `scroll-behavior: auto` under the same setting.
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 260),
         curve: Curves.easeOutCubic,
         alignment: 0.02,
       ),

@@ -95,7 +95,7 @@ class _EntryState extends State<_Entry> {
         child: GestureDetector(
           onTap: widget.onTap,
           child: AnimatedContainer(
-            duration: MawyMotion.duration,
+            duration: MawyMotion.durationOf(context),
             curve: MawyMotion.easing,
             padding: EdgeInsets.fromLTRB(8 + (depth - 1) * 10.0, 6, 8, 6),
             decoration: BoxDecoration(

@@ -22,11 +22,18 @@ Widget host(
   Brightness brightness = Brightness.light,
   Size size = const Size(900, 1400),
   TextDirection textDirection = TextDirection.ltr,
+  bool disableAnimations = false,
 }) {
   return Directionality(
     textDirection: textDirection,
     child: MediaQuery(
-      data: MediaQueryData(platformBrightness: brightness, size: size),
+      data: MediaQueryData(
+        platformBrightness: brightness,
+        size: size,
+        // The platform's reduce-motion setting, which is the same question the
+        // stylesheet asks as `prefers-reduced-motion`.
+        disableAnimations: disableAnimations,
+      ),
       // Anything that lifts itself out of the tree — the toolbar's menus — needs
       // somewhere to go, and in a real app that is the navigator's overlay.
       // Keyed, so that pumping a different tree through `host()` really does

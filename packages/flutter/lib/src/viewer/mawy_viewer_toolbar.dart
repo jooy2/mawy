@@ -13,10 +13,11 @@
 /// into a viewer that has all three of its own.
 library;
 
-import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
 
@@ -36,7 +37,11 @@ abstract final class MawyTypographyRange {
 }
 
 /// The bar across the top of a viewer.
-class MawyViewerToolbar extends StatelessWidget {
+///
+/// One tab stop for the whole row, and the arrows move between the controls
+/// inside it — see [MawyRoving], which is where that lives because there are
+/// two toolbars in this package and only one focus model.
+class MawyViewerToolbar extends StatefulWidget {
   /// Creates a toolbar.
   const MawyViewerToolbar({
     required this.items,
@@ -86,7 +91,20 @@ class MawyViewerToolbar extends StatelessWidget {
   /// Called when the copy button is pressed.
   final VoidCallback onCopy;
 
-  IconData get _schemeIcon => switch (colorScheme) {
+  @override
+  State<MawyViewerToolbar> createState() => _MawyViewerToolbarState();
+}
+
+class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
+  final MawyRoving _roving = MawyRoving();
+
+  @override
+  void dispose() {
+    _roving.dispose();
+    super.dispose();
+  }
+
+  IconData get _schemeIcon => switch (widget.colorScheme) {
     MawyColorScheme.light => LucideIcons.sun,
     MawyColorScheme.dark => LucideIcons.moon,
     MawyColorScheme.system => LucideIcons.sunMoon,
@@ -96,53 +114,68 @@ class MawyViewerToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Widget> drawn = <Widget>[];
 
-    for (final MawyViewerToolbarItem item in items) {
-      final Widget? control = _control(item);
+    // The row's places, counted over the controls rather than over the items:
+    // a separator is drawn and is not somewhere the focus goes, and a control
+    // the viewer decided not to draw takes no place either.
+    int stop = 0;
 
-      if (control != null) {
-        drawn.add(control);
+    for (final MawyViewerToolbarItem item in widget.items) {
+      final Widget? control = _control(item, _roving.nodeFor(stop));
+
+      if (control == null) {
+        continue;
+      }
+
+      drawn.add(control);
+
+      if (item != MawyViewerToolbarItem.separator) {
+        stop += 1;
       }
     }
 
     return Semantics(
       container: true,
-      label: strings.toolbar,
+      label: widget.strings.toolbar,
       child: Container(
         decoration: BoxDecoration(
-          color: tokens.chrome,
-          border: Border(bottom: BorderSide(color: tokens.border)),
+          color: widget.tokens.chrome,
+          border: Border(bottom: BorderSide(color: widget.tokens.border)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(mainAxisAlignment: MainAxisAlignment.end, children: drawn),
+        child: MawyRovingRow(
+          roving: _roving,
+          child: Row(mainAxisAlignment: MainAxisAlignment.end, children: drawn),
+        ),
       ),
     );
   }
 
-  Widget? _control(MawyViewerToolbarItem item) {
+  Widget? _control(MawyViewerToolbarItem item, FocusNode node) {
     switch (item) {
       case MawyViewerToolbarItem.separator:
         return Container(
           width: 1,
           height: 18,
           margin: const EdgeInsets.symmetric(horizontal: 6),
-          color: tokens.border,
+          color: widget.tokens.border,
         );
 
       case MawyViewerToolbarItem.fontFamily:
         return MawyToolbarMenu(
           icon: LucideIcons.type,
-          label: strings.fontFamily,
-          tokens: tokens,
+          label: widget.strings.fontFamily,
+          tokens: widget.tokens,
+          focusNode: node,
           builder: (VoidCallback close) => _Choice<MawyFontFamily>(
-            tokens: tokens,
-            value: typography.fontFamily,
+            tokens: widget.tokens,
+            value: widget.typography.fontFamily,
             options: <(MawyFontFamily, String)>[
-              (MawyFontFamily.sans, strings.fontFamilySans),
-              (MawyFontFamily.serif, strings.fontFamilySerif),
-              (MawyFontFamily.mono, strings.fontFamilyMono),
+              (MawyFontFamily.sans, widget.strings.fontFamilySans),
+              (MawyFontFamily.serif, widget.strings.fontFamilySerif),
+              (MawyFontFamily.mono, widget.strings.fontFamilyMono),
             ],
             onChanged: (MawyFontFamily next) {
-              onTypographyChange(typography.copyWith(fontFamily: next));
+              widget.onTypographyChange(widget.typography.copyWith(fontFamily: next));
               close();
             },
           ),
@@ -150,60 +183,67 @@ class MawyViewerToolbar extends StatelessWidget {
 
       case MawyViewerToolbarItem.fontSize:
         return _slider(
+          node: node,
           icon: LucideIcons.aLargeSmall,
-          label: strings.fontSize,
+          label: widget.strings.fontSize,
           range: MawyTypographyRange.fontSize,
-          value: typography.fontSize,
+          value: widget.typography.fontSize,
           fallback: const MawyTypography().fontSize,
           format: (double value) => '${value.round()}px',
-          apply: (double next) => onTypographyChange(typography.copyWith(fontSize: next)),
+          apply: (double next) =>
+              widget.onTypographyChange(widget.typography.copyWith(fontSize: next)),
         );
 
       case MawyViewerToolbarItem.lineHeight:
         return _slider(
+          node: node,
           icon: LucideIcons.unfoldVertical,
-          label: strings.lineHeight,
+          label: widget.strings.lineHeight,
           range: MawyTypographyRange.lineHeight,
-          value: typography.lineHeight,
+          value: widget.typography.lineHeight,
           fallback: const MawyTypography().lineHeight,
           format: (double value) => value.toStringAsFixed(2),
-          apply: (double next) => onTypographyChange(typography.copyWith(lineHeight: next)),
+          apply: (double next) =>
+              widget.onTypographyChange(widget.typography.copyWith(lineHeight: next)),
         );
 
       case MawyViewerToolbarItem.letterSpacing:
         return _slider(
+          node: node,
           icon: LucideIcons.unfoldHorizontal,
-          label: strings.letterSpacing,
+          label: widget.strings.letterSpacing,
           range: MawyTypographyRange.letterSpacing,
-          value: typography.letterSpacing,
+          value: widget.typography.letterSpacing,
           fallback: const MawyTypography().letterSpacing,
           format: (double value) => '${value > 0 ? '+' : ''}${value.toStringAsFixed(3)}em',
-          apply: (double next) => onTypographyChange(typography.copyWith(letterSpacing: next)),
+          apply: (double next) =>
+              widget.onTypographyChange(widget.typography.copyWith(letterSpacing: next)),
         );
 
       case MawyViewerToolbarItem.measure:
         return MawyToolbarMenu(
           icon: LucideIcons.stretchHorizontal,
-          label: strings.measure,
-          tokens: tokens,
+          label: widget.strings.measure,
+          tokens: widget.tokens,
+          focusNode: node,
           builder: (VoidCallback close) => _Choice<MawyMeasure>(
-            tokens: tokens,
-            value: typography.measure,
+            tokens: widget.tokens,
+            value: widget.typography.measure,
             options: <(MawyMeasure, String)>[
-              (MawyMeasure.narrow, strings.measureNarrow),
-              (MawyMeasure.normal, strings.measureNormal),
-              (MawyMeasure.wide, strings.measureWide),
-              (MawyMeasure.full, strings.measureFull),
+              (MawyMeasure.narrow, widget.strings.measureNarrow),
+              (MawyMeasure.normal, widget.strings.measureNormal),
+              (MawyMeasure.wide, widget.strings.measureWide),
+              (MawyMeasure.full, widget.strings.measureFull),
             ],
             onChanged: (MawyMeasure next) {
-              onTypographyChange(typography.copyWith(measure: next));
+              widget.onTypographyChange(widget.typography.copyWith(measure: next));
               close();
             },
           ),
         );
 
       case MawyViewerToolbarItem.colorScheme:
-        final ValueChanged<MawyColorScheme>? change = onColorSchemeChange;
+        final ValueChanged<MawyColorScheme>? change = widget.onColorSchemeChange;
 
         // A control that cannot change anything is a control that should not be
         // drawn: the scheme belongs to whoever passed it.
@@ -213,15 +253,16 @@ class MawyViewerToolbar extends StatelessWidget {
 
         return MawyToolbarMenu(
           icon: _schemeIcon,
-          label: strings.colorScheme,
-          tokens: tokens,
+          label: widget.strings.colorScheme,
+          tokens: widget.tokens,
+          focusNode: node,
           builder: (VoidCallback close) => _Choice<MawyColorScheme>(
-            tokens: tokens,
-            value: colorScheme,
+            tokens: widget.tokens,
+            value: widget.colorScheme,
             options: <(MawyColorScheme, String)>[
-              (MawyColorScheme.light, strings.colorSchemeLight),
-              (MawyColorScheme.dark, strings.colorSchemeDark),
-              (MawyColorScheme.system, strings.colorSchemeSystem),
+              (MawyColorScheme.light, widget.strings.colorSchemeLight),
+              (MawyColorScheme.dark, widget.strings.colorSchemeDark),
+              (MawyColorScheme.system, widget.strings.colorSchemeSystem),
             ],
             onChanged: (MawyColorScheme next) {
               change(next);
@@ -233,24 +274,27 @@ class MawyViewerToolbar extends StatelessWidget {
       case MawyViewerToolbarItem.outline:
         return MawyToolbarButton(
           icon: LucideIcons.listTree,
-          label: strings.outline,
-          tokens: tokens,
-          pressed: outlineOpen,
-          onPressed: onOutlineToggle,
+          label: widget.strings.outline,
+          tokens: widget.tokens,
+          focusNode: node,
+          pressed: widget.outlineOpen,
+          onPressed: widget.onOutlineToggle,
         );
 
       case MawyViewerToolbarItem.copy:
         return MawyToolbarButton(
-          icon: copied ? LucideIcons.check : LucideIcons.copy,
-          label: copied ? strings.copied : strings.copy,
-          tokens: tokens,
-          pressed: copied,
-          onPressed: onCopy,
+          icon: widget.copied ? LucideIcons.check : LucideIcons.copy,
+          label: widget.copied ? widget.strings.copied : widget.strings.copy,
+          tokens: widget.tokens,
+          focusNode: node,
+          pressed: widget.copied,
+          onPressed: widget.onCopy,
         );
     }
   }
 
   Widget _slider({
+    required FocusNode node,
     required IconData icon,
     required String label,
     required (double, double, double) range,
@@ -262,11 +306,12 @@ class MawyViewerToolbar extends StatelessWidget {
     return MawyToolbarMenu(
       icon: icon,
       label: label,
-      tokens: tokens,
+      tokens: widget.tokens,
+      focusNode: node,
       builder: (VoidCallback close) => _Slider(
-        tokens: tokens,
+        tokens: widget.tokens,
         label: label,
-        resetLabel: strings.reset,
+        resetLabel: widget.strings.reset,
         range: range,
         value: value,
         fallback: fallback,
@@ -282,6 +327,11 @@ class MawyViewerToolbar extends StatelessWidget {
  * ---------------------------------------------------------------------- */
 
 /// One icon button on the toolbar.
+///
+/// Focusable, and activated by Enter and by the space bar as well as by a
+/// pointer — the shortcuts are written out here rather than inherited, because
+/// this package does not require a [WidgetsApp] and it is a [WidgetsApp] that
+/// would otherwise be supplying them.
 class MawyToolbarButton extends StatefulWidget {
   /// Creates a toolbar button.
   const MawyToolbarButton({
@@ -290,6 +340,8 @@ class MawyToolbarButton extends StatefulWidget {
     required this.tokens,
     required this.onPressed,
     this.pressed = false,
+    this.focusNode,
+    this.autofocus = false,
     super.key,
   });
 
@@ -308,12 +360,37 @@ class MawyToolbarButton extends StatefulWidget {
   /// Whether it is showing as on.
   final bool pressed;
 
+  /// The node the row's [MawyRoving] gave this control, where it is in one.
+  ///
+  /// A button outside a row — the two beside a slider's track, inside a menu —
+  /// makes its own and keeps it.
+  final FocusNode? focusNode;
+
+  /// Whether it takes the focus as soon as it is drawn.
+  final bool autofocus;
+
   @override
   State<MawyToolbarButton> createState() => _MawyToolbarButtonState();
 }
 
 class _MawyToolbarButtonState extends State<MawyToolbarButton> {
+  static const Map<ShortcutActivator, Intent> _activate = <ShortcutActivator, Intent>{
+    SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+    SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+    SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+  };
+
   bool _hovered = false;
+  bool _focused = false;
+  FocusNode? _own;
+
+  FocusNode get _node => widget.focusNode ?? (_own ??= FocusNode(debugLabel: widget.label));
+
+  @override
+  void dispose() {
+    _own?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -324,14 +401,26 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
       button: true,
       toggled: widget.pressed,
       label: widget.label,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (PointerEnterEvent _) => setState(() => _hovered = true),
-        onExit: (PointerExitEvent _) => setState(() => _hovered = false),
+      child: FocusableActionDetector(
+        focusNode: _node,
+        autofocus: widget.autofocus,
+        mouseCursor: SystemMouseCursors.click,
+        shortcuts: _activate,
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (ActivateIntent _) {
+              widget.onPressed();
+
+              return null;
+            },
+          ),
+        },
+        onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
         child: GestureDetector(
           onTap: widget.onPressed,
           child: AnimatedContainer(
-            duration: MawyMotion.duration,
+            duration: MawyMotion.durationOf(context),
             curve: MawyMotion.easing,
             width: 30,
             height: 30,
@@ -339,6 +428,12 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
             decoration: BoxDecoration(
               color: widget.pressed ? tokens.accentSoft : (lit ? tokens.backgroundSunken : null),
               borderRadius: BorderRadius.circular(MawyRadius.small),
+              // A ring around the outside rather than a border inside it: the
+              // stylesheet's `outline` does not take a pixel off the button it
+              // is drawn on, and neither should this.
+              boxShadow: _focused
+                  ? <BoxShadow>[BoxShadow(color: tokens.accent, spreadRadius: 2)]
+                  : null,
             ),
             child: Icon(
               widget.icon,
@@ -355,6 +450,14 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
 }
 
 /// A toolbar button that puts a panel under itself.
+///
+/// The panel does the three things a panel has to do, and they are the three
+/// the React package's does: it shuts on Escape, it shuts on a tap elsewhere,
+/// and it gives the focus back to the button it came from. It is a
+/// [FocusScope], so Tab goes round the controls inside it rather than out of
+/// the panel and down the document — which matters here more than it does in a
+/// browser, because the panel is in the [Overlay] rather than beside its own
+/// button.
 class MawyToolbarMenu extends StatefulWidget {
   /// Creates a menu button.
   const MawyToolbarMenu({
@@ -362,6 +465,7 @@ class MawyToolbarMenu extends StatefulWidget {
     required this.label,
     required this.tokens,
     required this.builder,
+    this.focusNode,
     super.key,
   });
 
@@ -377,28 +481,63 @@ class MawyToolbarMenu extends StatefulWidget {
   /// What goes in the panel. The callback closes it.
   final Widget Function(VoidCallback close) builder;
 
+  /// The node the row's [MawyRoving] gave this control.
+  final FocusNode? focusNode;
+
   @override
   State<MawyToolbarMenu> createState() => _MawyToolbarMenuState();
 }
 
 class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
   final LayerLink _link = LayerLink();
+  final FocusScopeNode _panel = FocusScopeNode(debugLabel: 'MawyToolbarMenu');
+  FocusNode? _own;
   OverlayEntry? _entry;
+
+  FocusNode get _button => widget.focusNode ?? (_own ??= FocusNode(debugLabel: widget.label));
 
   @override
   void dispose() {
-    _close();
+    _remove();
+    _panel.dispose();
+    _own?.dispose();
     super.dispose();
   }
 
-  void _close() {
+  void _remove() {
     _entry?.remove();
     _entry = null;
   }
 
+  /// Shut, with the focus put back where it was before the panel had it.
+  void _close() {
+    final bool held = _panel.hasFocus;
+
+    setState(_remove);
+
+    if (held) {
+      _button.requestFocus();
+    }
+  }
+
+  /// Escape shuts it, and nothing else here does.
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.escape) {
+      return KeyEventResult.ignored;
+    }
+
+    if (_entry == null) {
+      return KeyEventResult.ignored;
+    }
+
+    _close();
+
+    return KeyEventResult.handled;
+  }
+
   void _toggle() {
     if (_entry != null) {
-      setState(_close);
+      _close();
 
       return;
     }
@@ -411,10 +550,7 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
           // A tap anywhere else closes it, which is what a menu does and what a
           // panel pinned to a button would otherwise not do.
           Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () => setState(_close),
-            ),
+            child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _close),
           ),
           CompositedTransformFollower(
             link: _link,
@@ -423,22 +559,26 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
             offset: const Offset(0, 6),
             child: Align(
               alignment: Alignment.topRight,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 190, maxWidth: 260),
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: widget.tokens.backgroundRaised,
-                  borderRadius: BorderRadius.circular(MawyRadius.large),
-                  border: Border.all(color: widget.tokens.border),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: const Color(0xFF101018).withValues(alpha: 0.14),
-                      blurRadius: 28,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+              child: FocusScope(
+                node: _panel,
+                onKeyEvent: _onKey,
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 190, maxWidth: 260),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: widget.tokens.backgroundRaised,
+                    borderRadius: BorderRadius.circular(MawyRadius.large),
+                    border: Border.all(color: widget.tokens.border),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: const Color(0xFF101018).withValues(alpha: 0.14),
+                        blurRadius: 28,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: widget.builder(_close),
                 ),
-                child: widget.builder(() => setState(_close)),
               ),
             ),
           ),
@@ -454,12 +594,20 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
       link: _link,
-      child: MawyToolbarButton(
-        icon: widget.icon,
-        label: widget.label,
-        tokens: widget.tokens,
-        pressed: _entry != null,
-        onPressed: _toggle,
+      // The button's own Escape, for the press that comes while the focus is
+      // still on the button — which is where a pointer leaves it.
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _onKey,
+        child: MawyToolbarButton(
+          icon: widget.icon,
+          label: widget.label,
+          tokens: widget.tokens,
+          pressed: _entry != null,
+          focusNode: _button,
+          onPressed: _toggle,
+        ),
       ),
     );
   }
@@ -484,43 +632,100 @@ class _Choice<T> extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: options.map(((T, String) option) {
-        final bool chosen = option.$1 == value;
+      children: <Widget>[
+        for (final (int at, (T, String) option) in options.indexed)
+          _ChoiceOption(
+            tokens: tokens,
+            label: option.$2,
+            chosen: option.$1 == value,
+            // The panel opens with the focus already in it, because it is in
+            // the overlay: Tab from the button would otherwise walk the whole
+            // document before it arrived.
+            autofocus: at == 0,
+            onChosen: () => onChanged(option.$1),
+          ),
+      ],
+    );
+  }
+}
 
-        return Semantics(
-          inMutuallyExclusiveGroup: true,
-          selected: chosen,
-          button: true,
-          child: GestureDetector(
-            onTap: () => onChanged(option.$1),
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: chosen ? tokens.accentSoft : null,
-                  borderRadius: BorderRadius.circular(MawyRadius.small),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        option.$2,
-                        style: TextStyle(
-                          color: chosen ? tokens.accent : tokens.foreground,
-                          fontSize: 13.5,
-                          fontWeight: chosen ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
+/// One of them.
+class _ChoiceOption extends StatefulWidget {
+  const _ChoiceOption({
+    required this.tokens,
+    required this.label,
+    required this.chosen,
+    required this.autofocus,
+    required this.onChosen,
+  });
+
+  final MawyTokens tokens;
+  final String label;
+  final bool chosen;
+  final bool autofocus;
+  final VoidCallback onChosen;
+
+  @override
+  State<_ChoiceOption> createState() => _ChoiceOptionState();
+}
+
+class _ChoiceOptionState extends State<_ChoiceOption> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final MawyTokens tokens = widget.tokens;
+    final bool chosen = widget.chosen;
+
+    return Semantics(
+      inMutuallyExclusiveGroup: true,
+      selected: chosen,
+      button: true,
+      child: FocusableActionDetector(
+        autofocus: widget.autofocus,
+        mouseCursor: SystemMouseCursors.click,
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        },
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (ActivateIntent _) {
+              widget.onChosen();
+
+              return null;
+            },
+          ),
+        },
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
+        child: GestureDetector(
+          onTap: widget.onChosen,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: chosen ? tokens.accentSoft : (_focused ? tokens.backgroundSunken : null),
+              borderRadius: BorderRadius.circular(MawyRadius.small),
+              border: Border.all(color: _focused ? tokens.accent : const Color(0x00000000)),
+            ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    widget.label,
+                    style: TextStyle(
+                      color: chosen ? tokens.accent : tokens.foreground,
+                      fontSize: 13.5,
+                      fontWeight: chosen ? FontWeight.w600 : FontWeight.w400,
                     ),
-                    if (chosen) Icon(LucideIcons.check, size: 14, color: tokens.accent),
-                  ],
+                  ),
                 ),
-              ),
+                if (chosen) Icon(LucideIcons.check, size: 14, color: tokens.accent),
+              ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
 }
@@ -586,6 +791,9 @@ class _Slider extends StatelessWidget {
               icon: LucideIcons.minus,
               label: '$label −',
               tokens: tokens,
+              // The panel opens with the focus already in it — see _Choice.
+              // A slider's first control is the one that takes a step down.
+              autofocus: true,
               onPressed: () => move(-1),
             ),
             Expanded(
@@ -615,19 +823,68 @@ class _Slider extends StatelessWidget {
         if (clamped != fallback)
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: GestureDetector(
-              onTap: () => onChanged(fallback),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Text(
-                  resetLabel,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: tokens.accent, fontSize: 12),
-                ),
-              ),
-            ),
+            child: _Reset(tokens: tokens, label: resetLabel, onPressed: () => onChanged(fallback)),
           ),
       ],
+    );
+  }
+}
+
+/// The way back to where a slider started.
+///
+/// A word rather than a button, and still a control: it is in the panel, so it
+/// is somewhere Tab arrives, and a control the keyboard can reach and not press
+/// is worse than one it cannot reach at all.
+class _Reset extends StatefulWidget {
+  const _Reset({required this.tokens, required this.label, required this.onPressed});
+
+  final MawyTokens tokens;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  State<_Reset> createState() => _ResetState();
+}
+
+class _ResetState extends State<_Reset> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: widget.label,
+      child: FocusableActionDetector(
+        mouseCursor: SystemMouseCursors.click,
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        },
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (ActivateIntent _) {
+              widget.onPressed();
+
+              return null;
+            },
+          ),
+        },
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: Text(
+            widget.label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: widget.tokens.accent,
+              fontSize: 12,
+              decoration: _focused ? TextDecoration.underline : null,
+              decorationColor: widget.tokens.accent,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

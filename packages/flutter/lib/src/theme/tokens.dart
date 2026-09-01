@@ -256,4 +256,14 @@ abstract final class MawyMotion {
 
   /// The one curve.
   static const Cubic easing = Cubic(0.2, 0, 0.2, 1);
+
+  /// How long, where the reader has asked the platform for less movement.
+  ///
+  /// [Duration.zero] rather than something shorter: a reader who turned this on
+  /// did not ask for a quicker animation, they asked for the thing to be in its
+  /// new state. It is the stylesheet's `@media (prefers-reduced-motion: reduce)`
+  /// said in Dart, and it reads the same setting — the platform's, through
+  /// [MediaQuery], rather than anything this package asks for on its own.
+  static Duration durationOf(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : duration;
 }
