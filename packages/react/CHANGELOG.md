@@ -6,9 +6,18 @@
 
 ### Added
 
+- **A print stylesheet.** A viewer on paper is the document and nothing else — the toolbar, the outline, the status bar, the find box and a footnote's link back to where it was mentioned are all things to press, and paper cannot be pressed. Three more things change because a page is not a screen: a viewer given a height is as tall as its document instead of printing one boxful, the palette goes dark-on-light whatever the reader chose, and a link's destination is written out after it. In the editor the drawn document prints — `split` drops the source pane, and `plain` prints the source as text rather than as a `<textarea>`, which would put only its own boxful on the page. Nothing to switch on: it is `@media print` in the stylesheet that was already imported.
+
+- **An accessibility pass, run by [axe](https://github.com/dequelabs/axe-core) rather than by opinion**, over every surface in both palettes — the viewer with a document and as the file picker, all four editor modes, the outline open, a menu open, find and replace open. Four things it found, all fixed:
+
+  - **A task list's checkbox had no name.** It was announced as "checked, checkbox" and nothing else, with the one thing worth knowing — what is done — sitting beside it as text. The item's first line is now the name.
+  - **The editing surface was an `<article role="textbox">`.** ARIA does not let a document section be a textbox, so it is a `<div>` now. The viewer's drawn document is still an `<article>`, where it is one.
+  - **The link back from a footnote was a colour and nothing else**, inside running text. It is underlined.
+  - **`--mawy-fg-subtle` did not meet WCAG AA** against either background: `#8b8b96` is 3.4:1 on white and 3.1:1 on the sunken grey. It is `#70707b` in the light palette and `#87879a` in the dark, both over 4.5:1 everywhere they are used — and the Dart palette moved with it, because the two are one palette.
+
 - **A size budget, and a stylesheet with its prose taken out.** `npm run size` bundles the published files for real and compares the result to `size-budget.json`, which CI now fails a change for going over. What it measures is what a consumer's bundler produces: React external because an application already has it, `lucide-react` counted because it arrives with this, and gzip because every server on the path compresses.
 
-  Gzipped, that is **21.9 kB for `MawyViewer`, 37.4 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.2 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
+  Gzipped, that is **22.0 kB for `MawyViewer`, 37.5 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.5 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
 
   The stylesheet is now minified on its way into `dist/`. Two fifths of `styles.css` is prose written for somebody reading the source, and a reader of a page was paying 3.7 kB gzipped for comments they cannot see; `src/styles.css` is still the file to read and to edit, and what ships is the same rules in the same order. The build checks the two things that would make that a bad trade: every `--mawy-*` custom property still declared, and every `:where()` still a `:where()`, because those are the resets and a reset that gained specificity is one that starts beating the page it was dropped into.
 

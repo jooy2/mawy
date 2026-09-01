@@ -49,6 +49,7 @@ export interface MawyStrings {
   reset: string;
   footnotes: string;
   footnoteBack: string;
+  task: string;
   alertNote: string;
   alertTip: string;
   alertImportant: string;
@@ -148,6 +149,7 @@ const en: MawyStrings = {
   reset: 'Back to the defaults',
   footnotes: 'Footnotes',
   footnoteBack: 'Back to where this was mentioned',
+  task: 'Task',
   alertNote: 'Note',
   alertTip: 'Tip',
   alertImportant: 'Important',
@@ -239,6 +241,7 @@ const ko: MawyStrings = {
   reset: '기본값으로',
   footnotes: '각주',
   footnoteBack: '언급된 자리로 돌아가기',
+  task: '할 일',
   alertNote: '참고',
   alertTip: '도움말',
   alertImportant: '중요',

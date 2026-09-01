@@ -103,6 +103,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/browser": "^4.1.11",
     "@vitest/browser-playwright": "^4.1.11",
+    "axe-core": "^4.13.0",
     "commonmark-spec": "0.31.2",
     "esbuild": "^0.28.2",
     "eslint": "^10.9.1",

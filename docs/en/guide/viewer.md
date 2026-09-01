@@ -585,6 +585,14 @@ Text is the one thing on the page with no range on it, having no attributes to p
 
 :::
 
+::: fw react
+
+Every surface is run through [axe](https://github.com/dequelabs/axe-core) on every change — the viewer with a document and as the file picker, all four editor modes, the outline open, a menu open, find and replace open, each in both palettes. What that found is already in the list above: a task list's checkbox is named by the line beside it, the palette's faintest text was raised until it meets AA on both backgrounds, the editing surface is a `div` rather than an `article` because ARIA does not let a document section be a `textbox`, and the link back from a footnote is underlined rather than only coloured.
+
+An automated pass is a floor rather than a ceiling. The things above it — arrow keys inside the toolbar, where the focus lands after an outline entry — are asserted one at a time in the same suite.
+
+:::
+
 ::: fw flutter
 
 - Every control is a `Semantics` button with a name and, where it toggles, a state — so a screen reader reads the toolbar rather than a row of shapes.
@@ -592,5 +600,25 @@ Text is the one thing on the page with no range on it, having no attributes to p
 - Text scales with the platform's own text size, because the sizes are logical pixels through `MawyTypography` rather than anything baked in.
 
 Three things the React package has and this one does not yet, and they are the honest list: keyboard traversal inside the toolbar, `Escape` closing a menu, and animation dropping out under the platform's reduce-motion setting.
+
+:::
+
+## Printing
+
+A viewer on paper is the document and nothing else. The toolbar, the outline, the status bar and the find box are all things to press, and paper cannot be pressed — so none of them prints, and neither does a footnote's link back to where it was mentioned.
+
+::: fw react
+
+Three other things change, and each is about a page rather than a screen. A viewer given a height scrolls inside it, and a box with a height prints one boxful and loses the rest — on paper it is as tall as the document is. The palette goes dark-on-light whatever the reader chose, because a dark theme printed is a rectangle of ink around white letters. And a link's destination is written out after it, since "see the docs" naming nothing is a sentence that has lost its point.
+
+In the editor the drawn document is what prints. In `split` the source pane steps aside; in `plain`, where there is no drawn document, the source prints as text rather than as a `<textarea>` — a textarea puts only what is inside its own box on the page and loses the rest of the file.
+
+Nothing has to be switched on: it is `@media print` in the stylesheet already imported, so `Ctrl`+`P` on a page with a viewer on it does the right thing.
+
+:::
+
+::: fw flutter
+
+Printing is the platform's rather than the package's — an app prints through a plugin or the operating system's own sheet, and what it hands over is a widget tree rather than a page. This section is the React package's.
 
 :::

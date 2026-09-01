@@ -36,6 +36,7 @@ import type {
   MdTableRow,
   MdTextDirective
 } from './ast.js';
+import { toPlainText } from './inline.js';
 import { sanitizeHtml } from './html.js';
 import type { MawyStrings } from '../i18n.js';
 import {
@@ -535,6 +536,22 @@ function CodeBlock({
  * Blocks
  * ---------------------------------------------------------------------- */
 
+/**
+ * What the checkbox on a task list item is called.
+ *
+ * The item's own first line, which is the text a reader sees next to the box.
+ * Only a paragraph or a heading has words in it directly — an item that opens
+ * with a nested list or a code block has none to lend — and that is the case
+ * the caller's fallback is for.
+ */
+function taskName(item: MdListItem): string {
+  const first = item.children[0];
+
+  return first !== undefined && (first.type === 'paragraph' || first.type === 'heading')
+    ? toPlainText(first.children)
+    : '';
+}
+
 function renderListItem(
   item: MdListItem,
   index: number,
@@ -556,6 +573,12 @@ function renderListItem(
           // the state away from a screen reader entirely, so it stays in the
           // tree and is simply not operable.
           tabIndex={-1}
+          // And a box with no name is read out as "checked, checkbox" and
+          // nothing else — the one thing worth knowing, which is what is done,
+          // is the text sitting beside it on the page. So that text is the
+          // name. An item with no text at all is the only place the fallback is
+          // reached, and there the word is all there is to say.
+          aria-label={taskName(item) || context.strings.task}
         />
       ) : null}
       {renderBlocks(item.children, context, tight)}

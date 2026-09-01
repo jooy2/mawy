@@ -53,7 +53,7 @@
 
   --mawy-fg: #16161a;
   --mawy-fg-muted: #5b5b66;
-  --mawy-fg-subtle: #8b8b96;
+  --mawy-fg-subtle: #70707b;
 
   --mawy-border: #e5e5ea;
   --mawy-border-strong: #d0d0d8;
@@ -109,7 +109,7 @@
 
   --mawy-fg: #e9e9ef;
   --mawy-fg-muted: #a2a2af;
-  --mawy-fg-subtle: #77778a;
+  --mawy-fg-subtle: #87879a;
 
   --mawy-border: #2b2b33;
   --mawy-border-strong: #3d3d47;
@@ -159,7 +159,7 @@
 
     --mawy-fg: #e9e9ef;
     --mawy-fg-muted: #a2a2af;
-    --mawy-fg-subtle: #77778a;
+    --mawy-fg-subtle: #87879a;
 
     --mawy-border: #2b2b33;
     --mawy-border-strong: #3d3d47;
@@ -1099,15 +1099,19 @@
   display: inline;
 }
 
+/*
+ * Underlined rather than only coloured, because it sits at the end of a
+ * paragraph and a link inside running text that is a colour and nothing else is
+ * a link a reader who does not see colour cannot find.
+ */
 .mawy-root .mawy-md-footnote-back {
   margin-inline-start: 0.4em;
   color: var(--mawy-accent);
-  text-decoration: none;
+  text-decoration: underline;
 }
 
-.mawy-root .mawy-md-footnote-back:hover,
-.mawy-root .mawy-md-footnote-back:focus-visible {
-  text-decoration: underline;
+.mawy-root .mawy-md-footnote-back:hover {
+  color: var(--mawy-accent-hover);
 }
 
 /* A footnote just jumped to, so a reader can see which one they landed on. */
@@ -1602,5 +1606,141 @@
   .mawy-root .mawy-editor-preview {
     border-inline-start: 0;
     border-top: 1px solid var(--mawy-border);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Paper
+ *
+ * On paper a viewer is the document and nothing else. Every control on the
+ * screen is something to press, and paper cannot be pressed — a toolbar, an
+ * outline, a status bar and a find box printed out are ink spent on the parts
+ * that stopped working the moment they left the screen. A footnote's link back
+ * to where it was mentioned goes the same way; the number is already there.
+ *
+ * Three other things change, and each is about a page rather than a screen.
+ *
+ * The viewer scrolls inside whatever height it was given, and a box with a
+ * height prints one boxful and loses the rest — so on paper it is as tall as
+ * the document is. The palette goes dark-on-light whatever the reader chose,
+ * because a dark theme printed is a full-bleed rectangle of ink around white
+ * letters. And a link's destination is written out after it, since a printed
+ * page has no way to be clicked and "see the docs" naming nothing is a
+ * sentence that has lost its point.
+ * ------------------------------------------------------------------------- */
+
+@media print {
+  .mawy-root {
+    --mawy-bg: #ffffff;
+    --mawy-bg-sunken: #ffffff;
+    --mawy-bg-raised: #ffffff;
+    --mawy-chrome: #ffffff;
+    --mawy-fg: #000000;
+    --mawy-fg-muted: #333333;
+    --mawy-fg-subtle: #444444;
+    --mawy-border: #999999;
+    --mawy-border-strong: #767676;
+    --mawy-accent: #000000;
+    --mawy-accent-hover: #000000;
+    --mawy-accent-soft: transparent;
+    --mawy-code-bg: #f2f2f2;
+    --mawy-code-fg: #000000;
+    --mawy-mark-bg: #e6e6e6;
+    --mawy-mark-fg: #000000;
+    --mawy-shadow-1: none;
+    --mawy-shadow-2: none;
+
+    display: block;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  /* The parts that were controls. */
+  .mawy-root .mawy-toolbar,
+  .mawy-root .mawy-outline,
+  .mawy-root .mawy-status,
+  .mawy-root .mawy-find,
+  .mawy-root .mawy-menu-panel,
+  .mawy-root .mawy-code-copy,
+  .mawy-root .mawy-md-footnote-back,
+  .mawy-root .mawy-editor-note {
+    display: none;
+  }
+
+  /* Every box that scrolls is as tall as what is in it. */
+  .mawy-root .mawy-viewer-body,
+  .mawy-root .mawy-viewer-scroll,
+  .mawy-root .mawy-editor-body,
+  .mawy-root .mawy-editor-pane,
+  .mawy-root .mawy-source {
+    display: block;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .mawy-root .mawy-editor-preview {
+    border-inline-start: 0;
+  }
+
+  /*
+   * In `split` there are two panes of the same document, and printing both is
+   * printing it twice. The drawn one is the one worth having, so the source
+   * steps aside — and where there is no drawn one, as in `plain`, the source is
+   * what prints. A browser without `:has()` prints both panes, which is worse
+   * than this and much better than nothing.
+   */
+  .mawy-root
+    .mawy-editor-body:has(.mawy-editor-preview)
+    .mawy-editor-pane:not(.mawy-editor-preview) {
+    display: none;
+  }
+
+  /*
+   * When the source is what prints, it is the coloured copy that prints it. A
+   * `<textarea>` puts only what is inside its own box on the page and the rest
+   * of the file simply does not appear; the layer underneath is ordinary text
+   * that a page can break wherever it likes.
+   */
+  .mawy-root .mawy-source-layer {
+    position: static;
+    overflow: visible;
+  }
+
+  .mawy-root .mawy-source-input {
+    display: none;
+  }
+
+  /* The measure is the paper's now. */
+  .mawy-root .mawy-md {
+    max-width: none;
+    padding: 0;
+  }
+
+  /* Where a page may break, and where it may not. */
+  .mawy-root .mawy-md-heading {
+    break-after: avoid;
+  }
+
+  .mawy-root .mawy-md :is(pre, table, blockquote, figure, img) {
+    break-inside: avoid;
+  }
+
+  .mawy-root .mawy-md :is(p, li, dd) {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /*
+   * A destination, written out. Only the ones that go somewhere else: a
+   * footnote reference and a heading anchor point inside the document, and on
+   * paper the number and the heading are already where they point.
+   */
+  .mawy-root .mawy-md-link[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    word-break: break-all;
   }
 }

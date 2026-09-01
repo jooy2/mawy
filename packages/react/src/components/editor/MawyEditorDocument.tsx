@@ -99,7 +99,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     },
     ref
   ) {
-    const root = React.useRef<HTMLElement>(null);
+    const root = React.useRef<HTMLDivElement>(null);
     const composing = React.useRef(false);
     const composed = React.useRef<{ host: Node; before: string; start: number } | null>(null);
     /** Bumped to throw the drawing away and make it again from the document. */
@@ -357,7 +357,13 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
     return (
       <div className="mawy-document">
-        <article
+        {/*
+          A `div` rather than an `article`, which is what this used to be: ARIA
+          does not let a document section be a `textbox`, and a role a browser
+          refuses is a role a screen reader does not read. The viewer's drawn
+          document is still an `article`, because there it is one.
+        */}
+        <div
           ref={root}
           className="mawy-md mawy-document-body"
           contentEditable={!readOnly}
@@ -372,7 +378,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
             {renderBlocks(blocks, context)}
             {renderFootnotes(document_.footnotes, context)}
           </React.Fragment>
-        </article>
+        </div>
       </div>
     );
   }
