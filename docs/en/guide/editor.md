@@ -300,6 +300,14 @@ What is stored is the document before each change together with where the caret 
 
 A run of typing is **one step**, not one per keystroke — a `Mod`+`Z` that gives back one character at a time is one nobody presses twice. A change carries on from the one before it while it is the same kind of change, in the same place, within a moment of it. A syllable being composed counts as more of the same typing, because a Korean keyboard rewrites what it wrote on every jamo and none of those are separate thoughts. A line ending closes the run behind it: what is typed after `Enter` is the next thing the writer meant, and undo stops between the two.
 
+::: fw flutter
+
+**This section is the React package's, and this package has no history of its own.** The reason that one has one does not arise here: there are two surfaces over there and the drawn one gets no entry on the browser's stack, so a single list is the only way an edit made on one can be taken back on the other. Here there is one editable surface, it is an `EditableText`, and an `EditableText` keeps its own undo stack.
+
+So undo is Flutter's rather than this package's, and it behaves the way it does in every other text field in your application — which is the answer somebody typing already expects. What that means for a change a toolbar button made rather than a keystroke is Flutter's answer to give, not this package's, and it is the same answer any `TextEditingController` written to from outside gets.
+
+:::
+
 ## Pasting
 
 **What is on the clipboard as HTML arrives as Markdown.** Copy a section of a web page into either surface and the headings are hashes, the links are links, the list is a list. Copy out of a word processor and the same is true.
@@ -309,6 +317,12 @@ A clipboard with nothing but text on it is left to the browser. Its own paste is
 This is **not** the renderer run backwards, and the difference is the whole reason it is allowed to exist. Markup from somewhere else is read once, for whatever can be made of it; nothing round-trips through it. So it is allowed to be lossy and it is — a `<span style="color: red">` is its text, a `<video>` is nothing, an attribute nobody named is gone. Every URL goes through the same check a Markdown link gets, so a pasted `javascript:` link arrives as the words it was written with rather than as a link that does nothing.
 
 Inside a code block a paste is the plain text and nothing else. Everything in there is the characters it is, and a pasted heading is a line beginning with a hash.
+
+::: fw flutter
+
+This section is the React package's. A clipboard here holds what the platform says it holds, and reaching past plain text to the HTML flavour of it — or to an image — is a plugin rather than a widget. So a paste is the platform's paste, and turning a page of HTML into Markdown is a thing an application can do to the string before it hands it over.
+
+:::
 
 ## The status bar
 
