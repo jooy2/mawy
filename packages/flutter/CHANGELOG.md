@@ -6,6 +6,8 @@
 
 ### Added
 
+- **Seven more of CommonMark, and the number moved from 605 to 612.** The React package's parser change, mirrored here in the same commit: a destination, a title and a fence's info string read their escapes and character references; a backtick fence whose info string holds a backtick is not a fence; and an escaped bracket is a bracket a shortcut reference's label may hold. `tool/parity.dart` says the two trees are still identical, which is the only thing that makes "one parser shipped twice" true rather than intended.
+
 - **The palette's faintest text now meets WCAG AA.** `foregroundSubtle` was `#8B8B96` in the light tokens and `#77778A` in the dark, which is 3.4:1 and 4.1:1 against the backgrounds it is drawn on — under the 4.5:1 that body text needs. It is `#70707B` and `#87879A` now. This is the React package's change, mirrored: the two palettes are one palette, value for value, and a colour that moved there had to move here.
 
 - **How much CommonMark, as a number.** The React package's parser answers 605 of the specification's 652 examples, and this parser is that parser: `tool/parity.dart` diffs the two trees over every awkward case and every Markdown file in the repository, so the suite is run once rather than twice. What the remaining 47 are, and why, is written down beside the test over there.

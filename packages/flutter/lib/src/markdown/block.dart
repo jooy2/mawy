@@ -22,7 +22,8 @@ library;
 
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/directive.dart';
-import 'package:mawy/src/markdown/inline.dart' show normalizeLabel;
+import 'package:mawy/src/markdown/entities.dart';
+import 'package:mawy/src/markdown/inline.dart' show normalizeLabel, unescaped;
 import 'package:mawy/src/markdown/source.dart';
 
 /// Somewhere a run of inline nodes has to go once there is one.
@@ -424,10 +425,16 @@ Sourced _takeDefinitions(Sourced paragraph, Map<String, MdDefinition> into) {
     match = _definition.firstMatch(paragraph.text.substring(taken))
   ) {
     final String label = normalizeLabel(match.group(1)!);
-    final String raw = match.group(2)!;
-    final String url = raw.startsWith('<') ? raw.substring(1, raw.length - 1) : raw;
+    final String written = match.group(2)!;
+    final String raw = written.startsWith('<') ? written.substring(1, written.length - 1) : written;
+    // The scan keeps the characters as written, so the escapes and the
+    // references in a destination and a title are read here — the same reading
+    // an inline `(url "title")` gets while it is being scanned.
+    final String url = decodeEntities(unescaped(raw));
     final String? quoted = match.group(3);
-    final String? title = quoted?.substring(1, quoted.length - 1);
+    final String? title = quoted == null
+        ? null
+        : decodeEntities(unescaped(quoted.substring(1, quoted.length - 1)));
 
     // First definition wins, which is what every other implementation does.
     if (label.isNotEmpty && !into.containsKey(label)) {
@@ -610,7 +617,12 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
 
     final RegExpMatch? fence = _fence.firstMatch(line.text);
 
-    if (fence != null) {
+    // A backtick fence's info string may not hold a backtick, and a line that
+    // breaks that rule is not a fence at all — it is the paragraph it looks
+    // like, with a code span somewhere in it. ``` ``` ``` on a line of its own
+    // is a span holding one space, and reading it as an empty code block would
+    // swallow everything under it until something closed the fence.
+    if (fence != null && (fence.group(2)![0] != '`' || !fence.group(3)!.contains('`'))) {
       final String indent = fence.group(1)!;
       final String marker = fence.group(2)!;
       final String info = fence.group(3)!;
@@ -651,9 +663,12 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
           range,
           content: MdRange(from, body.isNotEmpty ? lineEnd(body.last) : from),
           lines: body.map((Line each) => each.start).toList(),
-          // A backtick in an info string is not a language, it is an unclosed
-          // span that happens to sit on the fence line.
-          lang: words.isNotEmpty && !words.first.contains('`') ? words.first : null,
+          // A tilde fence may have a backtick in its info string, and then it
+          // is part of the language rather than a span: this is only reached at
+          // all when the fence allowed it.
+          lang: words.isNotEmpty && words.first.isNotEmpty
+              ? decodeEntities(unescaped(words.first))
+              : null,
           meta: words.length > 1 ? words.skip(1).join(' ') : null,
           value: body.map((Line each) => each.text).join('\n'),
         ),

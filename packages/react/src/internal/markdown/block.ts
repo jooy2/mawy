@@ -37,7 +37,8 @@ import type {
   MdTableRow
 } from './ast.js';
 import { readDirectiveHead, type DirectiveHead } from './directive.js';
-import { normalizeLabel } from './inline.js';
+import { decodeEntities } from './entities.js';
+import { normalizeLabel, unescaped } from './inline.js';
 import {
   advance,
   append,
@@ -394,8 +395,12 @@ function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): S
     match = DEFINITION.exec(paragraph.text.slice(taken))
   ) {
     const label = normalizeLabel(match[1]);
-    const url = match[2].startsWith('<') ? match[2].slice(1, -1) : match[2];
-    const title = match[3] ? match[3].slice(1, -1) : null;
+    // The scan keeps the characters as written, so the escapes and the
+    // references in a destination and a title are read here — the same reading
+    // an inline `(url "title")` gets while it is being scanned.
+    const raw = match[2].startsWith('<') ? match[2].slice(1, -1) : match[2];
+    const url = decodeEntities(unescaped(raw));
+    const title = match[3] ? decodeEntities(unescaped(match[3].slice(1, -1))) : null;
 
     // First definition wins, which is what every other implementation does.
     if (label && !into.has(label)) {
@@ -576,7 +581,12 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
     const fence = FENCE.exec(line.text);
 
-    if (fence) {
+    // A backtick fence's info string may not hold a backtick, and a line that
+    // breaks that rule is not a fence at all — it is the paragraph it looks
+    // like, with a code span somewhere in it. ``` ``` ``` on a line of its own
+    // is a span holding one space, and reading it as an empty code block would
+    // swallow everything under it until something closed the fence.
+    if (fence && (fence[2][0] !== '`' || !fence[3].includes('`'))) {
       const [, indent, marker, info] = fence;
       const body: Line[] = [];
       const closing = new RegExp(`^ {0,3}${marker[0]}{${marker.length},}[ \\t]*$`);
@@ -609,9 +619,10 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         range,
         content: { start: from, end: body.length ? lineEnd(body[body.length - 1]) : from },
         lines: body.map((each) => each.start),
-        // A backtick in an info string is not a language, it is an unclosed
-        // span that happens to sit on the fence line.
-        lang: words[0] && !words[0].includes('`') ? words[0] : null,
+        // A tilde fence may have a backtick in its info string, and then it is
+        // part of the language rather than a span: this is only reached at all
+        // when the fence allowed it.
+        lang: words[0] ? decodeEntities(unescaped(words[0])) : null,
         meta: words.length > 1 ? words.slice(1).join(' ') : null,
         value: body.map((each) => each.text).join('\n')
       });

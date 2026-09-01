@@ -6,6 +6,17 @@
 
 ### Added
 
+- **Seven more of CommonMark, and the number moved from 605 to 612.** Four kinds of thing the parser was reading as the characters they were written with rather than as what they say:
+
+  - **A destination and a title read their escapes and their character references**, inline and in a reference definition alike — `[a](/bar\*)` is `/bar*`, and `[a]: /u "ti\*tle"` is `ti*tle`. The inline scan already took the backslashes off; the definition kept them, so the same link meant two things depending on where it was written.
+  - **So does a fence's info string.** ` ```foo\+bar ` is `language-foo+bar`.
+  - **A backtick fence whose info string holds a backtick is not a fence.** ` ``` ``` ` on a line of its own is a code span with a space in it, and reading it as an empty code block swallowed the rest of the document until something closed the fence.
+  - **An escaped bracket is a bracket a shortcut reference's label may hold.** `[Foo*bar\]]` is one label rather than a failed reference.
+
+  The label a reference is _looked up_ by is deliberately not unescaped, which is the specification and not an oversight: `[foo\!]` and `[foo!]` are two labels, and both sides of the lookup fold the characters as written so the two cannot disagree.
+
+  Five deviations were reclassified rather than fixed. An empty destination is a decision: `<a href="">` is a control that does nothing, and this library's answer for a destination it will not follow is to draw the words the author wrote. Four more are `&ouml;` and `&auml;`, which are outside the character reference table this package carries.
+
 - **A link or an image the caret is inside is written out as its own characters** on the `wysiwyg` surface, destination and all, and drawn back as itself when the caret leaves.
 
   This is the destination becoming editable, which it was not. A drawn `<a>` puts its words on the page and never its `(url)`, so there was nowhere on the page for an address to be and nothing for a keystroke to land on — the toolbar's `[](url)` arrived with a placeholder that could not be typed over, and an existing link's destination could only be changed on the source surface. Written out it is the source one character for one, and every rule the surface already has applies to it unchanged: there is no link editor, no popover and no second way to type.

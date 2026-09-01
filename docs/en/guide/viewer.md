@@ -120,9 +120,9 @@ MawyViewer(
 
 ### How much of it
 
-**605 of the specification's 652 examples**, run against the parser on every change. CommonMark is a document with a test suite in it, so "reads CommonMark" is a number rather than a claim, and the number is in `packages/react/test/internal/markdown/commonmark.test.ts` beside the list of what the other 47 are.
+**612 of the specification's 652 examples**, run against the parser on every change. CommonMark is a document with a test suite in it, so "reads CommonMark" is a number rather than a claim, and the number is in `packages/react/test/internal/markdown/commonmark.test.ts` beside the list of what the other 40 are.
 
-Three of those are a decision rather than a shortfall: every URL is checked against a scheme allowlist, so `<made-up-scheme://foo>` is drawn as the words the author wrote. Most of the rest are edges — a tab inside a list item, a character reference in a link destination, a list counted loose where the specification counts it tight — and each one is written down with the reason it is there, so the list can only get shorter deliberately.
+Three of those are a decision rather than a shortfall: every URL is checked against a scheme allowlist, so `<made-up-scheme://foo>` is drawn as the words the author wrote. Five more are the same kind of decision: an empty destination is drawn as the words the author wrote rather than as `<a href="">`, which is a control that does nothing. Most of the rest are edges — a tab inside a list item, a character reference the table does not carry, a list counted loose where the specification counts it tight — and each one is written down with the reason it is there, so the list can only get shorter deliberately.
 
 The Dart parser is not run against the suite and does not need to be: the two parsers' trees are diffed over every awkward case and every Markdown file in the repository, so a tree that is right in one is the tree the other produces.
 

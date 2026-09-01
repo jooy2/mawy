@@ -359,7 +359,23 @@ function readInlineDestination(source: string, start: number): Destination | nul
     return null;
   }
 
-  return { url, title: title === null ? null : decodeEntities(title), end: at + 1 };
+  return {
+    url: decodeEntities(url),
+    title: title === null ? null : decodeEntities(title),
+    end: at + 1
+  };
+}
+
+/**
+ * A backslash taken off whatever it was in front of.
+ *
+ * A destination, a title, a reference label and a fence's info string all read
+ * their escapes rather than showing them, and each of them is scanned by a
+ * regular expression that keeps the characters as written — so this is what
+ * turns `/bar\\*` into `/bar*` afterwards.
+ */
+export function unescaped(text: string): string {
+  return text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, '$1');
 }
 
 /**
@@ -368,6 +384,11 @@ function readInlineDestination(source: string, start: number): Destination | nul
  * Case and runs of whitespace do not distinguish two labels, so `[Foo Bar]` and
  * `[foo   bar]` are the same reference. Folding here and at the definition site
  * means the map never has to be searched twice.
+ *
+ * An escape is *not* read here, and that is the specification rather than an
+ * oversight: `[foo\\!]` and `[foo!]` are two labels. Both sides fold the
+ * characters as written, so both sides agree, and what the escape means is
+ * settled where the label is drawn rather than where it is looked up.
  */
 export function normalizeLabel(label: string): string {
   return label.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -934,7 +955,11 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         const label = normalizeLabel(reference?.label || labelText);
         const found = label ? options.definitions.get(label) : undefined;
 
-        if (found && (reference || !/[[\]]/.test(labelText))) {
+        // A shortcut reference cannot have a bracket in its label — but an
+        // *escaped* one is a bracket the label is allowed to contain, so the
+        // escapes go before the question is asked and `[Foo*bar\]]` is one
+        // label rather than a failed reference.
+        if (found && (reference || !/[[\]]/.test(labelText.replace(/\\./g, '')))) {
           destination = {
             url: found.url,
             title: found.title,

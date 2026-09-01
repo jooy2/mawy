@@ -6,8 +6,8 @@ import { specExamples, writeHtml } from '../../support/commonmark.js';
  * The parser, against the specification it claims to read.
  *
  * "CommonMark" is written in the README, on the site and in the changelog, and
- * until this file existed it was a word rather than a number. It is 605 of the
- * specification's 652 examples — the other 47 are below, each one with the
+ * until this file existed it was a word rather than a number. It is 612 of the
+ * specification's 652 examples — the other 40 are below, each one with the
  * reason it is there, so that the claim is checkable and a change to it is
  * deliberate.
  *
@@ -44,31 +44,30 @@ const DEVIATIONS = new Map<number, string>([
   [7, 'a tab inside a list item is not expanded to the next stop'],
 
   /*
-   * Backslash escapes and character references are resolved in text. A
-   * destination, a title and a fence's info string are taken as the characters
-   * they were written with.
-   */
-  [23, 'an escape in a reference definition destination or title'],
-  [24, 'an escape in a fence info string'],
-  [32, 'a character reference in a destination or title'],
-  [33, 'a character reference in a reference definition'],
-  [34, 'a character reference in a fence info string'],
-  [194, 'an escape in a reference definition label'],
-  [202, 'an escape in a reference definition destination or title'],
-  [503, 'a character reference in a destination'],
-
-  /*
    * The character reference table is the names documents actually use rather
    * than all 2231 of HTML5's, which is a hundred kilobytes shipped to every
-   * page for `&DifferentialD;`.
+   * page for `&DifferentialD;`. Escapes and the references it does know are
+   * read everywhere the specification asks for them — in a destination, a
+   * title, a reference label and a fence's info string.
    */
   [25, 'a character reference outside the common names'],
   [28, 'a numeric reference past the last code point is drawn as U+FFFD'],
+  [32, '`&ouml;` is outside the table, in a destination and a title'],
+  [33, '`&ouml;` is outside the table, in a reference definition'],
+  [34, '`&ouml;` is outside the table, in a fence info string'],
+  [503, '`&auml;` is outside the table'],
 
-  /* A fence's info string may not hold a backtick. Here it may. */
-  [138, '``` ``` ``` is read as a fence rather than as a code span'],
-  [145, '``` aa ``` is read as a fence rather than as a code span'],
-  [347, '```foo`` is read as an unclosed fence rather than as text'],
+  /*
+   * An empty destination is a decision rather than a shortfall. `<a href="">`
+   * is a control that does nothing, and the answer everywhere else in this
+   * library for a destination it will not follow is to draw the words the
+   * author wrote and leave the sentence readable.
+   */
+  [200, '[foo]: <> defines nothing'],
+  [485, '[link]() is the words rather than a link to the page it is on'],
+  [486, '[link](<>) likewise'],
+  [487, '[]() likewise'],
+  [567, 'an empty destination does not shadow a definition of the same label'],
 
   /*
    * Looseness. A list is loose when blank lines separate its items or the
@@ -82,13 +81,6 @@ const DEVIATIONS = new Map<number, string>([
   [307, 'a blank line inside a nested item makes its ancestors loose'],
   [317, 'a reference definition alone in an item does not make the list loose'],
   [319, 'a blank line inside a nested item makes its ancestor loose'],
-
-  /* An empty destination is no destination, so nothing becomes a link. */
-  [200, '[foo]: <> defines nothing'],
-  [485, '[link]() is not a link'],
-  [486, '[link](<>) is not a link'],
-  [487, '[]() is not a link'],
-  [567, 'an empty destination does not shadow a definition of the same label'],
 
   /* What a reference definition's label may be written as. */
   [208, 'a label written over more than one line'],
@@ -169,7 +161,7 @@ describe('CommonMark', () => {
     expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
   });
 
-  it('reads 605 of the 652', () => {
-    expect(examples.length - differing.length).toBe(605);
+  it('reads 612 of the 652', () => {
+    expect(examples.length - differing.length).toBe(612);
   });
 });

@@ -378,17 +378,33 @@ _Destination? _readInlineDestination(String source, int start) {
     return null;
   }
 
-  return _Destination(url, title == null ? null : decodeEntities(title), at + 1);
+  return _Destination(decodeEntities(url), title == null ? null : decodeEntities(title), at + 1);
 }
 
 final RegExp _runsOfSpace = RegExp(r'\s+');
+final RegExp _anyEscape = RegExp(r'\\.', dotAll: true);
 
 /// A reference label, folded to the form definitions are stored under.
 ///
 /// Case and runs of whitespace do not distinguish two labels, so `[Foo Bar]`
 /// and `[foo   bar]` are the same reference. Folding here and at the definition
 /// site means the map never has to be searched twice.
+///
+/// An escape is *not* read here, and that is the specification rather than an
+/// oversight: `[foo\!]` and `[foo!]` are two labels. Both sides fold the
+/// characters as written, so both sides agree, and what the escape means is
+/// settled where the label is drawn rather than where it is looked up.
 String normalizeLabel(String label) => label.trim().replaceAll(_runsOfSpace, ' ').toLowerCase();
+
+final RegExp _escaped = RegExp(r'''\\([!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])''');
+
+/// A backslash taken off whatever it was in front of.
+///
+/// A destination, a title, a reference label and a fence's info string all read
+/// their escapes rather than showing them, and each of them is scanned by a
+/// regular expression that keeps the characters as written — so this is what
+/// turns `/bar\*` into `/bar*` afterwards.
+String unescaped(String text) => text.replaceAllMapped(_escaped, (Match m) => m.group(1)!);
 
 class _Reference {
   const _Reference(this.label, this.end);
@@ -998,7 +1014,13 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         );
         final MdDefinition? found = label.isEmpty ? null : options.definitions[label];
 
-        if (found != null && (reference != null || !RegExp(r'[\[\]]').hasMatch(labelText))) {
+        // A shortcut reference cannot have a bracket in its label — but an
+        // *escaped* one is a bracket the label is allowed to contain, so the
+        // escapes go before the question is asked and `[Foo*bar\]]` is one
+        // label rather than a failed reference.
+        if (found != null &&
+            (reference != null ||
+                !RegExp(r'[\[\]]').hasMatch(labelText.replaceAll(_anyEscape, '')))) {
           destination = _Destination(
             found.url,
             found.title,
