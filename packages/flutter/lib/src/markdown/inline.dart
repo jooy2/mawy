@@ -504,8 +504,17 @@ final RegExp _autolinkUri = RegExp(r'^<([A-Za-z][A-Za-z\d+.-]{1,31}:[^\s<>]*)>')
 final RegExp _autolinkEmail = RegExp(
   r"^<([A-Za-z\d.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z\d](?:[A-Za-z\d-]{0,61}[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]{0,61}[A-Za-z\d])?)*)>",
 );
+// An attribute name is a letter, `_` or `:` and then letters, digits, `_`,
+// `.`, `:` and `-` — which is the specification's own rule, and is narrower
+// than "anything that is not a space or a quote": `<a h*#ref="hi">` is a
+// sentence about a tag rather than a tag, and so is a second line of one that
+// begins `bim!bop`.
+//
+// `<!-->` and `<!--->` are comments in their own right, so they are tried
+// before the general form. Without that, `<!--> foo -->` is one comment as far
+// as the closing `-->` rather than a comment and then some text.
 final RegExp _inlineHtml = RegExp(
-  r'''^(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*/?>|</[A-Za-z][A-Za-z\d-]*\s*>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![A-Za-z][^>]*>|<!\[CDATA\[[\s\S]*?\]\]>)''',
+  r'''^(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[A-Za-z_:][A-Za-z\d_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*/?>|</[A-Za-z][A-Za-z\d-]*\s*>|<!-->|<!--->|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![A-Za-z][^>]*>|<!\[CDATA\[[\s\S]*?\]\]>)''',
 );
 
 /* -------------------------------------------------------------------------

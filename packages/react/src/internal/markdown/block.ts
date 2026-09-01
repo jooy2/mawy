@@ -253,8 +253,11 @@ const BLOCK_TAGS = new Set(
     'option p param search section summary table tbody td tfoot th thead title tr track ul'
   ).split(' ')
 );
+// The attribute name is the specification's, the same as in `inline.ts` and
+// for the same reason: a line reading `<a h*#ref="hi">` is a paragraph about a
+// tag rather than a block of HTML.
 const ANY_TAG =
-  /^ {0,3}(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>|<\/[A-Za-z][A-Za-z\d-]*\s*>)[ \t]*$/;
+  /^ {0,3}(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[A-Za-z_:][A-Za-z\d_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>|<\/[A-Za-z][A-Za-z\d-]*\s*>)[ \t]*$/;
 
 interface HtmlStart {
   /** What ends the block, or `null` for "the next blank line". */

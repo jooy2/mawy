@@ -6,6 +6,12 @@
 
 ### Added
 
+- **Three more of CommonMark, and the number moved from 618 to 621** — all three about reading a tag more carefully than the parser was reading one.
+
+  An **attribute name** is now the specification's own rule — a letter, `_` or `:` and then letters, digits, `_`, `.`, `:` and `-` — rather than "anything that is not a space or a quote". A line reading `<a h*#ref="hi">` is a sentence about a tag, and was being drawn as one; so was a tag whose second line began `bim!bop`, since the name that could not be a name was being taken for one.
+
+  And **`<!-->` and `<!--->` are comments in their own right**, tried before the general form. Without that, `foo <!--> foo -->` was one comment running to the closing `-->` rather than a comment followed by text.
+
 - **`wysiwyg` is on the default `modes` list**, and first on it. It was left off at 0.1.0 because two things on that surface did not work — a link's destination could not be typed and raw HTML being drawn could not be edited — and both are gone: whatever the caret is inside is written out as the characters it was written with. An application that would rather not offer the surface leaves it out of `modes`, the way it says anything else about the switch.
 
 - **The status bar's counts are their own module**, `src/internal/status.ts`, rather than functions inside the component that draws them — which is what lets the parity check diff them against the Dart ones. Nothing about the numbers changed; a count written twice is a count that reports two different answers for the same document the first time nobody is comparing them.

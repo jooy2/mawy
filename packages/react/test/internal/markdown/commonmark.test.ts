@@ -6,7 +6,7 @@ import { specExamples, writeHtml } from '../../support/commonmark.js';
  * The parser, against the specification it claims to read.
  *
  * "CommonMark" is written in the README, on the site and in the changelog, and
- * until this file existed it was a word rather than a number. It is 618 of the
+ * until this file existed it was a word rather than a number. It is 621 of the
  * specification's 652 examples — the other 34 are below, each one with the
  * reason it is there, so that the claim is checkable and a change to it is
  * deliberate.
@@ -100,14 +100,6 @@ const DEVIATIONS = new Map<number, string>([
   [507, 'a non-breaking space does not separate a destination from a title'],
 
   /*
-   * Raw HTML. The parser takes a tag as a tag more readily than the
-   * specification does, which draws as markup what would otherwise be text.
-   */
-  [619, 'an attribute name the specification would refuse'],
-  [621, 'an unquoted attribute value over two lines'],
-  [626, '`<!-->` is read as a comment'],
-
-  /*
    * And three that are a decision rather than a shortfall. Every URL is checked
    * against a scheme allowlist, in Markdown as much as in HTML, and a refused
    * destination is drawn as the words the author wrote. That is the whole of
@@ -156,7 +148,7 @@ describe('CommonMark', () => {
     expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
   });
 
-  it('reads 618 of the 652', () => {
-    expect(examples.length - differing.length).toBe(618);
+  it('reads 621 of the 652', () => {
+    expect(examples.length - differing.length).toBe(621);
   });
 });

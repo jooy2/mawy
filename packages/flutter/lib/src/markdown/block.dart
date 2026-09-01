@@ -277,8 +277,11 @@ final Set<String> _blockTags = <String>{
           'option p param search section summary table tbody td tfoot th thead title tr track ul')
       .split(' '),
 };
+// The attribute name is the specification's, the same as in `inline.dart` and
+// for the same reason: a line reading `<a h*#ref="hi">` is a paragraph about a
+// tag rather than a block of HTML.
 final RegExp _anyTag = RegExp(
-  r'''^ {0,3}(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*/?>|</[A-Za-z][A-Za-z\d-]*\s*>)[ \t]*$''',
+  r'''^ {0,3}(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[A-Za-z_:][A-Za-z\d_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*/?>|</[A-Za-z][A-Za-z\d-]*\s*>)[ \t]*$''',
 );
 final RegExp _htmlComment = RegExp(r'^ {0,3}<!--');
 final RegExp _htmlInstruction = RegExp(r'^ {0,3}<\?');
