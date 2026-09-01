@@ -372,7 +372,7 @@ class _MawyEditorState extends State<MawyEditor> {
       gfm: widget.parse.gfm,
       readOnly: widget.readOnly,
       placeholder: widget.placeholder ?? strings.editorPlaceholder,
-      onEnter: _readOnlyEnter,
+      onEnter: _enter,
       onIndent: _indent,
     );
 
@@ -425,7 +425,7 @@ class _MawyEditorState extends State<MawyEditor> {
 
   /// `Enter` on a list item carries the marker down, and gives it up on an item
   /// still empty. `null` is "this is not a list item", and `Enter` is `Enter`.
-  bool _readOnlyEnter() {
+  bool _enter() {
     final EditState? carried = continueList(_state);
 
     if (carried == null || widget.readOnly) {
