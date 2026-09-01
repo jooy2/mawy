@@ -106,9 +106,41 @@ const String _prose = '''
 > 인용도, 목록도, 표도 같은 규칙을 따릅니다.
 ''';
 
+const String _directives = '''
+# What Markdown has no word for
+
+The parser reads a **shape** and stops there. What each shape means is the
+gallery's to say, and the three below are declared in its own file, in about
+thirty lines between them.
+
+:::callout[The shape and the meaning are different jobs]{kind=note}
+A container holds blocks, so everything in here is read as Markdown:
+
+- `callout` is a container, and the parser knows that much
+- what a callout *is* — a box with a coloured edge — is this file's
+:::
+
+A leaf is a line of its own. This one draws a bar, and the number in it came out
+of `{value=72}`:
+
+::progress{value=72 label=Coverage}
+
+A text directive sits inside a sentence: press :kbd[Ctrl] + :kbd[K] to search,
+:kbd[Esc] to leave.
+
+:::callout[And nothing claimed this one]{kind=warning}
+No builder was handed the name `youtube`, so the line under this box is drawn as
+the characters it was written with rather than quietly dropped — the same answer
+raw HTML gets, and for the same reason.
+:::
+
+::youtube{id=dQw4w9WgXcQ}
+''';
+
 /// Everything the gallery can show.
 const List<Sample> samples = <Sample>[
   Sample('viewer/basic', 'Everything', _everything),
   Sample('viewer/minimal', 'Minimal', _minimal),
   Sample('viewer/prose', '한국어', _prose),
+  Sample('viewer/directives', 'Directives', _directives),
 ];

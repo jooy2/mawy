@@ -248,6 +248,8 @@ A builder is handed the `name`, the `attributes`, the `label` already drawn as a
 
 :::
 
+<MawyDemo name="viewer/directives" flutter="viewer/directives" :height="460" />
+
 `{…}` is written the way it is everywhere else this syntax is: `key=value`, `key="a value with spaces"`, `#id`, `.a .b` — which arrive as `id` and `class` — and a bare `key`, which arrives with an empty string and is how a flag is spelled. Every value is a string, because a string is all the document said; reading one as a number, and deciding what a missing one means, is the component's.
 
 **A name nobody claimed is drawn as the characters it was written with.** That is the same answer raw HTML gets under the default `html` policy and it is the same reason: a viewer that was never told what a construct means should show what the author wrote rather than quietly drop part of a document. It is also the one fallback that cannot lose anything — an unhandled `::youtube{id=…}` has no content inside it to fall back _to_.

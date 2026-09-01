@@ -61,34 +61,52 @@ class _GalleryAppState extends State<GalleryApp> {
     final bool embedded = _wanted != null;
     final Sample sample = _sample;
 
-    final Widget viewer = MawyViewer(
-      // A key on the document, so switching samples starts a fresh viewer
-      // rather than one that remembers the last one's scroll position.
-      key: ValueKey<String>(sample.id),
-      value: sample.value,
-      colorScheme: _scheme,
-      onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
-      toolbar: sample.id == 'viewer/minimal' ? const <MawyViewerToolbarItem>[] : kMawyViewerToolbar,
-      locale: sample.id == 'viewer/prose' ? MawyLocale.ko : MawyLocale.en,
-      onLinkTap: (String url, String? title) {
-        debugPrint('link: $url');
-      },
-    );
-
     return WidgetsApp(
       title: 'Mawy',
       color: const Color(0xFF5B34EA),
       debugShowCheckedModeBanner: false,
-      builder: (BuildContext context, Widget? _) => embedded
-          ? viewer
-          : Column(
-              children: <Widget>[
-                _Switch(sample: sample, onChange: _choose),
-                Expanded(child: viewer),
-              ],
-            ),
+      builder: (BuildContext context, Widget? _) {
+        // The viewer is built in here rather than above, because the gallery's
+        // own directives have to be drawn in the palette the viewer is drawn
+        // in - and until a reader picks one that is the platform's brightness,
+        // which is a `MediaQuery` and only exists under the app.
+        final MawyTokens tokens = MawyTokens.of(_brightness(context));
+
+        final Widget viewer = MawyViewer(
+          // A key on the document, so switching samples starts a fresh viewer
+          // rather than one that remembers the last one's scroll position.
+          key: ValueKey<String>(sample.id),
+          value: sample.value,
+          colorScheme: _scheme,
+          onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
+          toolbar: sample.id == 'viewer/minimal'
+              ? const <MawyViewerToolbarItem>[]
+              : kMawyViewerToolbar,
+          locale: sample.id == 'viewer/prose' ? MawyLocale.ko : MawyLocale.en,
+          directives: _directives(tokens),
+          onLinkTap: (String url, String? title) {
+            debugPrint('link: $url');
+          },
+        );
+
+        return embedded
+            ? viewer
+            : Column(
+                children: <Widget>[
+                  _Switch(sample: sample, onChange: _choose),
+                  Expanded(child: viewer),
+                ],
+              );
+      },
     );
   }
+
+  /// Which palette the viewer is drawing in, resolved the way it resolves it.
+  Brightness _brightness(BuildContext context) => switch (_scheme) {
+    MawyColorScheme.light => Brightness.light,
+    MawyColorScheme.dark => Brightness.dark,
+    MawyColorScheme.system => MediaQuery.platformBrightnessOf(context),
+  };
 
   void _choose(int index) => setState(() => _at = index);
 }
@@ -137,6 +155,182 @@ class _Switch extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// What the gallery's directives mean.
+///
+/// Three names, and `youtube` deliberately not among them. What a viewer does
+/// with a name nobody claimed is as much a part of the demo as the three that
+/// were claimed: it draws the characters the document was written with, which
+/// is the one fallback that cannot lose anything.
+///
+/// Every builder is handed pieces that are already drawn — a `label` as an
+/// [InlineSpan], a container's `children` as widgets — so what is written here
+/// composes widgets and never sees markup of any kind.
+Map<String, MawyDirectiveBuilder> _directives(MawyTokens tokens) => <String, MawyDirectiveBuilder>{
+  'callout': (BuildContext context, MawyDirective directive) => _Callout(
+    tokens: tokens,
+    kind: directive.attributes['kind'],
+    label: directive.label,
+    children: directive.children ?? const <Widget>[],
+  ),
+  'progress': (BuildContext context, MawyDirective directive) => _Progress(
+    tokens: tokens,
+    label: directive.attributes['label'] ?? 'Progress',
+    // Every attribute is a string, because a string is all the document
+    // said. Reading one as a number is the builder's, and so is deciding
+    // what a missing one means.
+    value: (double.tryParse(directive.attributes['value'] ?? '') ?? 0).clamp(0, 100).toDouble(),
+  ),
+  'kbd': (BuildContext context, MawyDirective directive) =>
+      _Kbd(tokens: tokens, label: directive.label),
+};
+
+/// The house callout, which is the directive every document turns out to want.
+class _Callout extends StatelessWidget {
+  const _Callout({
+    required this.tokens,
+    required this.kind,
+    required this.label,
+    required this.children,
+  });
+
+  final MawyTokens tokens;
+  final String? kind;
+  final InlineSpan? label;
+  final List<Widget> children;
+
+  Color get _colour => switch (kind) {
+    'tip' => tokens.tip,
+    'warning' => tokens.warning,
+    'caution' => tokens.caution,
+    'important' => tokens.important,
+    _ => tokens.note,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final Color colour = _colour;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      // A rule down one side and a rounded box are one decoration in CSS and
+      // two widgets here: `BoxDecoration` will not round a border that is not
+      // the same on all four sides.
+      child: IntrinsicHeight(
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: tokens.backgroundSunken,
+            borderRadius: BorderRadius.circular(MawyRadius.medium),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              ColoredBox(color: colour, child: const SizedBox(width: 3)),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (label != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text.rich(
+                            label!,
+                            style: TextStyle(
+                              color: colour,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ...children,
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A bar, from `{value=…}`. A leaf directive is a line and nothing under it.
+class _Progress extends StatelessWidget {
+  const _Progress({required this.tokens, required this.label, required this.value});
+
+  final MawyTokens tokens;
+  final String label;
+
+  /// Out of a hundred.
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle caption = TextStyle(color: tokens.foregroundMuted, fontSize: 13);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(label, style: caption),
+              Text('${value.round()}%', style: caption),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Container(
+            height: 9,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: tokens.background,
+              border: Border.all(color: tokens.border),
+              borderRadius: BorderRadius.circular(MawyRadius.small),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: value / 100,
+              child: ColoredBox(color: tokens.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A key cap.
+///
+/// A text directive is placed in the sentence as a `WidgetSpan`, so a builder
+/// for one should return something that sits on a line of text.
+class _Kbd extends StatelessWidget {
+  const _Kbd({required this.tokens, required this.label});
+
+  final MawyTokens tokens;
+  final InlineSpan? label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: tokens.codeBackground,
+        border: Border.all(color: tokens.borderStrong),
+        borderRadius: BorderRadius.circular(MawyRadius.small),
+      ),
+      child: Text.rich(
+        label ?? const TextSpan(),
+        style: TextStyle(color: tokens.codeForeground, fontSize: 13),
       ),
     );
   }
