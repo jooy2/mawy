@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
+import 'package:mawy/src/viewer/mawy_viewer_outline.dart' show MawyViewerOutline;
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart' show MawyToolbarButton;
 
 import '../support/host.dart';
@@ -26,6 +27,17 @@ const String sample = '''
 # Title
 
 Words, and a [link](https://example.com).
+''';
+
+/// Two headings, because the question the outline answers is which one.
+const String chapters = '''
+# Title
+
+Words.
+
+## Second
+
+More words.
 ''';
 
 void main() {
@@ -180,6 +192,58 @@ void main() {
 
       expect(find.text('Serif'), findsNothing);
       expect(nodeFor(tester, 'Typeface').hasPrimaryFocus, isTrue);
+    });
+
+    /// The node an outline entry is drawn with, found by what it says.
+    ///
+    /// The panel's entries are not [MawyToolbarButton]s — an entry is a line of
+    /// the document's own words rather than a glyph — so this asks the tree for
+    /// the detector wrapped around that line instead.
+    FocusNode entryNode(WidgetTester tester, String text) {
+      final FocusableActionDetector entry = tester.widget(
+        find.ancestor(
+          of: find.descendant(of: find.byType(MawyViewerOutline), matching: find.text(text)),
+          matching: find.byType(FocusableActionDetector),
+        ),
+      );
+
+      return entry.focusNode!;
+    }
+
+    testWidgets('reaches every outline entry, and presses one with Enter', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: chapters)));
+
+      await tester.tap(find.bySemanticsLabel('Outline'));
+      await tester.pumpAndSettle();
+
+      // Not the toolbar's arrangement: an entry is a tab stop of its own, the
+      // way the React package's `<button>`s in an `<ol>` are. A panel a
+      // keyboard cannot walk into is a panel a keyboard cannot use.
+      expect(entryNode(tester, 'Title').skipTraversal, isFalse);
+      expect(entryNode(tester, 'Second').skipTraversal, isFalse);
+
+      entryNode(tester, 'Second').requestFocus();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      // Following an entry moves the focus as well as the scroll: the next Tab
+      // carries on from the heading rather than from the panel it was pressed
+      // in.
+      final BuildContext? landed = FocusManager.instance.primaryFocus?.context;
+      final Finder here = find.byElementPredicate((Element element) => element == landed);
+
+      expect(landed, isNotNull);
+      // Inside the document rather than inside the panel — the entry it was
+      // pressed on says `Second` too, so the word alone proves nothing.
+      expect(
+        find.descendant(of: find.byType(SingleChildScrollView), matching: here),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: here, matching: find.text('Second')), findsOneWidget);
     });
 
     testWidgets('presses a button with Enter and with the space bar', (WidgetTester tester) async {

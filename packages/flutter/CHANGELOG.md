@@ -6,6 +6,12 @@
 
 ### Added
 
+- **The outline panel is reachable by a keyboard, and following an entry takes the focus with it.** Every entry is its own tab stop and is pressed with `Enter` or the space bar, the way the React package's `<button>`s in an `<ol>` are — not the toolbar's one stop and a set of arrows, because a list of a document's headings is not a row worth learning a second way of moving through.
+
+  It was the one piece of the accessibility work that got left behind: the toolbar, the menus, the sliders and the reset links were all made to take the focus, and the entries stayed a `GestureDetector` — which is a panel a keyboard can open and cannot then use.
+
+  Following an entry now moves the focus as well as the scroll, so the next `Tab` carries on from the heading rather than from the panel. The heading is `skipTraversal`, which is the web's `tabIndex = -1` said the other way round: somewhere the focus can be put, and not somewhere `Tab` stops on the way past. That was the last thing the viewer guide said this package did not do yet, and the sentence is gone.
+
 - **Finding text, and replacing it.** `Mod`+`F` opens a find bar over the source, and the toolbar has a `find` button that does the same thing. `Enter` goes to the next match, `Shift`+`Enter` to the one before, `Escape` closes the bar and gives the focus back to the document, and whatever was selected on one line is already in the box when it opens.
 
   It is there because a platform's own find reaches a page of text and not the inside of a text field, and the source surface is one — the same justification the React package's has, which is the only one either of them needs.

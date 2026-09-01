@@ -381,12 +381,6 @@ class MawyToolbarButton extends StatefulWidget {
 }
 
 class _MawyToolbarButtonState extends State<MawyToolbarButton> {
-  static const Map<ShortcutActivator, Intent> _activate = <ShortcutActivator, Intent>{
-    SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-    SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
-    SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
-  };
-
   bool _hovered = false;
   bool _focused = false;
   FocusNode? _own;
@@ -414,7 +408,7 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
         autofocus: widget.autofocus,
         enabled: widget.enabled,
         mouseCursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        shortcuts: _activate,
+        shortcuts: mawyActivate,
         actions: <Type, Action<Intent>>{
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (ActivateIntent _) {

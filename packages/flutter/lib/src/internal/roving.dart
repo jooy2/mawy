@@ -20,6 +20,20 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+/// What presses a control the focus is on.
+///
+/// This has no counterpart in `roving.ts`, and could not have one: a browser
+/// presses a `<button>` on Enter and on the space bar without being asked, and
+/// only a `WidgetsApp` does the same here. This package requires neither
+/// Material nor `WidgetsApp`, so anything of this library's that can be pressed
+/// declares the three itself — which is also why they are written down once
+/// rather than in each of the widgets that needs them.
+const Map<ShortcutActivator, Intent> mawyActivate = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+};
+
 /// Where the focus is in a row of controls, and how it moves.
 ///
 /// A toolbar makes one of these, hands each of its controls the node for that

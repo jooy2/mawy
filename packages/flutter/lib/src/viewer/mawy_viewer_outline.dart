@@ -4,13 +4,20 @@
 /// the heading it points at cannot disagree about which one it is.
 library;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/theme/tokens.dart';
 
 /// The panel beside the document.
+///
+/// Every entry is a tab stop of its own, the way the React package's are: they
+/// are `<button>`s in an `<ol>` there and nothing about a list of six headings
+/// is worth a roving tab stop and a set of arrow keys to learn. A panel opened
+/// by a keyboard has to be reachable by one, and the shortest way from the
+/// button that opened it to the entry it was opened for is the next press of
+/// Tab.
 class MawyViewerOutline extends StatelessWidget {
   /// Creates an outline panel.
   const MawyViewerOutline({
@@ -78,7 +85,16 @@ class _Entry extends StatefulWidget {
 }
 
 class _EntryState extends State<_Entry> {
+  final FocusNode _node = FocusNode(debugLabel: 'MawyViewerOutline entry');
+
   bool _hovered = false;
+  bool _focused = false;
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,10 +104,21 @@ class _EntryState extends State<_Entry> {
     return Semantics(
       button: true,
       label: widget.entry.text,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (PointerEnterEvent _) => setState(() => _hovered = true),
-        onExit: (PointerExitEvent _) => setState(() => _hovered = false),
+      child: FocusableActionDetector(
+        focusNode: _node,
+        mouseCursor: SystemMouseCursors.click,
+        shortcuts: mawyActivate,
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (ActivateIntent _) {
+              widget.onTap();
+
+              return null;
+            },
+          ),
+        },
+        onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
         child: GestureDetector(
           onTap: widget.onTap,
           child: AnimatedContainer(
@@ -99,8 +126,14 @@ class _EntryState extends State<_Entry> {
             curve: MawyMotion.easing,
             padding: EdgeInsets.fromLTRB(8 + (depth - 1) * 10.0, 6, 8, 6),
             decoration: BoxDecoration(
-              color: _hovered ? tokens.background : null,
+              color: _hovered || _focused ? tokens.background : null,
               borderRadius: BorderRadius.circular(MawyRadius.small),
+              // The toolbar's ring, drawn outside the row rather than inside
+              // it, so an entry that has the focus is not a line of text that
+              // has shifted by two pixels.
+              boxShadow: _focused
+                  ? <BoxShadow>[BoxShadow(color: tokens.accent, spreadRadius: 2)]
+                  : null,
             ),
             child: Text(
               widget.entry.text,

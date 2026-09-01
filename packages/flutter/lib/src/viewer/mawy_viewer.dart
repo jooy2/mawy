@@ -183,6 +183,14 @@ class _MawyViewerState extends State<MawyViewer> {
   late final ScrollController _scroller = widget.scrollController ?? ScrollController();
   final Map<String, GlobalKey> _headings = <String, GlobalKey>{};
 
+  /// Somewhere for the focus to land on each heading, by slug.
+  ///
+  /// Not a tab stop — `skipTraversal`, which is the web's `tabIndex = -1` said
+  /// the other way round. A heading is not a control and Tab should not stop on
+  /// every one of them; it is somewhere the focus can be *put*, which is what
+  /// following an outline entry does.
+  final Map<String, FocusNode> _anchors = <String, FocusNode>{};
+
   /// The tap recognizers the links in the document needed, last time it was
   /// drawn. Thrown away and made again on every build, because a recognizer
   /// that outlives the span it was made for is a leak.
@@ -198,6 +206,10 @@ class _MawyViewerState extends State<MawyViewer> {
   void dispose() {
     for (final GestureRecognizer recognizer in _recognizers) {
       recognizer.dispose();
+    }
+
+    for (final FocusNode anchor in _anchors.values) {
+      anchor.dispose();
     }
 
     if (widget.scrollController == null) {
@@ -227,6 +239,7 @@ class _MawyViewerState extends State<MawyViewer> {
       _parsedFrom = widget.value;
       _parsedWith = widget.parse;
       _headings.clear();
+      _dropAnchors();
     }
 
     return _document!;
@@ -254,6 +267,28 @@ class _MawyViewerState extends State<MawyViewer> {
     }
   }
 
+  /// Throws away the anchors the document that just went had.
+  ///
+  /// Not here, though: this is called from `build`, and the widgets holding
+  /// these nodes are the ones being replaced by the build that is asking. A
+  /// node disposed out from under its own element is one the element detaches
+  /// from after it is gone. The frame after is when nothing holds them.
+  void _dropAnchors() {
+    if (_anchors.isEmpty) {
+      return;
+    }
+
+    final List<FocusNode> stale = _anchors.values.toList();
+
+    _anchors.clear();
+
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      for (final FocusNode anchor in stale) {
+        anchor.dispose();
+      }
+    });
+  }
+
   void _goTo(String slug) {
     final BuildContext? target = _headings[slug]?.currentContext;
 
@@ -274,6 +309,11 @@ class _MawyViewerState extends State<MawyViewer> {
         alignment: 0.02,
       ),
     );
+
+    // Moving the page is only half of following a link: the focus has to go
+    // with it, or the next Tab carries on from the panel rather than from the
+    // heading the reader just asked to be at.
+    _anchors[slug]?.requestFocus();
   }
 
   @override
@@ -389,8 +429,15 @@ class _MawyViewerState extends State<MawyViewer> {
 
       if (block is MdHeading) {
         final GlobalKey key = _headings.putIfAbsent(block.slug, GlobalKey.new);
+        final FocusNode anchor = _anchors.putIfAbsent(
+          block.slug,
+          () => FocusNode(debugLabel: 'MawyViewer #${block.slug}', skipTraversal: true),
+        );
 
-        drawn[index] = KeyedSubtree(key: key, child: drawn[index]);
+        drawn[index] = KeyedSubtree(
+          key: key,
+          child: Focus(focusNode: anchor, child: drawn[index]),
+        );
       }
     }
 
