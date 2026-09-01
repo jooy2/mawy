@@ -6,6 +6,12 @@
 
 ### Added
 
+- **`wysiwyg` keeps a marker on the page until it is the block it looks like.** Typing `#` used to make an empty heading, and an empty heading draws no characters at all — so the character somebody had just typed disappeared as they typed it, and somebody who wanted a `#` in a sentence had a heading to undo.
+
+  The parser is not what changed and is not what was wrong: `#` on a line of its own is an empty ATX heading, CommonMark says so in as many words, and the viewer should go on drawing one. What changed is the surface that is being typed into, which already writes a link, an image and a piece of raw HTML out as their own characters when the caret is inside them, for exactly this reason — there is nothing of the document on the page for a caret to sit in. A block written so far as its marker and nothing else is the same thing said about a whole line.
+
+  `-`, `>`, `1.` and `- [ ]` too, with a bullet, a bar, a number or a box left where the text went. The outermost such block is the one written out, so a list holding one empty item is the list rather than the item — a bullet drawn beside the `-` that is a drawing of it is not an improvement.
+
 - **The highlighter knows Dart.** It is the one language this library is written in that the highlighter it ships could not colour, which showed on the documentation site: every Flutter example on it is a fenced `dart` block, and every one of them was drawn plain.
 
   Doc comments, annotations, strings written across three quotes, and `void`, `dynamic`, `bool`, `int`, `double` and `num` as types rather than keywords — the same decision TypeScript's `void` already gets here. Every other type is caught by the capital letter, which Dart's own style guide asks for.

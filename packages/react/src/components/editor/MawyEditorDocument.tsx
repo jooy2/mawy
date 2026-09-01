@@ -73,6 +73,39 @@ export interface MawyEditorDocumentProps {
 }
 
 /**
+ * The blocks a marker on its own makes, and which draw none of it.
+ *
+ * `#` is an empty heading to CommonMark and the specification is right about
+ * that — but on this surface it is a heading with nothing in it, which draws no
+ * characters at all, so the `#` somebody typed disappears as they type it. `-`,
+ * `>` and `1.` are the same story with a bullet, a bar or a number left where
+ * the text went. See [emptyBlock].
+ */
+const EMPTIABLE = new Set(['heading', 'list', 'listItem', 'blockquote']);
+
+/**
+ * Whether a block is one of those and has nothing written in it yet.
+ *
+ * Recursive, so that a list holding one empty item is empty and is the node
+ * revealed rather than the item inside it — revealing the item would leave the
+ * bullet beside the `-` it is a drawing of.
+ *
+ * A code block is deliberately not on the list. With nothing between its fences
+ * it draws nothing either, but the `code` element is a place a caret can be and
+ * a keystroke lands in it; and `rules.ts` has already moved the caret off a
+ * fence and off a thematic break by the time either could be asked about.
+ */
+function emptyBlock(node: MdNode): boolean {
+  if (!EMPTIABLE.has(node.type)) {
+    return false;
+  }
+
+  const children = 'children' in node ? (node.children as MdNode[]) : [];
+
+  return children.every(emptyBlock);
+}
+
+/**
  * The range of the innermost thing a selection falls entirely inside that is
  * drawn as something other than its own characters, or `null`.
  *
@@ -81,6 +114,13 @@ export interface MawyEditorDocumentProps {
  * reached the page through `dangerouslySetInnerHTML`, which is markup React
  * does not know the inside of. In each of them there is nothing on the page for
  * a caret to sit in that is a character of the document.
+ *
+ * A block written so far as a marker and nothing else is a fifth, for that same
+ * reason said about a whole line: `#` draws an empty heading, and somebody who
+ * typed it watched the character they typed vanish. Written out it is the `#`
+ * again, and the space that would turn it into a heading is one keystroke away
+ * rather than an undo away. The outermost such block rather than the innermost,
+ * which is what [emptyBlock] recurses for.
  *
  * Entirely inside, so that a range dragged across half a document does not turn
  * every link under it into markup — and so that the toolbar's `[](url)`, which
@@ -100,7 +140,8 @@ function revealedIn(nodes: readonly MdNode[], start: number, end: number): MdRan
       node.type === 'link' ||
       node.type === 'image' ||
       node.type === 'html' ||
-      node.type === 'inlineHtml'
+      node.type === 'inlineHtml' ||
+      emptyBlock(node)
     ) {
       return { start: node.range.start, end: node.range.end };
     }

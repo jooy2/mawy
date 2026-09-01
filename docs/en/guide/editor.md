@@ -135,6 +135,8 @@ Refusing a composition is refusing the composition. Korean is composed a jamo at
 
 **A link, an image or a piece of raw HTML the caret is inside is written out as its own characters**, destination and all, and drawn back as itself when the caret leaves — and only while the editor has the focus, so a document that opens with a link is not showing its brackets to somebody who has not touched it. That is not a flourish: a drawn `<a>` puts its words on the page and never its `(url)`, so before this there was nowhere on the page for a destination to be and nothing for a keystroke to land on — `[](url)` from the toolbar arrived with a placeholder nobody could type over. Written out, it is the source one character for one, and every rule this surface already has works on it unchanged. What is under the caret is marked rather than disguised, because text that has stopped being a link and started being the text that makes one is a difference worth seeing.
 
+**A block written so far as its marker and nothing else is written out the same way**, and for the same reason said about a whole line. `#` on its own is an empty heading to CommonMark — the specification is right about that, and the parser agrees with it — but an empty heading draws no characters at all, so the `#` somebody typed disappeared as they typed it, and somebody who wanted a `#` in a sentence had a heading to undo. Written out it is the `#` again, and the space that would make it a heading is one keystroke away. `-`, `>`, `1.` and `- [ ]` are the same, with a bullet, a bar, a number or a box left where the text went. It is the outermost such block that is written out, so a list holding one empty item is the list rather than the item — a bullet drawn beside the `-` that is a drawing of it is not an improvement.
+
 **Raw HTML being drawn rather than shown is written out the same way**, under `sanitize` and `raw` alike. It has to be: markup that reached the page through `dangerouslySetInnerHTML` is markup React does not know the inside of and could not put back, so there is nothing in the drawn form for a caret to be inside. Written out, there is. Under `escape` — the default — it was always text like any other text and edited like any other.
 
 ## Input rules
@@ -142,6 +144,8 @@ Refusing a composition is refusing the composition. Korean is composed a jamo at
 On the drawn document the shorthand you type becomes the formatting it is shorthand for, where you typed it. `# ` is a heading, `- ` and `* ` a bullet, `1. ` a number, `> ` a quotation, `- [ ] ` a task box.
 
 **Most of that is not a feature.** The document is drawn again from the Markdown after every keystroke, so `# ` at the start of a paragraph _is_ a heading the moment the space lands — the parser had already said so and the drawing only caught up. There is nothing to configure and nothing to turn off, because there is nothing there.
+
+The moment the space lands, and not before: `#` on its own is drawn as the character it is until there is something in the heading it would make. That is [the document surface](#the-document-surface) writing out a block with nothing in it rather than a rule of any kind, and it is why a `#` in a sentence can be typed at all.
 
 Two are written down, and they are the two where the marker changes the meaning of text nobody is typing:
 

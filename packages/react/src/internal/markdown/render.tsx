@@ -719,6 +719,19 @@ export function renderBlocks(
   tight = false
 ): React.ReactNode {
   return blocks.map((block, index) => {
+    // A block written so far as its marker and nothing else, with the caret in
+    // it. There is nothing of the document on the page to type the rest of it
+    // beside, so the marker is drawn as the characters it is — see
+    // `revealedIn` in `MawyEditorDocument`, which decides that and nothing here
+    // does.
+    if (revealed(block, context)) {
+      return (
+        <p key={index} className="mawy-md-source" {...origin(block)}>
+          {context.source?.slice(block.range.start, block.range.end)}
+        </p>
+      );
+    }
+
     switch (block.type) {
       case 'heading': {
         const Tag = `h${block.depth}` as 'h1';

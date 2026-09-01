@@ -52,7 +52,7 @@ function put(root: HTMLElement, saying: string, offset: number, through = offset
   if (saying === '') {
     // A block with nothing in it has no run of text to put the caret inside,
     // so the caret goes on the block.
-    const element = [...root.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li')].find(
+    const element = [...root.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote')].find(
       (child) => !child.textContent
     );
     const range = document.createRange();
@@ -792,6 +792,61 @@ describe('the document surface', () => {
     // Inside the asterisks, which is what the markers being part of the range
     // rather than part of the text is for.
     expect(onChange).toHaveBeenLastCalledWith('One and two.\n\nA **boLDld** word.');
+  });
+
+  it('keeps a marker on the page until it is the block it looks like', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'One two.', 8);
+    type(bodyOf(screen), 'insertParagraph');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One two.\n\n'));
+
+    put(bodyOf(screen), '', 0);
+    type(bodyOf(screen), 'insertText', '#');
+
+    // `#` on its own is an empty heading to the specification, and drawing one
+    // draws nothing at all — so the character somebody just typed used to
+    // disappear as they typed it.
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('#');
+    });
+    expect(bodyOf(screen).querySelector('h1')).toBeNull();
+
+    // And the space that means a heading is one keystroke away rather than an
+    // undo away.
+    put(bodyOf(screen), '#', 1);
+    type(bodyOf(screen), 'insertText', ' a');
+
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('h1')?.textContent).toBe('a');
+    });
+    expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull();
+  });
+
+  it('keeps a bullet, a quote and a number on the page the same way', async () => {
+    for (const [marker, drawn] of [
+      ['-', 'ul'],
+      ['>', 'blockquote'],
+      ['1.', 'ol']
+    ] as const) {
+      const screen = await render(<MawyEditor defaultValue={marker} mode="wysiwyg" />);
+
+      // Nothing is revealed until the caret is in it: with the focus elsewhere
+      // this surface draws what the viewer draws.
+      expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull();
+
+      put(bodyOf(screen), '', 0);
+
+      await vi.waitFor(() => {
+        expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe(marker);
+      });
+      // The list is written out rather than the item inside it, or the bullet
+      // would still be drawn beside the `-` that is a drawing of it.
+      expect(bodyOf(screen).querySelector(drawn)).toBeNull();
+    }
   });
 
   it('writes a link out as its own characters when the caret is inside it', async () => {

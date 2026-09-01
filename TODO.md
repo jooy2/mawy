@@ -26,16 +26,6 @@ Two rules keep it honest:
   not fit, rather than a wrap. The Flutter toolbar has not been looked at for
   the same thing.
 
-- **`wysiwyg` draws a block from a marker that is not finished yet.** Typing `#`
-  alone makes an empty heading before the space that would have meant one is
-  typed, and somebody who wanted a `#` in a sentence has to undo a heading. The
-  parser is right — CommonMark says a line of nothing but `#` is an empty ATX
-  heading — so this belongs to the drawn surface, which already expands a link
-  the caret is inside back to its source and can defer a block the same way.
-  `packages/react/src/internal/rules.ts` is where the two shorthands that are
-  handled early are written down, and its comment is where the reasoning for
-  this one goes. Other markers want the same look at them.
-
 - **Nothing in the documentation lets a reader type into either package.** A
   demo page, one per framework, with the editor and the viewer live and most of
   what they do switched on — enough to find the next four items on this list by
