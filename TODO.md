@@ -18,15 +18,6 @@ Two rules keep it honest:
 
 ## Confirmed
 
-- **The Flutter source field has no drag selection.**
-  `packages/flutter/lib/src/editor/source_field.dart` builds on a bare
-  `EditableText`, which places a caret on a tap and does nothing with a drag.
-  Selecting by dragging, double-tap-for-a-word and the mobile selection handles
-  all come from `TextSelectionGestureDetectorBuilder`, which `TextField` has and
-  this does not — the package takes neither Material nor Cupertino, so the
-  gestures have to be wired here. Everything the toolbar does to a selection is
-  reachable only by keyboard until they are.
-
 - **The editor's toolbar wraps to a second row and spills out of it.**
   `.mawy-toolbar-editor` in `packages/react/src/styles.css` is `flex-wrap: wrap`
   inside a `.mawy-toolbar` that is laid out as one row, so a narrow editor gets
@@ -61,9 +52,10 @@ Two rules keep it honest:
   gallery.** The commands are wired — `_commands` in
   `packages/flutter/lib/src/editor/mawy_editor.dart` maps every button to a
   `MawyCommand`, and `mawy_editor_test.dart` presses `Bold` and asserts the
-  document changed — so this is either the missing selection above, the focus
-  moving to the button, or something about the gallery inside its frame. It has
-  to be watched happening before it is guessed at.
+  document changed. The likeliest cause has since been fixed: the source surface
+  had no pointer selection at all, so every command that acts on one had nothing
+  to act on. Watch it again on the next documentation build before looking
+  further.
 
 ## Deliberate, and not to be quietly fixed
 

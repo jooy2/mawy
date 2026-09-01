@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,6 +94,63 @@ void main() {
       await press(tester, 'Preview');
 
       expect(find.byType(EditableText), findsNothing);
+    });
+  });
+
+  group('the pointer', () {
+    testWidgets('selects by dragging across the source', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one two three', defaultMode: MawyEditorMode.plain)),
+      );
+
+      final EditableTextState field = tester.state(find.byType(EditableText));
+      final RenderEditable render = field.renderEditable;
+
+      // Two carets, by where the characters actually are rather than by a
+      // guess at the metrics: the fourth character to the eighth is ` two`.
+      final Offset from = render.localToGlobal(
+        render.getLocalRectForCaret(const TextPosition(offset: 3)).center,
+      );
+      final Offset to = render.localToGlobal(
+        render.getLocalRectForCaret(const TextPosition(offset: 7)).center,
+      );
+
+      final TestGesture drag = await tester.startGesture(from, kind: PointerDeviceKind.mouse);
+
+      await tester.pump();
+      await drag.moveTo(to);
+      await tester.pumpAndSettle();
+      await drag.up();
+      await tester.pumpAndSettle();
+
+      // A bare `EditableText` puts the caret down on the press and leaves it
+      // there whatever the pointer does next, which is the whole of what this
+      // is checking: something has to be selected.
+      final TextSelection selection = field.widget.controller.selection;
+
+      expect(selection.isCollapsed, isFalse);
+      expect('one two three'.substring(selection.start, selection.end), ' two');
+    });
+
+    testWidgets('takes the word under a double tap', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one two three', defaultMode: MawyEditorMode.plain)),
+      );
+
+      final EditableTextState field = tester.state(find.byType(EditableText));
+      final RenderEditable render = field.renderEditable;
+      final Offset at = render.localToGlobal(
+        render.getLocalRectForCaret(const TextPosition(offset: 5)).center,
+      );
+
+      await tester.tapAt(at);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tapAt(at);
+      await tester.pumpAndSettle();
+
+      final TextSelection selection = field.widget.controller.selection;
+
+      expect('one two three'.substring(selection.start, selection.end), 'two');
     });
   });
 

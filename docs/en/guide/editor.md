@@ -63,15 +63,37 @@ It goes the other way too. **Click a word in the preview and the caret lands on 
 
 ## The source surface
 
+::: fw react
+
 A real `<textarea>`, with a coloured copy of the same text laid exactly underneath it.
 
 That arrangement is the point rather than a trick. The textarea keeps everything that is extremely hard to reimplement and extremely obvious when it is missing: the **IME** — Korean is composed a jamo at a time, and an editor that fights the composition eats characters — the mobile keyboard, autocorrect, spellcheck, and every text-selection gesture the platform has. What a textarea cannot do is colour anything, so its text is made transparent, its caret and selection are left visible, and a layer behind it draws the same characters in colour.
 
 Everything that decides where a character lands — font, size, line height, letter spacing, tab size, wrapping, and the padding that sets the left edge — is declared once in the stylesheet, for both layers. That is what keeps them in step, and it is why the editor's monospace face is `--mawy-font-mono` and not a choice the component makes.
 
+:::
+
+::: fw flutter
+
+One `EditableText`, coloured where it stands.
+
+This is the one place this package has the easier job. A browser gives no way to colour what is inside a text field, so the React package draws two layers and keeps them in step; a `TextEditingController` is simply asked for the spans it wants drawn, and `MawySourceController` answers with them. One layer, no grid to keep aligned, and the caret and the selection are the platform's own because the field is the platform's own.
+
+What that field does not come with is the pointer. A bare `EditableText` puts the caret where it is tapped and stops there — dragging across it selects nothing, a double tap takes no word, and a long press raises no handles. All of that is `TextSelectionGestureDetectorBuilder`, which `TextField` builds around its own field and this builds around its own. It lives in `package:flutter/widgets.dart` rather than in Material, so having it costs this package nothing it has refused elsewhere.
+
+Two things are still the platform's rather than this package's, and both are Cupertino's rather than Flutter's: the magnifier that opens under a hard press on iOS, and the selection toolbar. A gesture that starts something this package cannot finish is worse than one that does nothing, so the force press is off.
+
+There is no `lineNumbers` here. The gutter is a second column that has to stay level with soft-wrapped text, and one text field is not two grids.
+
+:::
+
 The syntax colouring is Mawy's own parser's vocabulary, but not Mawy's own parser. A line being typed is half-written most of the time, and a highlighter that waited for `**bold` to be closed before admitting anything was happening would flicker on every keystroke — so it reads a line at a time, approximately, and deliberately says nothing about an unfinished marker.
 
+::: fw react
+
 `lineNumbers` turns the gutter off. It is on by default, and the numbers stay lined up with soft-wrapped text because both layers are one grid rather than two stacks of rows.
+
+:::
 
 ## The document surface
 

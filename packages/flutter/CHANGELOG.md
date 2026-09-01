@@ -12,6 +12,14 @@
 
   Following an entry now moves the focus as well as the scroll, so the next `Tab` carries on from the heading rather than from the panel. The heading is `skipTraversal`, which is the web's `tabIndex = -1` said the other way round: somewhere the focus can be put, and not somewhere `Tab` stops on the way past. That was the last thing the viewer guide said this package did not do yet, and the sentence is gone.
 
+- **The source surface answers the pointer.** Dragging across it selects, a double tap takes the word under it, a triple tap takes the line, and a long press on a touch screen raises the handles. None of that worked: an `EditableText` on its own puts the caret where it is tapped and stops there, and everything else a text field does with a pointer is `TextSelectionGestureDetectorBuilder`, which `TextField` builds around its own field and this did not build around its own.
+
+  It costs nothing this package has refused elsewhere — the builder is in `package:flutter/widgets.dart` rather than in Material. `rendererIgnoresPointer` goes with it, because the detector and the renderer both want the gesture and two things reading one drag is a caret that jumps to where a selection was meant to start.
+
+  The force press stays off. What it opens is a magnifier and a toolbar and both of those are Cupertino's, and a gesture that starts something this package cannot finish is worse than one that does nothing.
+
+  Everything the toolbar does to a selection was reachable only from the keyboard until now, which is most of what the toolbar is for.
+
 - **The highlighter knows Dart**, which is the language this package is written in and the one it could not colour. Every Flutter example on the documentation site is a fenced `dart` block and every one of them was drawn plain. Doc comments, annotations, strings written across three quotes, and the six lowercase type names read as types rather than keywords. Both packages in the same commit, and `tool/parity.dart` diffs every token the two produce over a piece of it.
 
 - **One more of CommonMark, and the number moved from 639 to 640.** The React package's parser change, mirrored here in the same commit: a blank line loosens the list it is in when it is past the end of one of the item's blocks and inside none of them, rather than between two of them — which is where an item ending in a reference definition used to fall out.

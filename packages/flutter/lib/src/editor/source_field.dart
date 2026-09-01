@@ -99,7 +99,19 @@ TextStyle? _styleFor(MdTokenKind kind, MawyTokens tokens) => switch (kind) {
 };
 
 /// The source surface: one text field, coloured, with the keys an editor needs.
-class MawySourceField extends StatelessWidget {
+///
+/// A bare [EditableText] puts the caret where it is tapped and does nothing
+/// else with a pointer: dragging across it selects nothing, a double tap takes
+/// no word, and a long press on a touch screen raises no handles. All of that
+/// lives in [TextSelectionGestureDetectorBuilder], which `TextField` builds
+/// around its own field and this has to build around its own — the builder is
+/// in `package:flutter/widgets.dart` rather than in Material, so using it costs
+/// this package nothing it has refused elsewhere.
+///
+/// [EditableText.rendererIgnoresPointer] goes with it. The detector and the
+/// renderer both want the pointer, and two things reading one gesture is a
+/// caret that jumps to where a selection was meant to start.
+class MawySourceField extends StatefulWidget {
   /// Creates the surface.
   const MawySourceField({
     required this.controller,
@@ -142,9 +154,38 @@ class MawySourceField extends StatelessWidget {
   final void Function({required bool out}) onIndent;
 
   @override
+  State<MawySourceField> createState() => _MawySourceFieldState();
+}
+
+class _MawySourceFieldState extends State<MawySourceField>
+    implements TextSelectionGestureDetectorBuilderDelegate {
+  late final TextSelectionGestureDetectorBuilder _gestures = TextSelectionGestureDetectorBuilder(
+    delegate: this,
+  );
+
+  @override
+  final GlobalKey<EditableTextState> editableTextKey = GlobalKey<EditableTextState>();
+
+  /// The iOS gesture that opens a selection under a hard press.
+  ///
+  /// Off, and not because it is unwanted: what it opens is a magnifier and a
+  /// toolbar, and both of those are Cupertino's. A gesture that starts
+  /// something this package cannot finish is worse than one that does nothing.
+  @override
+  bool get forcePressEnabled => false;
+
+  /// A read-only document is still one somebody selects and copies, which is
+  /// what the argument's own documentation promises.
+  @override
+  bool get selectionEnabled => true;
+
+  @override
   Widget build(BuildContext context) {
+    final MawySourceController controller = widget.controller;
+    final MawyTokens tokens = widget.tokens;
+
     controller.tokens = tokens;
-    controller.gfm = gfm;
+    controller.gfm = widget.gfm;
 
     final TextStyle style = TextStyle(
       color: tokens.foreground,
@@ -165,7 +206,10 @@ class MawySourceField extends StatelessWidget {
               top: 0,
               right: 0,
               child: IgnorePointer(
-                child: Text(placeholder, style: style.copyWith(color: tokens.foregroundSubtle)),
+                child: Text(
+                  widget.placeholder,
+                  style: style.copyWith(color: tokens.foregroundSubtle),
+                ),
               ),
             ),
           Shortcuts(
@@ -177,7 +221,7 @@ class MawySourceField extends StatelessWidget {
               actions: <Type, Action<Intent>>{
                 _IndentIntent: CallbackAction<_IndentIntent>(
                   onInvoke: (_IndentIntent intent) {
-                    onIndent(out: intent.out);
+                    widget.onIndent(out: intent.out);
 
                     return null;
                   },
@@ -190,26 +234,33 @@ class MawySourceField extends StatelessWidget {
                   if (pressed &&
                       event.logicalKey == LogicalKeyboardKey.enter &&
                       !HardwareKeyboard.instance.isShiftPressed &&
-                      onEnter()) {
+                      widget.onEnter()) {
                     return KeyEventResult.handled;
                   }
 
                   return KeyEventResult.ignored;
                 },
-                child: EditableText(
-                  controller: controller,
-                  focusNode: focusNode,
-                  readOnly: readOnly,
-                  style: style,
-                  cursorColor: tokens.accent,
-                  backgroundCursorColor: tokens.border,
-                  selectionColor: tokens.accentSoft,
-                  maxLines: null,
-                  expands: true,
-                  textAlign: TextAlign.start,
-                  scrollPadding: const EdgeInsets.all(24),
-                  rendererIgnoresPointer: false,
-                  enableInteractiveSelection: true,
+                child: _gestures.buildGestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  child: EditableText(
+                    key: editableTextKey,
+                    controller: controller,
+                    focusNode: widget.focusNode,
+                    readOnly: widget.readOnly,
+                    style: style,
+                    cursorColor: tokens.accent,
+                    backgroundCursorColor: tokens.border,
+                    selectionColor: tokens.accentSoft,
+                    maxLines: null,
+                    expands: true,
+                    textAlign: TextAlign.start,
+                    scrollPadding: const EdgeInsets.all(24),
+                    // The detector above reads the pointer. Two things reading
+                    // one gesture is a caret that jumps to where a selection
+                    // was meant to start.
+                    rendererIgnoresPointer: true,
+                    enableInteractiveSelection: true,
+                  ),
                 ),
               ),
             ),
