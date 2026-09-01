@@ -243,6 +243,7 @@ One import gets all of it: `package:mawy/mawy.dart`.
 
 ## Next
 
+- [**The playground**](./playground) — both components with nothing switched off, to type into.
 - [**The viewer**](./viewer) — rendering a document without editing it.
-- [**The editor**](./editor) — the WYSIWYG and plain surfaces, and switching between them. React only, for now.
+- [**The editor**](./editor) — the source, the preview and switching between them, and in React the drawn document edited in place.
 - [**API**](../api/) — every component and every option.

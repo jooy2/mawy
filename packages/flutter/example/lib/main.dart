@@ -39,6 +39,18 @@ class _GalleryAppState extends State<GalleryApp> {
   /// it shows all of them.
   static final String? _wanted = Uri.base.queryParameters['demo'];
 
+  /// Which language the embedding page is written in, where it said.
+  ///
+  /// The React previews on the site are handed the page's locale as a prop, and
+  /// until this was read the Flutter preview beside one of them on a Korean
+  /// page was the only thing on that page with an English toolbar. Run as an
+  /// app there is no query string, and the sample decides for itself.
+  static final MawyLocale? _asked = switch (Uri.base.queryParameters['locale']) {
+    'ko' => MawyLocale.ko,
+    'en' => MawyLocale.en,
+    _ => null,
+  };
+
   int _at = 0;
   MawyColorScheme _scheme = MawyColorScheme.system;
 
@@ -56,10 +68,15 @@ class _GalleryAppState extends State<GalleryApp> {
     return samples[_at];
   }
 
+  /// The language the chrome is written in, and which document is shown with it.
+  MawyLocale get _locale =>
+      _asked ?? (_sample.id == 'viewer/prose' ? MawyLocale.ko : MawyLocale.en);
+
   @override
   Widget build(BuildContext context) {
     final bool embedded = _wanted != null;
     final Sample sample = _sample;
+    final MawyLocale locale = _locale;
 
     return WidgetsApp(
       title: 'Mawy',
@@ -72,15 +89,20 @@ class _GalleryAppState extends State<GalleryApp> {
         // which is a `MediaQuery` and only exists under the app.
         final MawyTokens tokens = MawyTokens.of(_brightness(context));
 
-        // The one sample that is not a document to read but a document to
-        // write, so it is the editor rather than the viewer.
-        if (sample.id == 'editor/basic') {
+        // The samples that are not a document to read but a document to
+        // write, so they are the editor rather than the viewer.
+        if (sample.editor) {
           final Widget editor = MawyEditor(
             key: ValueKey<String>(sample.id),
-            defaultValue: sample.value,
+            defaultValue: sample.valueFor(locale),
             colorScheme: _scheme,
             onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
+            locale: locale,
+            directives: _directives(tokens),
             highlight: mawyHighlighter,
+            onLinkTap: (String url, String? title) {
+              debugPrint('link: \$url');
+            },
           );
 
           return embedded
@@ -97,13 +119,13 @@ class _GalleryAppState extends State<GalleryApp> {
           // A key on the document, so switching samples starts a fresh viewer
           // rather than one that remembers the last one's scroll position.
           key: ValueKey<String>(sample.id),
-          value: sample.value,
+          value: sample.valueFor(locale),
           colorScheme: _scheme,
           onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
           toolbar: sample.id == 'viewer/minimal'
               ? const <MawyViewerToolbarItem>[]
               : kMawyViewerToolbar,
-          locale: sample.id == 'viewer/prose' ? MawyLocale.ko : MawyLocale.en,
+          locale: locale,
           directives: _directives(tokens),
           // The gallery is where the viewer is looked at, so it asks for the
           // colour an application would have to ask for too.
@@ -152,32 +174,38 @@ class _Switch extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: SafeArea(
         bottom: false,
-        child: Row(
-          children: <Widget>[
-            for (int index = 0; index < samples.length; index += 1)
-              GestureDetector(
-                onTap: () => onChange(index),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: samples[index].id == sample.id ? tokens.accentSoft : null,
-                    borderRadius: BorderRadius.circular(MawyRadius.medium),
-                    border: Border.all(color: tokens.border),
-                  ),
-                  child: Text(
-                    samples[index].label,
-                    style: TextStyle(
-                      color: samples[index].id == sample.id
-                          ? tokens.accent
-                          : tokens.foregroundMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+        // Six documents and counting, and the row of chips is wider than a
+        // phone before the list is interesting. It slides, the way the
+        // editor's own toolbar does on this platform.
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: <Widget>[
+              for (int index = 0; index < samples.length; index += 1)
+                GestureDetector(
+                  onTap: () => onChange(index),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: samples[index].id == sample.id ? tokens.accentSoft : null,
+                      borderRadius: BorderRadius.circular(MawyRadius.medium),
+                      border: Border.all(color: tokens.border),
+                    ),
+                    child: Text(
+                      samples[index].label,
+                      style: TextStyle(
+                        color: samples[index].id == sample.id
+                            ? tokens.accent
+                            : tokens.foregroundMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

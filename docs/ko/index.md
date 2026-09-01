@@ -19,6 +19,9 @@ hero:
       text: 시작하기
       link: /ko/guide/getting-started
     - theme: alt
+      text: 직접 써보기
+      link: /ko/guide/playground
+    - theme: alt
       text: API
       link: /ko/api/
     - theme: alt

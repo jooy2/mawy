@@ -18,11 +18,15 @@ Two rules keep it honest:
 
 ## Confirmed
 
-- **Nothing in the documentation lets a reader type into either package.** A
-  demo page, one per framework, with the editor and the viewer live and most of
-  what they do switched on — enough to find the next four items on this list by
-  using them rather than by reading them. Uploading an image can be mimed; there
-  is no server to put one on.
+- **The Flutter preview does not follow the site's own light/dark switch.** The
+  React demos take `colorScheme` as a prop and the site drives it; the framed
+  gallery is handed `demo` and `locale` in its query string and nothing else, so
+  it draws in `MawyColorScheme.system` — the platform's brightness, which is not
+  the same answer as the switch above the menu the moment a reader disagrees
+  with their OS. Reading it out of the query string would reload a Flutter
+  engine on every toggle, which is why it was not done that way; `postMessage`
+  into the frame is the shape that would work, and it wants `dart:js_interop` in
+  `packages/flutter/example`.
 
 ## Reported, not reproduced
 
@@ -32,8 +36,14 @@ Two rules keep it honest:
   `MawyCommand`, and `mawy_editor_test.dart` presses `Bold` and asserts the
   document changed. The likeliest cause has since been fixed: the source surface
   had no pointer selection at all, so every command that acts on one had nothing
-  to act on. Watch it again on the next documentation build before looking
-  further.
+  to act on.
+
+  The gallery has been rebuilt since, with the pointer fix in it and a
+  playground page to try it on, but a Flutter web build does not paint in the
+  environment these sessions run in — the engine loads and the scene stays
+  empty — so it has still not actually been watched. Somebody with a browser
+  should open `/guide/playground` with the switch set to Flutter, select a word
+  and press **Bold**.
 
 ## Deliberate, and not to be quietly fixed
 

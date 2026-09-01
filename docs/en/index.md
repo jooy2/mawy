@@ -19,6 +19,9 @@ hero:
       text: Get started
       link: /guide/getting-started
     - theme: alt
+      text: Try it
+      link: /guide/playground
+    - theme: alt
       text: API
       link: /api/
     - theme: alt

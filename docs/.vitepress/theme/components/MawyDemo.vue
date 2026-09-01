@@ -24,7 +24,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, useTemplateRef } from
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useData, withBase } from 'vitepress';
-import type { MawyColorScheme } from 'mawy-react';
+import type { MawyColorScheme, MawyLocale } from 'mawy-react';
 import type { DemoProps } from '../../demos/types.js';
 import { framework } from '../../data/framework';
 
@@ -69,6 +69,8 @@ function galleryBuilt(url: string): Promise<boolean> {
 }
 
 const galleryUrl = withBase('/flutter/');
+/** Which of the two languages the library speaks this page is written in. */
+const demoLocale = computed<MawyLocale>(() => (lang.value.startsWith('ko') ? 'ko' : 'en'));
 const embedded = computed(() => framework.value === 'flutter' && built.value === true);
 const missing = computed(() => framework.value === 'flutter' && built.value === false);
 /*
@@ -78,8 +80,14 @@ const missing = computed(() => framework.value === 'flutter' && built.value === 
  * inside it; the dev server is Vite's static middleware, which does not — and a
  * request it cannot answer falls through to VitePress's router and comes back
  * as the site's own 404 page inside the frame. Naming the file works in both.
+ *
+ * The locale rides along for the same reason the React island is handed one: a
+ * Korean page whose only English is the toolbar inside the preview reads as
+ * half-translated. The gallery takes it out of its own query string.
  */
-const frameSrc = computed(() => `${galleryUrl}index.html?demo=${props.flutter ?? props.name}`);
+const frameSrc = computed(
+  () => `${galleryUrl}index.html?demo=${props.flutter ?? props.name}&locale=${demoLocale.value}`
+);
 
 /**
  * The theme the reader chose *inside* a demo, if they have chosen one.
@@ -107,7 +115,7 @@ function paint() {
         override = next;
         paint();
       },
-      locale: lang.value.startsWith('ko') ? 'ko' : 'en'
+      locale: demoLocale.value
     })
   );
 }
