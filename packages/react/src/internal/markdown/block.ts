@@ -528,21 +528,33 @@ function describesAhead(lines: Line[], from: number): boolean {
  * ---------------------------------------------------------------------- */
 
 /**
- * Whether a line falls in the gap between two of a list of blocks.
+ * Whether a blank line inside an item is one that separates what is in it.
  *
  * The question looseness turns on. A list item holds every line under it,
- * including the ones inside whatever is nested there, and only a blank line
- * that sits *between* the item's own blocks says anything about the item.
+ * including the ones inside whatever is nested there, and a blank line in the
+ * middle of a fenced block says nothing about the item — so the line has to be
+ * past the end of one of the item's own blocks to count.
+ *
+ * Past the end of one and inside none of them, rather than between two, which
+ * is a difference of one example: an item whose last lines are a reference
+ * definition has a blank line with a block above it and nothing below, because
+ * a definition is taken off the paragraph before anything here counts what is
+ * left. The blank line is still a blank line, and the list is still loose.
+ * Blank lines at the end of an item are gone by the time this is asked, so
+ * there is always something under one that is left.
  */
 function separates(line: Line, blocks: MdBlock[]): boolean {
   if (!BLANK.test(line.text)) {
     return false;
   }
 
-  return blocks.some(
-    (block, index) =>
-      index > 0 && blocks[index - 1].range.end <= line.start && line.start <= block.range.start
-  );
+  // Inside one of them is the nested list's blank line rather than this item's,
+  // and it loosens that list where it is counted rather than this one.
+  if (blocks.some((block) => block.range.start <= line.start && line.start < block.range.end)) {
+    return false;
+  }
+
+  return blocks.some((block) => block.range.end <= line.start);
 }
 
 /** Whether a line may cut a paragraph short. */
@@ -944,7 +956,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
         const children = parseBlocks(body, context);
 
-        if (children.length > 1 && body.some((each) => separates(each, children))) {
+        if (body.some((each) => separates(each, children))) {
           loose = true;
         }
 

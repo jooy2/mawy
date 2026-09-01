@@ -586,23 +586,38 @@ bool _interrupts(String line) {
   return marker != null && !marker.empty && (!marker.ordered || marker.number == 1);
 }
 
-/// Whether a line falls in the gap between two of a list of blocks.
+/// Whether a blank line inside an item is one that separates what is in it.
 ///
 /// The question looseness turns on. A list item holds every line under it,
-/// including the ones inside whatever is nested there, and only a blank line
-/// that sits *between* the item's own blocks says anything about the item.
+/// including the ones inside whatever is nested there, and a blank line in the
+/// middle of a fenced block says nothing about the item — so the line has to be
+/// past the end of one of the item's own blocks to count.
+///
+/// Past the end of one and inside none of them, rather than between two, which
+/// is a difference of one example: an item whose last lines are a reference
+/// definition has a blank line with a block above it and nothing below, because
+/// a definition is taken off the paragraph before anything here counts what is
+/// left. The blank line is still a blank line, and the list is still loose.
+/// Blank lines at the end of an item are gone by the time this is asked, so
+/// there is always something under one that is left.
 bool _separates(Line line, List<MdBlock> blocks) {
   if (!_blank.hasMatch(line.text)) {
     return false;
   }
 
-  for (int index = 1; index < blocks.length; index += 1) {
-    if (blocks[index - 1].range.end <= line.start && line.start <= blocks[index].range.start) {
-      return true;
+  bool past = false;
+
+  for (final MdBlock block in blocks) {
+    // Inside one of them is the nested list's blank line rather than this
+    // item's, and it loosens that list where it is counted rather than this one.
+    if (block.range.start <= line.start && line.start < block.range.end) {
+      return false;
     }
+
+    past = past || block.range.end <= line.start;
   }
 
-  return false;
+  return past;
 }
 
 /// What a container has open, at the end of the lines it has taken so far.
@@ -997,7 +1012,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
         // A blank line loosens the list only where it separates two of *this*
         // item's own blocks. One further in belongs to whatever is nested
         // there, and a nested list being loose is not this one being loose.
-        if (children.length > 1 && body.any((Line each) => _separates(each, children))) {
+        if (body.any((Line each) => _separates(each, children))) {
           loose = true;
         }
 

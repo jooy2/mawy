@@ -6,6 +6,10 @@
 
 ### Added
 
+- **One more of CommonMark, and the number moved from 639 to 640.** The last one about looseness, which is the question of whether a list's items are paragraphs or lines. A blank line loosens the list it is in, and the test for which blank lines count was "between two of the item's own blocks" — which a reference definition falls outside of, being taken off the paragraph above it before anything counts what is left. An item ending in one had a blank line with a block above it and nothing below, and the list stayed tight.
+
+  It is "past the end of one of them and inside none of them" now. Inside is what the old test was really for: a blank line in the middle of a nested list belongs to that list and loosens it there, and one in the middle of a fenced block is code. Neither says anything about the item holding it.
+
 - **One more of CommonMark, and the number moved from 638 to 639.** The last of the lazy continuation, and the same rule from the other side: a lazily taken line cannot cut its paragraph short any more than it can underline it. It is there _because_ the paragraph is open, so whatever it looks like once it arrives, it is that paragraph's next line.
 
   What it looks like is the point. A container hands a lazy line over with its indentation gone, and `    - e` under a list item four columns in is not a marker where it was written — three spaces is as far in as one goes — and is a marker by the time the item's paragraph sees it. It used to open a list nobody wrote.

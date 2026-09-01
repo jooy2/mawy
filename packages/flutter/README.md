@@ -67,7 +67,7 @@ lists, `~~strikethrough~~`, bare URLs, footnotes, and the five alert kinds — a
 definition lists, which GitHub does not read. Link reference definitions resolve
 wherever in the file they are written.
 
-This is the React package's parser, function for function, and it answers 639 of
+This is the React package's parser, function for function, and it answers 640 of
 the CommonMark specification's 652 examples. That suite is run over there rather
 than here, and it does not need running twice: `tool/parity.dart` diffs the two
 parsers' trees over every awkward case and every Markdown file in the
