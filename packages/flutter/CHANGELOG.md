@@ -6,6 +6,8 @@
 
 ### Added
 
+- **Four more of CommonMark, and the number moved from 621 to 625.** The React package's parser change, mirrored here in the same commit: a link reference definition's label may run over more than one line, may not hold an unescaped bracket, and may not be nothing but whitespace — and a setext underline over a paragraph that was nothing but definitions is a line of text rather than an underline.
+
 - **Three more of CommonMark, and the number moved from 618 to 621.** The React package's parser change, mirrored here in the same commit: an attribute name is the specification's rule rather than "anything that is not a space or a quote", so `<a h*#ref="hi">` is a sentence about a tag rather than a tag; and `<!-->` and `<!--->` are comments in their own right rather than the start of one that runs to the next `-->`.
 
 - **A viewer takes a palette of its own.** `MawyViewer.tokens` and `MawyEditor.tokens` are the React package's `--mawy-*` custom properties said in Dart, and the whole of what theming is here:

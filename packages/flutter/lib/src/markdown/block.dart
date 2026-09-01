@@ -410,8 +410,13 @@ List<MdAlign?> _alignmentsOf(Line line) {
  * Link reference definitions
  * ---------------------------------------------------------------------- */
 
+// The label may run over more than one line, and may not hold a bracket of
+// either kind unescaped. Both are the specification's: a paragraph has no blank
+// line in it, so "any character but a bracket" cannot run away, and `[ref[]` is
+// a label with an unmatched bracket in it and therefore not a definition at
+// all.
 final RegExp _definition = RegExp(
-  r'''^ {0,3}\[((?:[^\]\\\n]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)''',
+  r'''^ {0,3}\[((?:[^\[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)''',
 );
 
 /// Definitions taken off the front of a paragraph, and whatever is left of it.
@@ -428,6 +433,14 @@ Sourced _takeDefinitions(Sourced paragraph, Map<String, MdDefinition> into) {
     match = _definition.firstMatch(paragraph.text.substring(taken))
   ) {
     final String label = normalizeLabel(match.group(1)!);
+
+    // A label of nothing but whitespace is not a label, and the line it is
+    // written on is not a definition: it stays the paragraph it was. Taking it
+    // off and dropping it on the floor would lose the line.
+    if (label.isEmpty) {
+      break;
+    }
+
     final String written = match.group(2)!;
     final String raw = written.startsWith('<') ? written.substring(1, written.length - 1) : written;
     // The scan keeps the characters as written, so the escapes and the
@@ -440,7 +453,7 @@ Sourced _takeDefinitions(Sourced paragraph, Map<String, MdDefinition> into) {
         : decodeEntities(unescaped(quoted.substring(1, quoted.length - 1)));
 
     // First definition wins, which is what every other implementation does.
-    if (label.isNotEmpty && !into.containsKey(label)) {
+    if (!into.containsKey(label)) {
       into[label] = MdDefinition(url, title);
     }
 
@@ -1183,18 +1196,27 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
 
         final Sourced text = trim(_takeDefinitions(fromLines(paragraph), context.definitions));
 
-        if (text.text.isNotEmpty) {
-          blocks.add(
-            MdHeading(
-              // Both lines: the underline is as much the heading as the words
-              // above it, and a range that stopped short would leave it out of
-              // whatever the heading is replaced by.
-              MdRange(rangeOf(text, 0, 0).start, lineEnd(underline)),
-              depth: setext.group(1)![0] == '=' ? 1 : 2,
-              children: later(text),
-            ),
-          );
+        if (text.text.isEmpty) {
+          // The paragraph was nothing but definitions, and a definition is not
+          // something an underline can underline. So there is no heading here:
+          // the line of `=` is the first line of the paragraph that follows.
+          paragraph
+            ..clear()
+            ..add(underline);
+
+          continue;
         }
+
+        blocks.add(
+          MdHeading(
+            // Both lines: the underline is as much the heading as the words
+            // above it, and a range that stopped short would leave it out of
+            // whatever the heading is replaced by.
+            MdRange(rangeOf(text, 0, 0).start, lineEnd(underline)),
+            depth: setext.group(1)![0] == '=' ? 1 : 2,
+            children: later(text),
+          ),
+        );
 
         paragraph.clear();
         break;

@@ -6,7 +6,7 @@ import { specExamples, writeHtml } from '../../support/commonmark.js';
  * The parser, against the specification it claims to read.
  *
  * "CommonMark" is written in the README, on the site and in the changelog, and
- * until this file existed it was a word rather than a number. It is 621 of the
+ * until this file existed it was a word rather than a number. It is 625 of the
  * specification's 652 examples — the other 34 are below, each one with the
  * reason it is there, so that the claim is checkable and a change to it is
  * deliberate.
@@ -77,12 +77,8 @@ const DEVIATIONS = new Map<number, string>([
    */
   [317, 'a reference definition alone in an item does not make the list loose'],
 
-  /* What a reference definition's label may be written as. */
-  [208, 'a label written over more than one line'],
-  [216, 'a definition is read where a setext underline should have ended it'],
-  [540, 'labels are folded by case rather than by Unicode case folding'],
-  [541, 'a label written over more than one line'],
-  [546, 'a label with an unmatched bracket in it'],
+  /* A label is folded by case rather than by Unicode case folding. */
+  [540, '`ẞ` and `SS` are one label to the specification and two here'],
 
   /* A link inside an image's description. */
   [520, 'a link inside an image description'],
@@ -148,7 +144,7 @@ describe('CommonMark', () => {
     expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
   });
 
-  it('reads 621 of the 652', () => {
-    expect(examples.length - differing.length).toBe(621);
+  it('reads 625 of the 652', () => {
+    expect(examples.length - differing.length).toBe(625);
   });
 });

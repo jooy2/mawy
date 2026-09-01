@@ -379,8 +379,13 @@ function alignmentsOf(line: Line): MdAlign[] {
  * Link reference definitions
  * ---------------------------------------------------------------------- */
 
+// The label may run over more than one line, and may not hold a bracket of
+// either kind unescaped. Both are the specification's: a paragraph has no blank
+// line in it, so "any character but a bracket" cannot run away, and `[ref[]` is
+// a label with an unmatched bracket in it and therefore not a definition at
+// all.
 const DEFINITION =
-  /^ {0,3}\[((?:[^\]\\\n]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)/;
+  /^ {0,3}\[((?:[^[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)/;
 
 /**
  * Definitions taken off the front of a paragraph, and whatever is left of it.
@@ -398,6 +403,14 @@ function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): S
     match = DEFINITION.exec(paragraph.text.slice(taken))
   ) {
     const label = normalizeLabel(match[1]);
+
+    // A label of nothing but whitespace is not a label, and the line it is
+    // written on is not a definition: it stays the paragraph it was. Taking it
+    // off and dropping it on the floor would lose the line.
+    if (!label) {
+      break;
+    }
+
     // The scan keeps the characters as written, so the escapes and the
     // references in a destination and a title are read here — the same reading
     // an inline `(url "title")` gets while it is being scanned.
@@ -406,7 +419,7 @@ function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): S
     const title = match[3] ? decodeEntities(unescaped(match[3].slice(1, -1))) : null;
 
     // First definition wins, which is what every other implementation does.
-    if (label && !into.has(label)) {
+    if (!into.has(label)) {
       into.set(label, { url, title });
     }
 
@@ -1158,23 +1171,30 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         at += 1;
         const text = trim(takeDefinitions(fromLines(paragraph), context.definitions));
 
-        if (text.text) {
-          blocks.push(
-            withInline<MdHeading>(
-              {
-                type: 'heading',
-                // Both lines: the underline is as much the heading as the words
-                // above it, and a range that stopped short would leave it out
-                // of whatever the heading is replaced by.
-                range: { start: rangeOf(text, 0, 0).start, end: lineEnd(underline) },
-                depth: setext[1][0] === '=' ? 1 : 2,
-                children: [],
-                slug: ''
-              },
-              text
-            )
-          );
+        if (!text.text) {
+          // The paragraph was nothing but definitions, and a definition is not
+          // something an underline can underline. So there is no heading here:
+          // the line of `=` is the first line of the paragraph that follows.
+          paragraph.length = 0;
+          paragraph.push(underline);
+          continue;
         }
+
+        blocks.push(
+          withInline<MdHeading>(
+            {
+              type: 'heading',
+              // Both lines: the underline is as much the heading as the words
+              // above it, and a range that stopped short would leave it out of
+              // whatever the heading is replaced by.
+              range: { start: rangeOf(text, 0, 0).start, end: lineEnd(underline) },
+              depth: setext[1][0] === '=' ? 1 : 2,
+              children: [],
+              slug: ''
+            },
+            text
+          )
+        );
 
         paragraph.length = 0;
         break;

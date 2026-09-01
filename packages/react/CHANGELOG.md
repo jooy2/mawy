@@ -6,6 +6,12 @@
 
 ### Added
 
+- **Four more of CommonMark, and the number moved from 621 to 625** — all four about what a link reference definition's label may be written as.
+
+  A **label may run over more than one line**, which is what `[Foo\n  bar]: /url` is, and it is found by `[Baz][Foo bar]` because a label is folded to one space before it is looked up. A label **may not hold an unescaped bracket** of either kind, so `[ref[]: /uri` is a paragraph rather than a definition that nothing can refer to. A label of **nothing but whitespace** is not a label, and the line it is on stays the paragraph it was rather than being taken off and dropped.
+
+  And an **underline over nothing but definitions is not an underline**. `[foo]: /url` followed by a line of `=` was losing that line entirely; a definition is not something a setext heading can be made out of, so the `=` is the first line of the paragraph that follows.
+
 - **Three more of CommonMark, and the number moved from 618 to 621** — all three about reading a tag more carefully than the parser was reading one.
 
   An **attribute name** is now the specification's own rule — a letter, `_` or `:` and then letters, digits, `_`, `.`, `:` and `-` — rather than "anything that is not a space or a quote". A line reading `<a h*#ref="hi">` is a sentence about a tag, and was being drawn as one; so was a tag whose second line began `bim!bop`, since the name that could not be a name was being taken for one.
