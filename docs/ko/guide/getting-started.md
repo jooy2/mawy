@@ -235,7 +235,7 @@ React 패키지의 넷이 아니라 화면은 셋입니다. `plain`, `split`, `p
 | `parseMarkdown` | 파서, 그리고 그것이 만드는 `Md*` 트리 전부 |
 | `MawyTokens` | 팔레트. `MawyTokens.light`와 `MawyTokens.dark`, 그리고 직접 만들 때의 `copyWith` |
 | `mawyHighlighter` | 신택스 하이라이터. 지목해야만 빌드에 남습니다 |
-| 타입 | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind` |
+| 타입 | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind`, `MawyMatch` |
 
 import 하나면 전부입니다. `package:mawy/mawy.dart`.
 

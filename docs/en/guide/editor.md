@@ -9,7 +9,7 @@ order: 2
 
 **Three surfaces here rather than four**, and the missing one is worth saying out loud. `wysiwyg` draws the document and edits it where it is drawn, which rests entirely on `contenteditable`: a browser telling a component what somebody tried to do to a tree, so the component can refuse it and change the Markdown instead. Flutter has no such thing — an `EditableText` owns a string — and drawing a document that is also a text field would mean a second model of what the document is. A second model is a second opinion about what a document means, and the two disagree the first time anybody writes something unusual.
 
-So `plain`, `split` and `preview`, and the drawn surface stays a viewer. Everything else on this page is here, and provably so: the commands, the colouring of the source and the counts along the bottom are the same functions under the same names, and the parity check diffs all three against the React package's on every change.
+So `plain`, `split` and `preview`, and the drawn surface stays a viewer. Nearly everything else on this page is here, and provably so: the commands, the colouring of the source, the counts along the bottom and finding text are the same functions under the same names, and the parity check diffs all four against the React package's on every change. Opening and saving are the exception, and that section says why.
 
 ```dart
 MawyEditor(
@@ -236,11 +236,29 @@ The name is the file's own, when one was opened. Otherwise it is **the document'
 
 **A file dropped on the editor is an image, never a document.** The drop is already the way an image gets in, and that is the smaller half of it: replacing a document somebody has been writing because a file landed on it is how work is lost. The viewer opens what is dropped on it because a viewer has nothing to lose; an editor asks to be asked.
 
+::: fw flutter
+
+This section is the React package's. Opening a file and writing one back are the application's here: a file picker is a plugin rather than a widget, and which one an app has already chosen is not a decision a Markdown editor should make on its behalf. `MawyEditorToolbarItem` has no `open` or `save` for the same reason — `onChange` hands over the document, and where it goes is yours.
+
+:::
+
 ## Finding
 
 `Mod`+`F` opens the find bar over the source, and the toolbar's `find` button does the same thing. `Enter` goes to the next match, `Shift`+`Enter` to the one before, and `Escape` closes the bar and gives the focus back to the document.
 
+::: fw react
+
 It exists because the browser's own find cannot reach here: **no browser searches the text inside a `<textarea>`**, and the source surface is one. That is the whole justification. Everywhere else in this library a thing the platform already does is left to the platform, and this is the place the platform does not.
+
+:::
+
+::: fw flutter
+
+It exists for the same reason said in Flutter's terms: **a platform's own find reaches a page of text and not the inside of a text field**, and the source surface is one. That is the whole justification. Everywhere else in this library a thing the platform already does is left to the platform, and this is the place the platform does not.
+
+The arithmetic under it is the React package's, function for function — `findMatches`, `matchFrom`, `replaceMatch` and `replaceAll` — and `tool/parity.dart` diffs the two over `tool/searches.json` on every change. Whether `aa` in `aaaa` is two matches or three is a decision, and it is the same decision in both.
+
+:::
 
 Whatever was selected is already in the box when it opens, as long as it was on one line — that is nearly always what somebody is about to look for.
 
@@ -248,7 +266,17 @@ Whatever was selected is already in the box when it opens, as long as it was on 
 
 Replace and replace all are on the second row. Replace all is one pass over the document as it was, so replacing `a` with `aa` replaces each `a` once rather than finding its own replacement for ever.
 
+::: fw react
+
 The bar is only offered where there is a source to search — `plain` and `split`. In `preview` and `wysiwyg` the document is drawn as elements, and the browser's own find works on it.
+
+:::
+
+::: fw flutter
+
+The bar is only offered where there is a source to search — `plain` and `split`. In `preview` there is no field to search and the button is not drawn.
+
+:::
 
 ## Indenting
 

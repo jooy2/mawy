@@ -303,6 +303,12 @@ type MawyEditorToolbarItem =
 
 에디터 툴바의 컨트롤 하나. `mode`·`find`·`open`·`save`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다. `find`와 `save`에도 `Mod`+`F`와 `Mod`+`S`가 있고, 버튼이 그려지든 아니든 동작합니다. `open`에는 없습니다. 브라우저 자신의 `Mod`+`O`는 그냥 두는 편이 합당하고, 파일을 여는 것은 흐름 중간에 하는 일이 아니라 드물고 분명한 행동입니다.
 
+::: fw flutter
+
+여기의 `MawyEditorToolbarItem`은 `open`과 `save`가 빠진 같은 enum입니다. 그 둘은 애플리케이션의 몫입니다 — [열기와 저장](../guide/editor#열기와-저장)을 보세요. `find`는 있고, 버튼을 그리든 아니든 `Mod`+`F`가 그것을 엽니다.
+
+:::
+
 ### `MawyEditorToolbarOption`
 
 ```ts

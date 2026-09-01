@@ -86,6 +86,10 @@ void main() {
         hasTapAction: true,
         isFocusable: true,
         hasFocusAction: true,
+        // A control that cannot be pressed says so rather than looking pressable
+        // and doing nothing — the find bar has four of those.
+        hasEnabledState: true,
+        isEnabled: true,
       ),
     );
 

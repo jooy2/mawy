@@ -72,6 +72,16 @@ class MawyStrings {
     required this.statusWords,
     required this.statusCharacters,
     required this.editorPlaceholder,
+    required this.find,
+    required this.replace,
+    required this.findMatchCase,
+    required this.findPrevious,
+    required this.findNext,
+    required this.findClose,
+    required this.findMatches,
+    required this.findNoMatches,
+    required this.replaceOne,
+    required this.replaceAll,
     required this.alertNote,
     required this.alertTip,
     required this.alertImportant,
@@ -250,6 +260,36 @@ class MawyStrings {
   /// The editor: Write in Markdown….
   final String editorPlaceholder;
 
+  /// The find bar's own name, and the field in it.
+  final String find;
+
+  /// The other field.
+  final String replace;
+
+  /// Whether `Foo` finds `foo`.
+  final String findMatchCase;
+
+  /// Backwards.
+  final String findPrevious;
+
+  /// Forwards.
+  final String findNext;
+
+  /// Shut the bar.
+  final String findClose;
+
+  /// Which match, out of how many. `%N` and `%T`.
+  final String findMatches;
+
+  /// When there are none.
+  final String findNoMatches;
+
+  /// Replace the one the caret is on.
+  final String replaceOne;
+
+  /// Replace every one of them.
+  final String replaceAll;
+
   /// `> [!NOTE]`.
   final String alertNote;
 
@@ -324,6 +364,16 @@ const MawyStrings _en = MawyStrings(
   statusWords: 'words',
   statusCharacters: 'characters',
   editorPlaceholder: 'Write in Markdown…',
+  find: 'Find',
+  replace: 'Replace',
+  findMatchCase: 'Match case',
+  findPrevious: 'Previous match',
+  findNext: 'Next match',
+  findClose: 'Close find',
+  findMatches: '%N of %T',
+  findNoMatches: 'No matches',
+  replaceOne: 'Replace',
+  replaceAll: 'Replace all',
   alertNote: 'Note',
   alertTip: 'Tip',
   alertImportant: 'Important',
@@ -389,6 +439,16 @@ const MawyStrings _ko = MawyStrings(
   statusWords: '단어',
   statusCharacters: '자',
   editorPlaceholder: '마크다운으로 쓰세요…',
+  find: '찾기',
+  replace: '바꾸기',
+  findMatchCase: '대소문자 구분',
+  findPrevious: '이전 결과',
+  findNext: '다음 결과',
+  findClose: '찾기 닫기',
+  findMatches: '%T개 중 %N번째',
+  findNoMatches: '결과 없음',
+  replaceOne: '바꾸기',
+  replaceAll: '모두 바꾸기',
   alertNote: '참고',
   alertTip: '도움말',
   alertImportant: '중요',

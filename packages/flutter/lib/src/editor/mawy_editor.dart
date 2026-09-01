@@ -16,9 +16,12 @@
 /// under the same names, and `tool/parity.dart` diffs all three.
 library;
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/editor/commands.dart';
+import 'package:mawy/src/editor/find_bar.dart';
+import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/editor/source_field.dart';
 import 'package:mawy/src/editor/status.dart';
 import 'package:mawy/src/internal/i18n.dart';
@@ -85,6 +88,9 @@ enum MawyEditorToolbarItem {
   /// `---`.
   rule,
 
+  /// The find bar, over the source.
+  find,
+
   /// Light, dark, or whatever the platform says.
   colorScheme,
 
@@ -140,6 +146,7 @@ const List<MawyEditorToolbarItem> kMawyEditorToolbar = <MawyEditorToolbarItem>[
   MawyEditorToolbarItem.codeBlock,
   MawyEditorToolbarItem.rule,
   MawyEditorToolbarItem.separator,
+  MawyEditorToolbarItem.find,
   MawyEditorToolbarItem.colorScheme,
 ];
 
@@ -268,6 +275,15 @@ class _MawyEditorState extends State<MawyEditor> {
   late MawyColorScheme _scheme = widget.colorScheme;
   late MawyTypography _type = widget.typography ?? widget.defaultTypography;
 
+  /// The find bar, which is closed until somebody asks for it.
+  ///
+  /// It exists because a platform's own find reaches a page of text and not the
+  /// inside of a text field, and the source surface is one.
+  bool _finding = false;
+  String _query = '';
+  String _replacement = '';
+  bool _matchCase = false;
+
   String get _value => _controller.text;
   MawyEditorMode get _current => widget.mode ?? _mode;
 
@@ -362,6 +378,119 @@ class _MawyEditorState extends State<MawyEditor> {
     setState(() => _scheme = scheme);
   }
 
+  /* ---------------------------------------------------------------------
+   * Finding, and replacing
+   * ------------------------------------------------------------------ */
+
+  List<MawyMatch> get _matches =>
+      _finding ? findMatches(_value, _query, _matchCase) : const <MawyMatch>[];
+
+  /// Where the caret is, for the purpose of finding.
+  ///
+  /// A selection nobody has set yet is the top of the document rather than the
+  /// end of it. [_state] reads the other way round on purpose — a command with
+  /// nothing selected acts where the writing stopped — but pressing next in a
+  /// document nobody has clicked in should find the first match, not the last.
+  int get _findCaret {
+    final TextSelection selection = _controller.selection;
+
+    return selection.isValid ? selection.start : 0;
+  }
+
+  /// Which match the caret is sitting in, or `-1` when it is in none of them.
+  ///
+  /// Read from the caret rather than held in a state of its own, so that
+  /// clicking somewhere in the document and pressing next goes to the match
+  /// after where you clicked. A number that walked on its own would go back to
+  /// wherever the last press left it, which is not where anybody is looking.
+  int _inside(List<MawyMatch> matches) {
+    final int caret = _findCaret;
+
+    return matches.indexWhere((MawyMatch match) => match.start <= caret && caret <= match.end);
+  }
+
+  /// The one to say is current: the one the caret is in, or the nearest ahead.
+  int _currentMatch(List<MawyMatch> matches) {
+    final int on = _inside(matches);
+
+    return on == -1 ? matchFrom(matches, _findCaret, forwards: true) : on;
+  }
+
+  void _goTo(MawyMatch match) {
+    _controller.selection = TextSelection(baseOffset: match.start, extentOffset: match.end);
+    _focus.requestFocus();
+  }
+
+  void _step(List<MawyMatch> matches, {required bool forwards}) {
+    if (matches.isEmpty) {
+      return;
+    }
+
+    final int on = _inside(matches);
+    // From the end of the match the caret is in rather than from the caret
+    // itself, so pressing next twice does not find the same one twice.
+    final int from = on == -1 ? _findCaret : (forwards ? matches[on].end : matches[on].start);
+
+    _goTo(matches[matchFrom(matches, from, forwards: forwards)]);
+  }
+
+  void _replaceOne(List<MawyMatch> matches) {
+    final int at = _currentMatch(matches);
+
+    if (widget.readOnly || at == -1) {
+      return;
+    }
+
+    final MawyReplaced after = replaceMatch(_value, matches[at], _replacement);
+
+    _controller.value = TextEditingValue(
+      text: after.value,
+      selection: TextSelection.collapsed(offset: after.caret),
+    );
+    _focus.requestFocus();
+  }
+
+  void _replaceEvery() {
+    if (widget.readOnly) {
+      return;
+    }
+
+    final MawyReplacedAll after = replaceAll(_value, _query, _replacement, _matchCase);
+
+    if (after.count == 0) {
+      return;
+    }
+
+    _controller.value = TextEditingValue(
+      text: after.value,
+      // Where the caret was, as far as the new document reaches. Sending it to
+      // the end would lose the reader's place over one replacement.
+      selection: TextSelection.collapsed(offset: _findCaret.clamp(0, after.value.length)),
+    );
+    _focus.requestFocus();
+  }
+
+  void _openFind() {
+    final TextSelection selection = _controller.selection;
+
+    if (selection.isValid && !selection.isCollapsed) {
+      final String selected = _value.substring(selection.start, selection.end);
+
+      // What is selected is nearly always what somebody is about to look for,
+      // and a selection that spans lines is nearly always not.
+      if (selected.isNotEmpty && !selected.contains('\n')) {
+        _query = selected;
+      }
+    }
+
+    setState(() => _finding = true);
+  }
+
+  void _closeFind() {
+    setState(() => _finding = false);
+    _focus.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final Brightness brightness = _brightness(context);
@@ -395,7 +524,9 @@ class _MawyEditorState extends State<MawyEditor> {
       onLinkTap: widget.onLinkTap,
     );
 
-    return Container(
+    final List<MawyMatch> matches = _matches;
+
+    final Widget editor = Container(
       color: tokens.background,
       child: Column(
         children: <Widget>[
@@ -411,6 +542,26 @@ class _MawyEditorState extends State<MawyEditor> {
               colorScheme: _scheme,
               onColorScheme: widget.onColorSchemeChange == null ? null : _setScheme,
               onCommand: widget.readOnly ? null : _run,
+              finding: _finding && showSource,
+              onFind: showSource ? _openFind : null,
+            ),
+          if (_finding && showSource)
+            MawyFindBar(
+              tokens: tokens,
+              strings: strings,
+              query: _query,
+              onQueryChange: (String query) => setState(() => _query = query),
+              replacement: _replacement,
+              onReplacementChange: (String value) => setState(() => _replacement = value),
+              matchCase: _matchCase,
+              onMatchCaseChange: (bool on) => setState(() => _matchCase = on),
+              total: matches.length,
+              current: _currentMatch(matches),
+              onStep: (bool forwards) => _step(matches, forwards: forwards),
+              onReplace: () => _replaceOne(matches),
+              onReplaceAll: _replaceEvery,
+              onClose: _closeFind,
+              editable: !widget.readOnly,
             ),
           Expanded(
             child: Row(
@@ -426,6 +577,32 @@ class _MawyEditorState extends State<MawyEditor> {
           if (widget.status.isNotEmpty)
             _Status(items: widget.status, tokens: tokens, strings: strings, state: _state),
         ],
+      ),
+    );
+
+    if (!showSource) {
+      return editor;
+    }
+
+    // `Mod`+`F` opens the bar from wherever the focus is inside the editor, the
+    // way it does in the React package. Both spellings, because which one a
+    // platform means by "the modifier" is the platform's business.
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.keyF, control: true): _FindIntent(),
+        SingleActivator(LogicalKeyboardKey.keyF, meta: true): _FindIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _FindIntent: CallbackAction<_FindIntent>(
+            onInvoke: (_FindIntent _) {
+              _openFind();
+
+              return null;
+            },
+          ),
+        },
+        child: editor,
       ),
     );
   }
@@ -463,6 +640,8 @@ class _Toolbar extends StatefulWidget {
     required this.colorScheme,
     required this.onColorScheme,
     required this.onCommand,
+    required this.finding,
+    required this.onFind,
   });
 
   final List<MawyEditorToolbarItem> items;
@@ -475,6 +654,8 @@ class _Toolbar extends StatefulWidget {
   final MawyColorScheme colorScheme;
   final ValueChanged<MawyColorScheme>? onColorScheme;
   final ValueChanged<MawyCommand>? onCommand;
+  final bool finding;
+  final VoidCallback? onFind;
 
   @override
   State<_Toolbar> createState() => _ToolbarState();
@@ -590,6 +771,27 @@ class _ToolbarState extends State<_Toolbar> {
             ),
           );
         }
+
+        continue;
+      }
+
+      if (item == MawyEditorToolbarItem.find) {
+        // Not drawn where there is no source to search: `preview` is a viewer,
+        // and a control that cannot do anything is one nobody should reach.
+        if (widget.onFind == null) {
+          continue;
+        }
+
+        children.add(
+          MawyToolbarButton(
+            icon: LucideIcons.search,
+            label: widget.strings.find,
+            tokens: widget.tokens,
+            focusNode: next(),
+            pressed: widget.finding,
+            onPressed: widget.onFind!,
+          ),
+        );
 
         continue;
       }
@@ -768,4 +970,9 @@ class _Status extends StatelessWidget {
       ),
     );
   }
+}
+
+/// `Mod`+`F`.
+class _FindIntent extends Intent {
+  const _FindIntent();
 }

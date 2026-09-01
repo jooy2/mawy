@@ -1,6 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
+import 'package:mawy/src/editor/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart' show MawyToolbarButton;
 
 import '../support/host.dart';
@@ -28,6 +30,31 @@ Some **words** here.
 /// Presses the toolbar button announced under [label].
 Future<void> press(WidgetTester tester, String label) async {
   await tester.tap(find.bySemanticsLabel(label));
+  await tester.pumpAndSettle();
+}
+
+/// A field in the find bar: 0 is what to look for and 1 is what to put there.
+///
+/// By position rather than by name, because "Find" names three things in the
+/// tree once the bar is open — the button that opened it, the bar itself, and
+/// the field — and a finder that matches all three is a finder that matches
+/// none.
+Finder findField(int at) =>
+    find.descendant(of: find.byType(MawyFindBar), matching: find.byType(EditableText)).at(at);
+
+/// Presses one of the buttons in the find bar rather than the toolbar's.
+///
+/// By widget rather than by name, because "Replace" is both a field and a
+/// button in there — which is what it is called in the React package too.
+Future<void> pressInBar(WidgetTester tester, String label) async {
+  await tester.tap(
+    find.descendant(
+      of: find.byType(MawyFindBar),
+      matching: find.byWidgetPredicate(
+        (Widget widget) => widget is MawyToolbarButton && widget.label == label,
+      ),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -117,6 +144,108 @@ void main() {
       );
 
       expect(find.bySemanticsLabel('굵게'), findsOneWidget);
+    });
+  });
+
+  group('finding', () {
+    testWidgets('opens from the toolbar, counts what it found, and steps through', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one two one two one', mode: MawyEditorMode.plain)),
+      );
+
+      await press(tester, 'Find');
+
+      expect(find.bySemanticsLabel('Match case'), findsOneWidget);
+
+      await tester.enterText(findField(0), 'one');
+      await tester.pumpAndSettle();
+
+      // Three of them, and the caret is at the top, so the first is current.
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      await press(tester, 'Next match');
+
+      expect(find.text('2 of 3'), findsOneWidget);
+
+      await press(tester, 'Next match');
+
+      expect(find.text('3 of 3'), findsOneWidget);
+
+      // Wrapping, because a search that stops at the end of the file is one you
+      // have to scroll to the top to finish.
+      await press(tester, 'Next match');
+
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      await press(tester, 'Previous match');
+
+      expect(find.text('3 of 3'), findsOneWidget);
+    });
+
+    testWidgets('says when there is nothing to find', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one two', mode: MawyEditorMode.plain)),
+      );
+
+      await press(tester, 'Find');
+      await tester.enterText(findField(0), 'three');
+      await tester.pumpAndSettle();
+
+      expect(find.text('No matches'), findsOneWidget);
+    });
+
+    testWidgets('replaces the one it is on, and then all of them', (WidgetTester tester) async {
+      String? latest;
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two one',
+            mode: MawyEditorMode.plain,
+            onChange: (String value) => latest = value,
+          ),
+        ),
+      );
+
+      await press(tester, 'Find');
+      await tester.enterText(findField(0), 'one');
+      await tester.enterText(findField(1), 'three');
+      await tester.pumpAndSettle();
+
+      await pressInBar(tester, 'Replace');
+
+      expect(latest, 'three two one');
+
+      await pressInBar(tester, 'Replace all');
+
+      // `three` is now a match for nothing — what is searched is the document
+      // as it is, and only the remaining `one` goes.
+      expect(latest, 'three two three');
+    });
+
+    testWidgets('is not offered where there is no source to search', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: document, mode: MawyEditorMode.preview)),
+      );
+
+      expect(find.bySemanticsLabel('Find'), findsNothing);
+    });
+
+    testWidgets('closes on Escape', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one two', mode: MawyEditorMode.plain)),
+      );
+
+      await press(tester, 'Find');
+
+      expect(find.bySemanticsLabel('Match case'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Match case'), findsNothing);
     });
   });
 

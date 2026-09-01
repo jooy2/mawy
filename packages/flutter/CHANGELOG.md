@@ -6,6 +6,16 @@
 
 ### Added
 
+- **Finding text, and replacing it.** `Mod`+`F` opens a find bar over the source, and the toolbar has a `find` button that does the same thing. `Enter` goes to the next match, `Shift`+`Enter` to the one before, `Escape` closes the bar and gives the focus back to the document, and whatever was selected on one line is already in the box when it opens.
+
+  It is there because a platform's own find reaches a page of text and not the inside of a text field, and the source surface is one — the same justification the React package's has, which is the only one either of them needs.
+
+  The arithmetic is `src/internal/search.ts` in Dart, function for function, and `tool/parity.dart` diffs the two over `tool/searches.json`: whether `aa` in `aaaa` is two matches or three, which one `next` goes to from where the caret is, and what `replace all` does to a document are decisions, and they are the same decisions in both. Plain text and never a regular expression, for the reason written down over there — a Markdown document is full of `*`, `[`, `.` and `+`.
+
+  `findMatches`, `matchFrom`, `replaceMatch`, `replaceAll` and `MawyMatch` are exported, like the commands are, for an application that would rather drive them from its own chrome.
+
+- **`MawyEditorToolbarItem.find`**, which is on the default toolbar. `open` and `save` are still the application's: a file picker is a plugin rather than a widget, and which one an app has already chosen is not a decision a Markdown editor should make on its behalf.
+
 - **The whole Latin-1 block of character references**, which is four more of CommonMark and takes the number from 630 to 634. The React package's table change, mirrored here in the same commit: ninety-seven names — `&ouml;`, `&eacute;`, `&szlig;`, `&frac12;` and the rest — read everywhere the specification asks for a reference.
 
 - **One more of CommonMark, and the number moved from 629 to 630.** The React package's parser change, mirrored here in the same commit: a numeric character reference is at most seven digits, or six in hexadecimal, so `&#87654321;` is text rather than a reference to a code point that does not exist.

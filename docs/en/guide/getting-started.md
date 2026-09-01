@@ -235,7 +235,7 @@ The types are also available from `mawy-react/types`, so an application can name
 | `parseMarkdown` | The parser, and the whole `Md*` tree it produces |
 | `MawyTokens` | The palette, as `MawyTokens.light` and `MawyTokens.dark` — and `copyWith` for one of your own |
 | `mawyHighlighter` | The syntax highlighter, which a build keeps only if you name it |
-| Types | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind` |
+| Types | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind`, `MawyMatch` |
 
 One import gets all of it: `package:mawy/mawy.dart`.
 

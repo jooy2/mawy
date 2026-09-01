@@ -303,6 +303,12 @@ type MawyEditorToolbarItem =
 
 One control on the editor's toolbar. Everything except `mode`, `find`, `open`, `save`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them. `find` and `save` have one too, `Mod`+`F` and `Mod`+`S`, and both work whether or not the button is drawn. `open` has none: the browser's own `Mod`+`O` is a reasonable thing to leave alone, and opening a file is a rare and deliberate act rather than one done mid-flow.
 
+::: fw flutter
+
+`MawyEditorToolbarItem` here is the same enum without `open` and `save`, which are the application's — see [opening and saving](../guide/editor#opening-and-saving). `find` is here, and `Mod`+`F` opens it whether or not the button is drawn.
+
+:::
+
 ### `MawyEditorToolbarOption`
 
 ```ts

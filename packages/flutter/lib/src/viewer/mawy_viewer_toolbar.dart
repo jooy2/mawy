@@ -340,6 +340,7 @@ class MawyToolbarButton extends StatefulWidget {
     required this.tokens,
     required this.onPressed,
     this.pressed = false,
+    this.enabled = true,
     this.focusNode,
     this.autofocus = false,
     super.key,
@@ -359,6 +360,12 @@ class MawyToolbarButton extends StatefulWidget {
 
   /// Whether it is showing as on.
   final bool pressed;
+
+  /// Whether it can be pressed at all.
+  ///
+  /// A disabled button is still drawn and still in the row — one that leaves
+  /// the layout is one the focus walks past and the eye looks for.
+  final bool enabled;
 
   /// The node the row's [MawyRoving] gave this control, where it is in one.
   ///
@@ -395,16 +402,18 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
   @override
   Widget build(BuildContext context) {
     final MawyTokens tokens = widget.tokens;
-    final bool lit = _hovered || widget.pressed;
+    final bool lit = widget.enabled && (_hovered || widget.pressed);
 
     return Semantics(
       button: true,
       toggled: widget.pressed,
+      enabled: widget.enabled,
       label: widget.label,
       child: FocusableActionDetector(
         focusNode: _node,
         autofocus: widget.autofocus,
-        mouseCursor: SystemMouseCursors.click,
+        enabled: widget.enabled,
+        mouseCursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
         shortcuts: _activate,
         actions: <Type, Action<Intent>>{
           ActivateIntent: CallbackAction<ActivateIntent>(
@@ -418,7 +427,7 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
         onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
         onShowFocusHighlight: (bool on) => setState(() => _focused = on),
         child: GestureDetector(
-          onTap: widget.onPressed,
+          onTap: widget.enabled ? widget.onPressed : null,
           child: AnimatedContainer(
             duration: MawyMotion.durationOf(context),
             curve: MawyMotion.easing,
@@ -435,12 +444,15 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
                   ? <BoxShadow>[BoxShadow(color: tokens.accent, spreadRadius: 2)]
                   : null,
             ),
-            child: Icon(
-              widget.icon,
-              size: 16,
-              color: widget.pressed
-                  ? tokens.accent
-                  : (lit ? tokens.foreground : tokens.foregroundMuted),
+            child: Opacity(
+              opacity: widget.enabled ? 1 : 0.4,
+              child: Icon(
+                widget.icon,
+                size: 16,
+                color: widget.pressed
+                    ? tokens.accent
+                    : (lit ? tokens.foreground : tokens.foregroundMuted),
+              ),
             ),
           ),
         ),
