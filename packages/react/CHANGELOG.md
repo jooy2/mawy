@@ -6,6 +6,10 @@
 
 ### Added
 
+- **Raw HTML is editable on the `wysiwyg` surface**, under `sanitize` and `raw` as well as under `escape`, and it is editable the same way a link's destination is: markup the caret is inside is written out as the characters it was written with, and drawn back as markup when the caret leaves. That was the last thing the surface could not do — what `dangerouslySetInnerHTML` puts on the page is markup React does not know the inside of, so there was nothing in the drawn form for a caret to be inside. Written out, there is, and every rule the surface already has applies to it unchanged.
+
+  The writing-out now happens only while the editor has the focus. A document that opens with a link would otherwise show its brackets to a reader who has not touched it, and "the thing the caret is inside" is not a question an editor nobody is typing in has an answer to. The editor rather than the drawn surface, because pressing a button on the toolbar takes the focus out of the document and the caret it is about to act on is still the caret.
+
 - **Six more of CommonMark, and the number moved from 612 to 618** — all six about which lists are _loose_, which is the difference between an item's text sitting on the line and sitting in a paragraph of its own with space around it.
 
   - **An item with nothing in it does not make its list loose.** `- foo`, `-`, `- bar` is three tight items; the middle one being empty was being read as a blank line after it.
@@ -44,7 +48,7 @@
 
 - **A size budget, and a stylesheet with its prose taken out.** `npm run size` bundles the published files for real and compares the result to `size-budget.json`, which CI now fails a change for going over. What it measures is what a consumer's bundler produces: React external because an application already has it, `lucide-react` counted because it arrives with this, and gzip because every server on the path compresses.
 
-  Gzipped, that is **22.2 kB for `MawyViewer`, 37.9 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.5 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
+  Gzipped, that is **22.2 kB for `MawyViewer`, 38.0 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.5 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
 
   The stylesheet is now minified on its way into `dist/`. Two fifths of `styles.css` is prose written for somebody reading the source, and a reader of a page was paying 3.7 kB gzipped for comments they cannot see; `src/styles.css` is still the file to read and to edit, and what ships is the same rules in the same order. The build checks the two things that would make that a bad trade: every `--mawy-*` custom property still declared, and every `:where()` still a `:where()`, because those are the resets and a reset that gained specificity is one that starts beating the page it was dropped into.
 

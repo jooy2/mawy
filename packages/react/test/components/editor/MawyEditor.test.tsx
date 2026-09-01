@@ -23,8 +23,16 @@ const sourceOf = (screen: { container: HTMLElement }) =>
 const bodyOf = (screen: { container: HTMLElement }) =>
   screen.container.querySelector('.mawy-document-body') as HTMLElement;
 
-/** Put the caret inside the run of text saying exactly this. */
+/**
+ * Put the caret inside the run of text saying exactly this.
+ *
+ * The surface is focused first, because a caret somebody put somewhere is a
+ * caret in a surface they are typing in — and the drawn document reads that: it
+ * writes out what the caret is inside, and only while there is a caret.
+ */
 function put(root: HTMLElement, saying: string, offset: number, through = offset): void {
+  root.focus();
+
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -891,6 +899,52 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('Words.[](/a)');
   });
 
+  it('writes raw HTML out when the caret is inside it, and edits it there', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'Before.\n\n<div>drawn</div>\n\nAfter.'}
+        mode="wysiwyg"
+        html="raw"
+        onChange={onChange}
+      />
+    );
+
+    // Drawn as the markup it is, until something is in it.
+    expect(bodyOf(screen).querySelector('.mawy-md-html')).not.toBeNull();
+
+    // The caret goes into the paragraph before it and then to the end of it,
+    // which is inside the block's own range.
+    put(bodyOf(screen), 'Before.', 7);
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-html')).not.toBeNull());
+
+    put(bodyOf(screen), 'drawn', 5);
+
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('<div>drawn</div>');
+    });
+    expect(bodyOf(screen).querySelector('.mawy-md-html')).toBeNull();
+
+    put(bodyOf(screen), '<div>drawn</div>', 10);
+    type(bodyOf(screen), 'insertText', ' more');
+
+    expect(onChange).toHaveBeenLastCalledWith('Before.\n\n<div>drawn more</div>\n\nAfter.');
+  });
+
+  it('draws it as markup again once the caret has left', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={'Before.\n\n<div>drawn</div>'} mode="wysiwyg" html="raw" />
+    );
+
+    put(bodyOf(screen), 'drawn', 5);
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).not.toBeNull());
+
+    put(bodyOf(screen), 'Before.', 1);
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull());
+
+    expect(bodyOf(screen).querySelector('.mawy-md-html')).not.toBeNull();
+  });
+
   it('replaces what was selected', async () => {
     const onChange = vi.fn();
     const screen = await render(
@@ -1115,7 +1169,7 @@ describe('the document surface', () => {
     expect(broken).toHaveBeenLastCalledWith('onetwo');
   });
 
-  it('refuses an edit inside raw HTML it is drawing rather than showing', async () => {
+  it('refuses an edit in raw HTML it is still drawing', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <MawyEditor
@@ -1126,12 +1180,19 @@ describe('the document surface', () => {
       />
     );
 
+    // The caret has landed but nothing has been drawn again yet, so what is
+    // under it is still markup that reached the page through
+    // `dangerouslySetInnerHTML` — which React does not know the inside of and
+    // could not put back. One render later it is written out and editable,
+    // which is the test above; this is the instant in between.
     put(bodyOf(screen), 'hi', 2);
     type(bodyOf(screen), 'insertText', '!');
 
-    // It reached the page through `dangerouslySetInnerHTML`, so React does not
-    // know what is in there and could not put it back.
     expect(onChange).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => {
+      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('<div>hi</div>');
+    });
   });
 
   it('runs a toolbar command on the caret it has', async () => {

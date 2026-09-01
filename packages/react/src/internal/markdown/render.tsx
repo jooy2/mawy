@@ -289,7 +289,14 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
 
       case 'inlineHtml':
         return (
-          <RawHtml key={index} value={node.value} context={context} inline marks={origin(node)} />
+          <RawHtml
+            key={index}
+            value={node.value}
+            context={context}
+            inline
+            marks={origin(node)}
+            reveal={revealed(node, context)}
+          />
         );
 
       default:
@@ -306,12 +313,15 @@ function RawHtml({
   value,
   context,
   inline,
-  marks
+  marks,
+  reveal
 }: {
   value: string;
   context: RenderContext;
   inline?: boolean;
   marks?: { 'data-mawy-range': string };
+  /** Whether the caret is in it, so it is written out rather than drawn. */
+  reveal?: boolean;
 }): React.ReactElement {
   // `sanitize` needs a DOM to parse with. Where there is none — a server render
   // — it comes back `null` and the markup is shown rather than guessed at.
@@ -326,6 +336,18 @@ function RawHtml({
   if (html === null) {
     return (
       <Tag className="mawy-md-html-source" {...marks}>
+        {value}
+      </Tag>
+    );
+  }
+
+  // Markup with the caret in it is written out as the characters it was
+  // written with, which is the only form of it a caret can be inside: what
+  // `dangerouslySetInnerHTML` put on the page is markup React does not know the
+  // inside of and could not put back.
+  if (reveal) {
+    return (
+      <Tag className="mawy-md-source" {...marks}>
         {value}
       </Tag>
     );
@@ -811,7 +833,15 @@ export function renderBlocks(
         return <Directive key={index} node={block} kind="leaf" context={context} />;
 
       case 'html':
-        return <RawHtml key={index} value={block.value} context={context} marks={origin(block)} />;
+        return (
+          <RawHtml
+            key={index}
+            value={block.value}
+            context={context}
+            marks={origin(block)}
+            reveal={revealed(block, context)}
+          />
+        );
 
       default:
         return null;

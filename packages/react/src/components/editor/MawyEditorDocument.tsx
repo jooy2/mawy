@@ -28,10 +28,22 @@ export interface MawyEditorDocumentProps {
   /** Where the caret is, in the document's own offsets. */
   onSelect: (selection: { start: number; end: number }) => void;
   /**
-   * Where the caret is now, as the editor has it. Read to decide which link or
-   * image, if any, is drawn as its own source — see `revealedIn` below.
+   * Where the caret is now, as the editor has it. Read to decide which link,
+   * image or piece of markup, if any, is drawn as its own source — see
+   * `revealedIn` below.
    */
   selection: { start: number; end: number };
+  /**
+   * Whether the editor has the focus anywhere in it.
+   *
+   * What is written out is "the thing the caret is inside", and an editor
+   * nobody is typing in has no caret to be inside anything — a document that
+   * opens with a link would otherwise show its brackets to a reader who has not
+   * touched it. The editor rather than this surface, because pressing a button
+   * on the toolbar takes the focus out of here and the caret it is about to act
+   * on is still the caret.
+   */
+  focused: boolean;
   onKeyDown: React.KeyboardEventHandler<HTMLElement>;
   readOnly: boolean;
   label: string;
@@ -61,8 +73,14 @@ export interface MawyEditorDocumentProps {
 }
 
 /**
- * The range of the innermost link or image a selection falls entirely inside,
- * or `null`.
+ * The range of the innermost thing a selection falls entirely inside that is
+ * drawn as something other than its own characters, or `null`.
+ *
+ * Four kinds of node, and one reason: a link and an image draw their words and
+ * never their `(url)`, and raw HTML that is being drawn rather than shown
+ * reached the page through `dangerouslySetInnerHTML`, which is markup React
+ * does not know the inside of. In each of them there is nothing on the page for
+ * a caret to sit in that is a character of the document.
  *
  * Entirely inside, so that a range dragged across half a document does not turn
  * every link under it into markup — and so that the toolbar's `[](url)`, which
@@ -78,7 +96,12 @@ function revealedIn(nodes: readonly MdNode[], start: number, end: number): MdRan
       continue;
     }
 
-    if (node.type === 'link' || node.type === 'image') {
+    if (
+      node.type === 'link' ||
+      node.type === 'image' ||
+      node.type === 'html' ||
+      node.type === 'inlineHtml'
+    ) {
       return { start: node.range.start, end: node.range.end };
     }
 
@@ -124,6 +147,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       onEdit,
       onSelect,
       selection,
+      focused,
       onKeyDown,
       readOnly,
       label,
@@ -172,8 +196,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
      * half a document turns nothing into markup under the pointer.
      */
     const reveal = React.useMemo(
-      () => revealedIn(document_.root.children, selection.start, selection.end),
-      [document_, selection.start, selection.end]
+      () => (focused ? revealedIn(document_.root.children, selection.start, selection.end) : null),
+      [document_, focused, selection.start, selection.end]
     );
     const context: RenderContext = React.useMemo(
       () => ({ html, strings, footnotes, directives, source: value, reveal }),
@@ -197,7 +221,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
       drawnReveal.current = reveal;
 
-      if (!element || was === reveal || composing.current) {
+      if (!element || was === reveal || composing.current || !focused) {
         return;
       }
 
@@ -222,7 +246,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       range.collapse(true);
       owner.getSelection()?.removeAllRanges();
       owner.getSelection()?.addRange(range);
-    }, [reveal, selection.start, value]);
+    }, [focused, reveal, selection.start, value]);
 
     /**
      * `beforeinput` rather than React's `onBeforeInput`, and a listener of our

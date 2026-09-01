@@ -67,20 +67,23 @@ export interface MawyEdit {
  */
 const BLOCKS =
   'p, h1, h2, h3, h4, h5, h6, li, dt, dd, td, th, blockquote, pre, .mawy-md-html-source, ' +
-  '.mawy-md-directive-source';
+  '.mawy-md-directive-source, .mawy-md-source';
 
 /**
  * Where an edit cannot go, whatever it is.
  *
  * Raw HTML that is being *drawn* rather than shown reached the page through
  * `dangerouslySetInnerHTML`, which means React does not know what is inside it
- * and cannot put it back. The markup is editable as the text it is written as —
- * that is the `escape` policy, and `.mawy-md-html-source` is on the list above.
+ * and could not put it back. The caret does not rest in one — the drawn surface
+ * writes out whatever it is inside, and markup written out is
+ * `.mawy-md-source`, which is on the list above — but a click lands in the
+ * drawn form for the render it takes to notice, and this is what says no in the
+ * meantime.
  *
- * A directive nobody claimed is on that list for the same reason and with the
- * better outcome: what is drawn is the characters of the source, one for one,
- * so a position inside it is a position inside the document and an edit lands
- * exactly where it was typed.
+ * `.mawy-md-html-source` and `.mawy-md-directive-source` are on that list for
+ * the better reason: what is drawn there is the characters of the source, one
+ * for one, so a position inside it is a position inside the document and an
+ * edit lands exactly where it was typed.
  */
 const INERT = '.mawy-md-html';
 

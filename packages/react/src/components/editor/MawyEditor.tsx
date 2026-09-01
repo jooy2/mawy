@@ -219,6 +219,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   );
 
   const [selection, setSelection] = React.useState({ start: 0, end: 0 });
+  /** Whether the focus is anywhere inside the editor. See `MawyEditorDocument`. */
+  const [focused, setFocused] = React.useState(false);
   const source = React.useRef<HTMLTextAreaElement>(null);
   const drawn = React.useRef<HTMLElement>(null);
   const preview = React.useRef<HTMLDivElement>(null);
@@ -1110,6 +1112,15 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      onFocus={() => setFocused(true)}
+      // `relatedTarget` is where the focus went. Inside, and it never left —
+      // which is the whole of the difference between this and a blur, and what
+      // keeps a toolbar press from counting as putting the editor down.
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setFocused(false);
+        }
+      }}
     >
       {items.length ? (
         <MawyEditorToolbar
@@ -1208,6 +1219,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               onEdit={applyEdit}
               onSelect={readDrawnSelection}
               selection={selection}
+              focused={focused}
               onKeyDown={onKeyDown}
               readOnly={readOnly}
               label={strings.document}
