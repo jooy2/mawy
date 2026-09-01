@@ -53,7 +53,7 @@ Three more things go through the same check in the same run, because each of the
 
 CI runs it on every change to either parser. Two implementations of CommonMark drift the moment nobody is comparing them, and a document that means one thing in a browser and another in an app is the bug this whole library exists to not have. **A change to one parser is a change to both**, and the diff is how you find out you forgot.
 
-**And the specification is run at the parser as well.** `packages/react/test/internal/markdown/commonmark.test.ts` runs all 652 of CommonMark's own examples, answers 625 of them, and writes down the other 27 with the reason each one is there. A change that fixes one is a line deleted from that list; a change that breaks one is a line the test tells you to add and you should not. The suite is run against the TypeScript parser alone, because parity above already says the Dart one produces the same tree.
+**And the specification is run at the parser as well.** `packages/react/test/internal/markdown/commonmark.test.ts` runs all 652 of CommonMark's own examples, answers 627 of them, and writes down the other 25 with the reason each one is there. A change that fixes one is a line deleted from that list; a change that breaks one is a line the test tells you to add and you should not. The suite is run against the TypeScript parser alone, because parity above already says the Dart one produces the same tree.
 
 The examples come from `commonmark-spec`, which is the specification document itself and is a devDependency of `packages/react`. It is CC-BY-SA, which the rule on [third-party dependencies](#third-party-dependencies) refuses for a *runtime* dependency and has no reason to refuse here: nothing in it reaches a consumer, or a build.
 

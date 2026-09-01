@@ -6,6 +6,8 @@
 
 ### Added
 
+- **Two more of CommonMark, and the number moved from 625 to 627** — both about a link inside an image's description. Closing a link deactivates the `[` openers to its left, which is what stops a link nesting inside a link; it was deactivating the `![` openers as well, so `![foo [bar](/url)](/url2)` was a sentence with a link in it rather than an image whose alt text is `foo bar`. An image's description is allowed to hold a link, and only the link openers are switched off now.
+
 - **Four more of CommonMark, and the number moved from 621 to 625** — all four about what a link reference definition's label may be written as.
 
   A **label may run over more than one line**, which is what `[Foo\n  bar]: /url` is, and it is found by `[Baz][Foo bar]` because a label is folded to one space before it is looked up. A label **may not hold an unescaped bracket** of either kind, so `[ref[]: /uri` is a paragraph rather than a definition that nothing can refer to. A label of **nothing but whitespace** is not a label, and the line it is on stays the paragraph it was rather than being taken off and dropped.

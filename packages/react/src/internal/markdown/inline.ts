@@ -51,9 +51,13 @@ interface Delimiter {
 interface Opener {
   image: boolean;
   /**
-   * A link may not contain another link. Closing one deactivates every opener
-   * to its left, so `[a [b](c)](d)` gives the inner link and leaves the outer
-   * brackets as text.
+   * A link may not contain another link. Closing one deactivates every *link*
+   * opener to its left, so `[a [b](c)](d)` gives the inner link and leaves the
+   * outer brackets as text.
+   *
+   * An image opener is left alone, and that is the whole of the difference
+   * between the two: a description may hold a link, and `![a [b](c)](d)` is one
+   * image whose alt text is `a b`.
    */
   active: boolean;
   /** Where the label's text starts in the source, for a reference lookup. */
@@ -1025,7 +1029,9 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       if (!opener.image) {
         for (const other of openers) {
-          if (other.opener) {
+          // Link openers only. An image's description is allowed to hold a
+          // link, so the `![` further out is still an image waiting to close.
+          if (other.opener && !other.opener.image) {
             other.opener.active = false;
           }
         }
