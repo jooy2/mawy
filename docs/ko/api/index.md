@@ -11,17 +11,7 @@ order: 2
 
 두 패키지 모두 `0.1.0`으로 게시되어 있습니다. `0.x`라서 마이너 버전 사이에도 API가 바뀔 수 있습니다 — 그게 문제가 된다면 버전을 고정하세요.
 
-::: fw react
-
-이 페이지에 있는 것은 전부 존재하며 동작합니다.
-
-:::
-
-::: fw flutter
-
-이 페이지에서 Flutter로 표시된 것은 전부 존재하며 동작합니다. 이름이 React에만 있는 것은 해당 절에 그렇게 적혀 있고, 이유도 함께 적혀 있습니다.
-
-:::
+이 페이지에 있는 것은 메뉴 위 스위치가 가리키는 패키지에서 전부 존재하며 동작합니다. 다른 쪽 패키지에만 있는 이름은 그 패키지를 고르기 전까지 이 페이지에 아예 나오지 않습니다.
 
 ::::
 
@@ -349,9 +339,11 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 
 ::: fw flutter
 
-`package:mawy/mawy.dart`에서 내보냅니다. 그것이 이 패키지의 공개 표면 전부입니다 — import는 하나뿐이고 그 밖에 손댈 곳이 없습니다. 에디터의 타입들 — `MawyMode`, `MawyEditorToolbarItem`, `MawyEditorToolbarOption`, `MawyEditorStatusItem`, `MawyEditorStatusOption` — 은 React 패키지의 것입니다. 에디터가 그렇기 때문입니다.
+`package:mawy/mawy.dart`에서 내보냅니다. 그것이 이 패키지의 공개 표면 전부입니다 — import는 하나뿐이고 그 밖에 손댈 곳이 없습니다.
 
 :::
+
+::: fw react
 
 ### `MawyMode`
 
@@ -368,15 +360,11 @@ type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 
 `split`이 이 목록 옆이 아니라 안에 있는 것은 독자가 그 컨트롤로 하는 일 때문입니다. 넷은 한 번에 하나씩 고르는 하나의 버튼 묶음이고, "둘 다"는 같은 질문에 대한 네 번째 답입니다.
 
-::: fw flutter
-
-이름은 **React 전용입니다.** Flutter 패키지는 아래 [`MawyEditorMode`](#mawyeditormode)라고 쓰고, 넷 중 셋을 가집니다.
-
 :::
 
-### `MawyEditorMode`
-
 ::: fw flutter
+
+### `MawyEditorMode`
 
 ```dart
 enum MawyEditorMode { plain, split, preview }
@@ -392,15 +380,9 @@ enum MawyEditorMode { plain, split, preview }
 
 :::
 
-::: fw react
-
-**Flutter 전용입니다.** React 패키지는 같은 것을 [`MawyMode`](#mawymode)라고 쓰고, `'wysiwyg'`도 가집니다.
-
-:::
+::: fw flutter
 
 ### `kMawyEditorModes`
-
-::: fw flutter
 
 ```dart
 const List<MawyEditorMode> kMawyEditorModes;
@@ -410,13 +392,9 @@ const List<MawyEditorMode> kMawyEditorModes;
 
 :::
 
-::: fw react
-
-**Flutter 전용입니다.** React 패키지의 `modes`는 배열을 받고 기본값은 넷 전부입니다 — [`MawyMode`](#mawymode)를 보세요.
-
-:::
-
 ### `MawyEditorToolbarItem`
+
+::: fw react
 
 ```ts
 type MawyEditorToolbarItem =
@@ -441,13 +419,49 @@ type MawyEditorToolbarItem =
   | 'separator';
 ```
 
-에디터 툴바의 컨트롤 하나. `mode`·`find`·`open`·`save`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다. `find`와 `save`에도 `Mod`+`F`와 `Mod`+`S`가 있고, 버튼이 그려지든 아니든 동작합니다. `open`에는 없습니다. 브라우저 자신의 `Mod`+`O`는 그냥 두는 편이 합당하고, 파일을 여는 것은 흐름 중간에 하는 일이 아니라 드물고 분명한 행동입니다.
+:::
 
 ::: fw flutter
 
-여기의 `MawyEditorToolbarItem`은 `open`과 `save`가 빠진 같은 enum입니다. 그 둘은 애플리케이션의 몫입니다 — [열기와 저장](../guide/editor#열기와-저장)을 보세요. `find`는 있고, 버튼을 그리든 아니든 `Mod`+`F`가 그것을 엽니다.
+```dart
+enum MawyEditorToolbarItem {
+  mode,
+  bold,
+  italic,
+  strikethrough,
+  code,
+  link,
+  image,
+  heading,
+  quote,
+  bulletList,
+  orderedList,
+  taskList,
+  codeBlock,
+  rule,
+  find,
+  colorScheme,
+  separator,
+}
+```
 
 :::
+
+에디터 툴바의 컨트롤 하나. `mode`·`find`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다. `find`에도 `Mod`+`F`가 있고, 버튼이 그려지든 아니든 동작합니다.
+
+::: fw react
+
+`open`과 `save`도 여기에 있습니다. `Mod`+`S`는 버튼이 그려지든 아니든 저장하고, `open`에는 단축키가 없습니다. 브라우저 자신의 `Mod`+`O`는 그냥 두는 편이 합당하고, 파일을 여는 것은 흐름 중간에 하는 일이 아니라 드물고 분명한 행동이기 때문입니다.
+
+:::
+
+::: fw flutter
+
+`open`도 `save`도 없습니다. 여기서 그 둘은 애플리케이션의 몫입니다 — [열기와 저장](../guide/editor#열기와-저장)을 보세요.
+
+:::
+
+::: fw react
 
 ### `MawyEditorToolbarOption`
 
@@ -455,11 +469,13 @@ type MawyEditorToolbarItem =
 type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
 ```
 
-`true`는 위 순서대로 전부, `false`는 툴바 없음, 배열은 정확히 그것들을 그 순서로. **React 전용입니다** — Flutter의 `toolbar` 인자는 그냥 리스트이고, `true`가 뜻했을 것은 [`kMawyEditorToolbar`](#kmawyeditortoolbar)입니다.
+`true`는 위 순서대로 전부, `false`는 툴바 없음, 배열은 정확히 그것들을 그 순서로.
 
-### `kMawyEditorToolbar`
+:::
 
 ::: fw flutter
+
+### `kMawyEditorToolbar`
 
 ```dart
 const List<MawyEditorToolbarItem> kMawyEditorToolbar;
@@ -469,19 +485,27 @@ const List<MawyEditorToolbarItem> kMawyEditorToolbar;
 
 :::
 
-::: fw react
-
-**Flutter 전용입니다.** React 패키지는 같은 것을 `toolbar={true}`로 씁니다 — [`MawyEditorToolbarOption`](#mawyeditortoolbaroption)를 보세요.
-
-:::
-
 ### `MawyEditorStatusItem`
+
+::: fw react
 
 ```ts
 type MawyEditorStatusItem = 'position' | 'selection' | 'lines' | 'words' | 'characters' | 'size';
 ```
 
+:::
+
+::: fw flutter
+
+```dart
+enum MawyEditorStatusItem { position, selection, lines, words, characters, size }
+```
+
+:::
+
 에디터가 아래쪽에 세어 보여주는 것. `characters`는 코드 포인트라서 이모지 하나는 하나입니다. `words`는 공백으로 나눈 수에 한자·히라가나·가타카나 글자를 각각 더합니다. 그 언어들은 공백 없이 쓰이기 때문이고, 한국어는 띄어 쓰므로 어절 하나가 한 단어입니다. `size`는 UTF-8 바이트이고, 그것이 디스크에 저장될 크기입니다.
+
+::: fw react
 
 ### `MawyEditorStatusOption`
 
@@ -489,23 +513,19 @@ type MawyEditorStatusItem = 'position' | 'selection' | 'lines' | 'words' | 'char
 type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
 ```
 
-**React 전용입니다** — Flutter의 `status` 인자는 그냥 리스트이고, `true`가 뜻했을 것은 [`kMawyEditorStatus`](#kmawyeditorstatus)입니다.
+`true`는 위 목록 전부, `false`는 상태 표시줄 없음, 배열은 정확히 그 항목들을 그 순서로.
 
-### `kMawyEditorStatus`
+:::
 
 ::: fw flutter
+
+### `kMawyEditorStatus`
 
 ```dart
 const List<MawyEditorStatusItem> kMawyEditorStatus;
 ```
 
 따로 말하지 않으면 상태 표시줄이 세는 것. `const []`는 상태 표시줄 없음입니다.
-
-:::
-
-::: fw react
-
-**Flutter 전용입니다.** React 패키지는 같은 것을 `status={true}`로 씁니다 — [`MawyEditorStatusOption`](#mawyeditorstatusoption)를 보세요.
 
 :::
 
@@ -583,6 +603,8 @@ class MawyParseOptions {
 
 세 옵션은 두 패키지에서 같은 셋이고, 기본값도 효과도 같습니다. 파서가 하나이고, [CI의 검사](https://github.com/jooy2/mawy/blob/main/packages/flutter/tool/parity.dart)가 저장소의 모든 마크다운 파일에 대해 두 트리를 diff합니다.
 
+::: fw react
+
 ### `MawyHtmlPolicy`
 
 ```ts
@@ -597,7 +619,7 @@ type MawyHtmlPolicy = 'escape' | 'sanitize' | 'raw';
 
 셋 중 어느 것도 링크에는 영향을 주지 않습니다. `[click](javascript:…)`은 모든 값에서 거절됩니다. 그것은 HTML이 아니라 마크다운이고, HTML 정책을 바꾼 것이 그것에 대한 말이었던 적은 없기 때문입니다.
 
-**React 전용입니다.** Flutter 패키지에는 대응하는 것이 없고, 필요도 없습니다. 마크다운에서 화면까지 가는 길에 HTML이 없으므로 문서 안의 원본 HTML은 언제나 쓰인 글자 그대로 보입니다. 거기서 `'escape'`는 고를 수 있는 정책이 아니라 일어날 수 있는 유일한 일입니다.
+:::
 
 ### `MawyTypography`
 
@@ -662,6 +684,8 @@ enum MawyFontFamily { sans, serif, mono }
 
 :::
 
+::: fw react
+
 ### `MawyFont`
 
 ```ts
@@ -673,12 +697,16 @@ interface MawyFont {
 }
 ```
 
-툴바가 제시하는 글꼴 하나. **React 전용이며**, `MAWY_SYSTEM_FONTS`와 `MAWY_WEB_FONTS`도 그렇습니다. 글꼴을 처음 그리는 순간에 스타일시트를 받아오는 것은 브라우저의 재주입니다. Flutter 패키지는 대신 번들한 패밀리 하나를 [`MawyTypography.fontFamilyName`](#mawytypography)으로 이름 댑니다.
+툴바가 제시하는 글꼴 하나이고, 아래의 두 목록이 넘길 만한 것들입니다. 글꼴을 처음 그리는 순간에 스타일시트를 받아오는 것은 브라우저의 재주이고, 그래서 이것은 이름 하나가 아니라 목록입니다.
 
 - **`id`** — 이 글꼴을 고르기 위해 `typography.fontFamily`에 넣는 값.
 - **`label`** — 툴바에 보이는 이름. 빼면 `sans`·`serif`·`mono`는 로케일에서, 그 밖에는 `id`에서 가져옵니다.
 - **`stack`** — CSS `font-family` 값. 기본값은 `var(--mawy-font-{id})`.
 - **`href`** — 글꼴을 그리기 전에 도착해야 하는 스타일시트. 글꼴을 처음 그릴 때 또는 글꼴 메뉴에 이름이 처음 보일 때, 페이지당 한 번 받아옵니다.
+
+:::
+
+::: fw react
 
 ### `MAWY_SYSTEM_FONTS`
 
@@ -687,6 +715,10 @@ const MAWY_SYSTEM_FONTS: readonly MawyFont[];
 ```
 
 독자의 기기에 이미 있는 것으로 그리는 세 역할. `href`가 없으므로 기본 상태의 뷰어는 아무것도 받아오지 않습니다.
+
+:::
+
+::: fw react
 
 ### `MAWY_WEB_FONTS`
 
@@ -701,6 +733,8 @@ const MAWY_WEB_FONTS: readonly MawyFont[];
 ```tsx
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
 ```
+
+:::
 
 ### `MawyDirectiveKind`
 
@@ -722,9 +756,9 @@ enum MawyDirectiveKind { container, leaf, text }
 
 디렉티브가 세 모양 중 어느 것으로 쓰였는지. 콜론의 개수가 그 차이이고 그 밖에는 아무것도 다르지 않습니다. `:::container`는 블록을 담고, `::leaf`는 한 줄이고, `:text`는 문장 안에 앉습니다. 무엇을 위한 것인지는 [디렉티브](../guide/viewer#디렉티브)에 있습니다.
 
-### `MawyDirectives`
-
 ::: fw react
+
+### `MawyDirectives`
 
 ```ts
 type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveProps>>>;
@@ -734,15 +768,9 @@ type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveP
 
 :::
 
-::: fw flutter
-
-이름이 붙은 타입으로는 **React 전용입니다.** Flutter의 인자는 그냥 `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>`이고, 거기 없는 이름은 쓰인 글자 그대로 그려집니다.
-
-:::
+::: fw react
 
 ### `MawyDirectiveProps`
-
-::: fw react
 
 ```ts
 interface MawyDirectiveProps {
@@ -767,13 +795,7 @@ interface MawyDirectiveProps {
 
 ::: fw flutter
 
-이 모양으로는 **Flutter 전용이 아닙니다** — 같은 것을 클래스로 만든 [`MawyDirective`](#mawydirective)를 보세요.
-
-:::
-
 ### `MawyDirective`
-
-::: fw flutter
 
 ```dart
 class MawyDirective {
@@ -793,15 +815,9 @@ class MawyDirective {
 
 :::
 
-::: fw react
-
-**Flutter 전용입니다.** React 패키지는 같은 것을 [`MawyDirectiveProps`](#mawydirectiveprops)라고 씁니다.
-
-:::
+::: fw flutter
 
 ### `MawyDirectiveBuilder`
-
-::: fw flutter
 
 ```dart
 typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
@@ -813,13 +829,7 @@ typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirecti
 
 ::: fw react
 
-**Flutter 전용입니다.** React 패키지에서 이에 해당하는 것은 컴포넌트 타입이고, [`MawyDirectives`](#mawydirectives)로 이름을 댑니다.
-
-:::
-
 ### `MawyRange`
-
-::: fw react
 
 ```ts
 interface MawyRange {
@@ -829,12 +839,6 @@ interface MawyRange {
 ```
 
 문서의 한 조각이 어디에 쓰였는지를, 컴포넌트가 받은 마크다운의 위치값으로. 모든 엘리먼트가 `data-mawy-range`로 들고 있는 그 두 수를, 컴포넌트가 직접 받는 자리에서는 수로 건네는 것입니다. 오늘 그런 자리는 [`MawyDirectiveProps`](#mawydirectiveprops) 하나뿐입니다.
-
-:::
-
-::: fw flutter
-
-이 이름으로는 **React 전용입니다.** Dart 쪽의 것은 `MdRange`이고, 파서에서 나와 모든 노드에 붙어 있습니다 — [`MdDocument`](#mddocument)를 보세요.
 
 :::
 
@@ -908,19 +912,23 @@ enum MawyViewerToolbarItem {
 
 :::
 
+::: fw react
+
 ### `MawyViewerToolbarOption`
 
 ```ts
 type MawyViewerToolbarOption = boolean | readonly MawyViewerToolbarItem[];
 ```
 
-`true`는 위 순서대로 전부, `false`는 툴바 없음, 배열은 정확히 그 컨트롤들을 정확히 그 순서로. **React 전용입니다** — Flutter의 `toolbar` 인자는 그냥 리스트이고, `true`가 뜻했을 것은 [`kMawyViewerToolbar`](#kmawyviewertoolbar)입니다.
+`true`는 위 순서대로 전부, `false`는 툴바 없음, 배열은 정확히 그 컨트롤들을 정확히 그 순서로.
 
 목록에 없는 컨트롤을 더할 방법은 두 패키지 어디에도 없습니다. 임의의 자식을 받는 툴바는 라이브러리가 더 이상 키보드로 다루게 만들어 줄 수 없는 툴바입니다.
 
-### `kMawyViewerToolbar`
+:::
 
 ::: fw flutter
+
+### `kMawyViewerToolbar`
 
 ```dart
 const List<MawyViewerToolbarItem> kMawyViewerToolbar;
@@ -932,19 +940,9 @@ const List<MawyViewerToolbarItem> kMawyViewerToolbar;
 
 ::: fw react
 
-**Flutter 전용입니다.** React 패키지는 같은 것을 `toolbar={true}`라고 씁니다 — [`MawyViewerToolbarOption`](#mawyviewertoolbaroption)을 보세요.
-
-:::
-
 ## 스타일시트
 
 ### `mawy-react/styles.css`
-
-::: fw flutter
-
-**React 전용입니다.** 여기에는 가져올 스타일시트가 없습니다. 위젯이 자기 값을 들고 있고, 그 값이 나오는 팔레트는 아래의 [`MawyTokens`](#mawytokens)입니다. 두 목록은 같은 목록입니다. 이 표의 모든 색은 저쪽에 같은 이름의 항목으로, 값 하나까지 그대로 있습니다.
-
-:::
 
 완성된 스타일시트. 애플리케이션이 한 번 가져옵니다. 라이브러리가 그리는 모든 값은 `--mawy-*` 커스텀 속성이고, 그 네임스페이스가 테마의 전부입니다.
 
@@ -964,11 +962,13 @@ const List<MawyViewerToolbarItem> kMawyViewerToolbar;
 
 문서를 그리는 데 쓰는 클래스 이름 `.mawy-md-*` 역시 지원되는 표면입니다. 라이브러리가 렌더 프롭을 내주지 않아도 애플리케이션이 표나 코드 블록의 스타일을 바꿀 수 있습니다.
 
+:::
+
+::: fw flutter
+
 ## 팔레트
 
 ### `MawyTokens`
-
-::: fw flutter
 
 ```dart
 class MawyTokens {
@@ -981,7 +981,7 @@ class MawyTokens {
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
-문서와 그 chrome을 그리는 모든 색을 한 객체로 담은 것입니다. 항목은 위의 `--mawy-*` 커스텀 속성을 Dart식 이름으로 옮긴 것들 — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, 그리고 알림 종류마다 하나씩 — 이고, 값은 스타일시트의 값을 다시 고른 것이 아니라 그대로 옮긴 것입니다. 브라우저에서 `#5b34ea`인 색은 앱에서도 `#5b34ea`입니다.
+문서와 그 chrome을 그리는 모든 색을 한 객체로 담은 것입니다. 항목은 React 패키지의 `--mawy-*` 커스텀 속성을 Dart식 이름으로 옮긴 것들 — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, 그리고 알림 종류마다 하나씩 — 이고, 값은 스타일시트의 값을 다시 고른 것이 아니라 그대로 옮긴 것입니다. 브라우저에서 `#5b34ea`인 색은 앱에서도 `#5b34ea`입니다.
 
 뷰어는 자기 `colorScheme`에서 `light`이나 `dark`를 고르며 전역을 읽지 않습니다. 문서 하나가 밝은 화면 안에서 어두울 수 있는 것이 그 덕분입니다.
 
@@ -997,17 +997,7 @@ MawyViewer(
 
 이 export는 문서 옆에 자기 chrome을 그리면서 같은 색을 쓰고 싶은 애플리케이션을 위한 것이기도 합니다.
 
-:::
-
-::: fw react
-
-**Flutter 전용입니다.** 브라우저에서 같은 팔레트는 위의 `--mawy-*` 커스텀 속성이고, 그중 하나를 다시 선언하는 일이 Dart 쪽에서는 `tokens`와 `copyWith`입니다.
-
-:::
-
 ### `MawyRadius`와 `MawyMotion`
-
-::: fw flutter
 
 ```dart
 abstract final class MawyRadius {
@@ -1022,29 +1012,15 @@ abstract final class MawyMotion {
 }
 ```
 
-모서리 반경 — 눈금이 아니라 세 크기입니다 — 그리고 움직이는 모든 것이 쓰는 하나의 시간과 하나의 곡선. `--mawy-radius-sm`, `--mawy-radius-md`, `--mawy-radius-lg`, `--mawy-duration`, `--mawy-easing`을 Dart로 옮긴 것입니다.
-
-:::
-
-::: fw react
-
-**Flutter 전용입니다** — `--mawy-radius-*`, `--mawy-duration`, `--mawy-easing`이 위 스타일시트에 있는 같은 값입니다.
-
-:::
-
-## 파서
-
-::: fw react
-
-**Flutter 전용입니다.** React 패키지의 파서는 내부의 것입니다. 지원되는 표면은 `MawyViewer`와 `MawyEditor`이고 그 뒤의 트리는 내보내지 않으므로, 그것이 바뀌어도 파괴적 변경이 아닙니다. 아래 세 항목은 `package:mawy/mawy.dart`의 것입니다.
+모서리 반경 — 눈금이 아니라 세 크기입니다 — 그리고 움직이는 모든 것이 쓰는 하나의 시간과 하나의 곡선. [`MawyTokens`](#mawytokens)이 색에 대해 그런 것처럼, React 패키지의 `--mawy-radius-*`, `--mawy-duration`, `--mawy-easing`을 값 그대로 옮긴 것입니다.
 
 :::
 
 ::: fw flutter
 
-쓰이기만 하는 것이 아니라 내보내집니다. 문서의 개요나 각주나 제목의 앵커를 원하는 Dart 애플리케이션에게는 그것을 얻을 다른 길이 없기 때문입니다.
+## 파서
 
-:::
+쓰이기만 하는 것이 아니라 내보내집니다. 문서의 개요나 각주나 제목의 앵커를 원하는 Dart 애플리케이션에게는 그것을 얻을 다른 길이 없기 때문입니다.
 
 ### `parseMarkdown`
 
@@ -1075,3 +1051,5 @@ String slugify(String text);
 ```
 
 제목의 앵커를 GitHub이 쓰는 철자로 만듭니다. 어떤 특정한 방식보다 GitHub과 같은 것이 더 중요합니다. README 안의 앵커는 그것에 맞춰 손으로 쓰이므로, `#getting-started`로 링크하는 문서는 GitHub이 그 제목을 뭐라고 불렀을지에 링크하고 있는 것입니다.
+
+:::

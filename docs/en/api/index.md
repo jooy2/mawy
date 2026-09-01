@@ -11,17 +11,7 @@ Everything the package exports. Each entry says what it is, what it takes and wh
 
 Both packages are published at `0.1.0`. They are a `0.x`, which means the API can still change between minor versions — pin the version if that matters to you.
 
-::: fw react
-
-Everything on this page exists and runs.
-
-:::
-
-::: fw flutter
-
-Everything on this page that is marked Flutter exists and runs. Where a name is React's alone, the section says so and says why.
-
-:::
+Everything on this page exists and runs, in whichever package the switch above the menu is set to. A name only the other package has is not on this page at all while that one is selected.
 
 ::::
 
@@ -349,9 +339,11 @@ Exported from `mawy-react` and from `mawy-react/types`. The second entry point e
 
 ::: fw flutter
 
-Exported from `package:mawy/mawy.dart`, which is the whole of this package's public surface — one import, and nothing else to reach for. The editor's types — `MawyMode`, `MawyEditorToolbarItem`, `MawyEditorToolbarOption`, `MawyEditorStatusItem` and `MawyEditorStatusOption` — are the React package's, because the editor is.
+Exported from `package:mawy/mawy.dart`, which is the whole of this package's public surface — one import, and nothing else to reach for.
 
 :::
+
+::: fw react
 
 ### `MawyMode`
 
@@ -368,15 +360,11 @@ Which surface a document is shown on. These are views of one document rather tha
 
 `split` is on this list rather than beside it because of what a reader does with the control: the four are one group of buttons, one at a time, and "both" is the fourth answer to the same question.
 
-::: fw flutter
-
-**React only** as a name. The Flutter package spells it [`MawyEditorMode`](#mawyeditormode) below, and has three of the four.
-
 :::
 
-### `MawyEditorMode`
-
 ::: fw flutter
+
+### `MawyEditorMode`
 
 ```dart
 enum MawyEditorMode { plain, split, preview }
@@ -392,15 +380,9 @@ There is no `wysiwyg`, and there is not going to be. See [`MawyEditor`](#mawyedi
 
 :::
 
-::: fw react
-
-**Flutter only.** The React package spells the same thing [`MawyMode`](#mawymode), and has `'wysiwyg'` as well.
-
-:::
+::: fw flutter
 
 ### `kMawyEditorModes`
-
-::: fw flutter
 
 ```dart
 const List<MawyEditorMode> kMawyEditorModes;
@@ -410,13 +392,9 @@ All three in the order the switch offers them, and the default for `modes`. Give
 
 :::
 
-::: fw react
-
-**Flutter only.** The React package's `modes` takes an array and defaults to all four — see [`MawyMode`](#mawymode).
-
-:::
-
 ### `MawyEditorToolbarItem`
+
+::: fw react
 
 ```ts
 type MawyEditorToolbarItem =
@@ -441,13 +419,49 @@ type MawyEditorToolbarItem =
   | 'separator';
 ```
 
-One control on the editor's toolbar. Everything except `mode`, `find`, `open`, `save`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them. `find` and `save` have one too, `Mod`+`F` and `Mod`+`S`, and both work whether or not the button is drawn. `open` has none: the browser's own `Mod`+`O` is a reasonable thing to leave alone, and opening a file is a rare and deliberate act rather than one done mid-flow.
+:::
 
 ::: fw flutter
 
-`MawyEditorToolbarItem` here is the same enum without `open` and `save`, which are the application's — see [opening and saving](../guide/editor#opening-and-saving). `find` is here, and `Mod`+`F` opens it whether or not the button is drawn.
+```dart
+enum MawyEditorToolbarItem {
+  mode,
+  bold,
+  italic,
+  strikethrough,
+  code,
+  link,
+  image,
+  heading,
+  quote,
+  bulletList,
+  orderedList,
+  taskList,
+  codeBlock,
+  rule,
+  find,
+  colorScheme,
+  separator,
+}
+```
 
 :::
+
+One control on the editor's toolbar. Everything except `mode`, `find`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them. `find` has one too, `Mod`+`F`, and it works whether or not the button is drawn.
+
+::: fw react
+
+`open` and `save` are here as well. `Mod`+`S` saves whether the button is drawn or not; `open` has no shortcut, because the browser's own `Mod`+`O` is a reasonable thing to leave alone and opening a file is a rare and deliberate act rather than one done mid-flow.
+
+:::
+
+::: fw flutter
+
+There is no `open` and no `save`: both are the application's here — see [opening and saving](../guide/editor#opening-and-saving).
+
+:::
+
+::: fw react
 
 ### `MawyEditorToolbarOption`
 
@@ -455,11 +469,13 @@ One control on the editor's toolbar. Everything except `mode`, `find`, `open`, `
 type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
 ```
 
-`true` is every control in the order above; `false` is no toolbar; an array is exactly those, in that order. **React only** — the Flutter `toolbar` argument is a plain list, and [`kMawyEditorToolbar`](#kmawyeditortoolbar) is what `true` would have meant.
+`true` is every control in the order above; `false` is no toolbar; an array is exactly those, in that order.
 
-### `kMawyEditorToolbar`
+:::
 
 ::: fw flutter
+
+### `kMawyEditorToolbar`
 
 ```dart
 const List<MawyEditorToolbarItem> kMawyEditorToolbar;
@@ -469,19 +485,27 @@ Every control in the order the toolbar draws them, and the default for `toolbar`
 
 :::
 
-::: fw react
-
-**Flutter only.** The React package spells the same thing `toolbar={true}` — see [`MawyEditorToolbarOption`](#mawyeditortoolbaroption).
-
-:::
-
 ### `MawyEditorStatusItem`
+
+::: fw react
 
 ```ts
 type MawyEditorStatusItem = 'position' | 'selection' | 'lines' | 'words' | 'characters' | 'size';
 ```
 
+:::
+
+::: fw flutter
+
+```dart
+enum MawyEditorStatusItem { position, selection, lines, words, characters, size }
+```
+
+:::
+
 What the editor counts along its bottom edge. `characters` are code points, so an emoji is one. `words` adds every Han, hiragana and katakana character to the space-separated count, because those are written without spaces; Korean is spaced, so an eojeol is one word. `size` is UTF-8 bytes, which is what a file on disk will be.
+
+::: fw react
 
 ### `MawyEditorStatusOption`
 
@@ -489,23 +513,19 @@ What the editor counts along its bottom edge. `characters` are code points, so a
 type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
 ```
 
-**React only** — the Flutter `status` argument is a plain list, and [`kMawyEditorStatus`](#kmawyeditorstatus) is what `true` would have meant.
+`true` is everything on the list above; `false` is no status bar at all; an array is exactly those counts, in that order.
 
-### `kMawyEditorStatus`
+:::
 
 ::: fw flutter
+
+### `kMawyEditorStatus`
 
 ```dart
 const List<MawyEditorStatusItem> kMawyEditorStatus;
 ```
 
 What the status bar counts unless it is told otherwise. `const []` is no status bar at all.
-
-:::
-
-::: fw react
-
-**Flutter only.** The React package spells the same thing `status={true}` — see [`MawyEditorStatusOption`](#mawyeditorstatusoption).
 
 :::
 
@@ -583,6 +603,8 @@ class MawyParseOptions {
 
 The three options are the same three in both packages, with the same defaults and the same effect — the parser is one parser, and [a check in CI](https://github.com/jooy2/mawy/blob/main/packages/flutter/tool/parity.dart) diffs the two trees over every Markdown file in the repository.
 
+::: fw react
+
 ### `MawyHtmlPolicy`
 
 ```ts
@@ -597,7 +619,7 @@ What becomes of raw HTML written inside a document.
 
 None of the three affects links. `[click](javascript:…)` is refused under every policy, because it is Markdown rather than HTML and switching the HTML policy was never a statement about it.
 
-**React only.** The Flutter package has no equivalent and needs none: there is no HTML on the path from Markdown to the screen, so raw HTML in a document is always shown as the characters it was written with, and `'escape'` is not a policy there but the only thing that could happen.
+:::
 
 ### `MawyTypography`
 
@@ -662,6 +684,8 @@ The three roles, and only the three. They are roles rather than font names: each
 
 :::
 
+::: fw react
+
 ### `MawyFont`
 
 ```ts
@@ -673,12 +697,16 @@ interface MawyFont {
 }
 ```
 
-A typeface the toolbar offers. **React only** — with it, `MAWY_SYSTEM_FONTS` and `MAWY_WEB_FONTS`. A stylesheet fetched at the moment a font is first drawn is a browser's trick; the Flutter package names one bundled family through [`MawyTypography.fontFamilyName`](#mawytypography) instead.
+A typeface the toolbar offers, and the two lists below are the ones worth passing. A stylesheet fetched at the moment a font is first drawn is a browser's trick, which is why this is a list of them rather than a name.
 
 - **`id`** — what `typography.fontFamily` is set to in order to choose this font.
 - **`label`** — what the toolbar shows. `sans`, `serif` and `mono` take theirs from the locale when it is left out; anything else falls back to its `id`.
 - **`stack`** — the CSS `font-family` value. Defaults to `var(--mawy-font-{id})`.
 - **`href`** — a stylesheet that has to arrive before the font can be drawn. Fetched once per page, the first time the font is drawn or its name is shown in the typeface menu.
+
+:::
+
+::: fw react
 
 ### `MAWY_SYSTEM_FONTS`
 
@@ -687,6 +715,10 @@ const MAWY_SYSTEM_FONTS: readonly MawyFont[];
 ```
 
 The three roles, drawn with whatever the reader's machine already has. None of them has an `href`, so the default viewer fetches nothing at all.
+
+:::
+
+::: fw react
 
 ### `MAWY_WEB_FONTS`
 
@@ -701,6 +733,8 @@ Thirteen open-licensed families, ready to be offered — every one under the SIL
 ```tsx
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
 ```
+
+:::
 
 ### `MawyDirectiveKind`
 
@@ -722,9 +756,9 @@ enum MawyDirectiveKind { container, leaf, text }
 
 Which of the three shapes a directive was written in. The number of colons is the difference and nothing else about it is: `:::container` holds blocks, `::leaf` is a line of its own, and `:text` sits inside a sentence. See [directives](../guide/viewer#directives) for what they are for.
 
-### `MawyDirectives`
-
 ::: fw react
+
+### `MawyDirectives`
 
 ```ts
 type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveProps>>>;
@@ -734,15 +768,9 @@ The directives an application knows, by name. A name that is not on the list is 
 
 :::
 
-::: fw flutter
-
-**React only** as a named type. The Flutter argument is a plain `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>`, and a name that is not in it is drawn as the characters it was written with.
-
-:::
+::: fw react
 
 ### `MawyDirectiveProps`
-
-::: fw react
 
 ```ts
 interface MawyDirectiveProps {
@@ -767,13 +795,7 @@ What a directive's component is given. The pieces arrive **already drawn**, so a
 
 ::: fw flutter
 
-**Flutter only** in this shape — see [`MawyDirective`](#mawydirective), which is the same thing as a class.
-
-:::
-
 ### `MawyDirective`
-
-::: fw flutter
 
 ```dart
 class MawyDirective {
@@ -793,15 +815,9 @@ What a directive's builder is given. The pieces arrive **already drawn**, so a b
 
 :::
 
-::: fw react
-
-**Flutter only.** The React package spells the same thing [`MawyDirectiveProps`](#mawydirectiveprops).
-
-:::
+::: fw flutter
 
 ### `MawyDirectiveBuilder`
-
-::: fw flutter
 
 ```dart
 typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
@@ -813,13 +829,7 @@ What draws one directive. A `MawyDirectiveKind.text` one is placed in the senten
 
 ::: fw react
 
-**Flutter only.** The React package's equivalent is a component type, named through [`MawyDirectives`](#mawydirectives).
-
-:::
-
 ### `MawyRange`
-
-::: fw react
 
 ```ts
 interface MawyRange {
@@ -829,12 +839,6 @@ interface MawyRange {
 ```
 
 Where a piece of a document was written, in the offsets of the Markdown the component was given — the same two numbers every element carries as `data-mawy-range`, handed over as numbers where a component gets them directly. Today that is [`MawyDirectiveProps`](#mawydirectiveprops) and nothing else.
-
-:::
-
-::: fw flutter
-
-**React only** under this name. The Dart side's is `MdRange`, which comes out of the parser and is on every node — see [`MdDocument`](#mddocument).
 
 :::
 
@@ -908,19 +912,23 @@ There is no `open`, for the same reason there is no file picker: opening a file 
 
 :::
 
+::: fw react
+
 ### `MawyViewerToolbarOption`
 
 ```ts
 type MawyViewerToolbarOption = boolean | readonly MawyViewerToolbarItem[];
 ```
 
-`true` is every control in the order above; `false` is no toolbar at all; an array is exactly those controls, in exactly that order. **React only** — the Flutter `toolbar` argument is a plain list, and [`kMawyViewerToolbar`](#kmawyviewertoolbar) is what `true` would have meant.
+`true` is every control in the order above; `false` is no toolbar at all; an array is exactly those controls, in exactly that order.
 
 There is no way in either package to add a control that is not on the list. A toolbar that takes arbitrary children is one the library can no longer make keyboard-operable.
 
-### `kMawyViewerToolbar`
+:::
 
 ::: fw flutter
+
+### `kMawyViewerToolbar`
 
 ```dart
 const List<MawyViewerToolbarItem> kMawyViewerToolbar;
@@ -932,19 +940,9 @@ Every control in the order the toolbar draws them, and the default for `toolbar`
 
 ::: fw react
 
-**Flutter only.** The React package spells the same thing `toolbar={true}` — see [`MawyViewerToolbarOption`](#mawyviewertoolbaroption).
-
-:::
-
 ## Stylesheet
 
 ### `mawy-react/styles.css`
-
-::: fw flutter
-
-**React only.** There is no stylesheet to import here — the widgets carry their own values, and the palette they are drawn from is [`MawyTokens`](#mawytokens) below. The two lists are the same list: every colour in this table has the field of the same name over there, value for value.
-
-:::
 
 The finished stylesheet, imported once by the embedding application. Every value the library draws with is a `--mawy-*` custom property, and that namespace is the entire supported surface for theming.
 
@@ -964,11 +962,13 @@ The tokens are declared on **`.mawy-root`** rather than on `:root`. A component 
 
 The class names the document is drawn with are `.mawy-md-*` and are also part of the supported surface, so an application can restyle a table or a code block without the library exposing a render prop for it.
 
+:::
+
+::: fw flutter
+
 ## Palette
 
 ### `MawyTokens`
-
-::: fw flutter
 
 ```dart
 class MawyTokens {
@@ -981,7 +981,7 @@ class MawyTokens {
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
-Every colour a document and its chrome are drawn in, as one object. The fields are the `--mawy-*` custom properties above under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
+Every colour a document and its chrome are drawn in, as one object. The fields are the React package's `--mawy-*` custom properties under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
 
 The viewer picks `light` or `dark` from its own `colorScheme` and does not read a global, which is what lets one document be dark inside a light screen.
 
@@ -997,17 +997,7 @@ MawyViewer(
 
 The export is also for an application drawing its own chrome beside a document and wanting the same colours in it.
 
-:::
-
-::: fw react
-
-**Flutter only.** In a browser the same palette is the `--mawy-*` custom properties above, and redeclaring one of those is what `tokens` and `copyWith` are on the Dart side.
-
-:::
-
 ### `MawyRadius` and `MawyMotion`
-
-::: fw flutter
 
 ```dart
 abstract final class MawyRadius {
@@ -1022,29 +1012,15 @@ abstract final class MawyMotion {
 }
 ```
 
-The corner radii, which are three sizes rather than a scale, and the one duration and one curve everything that moves uses. `--mawy-radius-sm`, `--mawy-radius-md`, `--mawy-radius-lg`, `--mawy-duration` and `--mawy-easing`, in Dart.
-
-:::
-
-::: fw react
-
-**Flutter only** — `--mawy-radius-*`, `--mawy-duration` and `--mawy-easing` are the same values in the stylesheet above.
-
-:::
-
-## Parser
-
-::: fw react
-
-**Flutter only.** The React package's parser is internal: `MawyViewer` and `MawyEditor` are the supported surface, and the tree behind them is not exported, so it can change without being a breaking change. The three entries below are `package:mawy/mawy.dart`'s.
+The corner radii, which are three sizes rather than a scale, and the one duration and one curve everything that moves uses. They are the React package's `--mawy-radius-*`, `--mawy-duration` and `--mawy-easing`, value for value, the way [`MawyTokens`](#mawytokens) is its colours.
 
 :::
 
 ::: fw flutter
 
-Exported as well as used, because a Dart application that wants the outline of a document, or its footnotes, or its headings' anchors, has no other way to get at them.
+## Parser
 
-:::
+Exported as well as used, because a Dart application that wants the outline of a document, or its footnotes, or its headings' anchors, has no other way to get at them.
 
 ### `parseMarkdown`
 
@@ -1075,3 +1051,5 @@ String slugify(String text);
 ```
 
 A heading's anchor, in the spelling GitHub uses. Matching GitHub matters more than any particular scheme would: the anchors in a README are written by hand against it, so a document linking to `#getting-started` is linking to whatever GitHub would have called that heading.
+
+:::
