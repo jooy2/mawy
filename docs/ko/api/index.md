@@ -19,7 +19,7 @@ order: 2
 
 ::: fw flutter
 
-Flutter 패키지는 아직 뷰어뿐이고, 에디터는 React 패키지의 것입니다. 이 페이지에서 Flutter로 표시된 것은 전부 존재하며 동작합니다.
+이 페이지에서 Flutter로 표시된 것은 전부 존재하며 동작합니다. 이름이 React에만 있는 것은 해당 절에 그렇게 적혀 있고, 이유도 함께 적혀 있습니다.
 
 :::
 
@@ -29,13 +29,9 @@ Flutter 패키지는 아직 뷰어뿐이고, 에디터는 React 패키지의 것
 
 ### `MawyEditor`
 
-::: fw flutter
-
-**이 패키지에는 없습니다.** `packages/flutter`가 내놓는 것은 뷰어이고, 에디터는 당분간 React 패키지의 것입니다. 편집 화면이 딛고 선 것 — `contenteditable`, `beforeinput`, DOM 셀렉션 — 에 대응하는 Flutter 쪽 물건이 없어서, 이식할 대상 자체가 없기 때문입니다. 이 절과 에디터의 타입들은 React의 것입니다. 아래 [`MawyViewer`](#mawyviewer)에는 양쪽이 다 있습니다.
-
-:::
-
 뷰어를 옆에 둔 마크다운 에디터입니다. [에디터](../guide/editor)를 보세요.
+
+::: fw react
 
 ```tsx
 import { MawyEditor } from 'mawy-react';
@@ -45,7 +41,23 @@ import { MawyEditor } from 'mawy-react';
 
 `children`과 `onChange`를 뺀 `<div>`의 모든 프롭을 받아 그대로 넘깁니다. `ref`는 가장 바깥 엘리먼트에 닿습니다.
 
+:::
+
+::: fw flutter
+
+```dart
+import 'package:mawy/mawy.dart';
+
+MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
+```
+
+뷰어와 마찬가지로 `package:flutter/widgets.dart`만으로 지어졌고, 문서를 건네받지 않으면 자기 것을 직접 갖습니다.
+
+:::
+
 #### 문서
+
+::: fw react
 
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
@@ -55,7 +67,25 @@ import { MawyEditor } from 'mawy-react';
 | `readOnly` | `boolean` | `false` | 읽고 선택하고 복사하는 것은 그대로 됩니다. |
 | `placeholder` | `string` | 로케일에 맞는 안내문 | 문서가 비어 있는 동안 보입니다. |
 
+:::
+
+::: fw flutter
+
+| 인자 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `value` | `String?` | — | 문서. 애플리케이션이 주인일 때. |
+| `defaultValue` | `String` | `''` | 에디터가 문서를 직접 가질 때, 시작할 문서. |
+| `onChange` | `ValueChanged<String>?` | — | 모든 변경. 직접 갖든 건네받든. |
+| `readOnly` | `bool` | `false` | 읽고 선택하고 복사하는 것은 그대로 됩니다. |
+| `placeholder` | `String?` | 로케일에 맞는 안내문 | 문서가 비어 있는 동안 보입니다. |
+
+이 두 가지 방식은 Flutter의 모든 텍스트 필드가 제공하는 두 가지이고, React 패키지의 두 가지이기도 합니다.
+
+:::
+
 #### 화면
+
+::: fw react
 
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
@@ -66,7 +96,24 @@ import { MawyEditor } from 'mawy-react';
 
 `'wysiwyg'`는 문서를 그리고 그 자리에서 편집합니다. 기본 목록의 첫 번째이고, 내놓고 싶지 않으면 `modes`에서 빼면 됩니다.
 
+:::
+
+::: fw flutter
+
+| 인자 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `mode` | [`MawyEditorMode?`](#mawyeditormode) | — | 어느 화면인지. 애플리케이션이 주인일 때. |
+| `defaultMode` | `MawyEditorMode` | `MawyEditorMode.split` | 처음 열 화면. |
+| `onModeChange` | `ValueChanged<MawyEditorMode>?` | — | 읽는 사람이 다른 화면을 고르면 호출됩니다. |
+| `modes` | `List<MawyEditorMode>` | [`kMawyEditorModes`](#kmawyeditormodes) | 전환 컨트롤이 제시할 화면. 하나만 주면 컨트롤이 사라집니다. |
+
+**React 패키지의 넷이 아니라 셋이고**, 빠진 하나는 `wysiwyg`입니다. 그려진 자리에서 문서를 편집하는 일은 전적으로 `contenteditable` 위에 서 있습니다. 브라우저가 컴포넌트에게 "누가 트리에 이런 짓을 하려 했다"고 알려 주고, 컴포넌트는 그것을 거절한 뒤 대신 마크다운을 고치는 구조입니다. Flutter에는 그런 것이 없습니다. `EditableText`는 문자열을 소유합니다. 텍스트 필드이기도 한 문서를 그린다는 것은 문서가 무엇인지에 대한 두 번째 모델을 갖는 일이고, 그 둘은 누군가 조금 특이한 것을 쓰는 첫 순간에 어긋납니다.
+
+:::
+
 #### Chrome
+
+::: fw react
 
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
@@ -74,7 +121,22 @@ import { MawyEditor } from 'mawy-react';
 | `status` | [`MawyEditorStatusOption`](#mawyeditorstatusoption) | `true` | 상태 표시줄이 세는 것. |
 | `lineNumbers` | `boolean` | `true` | 원문 왼쪽의 줄 번호 거터. |
 
+:::
+
+::: fw flutter
+
+| 인자 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `toolbar` | `List<MawyEditorToolbarItem>` | [`kMawyEditorToolbar`](#kmawyeditortoolbar) | 툴바에 어떤 컨트롤을 어떤 순서로 둘지. 없음은 `const []`. |
+| `status` | `List<MawyEditorStatusItem>` | [`kMawyEditorStatus`](#kmawyeditorstatus) | 상태 표시줄이 세는 것. 없음은 `const []`. |
+
+뷰어의 [`toolbar`](#mawyviewer)가 그런 이유와 같은 이유로 `true`가 아니라 리스트입니다. `lineNumbers`는 없습니다. 여기 원문 화면에는 줄 번호 거터가 없습니다.
+
+:::
+
 #### 열기와 저장
+
+::: fw react
 
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
@@ -83,13 +145,43 @@ import { MawyEditor } from 'mawy-react';
 
 이름은 파일을 열었다면 그 파일의 것이고, 아니면 문서의 첫 제목입니다. 에디터에 놓은 파일은 문서가 아니라 이미지입니다 — 이유는 [열기와 저장](../guide/editor#열기와-저장)에 있습니다.
 
-#### 미리보기와 팔레트
-
-`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`, `locale`은 [`MawyViewer`](#mawyviewer)에서와 정확히 같은 의미이고, 앞의 여섯은 미리보기로 그대로 전달됩니다. `directives`는 그려진 문서에도 닿습니다.
+:::
 
 ::: fw flutter
 
-`tokens`도 그중 하나입니다. 에디터 자신의 툴바와 상태 표시줄, 그리고 미리보기가 모두 그것이 돌려준 팔레트로 그려집니다.
+**여기에는 없고, 의도한 것입니다.** `onSave`도 `accept`도 없고, [`MawyEditorToolbarItem`](#mawyeditortoolbaritem)에 `open`과 `save`도 없습니다. 파일 선택기는 위젯이 아니라 플러그인이고, 애플리케이션이 이미 어느 것을 골랐는지는 마크다운 에디터가 대신 정할 일이 아닙니다. 이음매는 `value`와 `onChange`가 전부입니다. 파일을 읽고, 문자열을 건네고, 문자열을 돌려받으면 됩니다.
+
+:::
+
+#### 찾기
+
+::: fw flutter
+
+`Mod`+`F`가 원문 위에 찾기 바를 열고, [`MawyEditorToolbarItem.find`](#mawyeditortoolbaritem) 버튼도 같은 일을 합니다. `Enter`는 다음 일치, `Shift`+`Enter`는 이전 일치, `Escape`는 바를 닫고 포커스를 문서에 돌려줍니다.
+
+플랫폼 자신의 찾기는 텍스트가 놓인 페이지에는 닿아도 텍스트 필드 *안*에는 닿지 않는데, 원문 화면이 바로 그 텍스트 필드이기 때문에 여기 있습니다. 계산 부분도 `findMatches`, `matchFrom`, `replaceMatch`, `replaceAll`, `MawyMatch`로 내보내 두었습니다. 자기 UI에서 직접 몰고 싶은 애플리케이션을 위해서입니다.
+
+:::
+
+::: fw react
+
+`Mod`+`F`가 지금 보이는 화면 위에 찾기 바를 엽니다. [찾기와 바꾸기](../guide/editor#찾기와-바꾸기)를 보세요.
+
+:::
+
+#### 미리보기와 팔레트
+
+::: fw react
+
+`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`, `locale`은 [`MawyViewer`](#mawyviewer)에서와 정확히 같은 의미이고, 앞의 여섯은 미리보기로 그대로 전달됩니다. `directives`는 그려진 문서에도 닿습니다.
+
+:::
+
+::: fw flutter
+
+`parse`, `directives`, `highlight`, `onLinkTap`, `typography`, `defaultTypography`, `colorScheme`, `onColorSchemeChange`, `tokens`, `locale`은 [`MawyViewer`](#mawyviewer)에서와 정확히 같은 의미이고, 미리보기로 그대로 전달됩니다.
+
+`tokens`는 미리보기 너머까지 닿습니다. 에디터 자신의 툴바와 상태 표시줄과 찾기 바가 모두 그것이 돌려준 팔레트로 그려지므로, 에디터와 그것이 편집하는 문서가 서로 다른 두 팔레트가 되는 일은 없습니다.
 
 :::
 
@@ -276,6 +368,54 @@ type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 
 `split`이 이 목록 옆이 아니라 안에 있는 것은 독자가 그 컨트롤로 하는 일 때문입니다. 넷은 한 번에 하나씩 고르는 하나의 버튼 묶음이고, "둘 다"는 같은 질문에 대한 네 번째 답입니다.
 
+::: fw flutter
+
+이름은 **React 전용입니다.** Flutter 패키지는 아래 [`MawyEditorMode`](#mawyeditormode)라고 쓰고, 넷 중 셋을 가집니다.
+
+:::
+
+### `MawyEditorMode`
+
+::: fw flutter
+
+```dart
+enum MawyEditorMode { plain, split, preview }
+```
+
+문서를 어느 화면에서 보여줄지. 세 개의 에디터가 아니라 한 문서를 보는 세 가지 방식입니다 — [에디터](../guide/editor)를 보세요.
+
+- `plain` — 색이 입혀진 마크다운 원문을 텍스트로 편집.
+- `split` — 한쪽에 원문, 다른 쪽에 그려진 문서를 동시에. 기본값입니다.
+- `preview` — 그려진 문서만.
+
+`wysiwyg`는 없고, 앞으로도 없을 예정입니다. 이유는 위 [`MawyEditor`](#mawyeditor)에 있습니다.
+
+:::
+
+::: fw react
+
+**Flutter 전용입니다.** React 패키지는 같은 것을 [`MawyMode`](#mawymode)라고 쓰고, `'wysiwyg'`도 가집니다.
+
+:::
+
+### `kMawyEditorModes`
+
+::: fw flutter
+
+```dart
+const List<MawyEditorMode> kMawyEditorModes;
+```
+
+전환 컨트롤이 제시하는 순서대로 셋 전부이고, `modes`의 기본값입니다. 하나만 주면 컨트롤이 사라집니다.
+
+:::
+
+::: fw react
+
+**Flutter 전용입니다.** React 패키지의 `modes`는 배열을 받고 기본값은 넷 전부입니다 — [`MawyMode`](#mawymode)를 보세요.
+
+:::
+
 ### `MawyEditorToolbarItem`
 
 ```ts
@@ -315,7 +455,25 @@ type MawyEditorToolbarItem =
 type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
 ```
 
-`true`는 위 순서대로 전부, `false`는 툴바 없음, 배열은 정확히 그것들을 그 순서로.
+`true`는 위 순서대로 전부, `false`는 툴바 없음, 배열은 정확히 그것들을 그 순서로. **React 전용입니다** — Flutter의 `toolbar` 인자는 그냥 리스트이고, `true`가 뜻했을 것은 [`kMawyEditorToolbar`](#kmawyeditortoolbar)입니다.
+
+### `kMawyEditorToolbar`
+
+::: fw flutter
+
+```dart
+const List<MawyEditorToolbarItem> kMawyEditorToolbar;
+```
+
+툴바가 그리는 순서대로의 모든 컨트롤이며, `toolbar`의 기본값입니다. `const []`는 툴바 없음이고, 그 밖의 리스트는 정확히 그 컨트롤들을 정확히 그 순서로 뜻합니다.
+
+:::
+
+::: fw react
+
+**Flutter 전용입니다.** React 패키지는 같은 것을 `toolbar={true}`로 씁니다 — [`MawyEditorToolbarOption`](#mawyeditortoolbaroption)를 보세요.
+
+:::
 
 ### `MawyEditorStatusItem`
 
@@ -330,6 +488,26 @@ type MawyEditorStatusItem = 'position' | 'selection' | 'lines' | 'words' | 'char
 ```ts
 type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
 ```
+
+**React 전용입니다** — Flutter의 `status` 인자는 그냥 리스트이고, `true`가 뜻했을 것은 [`kMawyEditorStatus`](#kmawyeditorstatus)입니다.
+
+### `kMawyEditorStatus`
+
+::: fw flutter
+
+```dart
+const List<MawyEditorStatusItem> kMawyEditorStatus;
+```
+
+따로 말하지 않으면 상태 표시줄이 세는 것. `const []`는 상태 표시줄 없음입니다.
+
+:::
+
+::: fw react
+
+**Flutter 전용입니다.** React 패키지는 같은 것을 `status={true}`로 씁니다 — [`MawyEditorStatusOption`](#mawyeditorstatusoption)를 보세요.
+
+:::
 
 ### `MawyColorScheme`
 

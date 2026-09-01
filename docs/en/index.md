@@ -48,7 +48,7 @@ features:
 
 Mawy is in early development, and most of it works. A parser of ours reads CommonMark and GitHub's additions; `MawyViewer` draws the result; and `MawyEditor` puts the Markdown source, a live preview and a formatting toolbar around the same string. The demos on [the editor](./guide/editor) and [the viewer](./guide/viewer) pages are those components, running.
 
-It ships twice: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. They are one library rather than two — the Dart parser _is_ the TypeScript parser, and a check in the repository diffs both parsers' trees over every document it can find. The Flutter package is the viewer alone for now. Pick yours in the sidebar; it changes what every page here says.
+It ships twice: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. They are one library rather than two — the Dart parser _is_ the TypeScript parser, and a check in the repository diffs both parsers' trees over every document it can find. Both have the viewer and the editor; the Flutter editor has three surfaces where the React one has four, and says why. Pick yours in the sidebar; it changes what every page here says.
 
 The `wysiwyg` surface — editing the drawn document in place — is on the default list of surfaces now that the two things it could not do are done. `0.1.0` is on npm, and it is a `0.x`: the API can still change between minor versions.
 

@@ -19,7 +19,7 @@ Everything on this page exists and runs.
 
 ::: fw flutter
 
-The Flutter package is the viewer alone for now; the editor is the React package's. Everything on this page that is marked Flutter exists and runs.
+Everything on this page that is marked Flutter exists and runs. Where a name is React's alone, the section says so and says why.
 
 :::
 
@@ -29,13 +29,9 @@ The Flutter package is the viewer alone for now; the editor is the React package
 
 ### `MawyEditor`
 
-::: fw flutter
-
-**Not in this package.** `packages/flutter` ships the viewer; the editor is the React package's for now, because what the editing surfaces are built on — `contenteditable`, `beforeinput` and a DOM selection — has no Flutter equivalent a port would find. This section and the editor's types are React's. [`MawyViewer`](#mawyviewer) below has both halves.
-
-:::
-
 A Markdown editor with the viewer beside it. See [the editor](../guide/editor).
+
+::: fw react
 
 ```tsx
 import { MawyEditor } from 'mawy-react';
@@ -45,7 +41,23 @@ import { MawyEditor } from 'mawy-react';
 
 Every prop of `<div>` is accepted and forwarded, apart from `children` and `onChange`. A `ref` reaches the outermost element.
 
+:::
+
+::: fw flutter
+
+```dart
+import 'package:mawy/mawy.dart';
+
+MawyEditor(defaultValue: '# Hello', onChange: save);
+```
+
+Built on `package:flutter/widgets.dart` alone, like the viewer, and holding its own document unless it is handed one.
+
+:::
+
 #### The document
+
+::: fw react
 
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
@@ -55,7 +67,25 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 | `readOnly` | `boolean` | `false` | The document can still be read, selected and copied. |
 | `placeholder` | `string` | a localised prompt | Shown while the document is empty. |
 
+:::
+
+::: fw flutter
+
+| Argument | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `value` | `String?` | — | The document, when the application owns it. |
+| `defaultValue` | `String` | `''` | The document to start with, when the editor is to keep it. |
+| `onChange` | `ValueChanged<String>?` | — | Every change, held or handed over. |
+| `readOnly` | `bool` | `false` | The document can still be read, selected and copied. |
+| `placeholder` | `String?` | a localised prompt | Shown while the document is empty. |
+
+The two ways round are the ones every text field in Flutter offers, and they are the React package's two as well.
+
+:::
+
 #### Surfaces
+
+::: fw react
 
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
@@ -66,7 +96,24 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 
 `'wysiwyg'` draws the document and edits it in place. It is the first of the default list; leave it out of `modes` to not offer it.
 
+:::
+
+::: fw flutter
+
+| Argument | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `mode` | [`MawyEditorMode?`](#mawyeditormode) | — | Which surface, when the application owns it. |
+| `defaultMode` | `MawyEditorMode` | `MawyEditorMode.split` | Which surface to open on. |
+| `onModeChange` | `ValueChanged<MawyEditorMode>?` | — | Called when the reader picks a different one. |
+| `modes` | `List<MawyEditorMode>` | [`kMawyEditorModes`](#kmawyeditormodes) | Which surfaces the switch offers. Give it one and the switch disappears. |
+
+**Three surfaces rather than the React package's four**, and the missing one is `wysiwyg`. Editing a document where it is drawn rests entirely on `contenteditable` — a browser telling a component what somebody tried to do to a tree, so the component can refuse it and change the Markdown instead — and Flutter has nothing of the kind: an `EditableText` owns a string. Drawing a document that is also a text field would mean a second model of what the document is, and the two disagree the first time anybody writes something unusual.
+
+:::
+
 #### Chrome
+
+::: fw react
 
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
@@ -74,7 +121,22 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 | `status` | [`MawyEditorStatusOption`](#mawyeditorstatusoption) | `true` | What the status bar counts. |
 | `lineNumbers` | `boolean` | `true` | The gutter down the left of the source. |
 
+:::
+
+::: fw flutter
+
+| Argument | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `toolbar` | `List<MawyEditorToolbarItem>` | [`kMawyEditorToolbar`](#kmawyeditortoolbar) | Which controls the toolbar has, and in what order. `const []` for none. |
+| `status` | `List<MawyEditorStatusItem>` | [`kMawyEditorStatus`](#kmawyeditorstatus) | What the status bar counts. `const []` for none. |
+
+A list rather than a `true`, for the reason [`toolbar`](#mawyviewer) is one on the viewer. There is no `lineNumbers`: the source surface has no gutter here.
+
+:::
+
 #### Opening and saving
+
+::: fw react
 
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
@@ -83,13 +145,43 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 
 The name is the file's own when one was opened, and the document's first heading otherwise. A file dropped on the editor is an image rather than a document — see [opening and saving](../guide/editor#opening-and-saving) for why.
 
-#### The preview, and the palette
-
-`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first six are passed straight through to the preview. `directives` reaches the drawn document as well.
+:::
 
 ::: fw flutter
 
-`tokens` is one of them: the editor's own toolbar and status bar are drawn from the palette it returns, and so is the preview.
+**Not here, and deliberately.** There is no `onSave`, no `accept`, and no `open` or `save` on [`MawyEditorToolbarItem`](#mawyeditortoolbaritem). A file picker is a plugin rather than a widget, and which one an application has already chosen is not a decision a Markdown editor should make on its behalf. `value` and `onChange` are the whole of the seam: read the file, hand over the string, take the string back.
+
+:::
+
+#### Finding
+
+::: fw flutter
+
+`Mod`+`F` opens a find bar over the source, and [`MawyEditorToolbarItem.find`](#mawyeditortoolbaritem) is the button that does the same thing. `Enter` is the next match, `Shift`+`Enter` the one before, `Escape` closes it and gives the focus back to the document.
+
+It is there because a platform's own find reaches a page of text and not the inside of a text field, and the source surface is one. The arithmetic is exported as well — `findMatches`, `matchFrom`, `replaceMatch`, `replaceAll` and `MawyMatch` — for an application that would rather drive it from its own chrome.
+
+:::
+
+::: fw react
+
+`Mod`+`F` opens the find bar over whichever surface is showing. See [finding and replacing](../guide/editor#finding-and-replacing).
+
+:::
+
+#### The preview, and the palette
+
+::: fw react
+
+`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first six are passed straight through to the preview. `directives` reaches the drawn document as well.
+
+:::
+
+::: fw flutter
+
+`parse`, `directives`, `highlight`, `onLinkTap`, `typography`, `defaultTypography`, `colorScheme`, `onColorSchemeChange`, `tokens` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and are passed straight through to the preview.
+
+`tokens` reaches further than the preview: the editor's own toolbar, status bar and find bar are drawn from the palette it returns, so an editor and the document it is editing are never two palettes.
 
 :::
 
@@ -276,6 +368,54 @@ Which surface a document is shown on. These are views of one document rather tha
 
 `split` is on this list rather than beside it because of what a reader does with the control: the four are one group of buttons, one at a time, and "both" is the fourth answer to the same question.
 
+::: fw flutter
+
+**React only** as a name. The Flutter package spells it [`MawyEditorMode`](#mawyeditormode) below, and has three of the four.
+
+:::
+
+### `MawyEditorMode`
+
+::: fw flutter
+
+```dart
+enum MawyEditorMode { plain, split, preview }
+```
+
+Which surface a document is shown on. Views of one document rather than three editors — see [the editor](../guide/editor).
+
+- `plain` — the Markdown source, coloured, edited as text.
+- `split` — the source on one side and the drawn document on the other, at once. The default.
+- `preview` — the drawn document alone.
+
+There is no `wysiwyg`, and there is not going to be. See [`MawyEditor`](#mawyeditor) above for why.
+
+:::
+
+::: fw react
+
+**Flutter only.** The React package spells the same thing [`MawyMode`](#mawymode), and has `'wysiwyg'` as well.
+
+:::
+
+### `kMawyEditorModes`
+
+::: fw flutter
+
+```dart
+const List<MawyEditorMode> kMawyEditorModes;
+```
+
+All three in the order the switch offers them, and the default for `modes`. Give it one and the switch disappears.
+
+:::
+
+::: fw react
+
+**Flutter only.** The React package's `modes` takes an array and defaults to all four — see [`MawyMode`](#mawymode).
+
+:::
+
 ### `MawyEditorToolbarItem`
 
 ```ts
@@ -315,7 +455,25 @@ One control on the editor's toolbar. Everything except `mode`, `find`, `open`, `
 type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
 ```
 
-`true` is every control in the order above; `false` is no toolbar; an array is exactly those, in that order.
+`true` is every control in the order above; `false` is no toolbar; an array is exactly those, in that order. **React only** — the Flutter `toolbar` argument is a plain list, and [`kMawyEditorToolbar`](#kmawyeditortoolbar) is what `true` would have meant.
+
+### `kMawyEditorToolbar`
+
+::: fw flutter
+
+```dart
+const List<MawyEditorToolbarItem> kMawyEditorToolbar;
+```
+
+Every control in the order the toolbar draws them, and the default for `toolbar`. `const []` is no toolbar at all, and any other list is exactly those controls in exactly that order.
+
+:::
+
+::: fw react
+
+**Flutter only.** The React package spells the same thing `toolbar={true}` — see [`MawyEditorToolbarOption`](#mawyeditortoolbaroption).
+
+:::
 
 ### `MawyEditorStatusItem`
 
@@ -330,6 +488,26 @@ What the editor counts along its bottom edge. `characters` are code points, so a
 ```ts
 type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
 ```
+
+**React only** — the Flutter `status` argument is a plain list, and [`kMawyEditorStatus`](#kmawyeditorstatus) is what `true` would have meant.
+
+### `kMawyEditorStatus`
+
+::: fw flutter
+
+```dart
+const List<MawyEditorStatusItem> kMawyEditorStatus;
+```
+
+What the status bar counts unless it is told otherwise. `const []` is no status bar at all.
+
+:::
+
+::: fw react
+
+**Flutter only.** The React package spells the same thing `status={true}` — see [`MawyEditorStatusOption`](#mawyeditorstatusoption).
+
+:::
 
 ### `MawyColorScheme`
 
