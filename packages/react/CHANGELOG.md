@@ -6,6 +6,14 @@
 
 ### Added
 
+- **A size budget, and a stylesheet with its prose taken out.** `npm run size` bundles the published files for real and compares the result to `size-budget.json`, which CI now fails a change for going over. What it measures is what a consumer's bundler produces: React external because an application already has it, `lucide-react` counted because it arrives with this, and gzip because every server on the path compresses.
+
+  Gzipped, that is **21.9 kB for `MawyViewer`, 37.4 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.2 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
+
+  The stylesheet is now minified on its way into `dist/`. Two fifths of `styles.css` is prose written for somebody reading the source, and a reader of a page was paying 3.7 kB gzipped for comments they cannot see; `src/styles.css` is still the file to read and to edit, and what ships is the same rules in the same order. The build checks the two things that would make that a bad trade: every `--mawy-*` custom property still declared, and every `:where()` still a `:where()`, because those are the resets and a reset that gained specificity is one that starts beating the page it was dropped into.
+
+  Also checked there, because it is the failure a bundler hides: Node's own resolver, on every entry point the package claims to have. A bundler forgives a specifier that a server render does not.
+
 - **How much CommonMark, as a number.** The specification's own 652 examples are run at the parser on every change, and it answers 605 of them. The other 47 are written down in `test/internal/markdown/commonmark.test.ts`, one line each with the reason it is there, so the list can only get shorter deliberately — and a fix that is not recorded fails the same test.
 
   Three of them are a decision rather than a shortfall: every URL is checked against a scheme allowlist, so `<made-up-scheme://foo>` is drawn as the words the author wrote rather than as a link. The rest are edges — a tab inside a list item, a character reference in a link destination, a list counted loose where the specification counts it tight, a fence whose info string holds a backtick.

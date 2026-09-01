@@ -59,6 +59,29 @@ The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_i
 
 :::
 
+### How big it is
+
+::: fw react
+
+| What you import         | gzipped |
+| ----------------------- | ------- |
+| `MawyViewer`            | 21.9 kB |
+| `MawyEditor`            | 37.4 kB |
+| `mawy-react/highlight`  | 2.6 kB  |
+| `mawy-react/styles.css` | 5.2 kB  |
+
+React is not counted, because your application already has it; `lucide-react` is, because it arrives with this. **A page that only reads documents does not ship the editor** — the toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, and the fifteen kilobytes between the first two rows are what that is worth.
+
+The numbers are a real bundle of the published files rather than an estimate, they are recorded in `packages/react/size-budget.json`, and CI fails a change that goes over one. So they are what you get rather than what we hope.
+
+:::
+
+::: fw flutter
+
+An app bundle is not measured the way a page is, and the one number worth knowing here is the icon font's — about 3 MB, as above. This section is the React package's.
+
+:::
+
 ## Wiring up
 
 ::: fw react

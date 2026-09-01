@@ -41,6 +41,11 @@ jobs:
       # fails here rather than in a release.
       - name: Build
         run: npm run build
+      # What a consumer's bundle actually gains, against a recorded ceiling. It
+      # runs here rather than in its own job because it needs `dist/`, which the
+      # step above is the only one that makes.
+      - name: Size
+        run: npm run size
 
   run-test-react:
     runs-on: ${{ matrix.os }}

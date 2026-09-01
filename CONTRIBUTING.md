@@ -74,7 +74,11 @@ npm run lint         # ESLint
 npx prettier . --check
 npm run typecheck    # tsc, source and tests
 npm test             # Vitest, in a real browser
+npm run build        # what `npm publish` would compile
+npm run size         # a real bundle of `dist/`, against `size-budget.json`
 ```
+
+`npm run size` needs `npm run build` to have run, since it bundles what would be published rather than what is in `src/`. It fails a change that puts a scenario more than two per cent over the number recorded in `size-budget.json`; if that is the change you meant, `npm run size -- --update` writes the new numbers back and they go in the same commit. The figures on the site's [getting started](https://mawy.cdget.com/guide/getting-started) page are these, so a change that moves them moves those too.
 
 For the Flutter package:
 
