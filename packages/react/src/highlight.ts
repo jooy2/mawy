@@ -329,6 +329,38 @@ const sql: Rule[] = [
   PUNCTUATION
 ];
 
+/**
+ * Dart, which this repository is half written in.
+ *
+ * `clike` would very nearly do, and the two things it would miss are the two a
+ * Dart file has on nearly every page: a string written across three quotes, and
+ * an annotation. `void`, `dynamic` and the four number-ish names are types
+ * rather than keywords, the way TypeScript's are — and every other type is
+ * caught by the capital letter, which Dart's own style guide asks for.
+ */
+const dart: Rule[] = [
+  BLOCK_COMMENT,
+  lineComment('//'),
+  { match: /r?"""[\s\S]*?(?:"""|$)|r?'''[\s\S]*?(?:'''|$)/y, kind: 'string' },
+  { match: /r?"(?:\\[\s\S]|[^"\\\n])*"?/y, kind: 'string' },
+  { match: /r?'(?:\\[\s\S]|[^'\\\n])*'?/y, kind: 'string' },
+  { match: /@[\w.]+/y, kind: 'attribute' },
+  NUMBER,
+  identifier(
+    words(
+      'abstract as assert async await base break case catch class const continue covariant ' +
+        'default deferred do else enum export extends extension external factory final finally ' +
+        'for get hide if implements import in interface is late library mixin new on operator ' +
+        'part required rethrow return sealed set show static switch sync this throw try typedef ' +
+        'var when while with yield'
+    ),
+    words('true false null this super'),
+    words('bool double int num dynamic void Never')
+  ),
+  OPERATOR,
+  PUNCTUATION
+];
+
 const go = clike({
   keywords:
     'break case chan const continue default defer else fallthrough for func go goto if import ' +
@@ -391,6 +423,7 @@ const LANGUAGES: Record<string, Rule[]> = {
   css,
   scss: css,
   less: css,
+  dart,
   bash: shell,
   sh: shell,
   shell: shell,

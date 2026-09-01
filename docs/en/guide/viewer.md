@@ -170,7 +170,7 @@ MawyViewer(value: document, highlight: mawyHighlighter);
 
 `mawyHighlighter` is this package's own, and it is the React package's own: `lib/src/highlight.dart` is `src/highlight.ts`, rule for rule, and `tool/parity.dart` diffs every token the two produce over a piece of every language either of them claims. So a code block coloured in a browser is coloured the same way in an app, which is the same promise the parser makes.
 
-The languages are the ones a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
+The languages are the ones a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `dart`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
 
 For anything more than that, `MawyHighlighter` is the whole interface and any grammar behind it is a few lines:
 
@@ -205,7 +205,7 @@ Nothing is coloured by default, and that is not an omission. A highlighter is th
 />
 ```
 
-`mawy-react/highlight` is a separate entry point, so an application that never mentions it never ships it. What is in it is Mawy's own highlighter, for the languages a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
+`mawy-react/highlight` is a separate entry point, so an application that never mentions it never ships it. What is in it is Mawy's own highlighter, for the languages a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `dart`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
 
 For anything more than that, `MawyHighlighter` is the whole interface and Shiki or Prism behind it is a few lines:
 

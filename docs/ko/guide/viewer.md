@@ -170,7 +170,7 @@ MawyViewer(value: document, highlight: mawyHighlighter);
 
 `mawyHighlighter`는 이 패키지의 것이자 React 패키지의 것입니다. `lib/src/highlight.dart`는 규칙 하나하나가 `src/highlight.ts`이고, `tool/parity.dart`가 양쪽이 안다고 주장하는 모든 언어의 조각에 대해 두 쪽이 내놓는 토큰을 전부 diff합니다. 그래서 브라우저에서 색이 입혀진 코드 블록은 앱에서도 같은 방식으로 색이 입혀집니다. 파서가 하는 것과 같은 약속입니다.
 
-언어는 문서가 흔히 보여주는 것들입니다. `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp`, 그리고 각각이 함께 답하는 이름들. 이것은 의도적으로, 그리고 앞으로도 **근사치**입니다. 중괄호가 든 템플릿 리터럴이나 나눗셈처럼 읽히는 정규식은 조금 어긋나게 나오고, 그건 아무 문제가 아닙니다. 색은 반드시 맞아야 하는 종류의 답이 아니니까요.
+언어는 문서가 흔히 보여주는 것들입니다. `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `dart`, `go`, `rust`, `java`, `c`, `cpp`, 그리고 각각이 함께 답하는 이름들. 이것은 의도적으로, 그리고 앞으로도 **근사치**입니다. 중괄호가 든 템플릿 리터럴이나 나눗셈처럼 읽히는 정규식은 조금 어긋나게 나오고, 그건 아무 문제가 아닙니다. 색은 반드시 맞아야 하는 종류의 답이 아니니까요.
 
 그 이상이 필요하면 `MawyHighlighter`가 인터페이스 전부이고, 그 뒤에 어떤 문법을 두든 몇 줄입니다.
 
@@ -205,7 +205,7 @@ class MyHighlighter extends MawyHighlighter {
 />
 ```
 
-`mawy-react/highlight`는 별도의 진입점이라, 언급한 적 없는 애플리케이션의 번들에는 들어가지 않습니다. 안에 든 것은 Mawy가 직접 만든 하이라이터이고, 문서가 흔히 보여주는 언어들 — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp`과 그것들이 함께 답하는 이름들 — 을 압니다. **근사적이고**, 의도적으로 그리고 앞으로도 그렇습니다. 중괄호가 든 템플릿 리터럴이나 나눗셈처럼 읽히는 정규식은 조금씩 틀리게 나오고, 그건 문제가 되지 않습니다. 색은 반드시 맞아야 하는 종류의 답이 아니니까요.
+`mawy-react/highlight`는 별도의 진입점이라, 언급한 적 없는 애플리케이션의 번들에는 들어가지 않습니다. 안에 든 것은 Mawy가 직접 만든 하이라이터이고, 문서가 흔히 보여주는 언어들 — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `dart`, `go`, `rust`, `java`, `c`, `cpp`과 그것들이 함께 답하는 이름들 — 을 압니다. **근사적이고**, 의도적으로 그리고 앞으로도 그렇습니다. 중괄호가 든 템플릿 리터럴이나 나눗셈처럼 읽히는 정규식은 조금씩 틀리게 나오고, 그건 문제가 되지 않습니다. 색은 반드시 맞아야 하는 종류의 답이 아니니까요.
 
 그 이상이 필요하면 `MawyHighlighter`가 인터페이스 전부이고, 그 뒤에 Shiki나 Prism을 두는 것은 몇 줄입니다.
 

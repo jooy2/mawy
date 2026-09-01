@@ -27,13 +27,6 @@ Two rules keep it honest:
   gestures have to be wired here. Everything the toolbar does to a selection is
   reachable only by keyboard until they are.
 
-- **Neither highlighter knows Dart.** `packages/react/src/highlight.ts` and
-  `packages/flutter/lib/src/highlight.dart` answer to 48 names between
-  JavaScript and C#, and `dart` is not one of them — so the Flutter gallery's own
-  editor sample, which is a fenced `dart` block, is drawn plain. A language is a
-  grammar in both files and a case in `packages/flutter/tool/code.json`, and the
-  parity check diffs every token the two produce.
-
 - **The editor's toolbar wraps to a second row and spills out of it.**
   `.mawy-toolbar-editor` in `packages/react/src/styles.css` is `flex-wrap: wrap`
   inside a `.mawy-toolbar` that is laid out as one row, so a narrow editor gets

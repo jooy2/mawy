@@ -353,6 +353,39 @@ final List<_Rule> _sql = <_Rule>[
   _punctuation,
 ];
 
+/// Dart, which this repository is half written in.
+///
+/// `_clike` would very nearly do, and the two things it would miss are the two
+/// a Dart file has on nearly every page: a string written across three quotes,
+/// and an annotation. `void`, `dynamic` and the four number-ish names are types
+/// rather than keywords, the way TypeScript's are — and every other type is
+/// caught by the capital letter, which Dart's own style guide asks for.
+final List<_Rule> _dart = <_Rule>[
+  _blockComment,
+  _lineComment('//'),
+  _Rule(
+    RegExp('r?"""[\\s\\S]*?(?:"""|\$)|r?\'\'\'[\\s\\S]*?(?:\'\'\'|\$)'),
+    MawyCodeTokenKind.string,
+  ),
+  _Rule(RegExp(r'r?"(?:\\[\s\S]|[^"\\\n])*"?'), MawyCodeTokenKind.string),
+  _Rule(RegExp(r"r?'(?:\\[\s\S]|[^'\\\n])*'?"), MawyCodeTokenKind.string),
+  _Rule(RegExp(r'@[\w.]+'), MawyCodeTokenKind.attribute),
+  _number,
+  _identifier(
+    _words(
+      'abstract as assert async await base break case catch class const continue covariant '
+      'default deferred do else enum export extends extension external factory final finally '
+      'for get hide if implements import in interface is late library mixin new on operator '
+      'part required rethrow return sealed set show static switch sync this throw try typedef '
+      'var when while with yield',
+    ),
+    _words('true false null this super'),
+    _words('bool double int num dynamic void Never'),
+  ),
+  _operator,
+  _punctuation,
+];
+
 final List<_Rule> _go = _clike(
   keywords:
       'break case chan const continue default defer else fallthrough for func go goto if import '
@@ -414,6 +447,7 @@ final Map<String, List<_Rule>> _languages = <String, List<_Rule>>{
   'css': _css,
   'scss': _css,
   'less': _css,
+  'dart': _dart,
   'bash': _shell,
   'sh': _shell,
   'shell': _shell,

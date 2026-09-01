@@ -36,6 +36,10 @@
   "-- a comment\nSELECT COUNT(*) AS n, t.name\nFROM things t /* block */\nINNER JOIN other o ON o.id = t.id\nWHERE t.x > 10 AND t.y IS NOT NULL\nORDER BY n DESC;\n"
  ],
  [
+  "dart",
+  "/// A doc comment.\n/* a block\n   comment */\n@immutable\nabstract class Thing<T extends Object?> implements Other {\n  const Thing(this.name, {this.count = 0, required this.on});\n\n  final String name; // trailing\n  final int count;\n  final void Function(double x)? on;\n\n  static const List<num> sizes = <num>[0x1f, .5e-3, 10];\n  bool get empty => count == 0 && name.isEmpty;\n\n  Future<void> run() async {\n    final raw = r'it\\'s raw';\n    final long = '''\na line\nand another\n''';\n    print(\"$name: ${sizes.length} $long $raw\");\n  }\n}\n"
+ ],
+ [
   "go",
   "package main\n\nimport \"fmt\"\n\nfunc main() {\n\t// hello\n\tvar x int = 1\n\tif x != 0 { fmt.Println(\"hi\", x) }\n}\n"
  ],

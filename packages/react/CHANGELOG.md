@@ -6,6 +6,12 @@
 
 ### Added
 
+- **The highlighter knows Dart.** It is the one language this library is written in that the highlighter it ships could not colour, which showed on the documentation site: every Flutter example on it is a fenced `dart` block, and every one of them was drawn plain.
+
+  Doc comments, annotations, strings written across three quotes, and `void`, `dynamic`, `bool`, `int`, `double` and `num` as types rather than keywords — the same decision TypeScript's `void` already gets here. Every other type is caught by the capital letter, which Dart's own style guide asks for.
+
+  It is a grammar in both packages and a case in `tool/code.json`, so the parity check diffs every token the two produce over it. The entry point goes from 2.6 kB gzipped to 2.8 kB, and the viewer and the editor do not move — nothing in either reaches the highlighter unless an application names it.
+
 - **One more of CommonMark, and the number moved from 639 to 640.** The last one about looseness, which is the question of whether a list's items are paragraphs or lines. A blank line loosens the list it is in, and the test for which blank lines count was "between two of the item's own blocks" — which a reference definition falls outside of, being taken off the paragraph above it before anything counts what is left. An item ending in one had a blank line with a block above it and nothing below, and the list stayed tight.
 
   It is "past the end of one of them and inside none of them" now. Inside is what the old test was really for: a blank line in the middle of a nested list belongs to that list and loosens it there, and one in the middle of a fenced block is code. Neither says anything about the item holding it.
