@@ -59,6 +59,11 @@ parsers' trees over every awkward case and every Markdown file in the
 repository, so a tree that is right in TypeScript is the tree this one
 produces.
 
+Code blocks are coloured by whatever `highlight` is given, and by nothing at all
+by default. `mawyHighlighter` is this package's own — the React package's
+highlighter in Dart, diffed against it token for token by `tool/parity.dart` —
+and an application that never names it never carries the grammars behind it.
+
 Raw HTML is shown as the characters it was written with, and there is no option
 to make it otherwise: Flutter has no HTML to draw it as. That is the one place
 this package and the React one differ about a document, and it is a difference

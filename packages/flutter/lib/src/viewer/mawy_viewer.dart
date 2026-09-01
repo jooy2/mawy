@@ -61,6 +61,7 @@ class MawyViewer extends StatefulWidget {
     this.locale = MawyLocale.en,
     this.onLinkTap,
     this.directives,
+    this.highlight,
     this.padding,
     this.scrollController,
   });
@@ -124,6 +125,24 @@ class MawyViewer extends StatefulWidget {
   /// A name that is not here is drawn as the characters it was written with,
   /// the same answer raw HTML gets.
   final Map<String, MawyDirectiveBuilder>? directives;
+
+  /// What colours a code block.
+  ///
+  /// Nothing by default, and that is the same decision the React package makes
+  /// for the same reason: a highlighter is the largest thing a Markdown
+  /// renderer can be made to carry and most documents have nothing in them to
+  /// colour. [mawyHighlighter] is this package's own — pass it and a build
+  /// keeps the grammars, leave it out and a build never has them.
+  ///
+  /// ```dart
+  /// MawyViewer(value: document, highlight: mawyHighlighter)
+  /// ```
+  ///
+  /// The one thing a highlighter has to promise is that its tokens *are* the
+  /// code. What it hands back is joined together and checked against what went
+  /// in, and a block whose tokens do not add up is drawn plain — colour is not
+  /// worth a screen that says something the document does not.
+  final MawyHighlighter? highlight;
 
   /// The space around the document. The React package's own numbers otherwise.
   final EdgeInsetsGeometry? padding;
@@ -267,6 +286,7 @@ class _MawyViewerState extends State<MawyViewer> {
       },
       onLinkTap: widget.onLinkTap,
       directives: widget.directives,
+      highlighter: widget.highlight,
       source: widget.value,
       recognizers: _recognizers,
     );

@@ -229,7 +229,8 @@ Flutter 패키지에는 아직 에디터가 없고, 이유는 아무도 손을 �
 | `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer) |
 | `parseMarkdown` | 파서, 그리고 그것이 만드는 `Md*` 트리 전부 |
 | `MawyTokens` | 팔레트. `MawyTokens.light`와 `MawyTokens.dark` |
-| 타입 | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem` |
+| `mawyHighlighter` | 신택스 하이라이터. 지목해야만 빌드에 남습니다 |
+| 타입 | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind` |
 
 import 하나면 전부입니다. `package:mawy/mawy.dart`.
 

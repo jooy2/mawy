@@ -34,10 +34,19 @@ class MawyRenderContext {
     this.directives,
     this.source,
     this.recognizers,
+    this.highlighter,
   });
 
   /// The palette.
   final MawyTokens tokens;
+
+  /// What colours a code block, if an application asked for one.
+  ///
+  /// `null` in an application that never named one, which is the default and is
+  /// why nothing in this package reaches [mawyHighlighter] on its own: a Dart
+  /// build drops what nothing references, and a viewer that mentioned it would
+  /// make every application carry the tables behind it.
+  final MawyHighlighter? highlighter;
 
   /// How the document is set.
   final MawyTypography typography;
@@ -561,6 +570,59 @@ Widget _block(
  * Code
  * ---------------------------------------------------------------------- */
 
+/// The code, coloured if there is anything to colour it with.
+///
+/// One span when there is not, which is the same drawing the block had before
+/// a highlighter was ever an argument.
+InlineSpan _code(String code, String? lang, MawyRenderContext context, TextStyle style) {
+  final MawyHighlighter? highlighter = context.highlighter;
+
+  if (highlighter == null || lang == null || code.isEmpty || !highlighter.supports(lang)) {
+    return TextSpan(text: code, style: style);
+  }
+
+  final List<MawyCodeToken> tokens = highlighter.highlight(code, lang);
+
+  // Tokens, checked against the code they claim to be. A highlighter that drops
+  // a character or invents one would have the screen showing something the
+  // document does not say, and colour is not worth that — so tokens that do not
+  // join back into the code exactly are thrown away and the block is drawn
+  // plain.
+  if (tokens.map((MawyCodeToken token) => token.text).join() != code) {
+    return TextSpan(text: code, style: style);
+  }
+
+  return TextSpan(
+    style: style,
+    children: <InlineSpan>[
+      for (final MawyCodeToken token in tokens)
+        TextSpan(text: token.text, style: _codeColour(token.kind, context.tokens)),
+    ],
+  );
+}
+
+/// Which of the eight colours a name is drawn in.
+///
+/// Thirteen names and eight colours, exactly as `styles.css` pairs them: a
+/// palette with a separate colour for every name is a code block nobody reads.
+TextStyle? _codeColour(MawyCodeTokenKind? kind, MawyTokens tokens) => switch (kind) {
+  null => null,
+  MawyCodeTokenKind.comment => TextStyle(
+    color: tokens.highlightComment,
+    fontStyle: FontStyle.italic,
+  ),
+  MawyCodeTokenKind.string || MawyCodeTokenKind.regex => TextStyle(color: tokens.highlightString),
+  MawyCodeTokenKind.number ||
+  MawyCodeTokenKind.constant => TextStyle(color: tokens.highlightNumber),
+  MawyCodeTokenKind.keyword => TextStyle(color: tokens.highlightKeyword),
+  MawyCodeTokenKind.type => TextStyle(color: tokens.highlightType),
+  MawyCodeTokenKind.function || MawyCodeTokenKind.tag => TextStyle(color: tokens.highlightFunction),
+  MawyCodeTokenKind.variable ||
+  MawyCodeTokenKind.attribute => TextStyle(color: tokens.highlightVariable),
+  MawyCodeTokenKind.operator ||
+  MawyCodeTokenKind.punctuation => TextStyle(color: tokens.highlightPunctuation),
+};
+
 class _CodeBlock extends StatefulWidget {
   const _CodeBlock({required this.block, required this.context});
 
@@ -600,12 +662,16 @@ class _CodeBlockState extends State<_CodeBlock> {
               em * 1.05,
               em * 0.95,
             ),
-            child: Text(
-              widget.block.value,
-              style: _codeStyle(
+            child: Text.rich(
+              _code(
+                widget.block.value,
+                lang,
                 context,
-                context.body,
-              ).copyWith(backgroundColor: null, fontSize: em * 0.855, height: 1.6),
+                _codeStyle(
+                  context,
+                  context.body,
+                ).copyWith(backgroundColor: null, fontSize: em * 0.855, height: 1.6),
+              ),
             ),
           ),
         ),

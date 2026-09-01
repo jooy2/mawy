@@ -14,6 +14,9 @@
  * one. It lives beside the Dart half because one list read by both is the whole
  * point; two would be two corpora that agree until they do not.
  *
+ * The highlighter is diffed alongside it, over `tool/code.json`, for exactly
+ * the same reason: it is also one grammar written twice.
+ *
  *     cd packages/react && node scripts/parity.mjs > /tmp/react.json
  *     cd ../flutter && dart run tool/parity.dart > /tmp/flutter.json
  *     diff /tmp/react.json /tmp/flutter.json
@@ -22,6 +25,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseMarkdown } from '../src/internal/markdown/parse.ts';
+import { mawyHighlighter } from '../src/highlight.ts';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptsDir, '../../..');
@@ -102,4 +106,20 @@ const trees = corpus().map((source) => {
   };
 });
 
-process.stdout.write(JSON.stringify(trees, null, 1));
+/**
+ * The highlighter's half of the same question.
+ *
+ * `src/highlight.ts` and `lib/src/highlight.dart` are one grammar written
+ * twice, the same way the parser is, and they drift for the same reason — so
+ * they are diffed over `packages/flutter/tool/code.json`, which is a piece of
+ * every language either of them claims to know plus two that nobody does.
+ */
+const highlights = JSON.parse(
+  readFileSync(resolve(rootDir, 'packages/flutter/tool/code.json'), 'utf8')
+).map(([language, code]) => ({
+  language,
+  supported: mawyHighlighter.supports(language),
+  tokens: mawyHighlighter.highlight(code, language).map((token) => [token.kind ?? '', token.text])
+}));
+
+process.stdout.write(JSON.stringify({ trees, highlights }, null, 1));

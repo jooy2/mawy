@@ -45,6 +45,8 @@ cd ../flutter && dart run tool/parity.dart > /tmp/flutter.json
 diff /tmp/react.json /tmp/flutter.json
 ```
 
+The highlighter goes through the same check in the same run: `src/highlight.ts` and `lib/src/highlight.dart` are one grammar written twice, diffed over `tool/code.json`, which holds a piece of every language either of them claims to know.
+
 CI runs it on every change to either parser. Two implementations of CommonMark drift the moment nobody is comparing them, and a document that means one thing in a browser and another in an app is the bug this whole library exists to not have. **A change to one parser is a change to both**, and the diff is how you find out you forgot.
 
 **And the specification is run at the parser as well.** `packages/react/test/internal/markdown/commonmark.test.ts` runs all 652 of CommonMark's own examples, answers 612 of them, and writes down the other 40 with the reason each one is there. A change that fixes one is a line deleted from that list; a change that breaks one is a line the test tells you to add and you should not. The suite is run against the TypeScript parser alone, because parity above already says the Dart one produces the same tree.

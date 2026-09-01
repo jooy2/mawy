@@ -162,7 +162,35 @@ Mawy : 이것. : 그리고 그 옆의 에디터.
 
 ::: fw flutter
 
-Flutter 패키지는 지금 코드 블록을 색 없이 그립니다. `MawyHighlighter`는 React의 타입이고, Dart 쪽은 그것을 번역한 것이 아니라 자기 모양을 갖게 될 것입니다. 그래서 이 절의 나머지는 React 패키지의 것이고, 그 모양은 거기서부터 따져 나가게 됩니다.
+기본값은 색 없음이고, 그건 빠뜨린 것이 아닙니다. 하이라이터는 마크다운 렌더러가 짊어질 수 있는 가장 큰 것이고, 대부분의 문서에는 색을 입힐 것이 아예 없습니다. 그래서 인자이고, 하나도 지목하지 않은 애플리케이션은 그 뒤의 문법 표들을 아예 싣지 않습니다. Dart 빌드는 아무도 참조하지 않는 것을 떨어뜨리니까요.
+
+```dart
+MawyViewer(value: document, highlight: mawyHighlighter);
+```
+
+`mawyHighlighter`는 이 패키지의 것이자 React 패키지의 것입니다. `lib/src/highlight.dart`는 규칙 하나하나가 `src/highlight.ts`이고, `tool/parity.dart`가 양쪽이 안다고 주장하는 모든 언어의 조각에 대해 두 쪽이 내놓는 토큰을 전부 diff합니다. 그래서 브라우저에서 색이 입혀진 코드 블록은 앱에서도 같은 방식으로 색이 입혀집니다. 파서가 하는 것과 같은 약속입니다.
+
+언어는 문서가 흔히 보여주는 것들입니다. `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp`, 그리고 각각이 함께 답하는 이름들. 이것은 의도적으로, 그리고 앞으로도 **근사치**입니다. 중괄호가 든 템플릿 리터럴이나 나눗셈처럼 읽히는 정규식은 조금 어긋나게 나오고, 그건 아무 문제가 아닙니다. 색은 반드시 맞아야 하는 종류의 답이 아니니까요.
+
+그 이상이 필요하면 `MawyHighlighter`가 인터페이스 전부이고, 그 뒤에 어떤 문법을 두든 몇 줄입니다.
+
+```dart
+class MyHighlighter extends MawyHighlighter {
+  const MyHighlighter();
+
+  @override
+  bool supports(String language) => language == 'dart';
+
+  @override
+  List<MawyCodeToken> highlight(String code, String language) => tokensFor(code);
+}
+```
+
+이것은 **마크업이 아니라 토큰**이고, 라이브러리의 나머지가 딛고 선 것과 같은 결정입니다. 하이라이터가 돌려주는 것은 글자와 이름뿐이고 — `keyword`, `string`, `comment`, 그리고 열 개 더 — 그 각각이 무엇이 될지는 이 패키지가 정합니다. 그래서 어떤 종류의 마크업도 화면에 닿지 않고, 하이라이터가 틀렸다고 해서 문서에 무언가를 집어넣을 수는 없습니다.
+
+하이라이터가 지켜야 할 약속은 하나, 그 토큰들이 **곧** 그 코드라는 것입니다. 돌아온 것을 이어 붙여 들어간 것과 대조하고, 셈이 맞지 않는 블록은 색 없이 그립니다. 문서가 말하지 않은 것을 말하는 화면과 바꿀 만큼 색이 중요하지는 않습니다.
+
+색 자체는 `MawyTokens`의 여덟 필드입니다. `highlightComment`, `highlightString`, `highlightNumber`, `highlightKeyword`, `highlightType`, `highlightFunction`, `highlightVariable`, `highlightPunctuation` — React 패키지가 `--mawy-hl-*`로 선언하는 그 여덟 개와 값 하나하나까지 같습니다.
 
 :::
 

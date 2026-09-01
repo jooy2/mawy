@@ -23,6 +23,8 @@
 /// ```
 library;
 
+export 'src/code.dart';
+export 'src/highlight.dart' show kMawyHighlightLanguages, mawyHighlighter;
 export 'src/markdown/ast.dart';
 export 'src/markdown/parse.dart' show MawyParseOptions, parseMarkdown, slugify;
 export 'src/theme/tokens.dart';

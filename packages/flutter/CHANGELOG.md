@@ -6,6 +6,20 @@
 
 ### Added
 
+- **A syntax highlighter, and a code block that uses it.** `mawyHighlighter` is the React package's `src/highlight.ts` in Dart — the same grammars, the same rules, the same approximations — and `tool/parity.dart` now diffs every token the two produce over a piece of every language either of them claims. A code block coloured in a browser is coloured the same way in an app, which is the promise the parser already made and the one this makes now.
+
+  ```dart
+  MawyViewer(value: document, highlight: mawyHighlighter);
+  ```
+
+  Nothing is coloured without being asked. A highlighter is the largest thing a Markdown renderer can be made to carry and most documents have nothing to colour, so an application that never names one never carries the tables: a Dart build drops what nothing references, which is what this package has instead of the React package's separate entry point.
+
+  It is **tokens rather than markup**, like everything else here — what a highlighter hands back is text and names, and this package decides what each becomes, so nothing reaches the screen as markup of any kind. The tokens are joined together and checked against the code they claim to be, and a block that does not add up is drawn plain.
+
+- **`MawyHighlighter`, `MawyCodeToken` and `MawyCodeTokenKind`**, exported from `package:mawy/mawy.dart` like the rest of the vocabulary. They live in `src/code.dart` rather than `src/types.dart` and import nothing: the parity check runs the highlighter under the plain Dart VM, and a library that reaches `package:flutter/widgets.dart` cannot be compiled by one.
+
+- **Eight more colours on `MawyTokens`** — `highlightComment`, `highlightString`, `highlightNumber`, `highlightKeyword`, `highlightType`, `highlightFunction`, `highlightVariable` and `highlightPunctuation` — which are the React package's `--mawy-hl-*` custom properties, value for value.
+
 - **Seven more of CommonMark, and the number moved from 605 to 612.** The React package's parser change, mirrored here in the same commit: a destination, a title and a fence's info string read their escapes and character references; a backtick fence whose info string holds a backtick is not a fence; and an escaped bracket is a bracket a shortcut reference's label may hold. `tool/parity.dart` says the two trees are still identical, which is the only thing that makes "one parser shipped twice" true rather than intended.
 
 - **The palette's faintest text now meets WCAG AA.** `foregroundSubtle` was `#8B8B96` in the light tokens and `#77778A` in the dark, which is 3.4:1 and 4.1:1 against the backgrounds it is drawn on — under the 4.5:1 that body text needs. It is `#70707B` and `#87879A` now. This is the React package's change, mirrored: the two palettes are one palette, value for value, and a colour that moved there had to move here.

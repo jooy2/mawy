@@ -162,7 +162,35 @@ Pass `definitionLists: false` in `parse` to turn it off, for a document that has
 
 ::: fw flutter
 
-The Flutter package draws code blocks plain for now. `MawyHighlighter` is a React type, and the Dart side will want a shape of its own rather than the same one translated — so the rest of this section is the React package's, and it is where that shape will be argued from.
+Nothing is coloured by default, and that is not an omission. A highlighter is the largest thing a Markdown renderer can be made to carry, and most documents have nothing in them to colour — so it is an argument, and an application that never names one never carries the grammars behind it, because a Dart build drops what nothing references:
+
+```dart
+MawyViewer(value: document, highlight: mawyHighlighter);
+```
+
+`mawyHighlighter` is this package's own, and it is the React package's own: `lib/src/highlight.dart` is `src/highlight.ts`, rule for rule, and `tool/parity.dart` diffs every token the two produce over a piece of every language either of them claims. So a code block coloured in a browser is coloured the same way in an app, which is the same promise the parser makes.
+
+The languages are the ones a document usually shows — `js`, `ts`, `jsx`, `tsx`, `json`, `html`, `xml`, `css`, `bash`, `python`, `yaml`, `sql`, `go`, `rust`, `java`, `c`, `cpp` and the names each of those also answers to. It is **approximate**, deliberately and permanently: a template literal with a brace in it or a regular expression that reads as division comes out slightly wrong, and none of that matters, because colour is not the kind of answer that has to be right.
+
+For anything more than that, `MawyHighlighter` is the whole interface and any grammar behind it is a few lines:
+
+```dart
+class MyHighlighter extends MawyHighlighter {
+  const MyHighlighter();
+
+  @override
+  bool supports(String language) => language == 'dart';
+
+  @override
+  List<MawyCodeToken> highlight(String code, String language) => tokensFor(code);
+}
+```
+
+It is **tokens rather than markup**, and that is the same decision the rest of the library rests on. What a highlighter hands back is text and names — `keyword`, `string`, `comment`, and ten more — and this package decides what each becomes, so nothing reaches the screen as markup of any kind and a highlighter cannot put anything in a document by being wrong.
+
+The one thing a highlighter has to promise is that its tokens **are** the code. What comes back is joined together and checked against what went in, and a block whose tokens do not add up is drawn plain — colour is not worth a screen that says something the document does not.
+
+The colours themselves are eight fields on `MawyTokens` — `highlightComment`, `highlightString`, `highlightNumber`, `highlightKeyword`, `highlightType`, `highlightFunction`, `highlightVariable`, `highlightPunctuation` — the same eight the React package declares as `--mawy-hl-*`, value for value.
 
 :::
 

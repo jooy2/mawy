@@ -1,0 +1,62 @@
+[
+ [
+  "ts",
+  "export interface A<T> {\n  /* a block\n     comment */\n  name?: string; // trailing\n  run(x: number): Promise<void>;\n}\n\nconst a = `tpl ${1 + 2} end`;\nlet b = 0x1f_e0, c = .5e-3, d = 10n;\nexport default class Thing extends Base { static #x = null; }\n"
+ ],
+ [
+  "js",
+  "async function* go(a = 1, ...rest) {\n  const s = 'it\\'s';\n  yield await fetch(`/u/${a}`);\n}\nexport { go };\n"
+ ],
+ [
+  "json",
+  "{\n  \"name\": \"mawy\",\n  \"n\": -1.5e3,\n  \"ok\": true,\n  \"list\": [null, \"a\"]\n}\n"
+ ],
+ [
+  "html",
+  "<!doctype html>\n<!-- a comment -->\n<div class=\"a b\" data-x='1'>&amp;&#65; text</div>\n<br/>\n"
+ ],
+ [
+  "css",
+  "@media (min-width: 40rem) {\n  .a > .b::after { --x: #ff00aa; color: rgb(1 2 3 / 40%); }\n}\n/* done */\n"
+ ],
+ [
+  "bash",
+  "#!/bin/sh\n# a comment\nfor f in *.md; do\n  echo \"${f%.md}\" | tr a-z A-Z > \"$f.out\"\ndone\nexport X=1\n"
+ ],
+ [
+  "python",
+  "import os\n\n@decorator(1)\ndef fn(a: int = 3, *args, **kw) -> None:\n    '''doc\n    string'''\n    if a is not None and True:\n        return f\"{a!r}\"\n"
+ ],
+ [
+  "yaml",
+  "# a comment\nname: mawy\nversion: 1.2.3\nlist:\n  - one\n  - key: value\n    flag: true\nanchor: &a x\nref: *a\n"
+ ],
+ [
+  "sql",
+  "-- a comment\nSELECT COUNT(*) AS n, t.name\nFROM things t /* block */\nINNER JOIN other o ON o.id = t.id\nWHERE t.x > 10 AND t.y IS NOT NULL\nORDER BY n DESC;\n"
+ ],
+ [
+  "go",
+  "package main\n\nimport \"fmt\"\n\nfunc main() {\n\t// hello\n\tvar x int = 1\n\tif x != 0 { fmt.Println(\"hi\", x) }\n}\n"
+ ],
+ [
+  "rust",
+  "use std::fmt;\n\npub fn main() -> Result<(), Box<dyn fmt::Debug>> {\n    let mut v: Vec<u8> = vec![1, 2];\n    match v.pop() { Some(x) => println!(\"{x}\"), None => {} }\n    Ok(())\n}\n"
+ ],
+ [
+  "java",
+  "package a.b;\n\npublic final class Thing implements Runnable {\n  private static final int N = 10;\n  @Override public void run() { System.out.println(\"x\"); }\n}\n"
+ ],
+ [
+  "cpp",
+  "#include <vector>\n\ntemplate <typename T>\nclass Thing {\n public:\n  explicit Thing(T v) : v_(v) {}\n  T get() const { return v_; }\n private:\n  T v_;\n};\n"
+ ],
+ [
+  "text",
+  "not a language anybody here knows\n"
+ ],
+ [
+  "ts",
+  "const unterminated = 'oops\nconst also = `open\n"
+ ]
+]

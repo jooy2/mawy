@@ -84,6 +84,9 @@ class _GalleryAppState extends State<GalleryApp> {
               : kMawyViewerToolbar,
           locale: sample.id == 'viewer/prose' ? MawyLocale.ko : MawyLocale.en,
           directives: _directives(tokens),
+          // The gallery is where the viewer is looked at, so it asks for the
+          // colour an application would have to ask for too.
+          highlight: mawyHighlighter,
           onLinkTap: (String url, String? title) {
             debugPrint('link: $url');
           },

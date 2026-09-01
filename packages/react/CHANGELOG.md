@@ -6,6 +6,8 @@
 
 ### Added
 
+- **The highlighter is diffed against the Dart one**, over `packages/flutter/tool/code.json`, as part of the parity check. `src/highlight.ts` and `lib/src/highlight.dart` are one grammar written twice and they drift for exactly the reason the two parsers do; nothing in this package changed, and now nothing can change in it alone.
+
 - **Seven more of CommonMark, and the number moved from 605 to 612.** Four kinds of thing the parser was reading as the characters they were written with rather than as what they say:
 
   - **A destination and a title read their escapes and their character references**, inline and in a reference definition alike — `[a](/bar\*)` is `/bar*`, and `[a]: /u "ti\*tle"` is `ti*tle`. The inline scan already took the backslashes off; the definition kept them, so the same link meant two things depending on where it was written.

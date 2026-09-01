@@ -9,6 +9,11 @@ library;
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/markdown/ast.dart' show MdRange;
 
+/// The highlighter's vocabulary, which is deliberately in a file of its own —
+/// see `src/code.dart`. It is re-exported here so that an application still has
+/// one place to read the whole of it from.
+export 'package:mawy/src/code.dart';
+
 /// Which palette to draw in.
 ///
 /// [system] follows the platform's own brightness, which is the default: a

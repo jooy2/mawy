@@ -41,6 +41,14 @@ class MawyTokens {
     required this.codeForeground,
     required this.markBackground,
     required this.markForeground,
+    required this.highlightComment,
+    required this.highlightString,
+    required this.highlightNumber,
+    required this.highlightKeyword,
+    required this.highlightType,
+    required this.highlightFunction,
+    required this.highlightVariable,
+    required this.highlightPunctuation,
     required this.note,
     required this.tip,
     required this.important,
@@ -71,6 +79,30 @@ class MawyTokens {
 
   /// Text that is barely there.
   final Color foregroundSubtle;
+
+  /// `// a comment`, in a code block. Drawn in italics.
+  final Color highlightComment;
+
+  /// A string, and a regular expression with it.
+  final Color highlightString;
+
+  /// A number, and a constant with it.
+  final Color highlightNumber;
+
+  /// A keyword.
+  final Color highlightKeyword;
+
+  /// A type name.
+  final Color highlightType;
+
+  /// A name being called, and a tag with it.
+  final Color highlightFunction;
+
+  /// A variable, and an attribute name with it.
+  final Color highlightVariable;
+
+  /// An operator, and punctuation with it.
+  final Color highlightPunctuation;
 
   /// A hairline.
   final Color border;
@@ -137,6 +169,14 @@ class MawyTokens {
     codeForeground: Color(0xFF24242C),
     markBackground: Color(0xFFFFF3A8),
     markForeground: Color(0xFF4A3B00),
+    highlightComment: Color(0xFF7B7B88),
+    highlightString: Color(0xFF0F7A4A),
+    highlightNumber: Color(0xFFA8541B),
+    highlightKeyword: Color(0xFF8A37C4),
+    highlightType: Color(0xFF9A6407),
+    highlightFunction: Color(0xFF2159BD),
+    highlightVariable: Color(0xFFB03A5B),
+    highlightPunctuation: Color(0xFF7B7B88),
     note: Color(0xFF2563C9),
     tip: Color(0xFF17855A),
     important: Color(0xFF7C3AED),
@@ -164,6 +204,14 @@ class MawyTokens {
     codeForeground: Color(0xFFDCDCE6),
     markBackground: Color(0xFF4A3D00),
     markForeground: Color(0xFFFFE98A),
+    highlightComment: Color(0xFF8B8B9C),
+    highlightString: Color(0xFF7DDBA4),
+    highlightNumber: Color(0xFFF0A26B),
+    highlightKeyword: Color(0xFFD5A3FF),
+    highlightType: Color(0xFFF0D08A),
+    highlightFunction: Color(0xFF7FB6FF),
+    highlightVariable: Color(0xFFFF9AB0),
+    highlightPunctuation: Color(0xFF8B8B9C),
     note: Color(0xFF6EA8FE),
     tip: Color(0xFF4ADE9D),
     important: Color(0xFFB79BFF),

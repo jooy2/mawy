@@ -21,6 +21,8 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mawy/src/code.dart';
+import 'package:mawy/src/highlight.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/parse.dart';
 
@@ -261,5 +263,41 @@ void main() {
     });
   }
 
-  stdout.write(const JsonEncoder.withIndent(' ').convert(out));
+  stdout.write(
+    const JsonEncoder.withIndent(
+      ' ',
+    ).convert(<String, Object?>{'trees': out, 'highlights': _highlights()}),
+  );
+}
+
+/// The highlighter's half of the same question.
+///
+/// `lib/src/highlight.dart` and the React package's `src/highlight.ts` are one
+/// grammar written twice, the same way the parser is, and they drift for the
+/// same reason — so they are diffed over `tool/code.json`, which is a piece of
+/// every language either of them claims to know plus two that nobody does.
+List<Object?> _highlights() {
+  final Directory tool = File(Platform.script.toFilePath()).parent;
+  final File file = File('${tool.path}/code.json');
+  final List<Object?> corpus = jsonDecode(file.readAsStringSync()) as List<Object?>;
+
+  return corpus.map((Object? entry) {
+    final List<Object?> pair = entry! as List<Object?>;
+    final String language = pair[0]! as String;
+    final String code = pair[1]! as String;
+
+    return <String, Object?>{
+      'language': language,
+      'supported': mawyHighlighter.supports(language),
+      'tokens': mawyHighlighter
+          .highlight(code, language)
+          .map(
+            (MawyCodeToken token) => <String>[
+              token.kind == null ? '' : token.kind!.name,
+              token.text,
+            ],
+          )
+          .toList(),
+    };
+  }).toList();
 }
