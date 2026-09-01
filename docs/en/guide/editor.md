@@ -75,16 +75,16 @@ The syntax colouring is Mawy's own parser's vocabulary, but not Mawy's own parse
 
 ## The document surface
 
-`wysiwyg` draws the document and lets you edit it where it is drawn. It is **partly built**, and what follows is exactly which part.
+`wysiwyg` draws the document and lets you edit it where it is drawn. What follows is exactly what that means, because it is the surface with the most in it that could be assumed and is not.
 
 <MawyDemo name="editor/document" />
 
 There is no second model behind it. What is on screen is a drawing of the Markdown and the Markdown is what is true: every keystroke is refused, turned into an edit to that string, and the document is drawn again from whatever the string became. Nothing is ever read back out of the tree the browser wanted to change. There is no DOM-to-Markdown serialiser in this package and there is not going to be one — a second implementation is a second opinion about what a document means, and the two disagree the first time anybody writes something unusual.
 
-It is not on `modes` by default. An application asks for it:
+**It is the first surface the switch offers**, and it was not on the default list at all until the two things it could not do stopped being true — a link's destination and raw HTML being drawn are both written out as their own characters when the caret is in them, so there is nowhere on it a caret cannot go. An application that would rather not offer it says so the way it says anything else about the switch:
 
 ```tsx
-<MawyEditor defaultValue={document} modes={['wysiwyg', 'plain']} />
+<MawyEditor defaultValue={document} modes={['plain', 'split', 'preview']} />
 ```
 
 What works: typing and deleting **anywhere there is text to type in** — a paragraph, a heading, a list item, a quotation, a table cell, a code block — replacing a selection, `Shift`+`Enter` for a hard break, the shorthands that turn into formatting as they are typed, and every command on the toolbar. Those last needed nothing new: they are pure functions of the source and its selection and neither surface is mentioned anywhere in them.

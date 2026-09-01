@@ -6,6 +6,8 @@
 
 ### Added
 
+- **`wysiwyg` is on the default `modes` list**, and first on it. It was left off at 0.1.0 because two things on that surface did not work — a link's destination could not be typed and raw HTML being drawn could not be edited — and both are gone: whatever the caret is inside is written out as the characters it was written with. An application that would rather not offer the surface leaves it out of `modes`, the way it says anything else about the switch.
+
 - **The status bar's counts are their own module**, `src/internal/status.ts`, rather than functions inside the component that draws them — which is what lets the parity check diff them against the Dart ones. Nothing about the numbers changed; a count written twice is a count that reports two different answers for the same document the first time nobody is comparing them.
 
 - **Raw HTML is editable on the `wysiwyg` surface**, under `sanitize` and `raw` as well as under `escape`, and it is editable the same way a link's destination is: markup the caret is inside is written out as the characters it was written with, and drawn back as markup when the caret leaves. That was the last thing the surface could not do — what `dangerouslySetInnerHTML` puts on the page is markup React does not know the inside of, so there was nothing in the drawn form for a caret to be inside. Written out, there is, and every rule the surface already has applies to it unchanged.

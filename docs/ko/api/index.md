@@ -13,7 +13,7 @@ order: 2
 
 ::: fw react
 
-`wysiwyg` 화면은 일부만 만들어졌습니다 — 어느 일부인지는 [에디터](../guide/editor#문서-편집-화면)에 있습니다. 이 페이지의 나머지는 전부 존재하며 동작합니다.
+이 페이지에 있는 것은 전부 존재하며 동작합니다.
 
 :::
 
@@ -62,9 +62,9 @@ import { MawyEditor } from 'mawy-react';
 | `mode` | [`MawyMode`](#mawymode) | — | 어느 화면인지. 애플리케이션이 주인일 때. |
 | `defaultMode` | `MawyMode` | `modes`의 첫 번째 | 시작할 화면. |
 | `onModeChange` | `(mode: MawyMode) => void` | — | 바뀔 때마다 호출됩니다. |
-| `modes` | `readonly MawyMode[]` | `['plain', 'split', 'preview']` | 전환 컨트롤이 제시할 화면. 하나만 주면 컨트롤이 사라집니다. |
+| `modes` | `readonly MawyMode[]` | `['wysiwyg', 'plain', 'split', 'preview']` | 전환 컨트롤이 제시할 화면. 하나만 주면 컨트롤이 사라집니다. |
 
-`'wysiwyg'`는 기본 목록에 없습니다. 문서를 그리고 그 자리에서 편집하며, 일부만 만들어졌습니다. 제시하려면 `modes`에 넣으세요.
+`'wysiwyg'`는 문서를 그리고 그 자리에서 편집합니다. 기본 목록의 첫 번째이고, 내놓고 싶지 않으면 `modes`에서 빼면 됩니다.
 
 #### Chrome
 
@@ -262,7 +262,7 @@ type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 
 문서를 어느 화면에서 보여줄지. 네 개의 에디터가 아니라 한 문서를 보는 네 가지 방식입니다 — [에디터](../guide/editor)를 보세요.
 
-- `'wysiwyg'` — 그려진 문서를 그 자리에서 편집. 일부만 만들어졌습니다.
+- `'wysiwyg'` — 그려진 문서를 그 자리에서 편집.
 - `'plain'` — 마크다운 원문을 텍스트로 편집.
 - `'preview'` — 그려진 문서, 읽기 전용.
 - `'split'` — 한쪽에 원문, 다른 쪽에 미리보기를 동시에.

@@ -50,6 +50,6 @@ Mawy is in early development, and most of it works. A parser of ours reads Commo
 
 It ships twice: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. They are one library rather than two — the Dart parser _is_ the TypeScript parser, and a check in the repository diffs both parsers' trees over every document it can find. The Flutter package is the viewer alone for now. Pick yours in the sidebar; it changes what every page here says.
 
-The `wysiwyg` surface — editing the drawn document in place — is partly built: anywhere there is text to type in can be typed in, and raw HTML being drawn rather than shown is refused rather than half-done. `0.1.0` is on npm, and it is a `0.x`: the API can still change between minor versions.
+The `wysiwyg` surface — editing the drawn document in place — is on the default list of surfaces now that the two things it could not do are done. `0.1.0` is on npm, and it is a `0.x`: the API can still change between minor versions.
 
 [Getting started](./guide/getting-started) has what exists today. The [changelog](./changelog) is where each release is written down.

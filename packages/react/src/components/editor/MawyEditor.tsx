@@ -50,8 +50,15 @@ import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
 import { MawyEditorDocument } from './MawyEditorDocument.js';
 import { MawyEditorSource } from './MawyEditorSource.js';
 
-/** What the editor offers until an application says otherwise. */
-const DEFAULT_MODES: readonly MawyMode[] = ['plain', 'split', 'preview'];
+/**
+ * What the editor offers until an application says otherwise.
+ *
+ * `wysiwyg` is first, and it was not on this list at all until the two things
+ * it could not do stopped being true: a link's destination and raw HTML being
+ * drawn are both written out as their own characters when the caret is in
+ * them, so there is no longer anywhere on that surface a caret cannot go.
+ */
+const DEFAULT_MODES: readonly MawyMode[] = ['wysiwyg', 'plain', 'split', 'preview'];
 
 /**
  * The keyboard, which is the editor's real interface.
@@ -82,8 +89,7 @@ export interface MawyEditorProps extends Omit<
   onChange?: (value: string) => void;
 
   /**
-   * Which surface the document is on. `wysiwyg` is not on the default list of
-   * them — an application asks for it by name while it is this new.
+   * Which surface the document is on.
    * @default the first of `modes`
    */
   mode?: MawyMode;
@@ -92,7 +98,7 @@ export interface MawyEditorProps extends Omit<
   /**
    * The surfaces the toolbar offers. Give it one and the switch disappears,
    * which is how an editor that is only ever a source editor is built.
-   * @default ['plain', 'split', 'preview']
+   * @default ['wysiwyg', 'plain', 'split', 'preview']
    */
   modes?: readonly MawyMode[];
 

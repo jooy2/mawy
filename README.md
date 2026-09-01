@@ -13,7 +13,7 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
 > [!IMPORTANT]
-> **Mawy is in early development, and most of it works.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested. The `wysiwyg` surface — editing the drawn document in place — is partly built: anywhere there is text to type in can be typed in, and raw HTML being drawn rather than shown is refused rather than half-done. `0.1.0` is the first release of both packages — [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev, the Flutter one being the viewer alone for now. They are a `0.x`, so the API can still change between minor versions.
+> **Mawy is in early development, and most of it works.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested. The `wysiwyg` surface — editing the drawn document in place — is on the default list of surfaces now that the two things it could not do are done. `0.1.0` is the first release of both packages — [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev; since then the Flutter one has grown a syntax highlighter and an editor of its own. They are a `0.x`, so the API can still change between minor versions.
 
 ## Why Mawy
 

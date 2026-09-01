@@ -13,7 +13,7 @@ Both packages are published at `0.1.0`. They are a `0.x`, which means the API ca
 
 ::: fw react
 
-The `wysiwyg` surface is partly built — see [the editor](../guide/editor#the-document-surface) for exactly which part. Everything else on this page exists and runs.
+Everything on this page exists and runs.
 
 :::
 
@@ -62,9 +62,9 @@ Every prop of `<div>` is accepted and forwarded, apart from `children` and `onCh
 | `mode` | [`MawyMode`](#mawymode) | — | Which surface, when the application owns it. |
 | `defaultMode` | `MawyMode` | the first of `modes` | Which surface to start on. |
 | `onModeChange` | `(mode: MawyMode) => void` | — | Called whenever it changes. |
-| `modes` | `readonly MawyMode[]` | `['plain', 'split', 'preview']` | Which surfaces the switch offers. Give it one and the switch disappears. |
+| `modes` | `readonly MawyMode[]` | `['wysiwyg', 'plain', 'split', 'preview']` | Which surfaces the switch offers. Give it one and the switch disappears. |
 
-`'wysiwyg'` is not on the default list. It draws the document and edits it in place, and it is partly built — pass it in `modes` to offer it.
+`'wysiwyg'` draws the document and edits it in place. It is the first of the default list; leave it out of `modes` to not offer it.
 
 #### Chrome
 
