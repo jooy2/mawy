@@ -120,6 +120,8 @@
 
 ### Changed
 
+- **An outline entry says its heading once.** The panel named each entry after the heading it points at and then drew that heading inside it, and a screen reader handed both read the words out and read them out again — `Second, Second, button`. The drawn words are the drawing now, and the name is the name. The React package's entry is a `<button>` with the heading inside it and has always said it once, which is what makes this a difference between the two rather than a preference.
+
 - **`MawyTokens` compares on every colour rather than on six of them.** Six was enough while the only palettes in existence were this package's own two, and became wrong the moment an application could build a third: two palettes differing in nothing but their alert colours called themselves the same palette, and a viewer handed the second one would not have redrawn.
 
 ## 0.1.0 — 2026-08-31

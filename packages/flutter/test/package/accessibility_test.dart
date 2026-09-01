@@ -108,6 +108,36 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('names an outline entry after its heading, once', (WidgetTester tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+
+    await tester.pumpWidget(host(const MawyViewer(value: chapters)));
+
+    await tester.tap(find.bySemanticsLabel('Outline'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSemantics(
+        find.ancestor(
+          of: find.descendant(of: find.byType(MawyViewerOutline), matching: find.text('Second')),
+          matching: find.byType(FocusableActionDetector),
+        ),
+      ),
+      // Once, and not twice. The heading's words are the name of the control
+      // and are also the words drawn inside it, and a node handed both reads
+      // the heading out and then reads it out again.
+      matchesSemantics(
+        label: 'Second',
+        isButton: true,
+        hasTapAction: true,
+        isFocusable: true,
+        hasFocusAction: true,
+      ),
+    );
+
+    handle.dispose();
+  });
+
   testWidgets('meets the platform guidelines for tap targets and contrast', (
     WidgetTester tester,
   ) async {

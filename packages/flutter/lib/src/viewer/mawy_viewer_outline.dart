@@ -135,18 +135,24 @@ class _EntryState extends State<_Entry> {
                   ? <BoxShadow>[BoxShadow(color: tokens.accent, spreadRadius: 2)]
                   : null,
             ),
-            child: Text(
-              widget.entry.text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                // The first two levels carry the structure; the rest are
-                // detail, and drawing them all the same makes a wall of text
-                // out of what is meant to be a map.
-                color: depth <= 2 ? tokens.foreground : tokens.foregroundMuted,
-                fontSize: depth == 1 ? 13.5 : 13,
-                fontWeight: depth == 1 ? FontWeight.w600 : FontWeight.w400,
-                height: 1.4,
+            // The heading's words are the name of this control, and they are
+            // said once — up there, where the control says what it is. Drawn
+            // again here they are the same string a second time, and a screen
+            // reader that is handed both reads the heading twice.
+            child: ExcludeSemantics(
+              child: Text(
+                widget.entry.text,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  // The first two levels carry the structure; the rest are
+                  // detail, and drawing them all the same makes a wall of text
+                  // out of what is meant to be a map.
+                  color: depth <= 2 ? tokens.foreground : tokens.foregroundMuted,
+                  fontSize: depth == 1 ? 13.5 : 13,
+                  fontWeight: depth == 1 ? FontWeight.w600 : FontWeight.w400,
+                  height: 1.4,
+                ),
               ),
             ),
           ),
