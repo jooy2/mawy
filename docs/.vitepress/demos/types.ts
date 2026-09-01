@@ -16,4 +16,13 @@ export interface DemoProps {
   colorScheme: MawyColorScheme;
   onColorSchemeChange: (colorScheme: MawyColorScheme) => void;
   locale: MawyLocale;
+  /**
+   * How tall to draw, as a CSS length.
+   *
+   * Most demos ignore it and set a height that suits what they are showing —
+   * the number beside `<MawyDemo>` on the page is there for the Flutter frame,
+   * which has no content of ours to measure. The playground is the exception:
+   * its height is measured from the window, so both halves have to take it.
+   */
+  height: string;
 }

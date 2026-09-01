@@ -54,3 +54,105 @@
 .mawy-demo .mawy-root {
   border-radius: 0;
 }
+
+/* ---------------------------------------------------------------------------
+ * The playground
+ *
+ * The one page here that is not reading. Everything the default layout puts
+ * around a document — the outline, the previous and next links, the edit link —
+ * is off in that page's frontmatter, and what is left is trimmed here so that
+ * the component below the heading reaches the bottom of the window without the
+ * page scrolling.
+ * ------------------------------------------------------------------------- */
+
+/* The default theme keeps 128px under a document, for the previous and next
+   links this page does not have. */
+.mawy-playground-page .VPDoc,
+.mawy-playground-page .VPDoc .content {
+  padding-bottom: 0;
+}
+
+/* A heading at document size spends sixty pixels saying a word the navbar and
+   the sidebar are both already saying. */
+.mawy-playground-page .vp-doc h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.mawy-play {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+/* The framework switch's track, said again for a control that is in the page
+   rather than in the sidebar — hence its own width rather than the column's. */
+.mawy-play-track {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(88px, auto);
+  gap: 3px;
+  justify-self: start;
+  width: fit-content;
+  padding: 3px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background-color: var(--vp-c-bg-alt);
+}
+
+.mawy-play-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 7px;
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color 0.16s,
+    background-color 0.16s,
+    box-shadow 0.16s;
+}
+
+/* Present to a screen reader and to the arrow keys, and not drawn: the label
+   around it is the control as far as the eye is concerned. */
+.mawy-play-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.mawy-play-option:hover {
+  color: var(--vp-c-text-1);
+}
+
+.mawy-play-option[data-on] {
+  background-color: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  box-shadow:
+    0 0 0 1px var(--vp-c-divider),
+    0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.mawy-play-option:has(input:focus-visible) {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+/* The demo fills the stage, so it cannot carry the margin a demo in the middle
+   of a page needs. */
+.mawy-play-stage .mawy-demo {
+  margin: 0;
+}

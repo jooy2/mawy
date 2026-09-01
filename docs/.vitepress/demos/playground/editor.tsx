@@ -17,7 +17,12 @@ import { PLAYGROUND } from './document.js';
  * it the editor hands the document to the browser as a download, and a download
  * is a thing that actually happens rather than a callback nobody can see.
  */
-export default function PlaygroundEditor({ colorScheme, onColorSchemeChange, locale }: DemoProps) {
+export default function PlaygroundEditor({
+  colorScheme,
+  onColorSchemeChange,
+  locale,
+  height
+}: DemoProps) {
   return (
     <MawyEditor
       defaultValue={PLAYGROUND[locale]}
@@ -29,7 +34,7 @@ export default function PlaygroundEditor({ colorScheme, onColorSchemeChange, loc
       highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
       directives={DEMO_DIRECTIVES}
       onUploadImage={readAsDataUrl}
-      style={{ height: '38rem' }}
+      style={{ height }}
     />
   );
 }

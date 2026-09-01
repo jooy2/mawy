@@ -17,7 +17,7 @@ import {
 import { withI18n } from 'vitepress-i18n';
 import type { VitePressI18nOptions } from 'vitepress-i18n/types';
 import type { VitePressSidebarOptions } from 'vitepress-sidebar/types';
-import { FRAMEWORK_HEAD_SCRIPT, FRAMEWORK_IDS } from './data/frameworks';
+import { FRAMEWORK_HEAD_SCRIPT, FRAMEWORK_IDS, FRAMEWORKS } from './data/frameworks';
 
 const vitePressDir = dirname(fileURLToPath(import.meta.url));
 /** `docs/`, which is where the locale folders live and what VitePress serves. */
@@ -32,6 +32,17 @@ const editLinkPattern = `${packageJson.repository.url}/edit/main/docs/:path`;
 const siteUrl = packageJson.homepage.replace(/\/+$/, '');
 const repoUrl = packageJson.repository.url.replace(/\.git$/, '');
 const npmUrl = `https://www.npmjs.com/package/${packageJson.name}`;
+/*
+ * The other registry, which the navbar had no link to.
+ *
+ * Half the readers of this site install from pub.dev and the row above the
+ * menu offered them npm — the registry for the package they did not pick. The
+ * name comes off the framework list rather than being written again, since that
+ * is already where each ecosystem's package name is recorded.
+ */
+const pubUrl = `https://pub.dev/packages/${
+  FRAMEWORKS.find((item) => item.id === 'flutter')?.pkg ?? 'mawy'
+}`;
 
 /** The card image. A square mark, which is why the Twitter card is `summary`. */
 const socialImage = `${siteUrl}/256x256.png`;
@@ -74,10 +85,13 @@ const vitePressSidebarConfig = supportLocales.map((lang) => ({
   ...(defaultLocale === lang ? {} : { basePath: localeBase(lang) })
 }));
 
-/** The same two destinations in every locale, prefixed with its base. */
-const navFor = (lang: string, labels: [string, string]) => [
+/** The same three destinations in every locale, prefixed with its base. */
+const navFor = (lang: string, labels: [string, string, string]) => [
   { text: labels[0], link: `${localeBase(lang)}guide/getting-started` },
-  { text: labels[1], link: `${localeBase(lang)}api/` }
+  // The one page on this site that is not reading, so it is in the row a reader
+  // sees before they have opened anything.
+  { text: labels[1], link: `${localeBase(lang)}guide/playground` },
+  { text: labels[2], link: `${localeBase(lang)}api/` }
 ];
 
 const vitePressI18nConfig: VitePressI18nOptions = {
@@ -89,8 +103,8 @@ const vitePressI18nConfig: VitePressI18nOptions = {
     ko: '마크다운을 쓰고 보여주는 일을 하나로 묶은 에디터. 위지윅 화면과 원문 화면을 오가며 쓰고, 다 쓴 문서는 읽기 전용 뷰어로 그대로 보여줍니다.'
   },
   themeConfig: {
-    en: { nav: navFor('en', ['Guide', 'API']) },
-    ko: { nav: navFor('ko', ['가이드', 'API']) }
+    en: { nav: navFor('en', ['Guide', 'Playground', 'API']) },
+    ko: { nav: navFor('ko', ['가이드', '직접 써보기', 'API']) }
   }
 };
 
@@ -463,7 +477,17 @@ const vitePressConfig: UserConfig = {
       pattern: editLinkPattern
     },
     socialLinks: [
-      { icon: 'npm', link: npmUrl },
+      { icon: 'npm', link: npmUrl, ariaLabel: `${packageJson.name} on npm` },
+      // pub.dev has no icon in VitePress's set, so the mark is Flutter's own —
+      // the same path `FrameworkMark.vue` draws in the sidebar switch, drawn
+      // here in the navbar's colour like every other social link.
+      {
+        icon: {
+          svg: '<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>pub.dev</title><path d="M14.314 0 2.3 12l3.7 3.7L21.684.013h-7.37Zm.014 11.072L7.857 17.53l6.47 6.47H21.7l-6.42-6.47 6.42-6.458h-7.372Z"/></svg>'
+        },
+        link: pubUrl,
+        ariaLabel: 'mawy on pub.dev'
+      },
       { icon: 'github', link: repoUrl }
     ],
     footer: {

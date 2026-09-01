@@ -16,7 +16,12 @@ import type { DemoProps } from '../types.js';
  * a table with three alignments or a footnote mentioned twice looks like does
  * not depend on who is reading it.
  */
-export default function PlaygroundViewer({ colorScheme, onColorSchemeChange, locale }: DemoProps) {
+export default function PlaygroundViewer({
+  colorScheme,
+  onColorSchemeChange,
+  locale,
+  height
+}: DemoProps) {
   return (
     <MawyViewer
       defaultValue={SAMPLE}
@@ -27,7 +32,7 @@ export default function PlaygroundViewer({ colorScheme, onColorSchemeChange, loc
       highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
       directives={DEMO_DIRECTIVES}
       defaultTypography={{ measure: 'wide' }}
-      style={{ height: '32rem' }}
+      style={{ height }}
     />
   );
 }

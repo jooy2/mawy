@@ -115,7 +115,8 @@ function paint() {
         override = next;
         paint();
       },
-      locale: demoLocale.value
+      locale: demoLocale.value,
+      height: `${props.height}px`
     })
   );
 }
@@ -131,6 +132,15 @@ watch([isDark, lang, () => props.name], () => {
   override = null;
   paint();
 });
+
+// The height is a prop like any other and has to reach the island, and it moves
+// on its own: the playground measures it from the window. Kept out of the watch
+// above because a resize is not a reason to throw away the theme somebody chose
+// inside the demo.
+watch(
+  () => props.height,
+  () => paint()
+);
 
 onBeforeUnmount(() => {
   root?.unmount();
