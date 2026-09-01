@@ -100,6 +100,18 @@ function drop<T>(list: T[], item: T): void {
 
 const PUNCTUATION = /[\p{P}\p{S}]/u;
 const WHITESPACE = /\s/;
+/**
+ * The five characters the specification calls whitespace.
+ *
+ * Not `\s`, which is every Unicode space there is — and a no-break space is
+ * one of those and is not one of these. `[link](/url\u00a0"title")` has a
+ * destination of `/url\u00a0"title"` and no title at all, because nothing
+ * separated the two.
+ *
+ * The flanking rules above *do* want `\s`: those are written in terms of
+ * Unicode whitespace rather than these five, which is why both are here.
+ */
+const ASCII_WHITESPACE = /[ \t\n\f\r]/;
 const ESCAPABLE = /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/;
 
 /**
@@ -271,7 +283,7 @@ function readInlineDestination(source: string, start: number): Destination | nul
   let at = start + 1;
 
   const skipSpace = () => {
-    while (at < source.length && WHITESPACE.test(source[at])) {
+    while (at < source.length && ASCII_WHITESPACE.test(source[at])) {
       at += 1;
     }
   };
@@ -307,7 +319,7 @@ function readInlineDestination(source: string, start: number): Destination | nul
     while (at < source.length) {
       const character = source[at];
 
-      if (WHITESPACE.test(character)) {
+      if (ASCII_WHITESPACE.test(character)) {
         break;
       }
 

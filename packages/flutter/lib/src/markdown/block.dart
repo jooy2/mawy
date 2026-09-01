@@ -818,6 +818,14 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
       bool separated = false;
 
       while (at < lines.length) {
+        // A thematic break wins wherever both readings are possible, inside a
+        // list as much as outside one: `* * *` on the second line of a list of
+        // `*` items is a rule that ends the list, not an item with two more
+        // bullets in it.
+        if (_thematic.hasMatch(lines[at].text)) {
+          break;
+        }
+
         final _Marker? current = _markerAt(lines[at].text);
 
         if (current == null ||

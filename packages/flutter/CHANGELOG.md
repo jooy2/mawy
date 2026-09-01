@@ -6,6 +6,8 @@
 
 ### Added
 
+- **Two more of CommonMark, and the number moved from 627 to 629.** The React package's parser change, mirrored here in the same commit: a no-break space is not one of the five characters the specification calls whitespace, so it does not separate a destination from a title; and a thematic break wins over a list item inside a list as much as outside one.
+
 - **Two more of CommonMark, and the number moved from 625 to 627.** The React package's parser change, mirrored here in the same commit: closing a link deactivates the `[` openers to its left and no longer the `![` ones, so `![foo [bar](/url)](/url2)` is an image whose alt text is `foo bar` rather than a sentence with a link in it.
 
 - **Four more of CommonMark, and the number moved from 621 to 625.** The React package's parser change, mirrored here in the same commit: a link reference definition's label may run over more than one line, may not hold an unescaped bracket, and may not be nothing but whitespace — and a setext underline over a paragraph that was nothing but definitions is a line of text rather than an underline.

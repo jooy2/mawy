@@ -6,7 +6,7 @@ import { specExamples, writeHtml } from '../../support/commonmark.js';
  * The parser, against the specification it claims to read.
  *
  * "CommonMark" is written in the README, on the site and in the changelog, and
- * until this file existed it was a word rather than a number. It is 627 of the
+ * until this file existed it was a word rather than a number. It is 629 of the
  * specification's 652 examples — the other 34 are below, each one with the
  * reason it is there, so that the claim is checkable and a change to it is
  * deliberate.
@@ -81,7 +81,6 @@ const DEVIATIONS = new Map<number, string>([
   [540, '`ẞ` and `SS` are one label to the specification and two here'],
 
   /* A line that continues a paragraph inside a container. */
-  [60, '`* * *` inside a list is an item rather than a thematic break'],
   [93, 'a setext underline on a lazy continuation line'],
   [236, 'an indented line after a quoted indented code block'],
   [237, 'a line after an unclosed fence inside a quotation'],
@@ -89,7 +88,6 @@ const DEVIATIONS = new Map<number, string>([
   /* Two more about where a container ends. */
   [312, 'a fifth level of indentation opens a list rather than continuing one'],
   [318, 'blank lines before a fence closing inside an item'],
-  [507, 'a non-breaking space does not separate a destination from a title'],
 
   /*
    * And three that are a decision rather than a shortfall. Every URL is checked
@@ -140,7 +138,7 @@ describe('CommonMark', () => {
     expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
   });
 
-  it('reads 627 of the 652', () => {
-    expect(examples.length - differing.length).toBe(627);
+  it('reads 629 of the 652', () => {
+    expect(examples.length - differing.length).toBe(629);
   });
 });

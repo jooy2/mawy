@@ -120,7 +120,7 @@ MawyViewer(
 
 ### How much of it
 
-**627 of the specification's 652 examples**, run against the parser on every change. CommonMark is a document with a test suite in it, so "reads CommonMark" is a number rather than a claim, and the number is in `packages/react/test/internal/markdown/commonmark.test.ts` beside the list of what the other 25 are.
+**629 of the specification's 652 examples**, run against the parser on every change. CommonMark is a document with a test suite in it, so "reads CommonMark" is a number rather than a claim, and the number is in `packages/react/test/internal/markdown/commonmark.test.ts` beside the list of what the other 23 are.
 
 Three of those are a decision rather than a shortfall: every URL is checked against a scheme allowlist, so `<made-up-scheme://foo>` is drawn as the words the author wrote. Five more are the same kind of decision: an empty destination is drawn as the words the author wrote rather than as `<a href="">`, which is a control that does nothing. Most of the rest are edges — a tab inside a list item, a character reference the table does not carry, a reference definition alone in a list item — and each one is written down with the reason it is there, so the list can only get shorter deliberately.
 

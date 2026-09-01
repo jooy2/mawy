@@ -6,6 +6,14 @@
 
 ### Added
 
+- **Two more of CommonMark, and the number moved from 627 to 629.**
+
+  **A no-break space is not whitespace**, as the specification counts it — the five characters it means by the word are space, tab, newline, form feed and carriage return, and a regular expression's `\s` is every Unicode space there is. So `[link](/url\u00a0"title")` has a destination of `/url\u00a0"title"` and no title, because nothing separated the two. The emphasis rules still use `\s`, and correctly: those are written in terms of Unicode whitespace.
+
+  **A thematic break wins over a list item** inside a list as much as outside one. `* * *` on the second line of a list of `*` items was an item with two more bullets in it, and is a rule that ends the list.
+
+  The viewer is 0.1 kB larger for the two, at 22.3 kB gzipped.
+
 - **Two more of CommonMark, and the number moved from 625 to 627** — both about a link inside an image's description. Closing a link deactivates the `[` openers to its left, which is what stops a link nesting inside a link; it was deactivating the `![` openers as well, so `![foo [bar](/url)](/url2)` was a sentence with a link in it rather than an image whose alt text is `foo bar`. An image's description is allowed to hold a link, and only the link openers are switched off now.
 
 - **Four more of CommonMark, and the number moved from 621 to 625** — all four about what a link reference definition's label may be written as.

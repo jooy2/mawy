@@ -122,6 +122,17 @@ void _drop(List<_Chunk> list, _Chunk item) {
 
 final RegExp _punctuation = RegExp(r'[\p{P}\p{S}]', unicode: true);
 final RegExp _whitespace = RegExp(r'\s');
+
+/// The five characters the specification calls whitespace.
+///
+/// Not `\s`, which is every Unicode space there is — and a no-break space is
+/// one of those and is not one of these. `[link](/url "title")` has a
+/// destination of `/url "title"` and no title at all, because nothing
+/// separated the two.
+///
+/// The flanking rules above *do* want `\s`: those are written in terms of
+/// Unicode whitespace rather than these five, which is why both are here.
+final RegExp _asciiWhitespace = RegExp(r'[ \t\n\f\r]');
 final RegExp _escapable = RegExp(r'''[!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]''');
 
 /// Whether a delimiter run has content on its left, on its right, or both.
@@ -289,7 +300,7 @@ _Destination? _readInlineDestination(String source, int start) {
   int at = start + 1;
 
   void skipSpace() {
-    while (at < source.length && _whitespace.hasMatch(source[at])) {
+    while (at < source.length && _asciiWhitespace.hasMatch(source[at])) {
       at += 1;
     }
   }
@@ -325,7 +336,7 @@ _Destination? _readInlineDestination(String source, int start) {
     while (at < source.length) {
       final String character = source[at];
 
-      if (_whitespace.hasMatch(character)) {
+      if (_asciiWhitespace.hasMatch(character)) {
         break;
       }
 
