@@ -48,8 +48,21 @@ const SAMPLE = [
   '```'
 ].join('\n');
 
-/** Every violation axe finds, in a shape a failure message can be read from. */
+/**
+ * Every violation axe finds, in a shape a failure message can be read from.
+ *
+ * Nothing is audited while it is still arriving. A menu panel fades in over
+ * `--mawy-duration`, and text at half opacity over the page behind it does not
+ * meet contrast — correctly, and about a state that is gone in 140ms and that
+ * nobody reads. Auditing into it made this suite fail on whichever runner was
+ * slowest that morning, which is a test that reports the weather.
+ *
+ * There is no animation in this library that does not end, so waiting on all of
+ * them is waiting rather than hanging.
+ */
 async function violations(container: Element) {
+  await Promise.all(document.getAnimations().map((animation) => animation.finished));
+
   const results = await axe.run(container as HTMLElement, { resultTypes: ['violations'] });
 
   return results.violations.map((violation) => ({
