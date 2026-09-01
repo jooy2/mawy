@@ -177,6 +177,7 @@ class MawyEditor extends StatefulWidget {
     this.parse = const MawyParseOptions(),
     this.colorScheme = MawyColorScheme.system,
     this.onColorSchemeChange,
+    this.tokens,
     this.typography,
     this.defaultTypography = const MawyTypography(),
     this.locale = MawyLocale.en,
@@ -225,6 +226,9 @@ class MawyEditor extends StatefulWidget {
 
   /// Called when the reader picks a different one.
   final ValueChanged<MawyColorScheme>? onColorSchemeChange;
+
+  /// The colours to draw in. See [MawyViewer.tokens], which this is passed to.
+  final MawyTokensBuilder? tokens;
 
   /// How the preview is set, where the application decides.
   final MawyTypography? typography;
@@ -360,7 +364,8 @@ class _MawyEditorState extends State<MawyEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final MawyTokens tokens = MawyTokens.of(_brightness(context));
+    final Brightness brightness = _brightness(context);
+    final MawyTokens tokens = widget.tokens?.call(brightness) ?? MawyTokens.of(brightness);
     final MawyStrings strings = stringsFor(widget.locale);
     final bool showSource = _current != MawyEditorMode.preview;
     final bool showPreview = _current != MawyEditorMode.plain;
@@ -381,6 +386,7 @@ class _MawyEditorState extends State<MawyEditor> {
       value: _value,
       parse: widget.parse,
       colorScheme: _scheme,
+      tokens: widget.tokens,
       typography: _type,
       toolbar: const <MawyViewerToolbarItem>[],
       locale: widget.locale,

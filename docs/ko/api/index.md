@@ -87,6 +87,12 @@ import { MawyEditor } from 'mawy-react';
 
 `parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`, `locale`은 [`MawyViewer`](#mawyviewer)에서와 정확히 같은 의미이고, 앞의 여섯은 미리보기로 그대로 전달됩니다. `directives`는 그려진 문서에도 닿습니다.
 
+::: fw flutter
+
+`tokens`도 그중 하나입니다. 에디터 자신의 툴바와 상태 표시줄, 그리고 미리보기가 모두 그것이 돌려준 팔레트로 그려집니다.
+
+:::
+
 ### `MawyViewer`
 
 마크다운 문서를 그리고, 편집하지는 않습니다. 무엇을 왜 하는지는 [뷰어](../guide/viewer)에 있습니다.
@@ -193,6 +199,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | --- | --- | --- | --- |
 | `colorScheme` | [`MawyColorScheme`](#mawycolorscheme) | `MawyColorScheme.system` | 어느 팔레트로 그릴지. |
 | `onColorSchemeChange` | `ValueChanged<MawyColorScheme>?` | — | 독자가 툴바에서 바꿨을 때 호출됩니다. |
+| `tokens` | [`MawyTokensBuilder`](#mawytokens)`?` | 스타일시트의 값 | 그릴 색. 뷰어가 정한 밝기를 받아 돌려줍니다. |
 | `typography` | [`MawyTypography`](#mawytypography)`?` | — | 문서 조판. 애플리케이션이 주인일 때. |
 | `defaultTypography` | `MawyTypography` | `MawyTypography()` | 뷰어가 직접 가질 때, 처음의 조판. |
 | `onTypographyChange` | `ValueChanged<MawyTypography>?` | — | `typography`를 넘겼든 아니든 호출됩니다. |
@@ -784,18 +791,33 @@ class MawyTokens {
   static const MawyTokens light;
   static const MawyTokens dark;
   static MawyTokens of(Brightness brightness);
+  MawyTokens copyWith({Brightness? brightness, Color? background, /* … */});
 }
+
+typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
 문서와 그 chrome을 그리는 모든 색을 한 객체로 담은 것입니다. 항목은 위의 `--mawy-*` 커스텀 속성을 Dart식 이름으로 옮긴 것들 — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, 그리고 알림 종류마다 하나씩 — 이고, 값은 스타일시트의 값을 다시 고른 것이 아니라 그대로 옮긴 것입니다. 브라우저에서 `#5b34ea`인 색은 앱에서도 `#5b34ea`입니다.
 
-뷰어는 자기 `colorScheme`에서 `light`이나 `dark`를 고르며 전역을 읽지 않습니다. 아직 이것을 인자로 받지는 않으므로, 오늘 이 export가 쓰이는 곳은 문서 옆에 자기 chrome을 그리면서 같은 색을 쓰고 싶은 애플리케이션입니다.
+뷰어는 자기 `colorScheme`에서 `light`이나 `dark`를 고르며 전역을 읽지 않습니다. 문서 하나가 밝은 화면 안에서 어두울 수 있는 것이 그 덕분입니다.
+
+자기 색을 쓰고 싶은 애플리케이션은 `tokens`를 넘깁니다. 팔레트 하나가 아니라 `MawyTokensBuilder`인데, 뷰어는 나머지를 다 받은 다음에야 자기 밝기를 정하기 때문입니다. 플랫폼을 따라가는 문서라면 두 팔레트 모두에서 따라갈 수 있어야 합니다. 하나를 만드는 방법은 `copyWith`입니다. 색 하나를 바꾸려고 서른한 개를 쓰는 대신, `MawyTokens.of(brightness)`에서 출발해 다른 것만 말합니다.
+
+```dart
+MawyViewer(
+  value: document,
+  tokens: (Brightness brightness) =>
+      MawyTokens.of(brightness).copyWith(accent: const Color(0xFFB8005C)),
+);
+```
+
+이 export는 문서 옆에 자기 chrome을 그리면서 같은 색을 쓰고 싶은 애플리케이션을 위한 것이기도 합니다.
 
 :::
 
 ::: fw react
 
-**Flutter 전용입니다.** 브라우저에서 같은 팔레트는 위의 `--mawy-*` 커스텀 속성이고, 그쪽은 애플리케이션이 다시 선언할 수도 있습니다. Dart 쪽에는 아직 그에 해당하는 것이 없습니다.
+**Flutter 전용입니다.** 브라우저에서 같은 팔레트는 위의 `--mawy-*` 커스텀 속성이고, 그중 하나를 다시 선언하는 일이 Dart 쪽에서는 `tokens`와 `copyWith`입니다.
 
 :::
 

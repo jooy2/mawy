@@ -6,6 +6,20 @@
 
 ### Added
 
+- **A viewer takes a palette of its own.** `MawyViewer.tokens` and `MawyEditor.tokens` are the React package's `--mawy-*` custom properties said in Dart, and the whole of what theming is here:
+
+  ```dart
+  MawyViewer(
+    value: document,
+    tokens: (Brightness brightness) =>
+        MawyTokens.of(brightness).copyWith(accent: const Color(0xFFB8005C)),
+  );
+  ```
+
+  It is a `MawyTokensBuilder` rather than one palette because a viewer settles on its brightness *after* it has been handed everything else — from `colorScheme`, or from the platform where that is `system` — and a document that follows the platform has to be able to follow it in both palettes rather than only in the one it opened on. An editor passes what it is given to its preview, so an editor and the document it is editing are never two palettes.
+
+- **`MawyTokens.copyWith`**, which is how one of those is written: start from `MawyTokens.of(brightness)` and name what differs. Thirty-one arguments to change one colour is not a palette anybody writes twice.
+
 - **The three pieces of accessibility this package was missing**, and they were the three the React package had:
 
   **The toolbar is one tab stop.** A keyboard enters it once, leaves it once, and moves between the controls inside it with the arrows — `Home` and `End` for the ends of the row, `Enter` and the space bar for whichever control the focus is on. Eleven buttons above a document used to be eleven things to step over on the way to reading it, and now they are one. It is `src/internal/roving.ts` in Dart, in `src/internal/roving.dart`, because there are two toolbars here and two copies of a focus model drift into two different keyboards.
@@ -67,6 +81,10 @@
   This is the React package's parser change, in Dart: the same syntax, the same tree, and `tool/parity.dart` diffs the two over the awkward cases and every Markdown file in the repository. Two rules are narrower than the `remark-directive` extension's, and both are about not changing what an existing document already said: the colons must be followed immediately by the name, so `::: tip` with a space is the paragraph it always was; and an inline directive must carry a label or attributes, so `Note:` and `12:30` and `:warning:` stay what they are.
 
 - **`MawyDirective`, `MawyDirectiveBuilder` and `MawyDirectiveKind`**, exported from `package:mawy/mawy.dart` like the rest of the vocabulary.
+
+### Changed
+
+- **`MawyTokens` compares on every colour rather than on six of them.** Six was enough while the only palettes in existence were this package's own two, and became wrong the moment an application could build a third: two palettes differing in nothing but their alert colours called themselves the same palette, and a viewer handed the second one would not have redrawn.
 
 ## 0.1.0 — 2026-08-31
 

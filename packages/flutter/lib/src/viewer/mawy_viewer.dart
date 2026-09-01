@@ -54,6 +54,7 @@ class MawyViewer extends StatefulWidget {
     this.parse = const MawyParseOptions(),
     this.colorScheme = MawyColorScheme.system,
     this.onColorSchemeChange,
+    this.tokens,
     this.typography,
     this.defaultTypography = const MawyTypography(),
     this.onTypographyChange,
@@ -77,6 +78,28 @@ class MawyViewer extends StatefulWidget {
 
   /// Called when the reader changes it from the toolbar.
   final ValueChanged<MawyColorScheme>? onColorSchemeChange;
+
+  /// The colours to draw in, where the application would rather choose them.
+  ///
+  /// This is the React package's `--mawy-*` custom properties: everything the
+  /// document and its chrome are drawn in, and the whole of what theming is.
+  /// It is a function of the brightness rather than one palette, because a
+  /// viewer settles on its brightness after it has been handed everything else
+  /// — from [colorScheme], or from the platform where that is
+  /// [MawyColorScheme.system] — and a document that follows the platform should
+  /// follow it in both palettes.
+  ///
+  /// ```dart
+  /// MawyViewer(
+  ///   value: document,
+  ///   tokens: (Brightness brightness) =>
+  ///       MawyTokens.of(brightness).copyWith(accent: const Color(0xFFB8005C)),
+  /// );
+  /// ```
+  ///
+  /// [MawyTokens.light] and [MawyTokens.dark] otherwise, which are the
+  /// stylesheet's own values.
+  final MawyTokensBuilder? tokens;
 
   /// How the document is set, when the application owns it.
   ///
@@ -255,7 +278,8 @@ class _MawyViewerState extends State<MawyViewer> {
 
   @override
   Widget build(BuildContext context) {
-    final MawyTokens tokens = MawyTokens.of(_brightness(context));
+    final Brightness brightness = _brightness(context);
+    final MawyTokens tokens = widget.tokens?.call(brightness) ?? MawyTokens.of(brightness);
     final MawyStrings strings = stringsFor(widget.locale);
     final MawyTypography type = _typography;
     final MdDocument document = _parsed;

@@ -87,6 +87,12 @@ The name is the file's own when one was opened, and the document's first heading
 
 `parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first six are passed straight through to the preview. `directives` reaches the drawn document as well.
 
+::: fw flutter
+
+`tokens` is one of them: the editor's own toolbar and status bar are drawn from the palette it returns, and so is the preview.
+
+:::
+
 ### `MawyViewer`
 
 A Markdown document, rendered and not editable. See [the viewer](../guide/viewer) for what it does and why.
@@ -193,6 +199,7 @@ Anything left out of `typography` or `defaultTypography` keeps its default, so `
 | --- | --- | --- | --- |
 | `colorScheme` | [`MawyColorScheme`](#mawycolorscheme) | `MawyColorScheme.system` | Which palette to draw in. |
 | `onColorSchemeChange` | `ValueChanged<MawyColorScheme>?` | — | Called when the reader changes it from the toolbar. |
+| `tokens` | [`MawyTokensBuilder`](#mawytokens)`?` | the stylesheet's own | The colours to draw in, given the brightness the viewer settled on. |
 | `typography` | [`MawyTypography`](#mawytypography)`?` | — | How the document is set, when the application owns it. |
 | `defaultTypography` | `MawyTypography` | `MawyTypography()` | How it is set to begin with, when the viewer keeps it itself. |
 | `onTypographyChange` | `ValueChanged<MawyTypography>?` | — | Called whether or not `typography` is being passed. |
@@ -784,18 +791,33 @@ class MawyTokens {
   static const MawyTokens light;
   static const MawyTokens dark;
   static MawyTokens of(Brightness brightness);
+  MawyTokens copyWith({Brightness? brightness, Color? background, /* … */});
 }
+
+typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
 Every colour a document and its chrome are drawn in, as one object. The fields are the `--mawy-*` custom properties above under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
 
-The viewer picks `light` or `dark` from its own `colorScheme` and does not read a global. It does not yet take one as an argument, so what this export is for today is an application drawing its own chrome beside a document and wanting the same colours in it.
+The viewer picks `light` or `dark` from its own `colorScheme` and does not read a global, which is what lets one document be dark inside a light screen.
+
+An application wanting its own colours passes `tokens`, which is a `MawyTokensBuilder` rather than one palette: the viewer settles on its brightness after it has been handed everything else, so a document following the platform has to be able to follow it in both. `copyWith` is how one is written — start from `MawyTokens.of(brightness)` and name what differs, rather than writing thirty-one colours to change one.
+
+```dart
+MawyViewer(
+  value: document,
+  tokens: (Brightness brightness) =>
+      MawyTokens.of(brightness).copyWith(accent: const Color(0xFFB8005C)),
+);
+```
+
+The export is also for an application drawing its own chrome beside a document and wanting the same colours in it.
 
 :::
 
 ::: fw react
 
-**Flutter only.** In a browser the same palette is the `--mawy-*` custom properties above, which an application can also redeclare — the Dart side has no equivalent of that yet.
+**Flutter only.** In a browser the same palette is the `--mawy-*` custom properties above, and redeclaring one of those is what `tokens` and `copyWith` are on the Dart side.
 
 :::
 

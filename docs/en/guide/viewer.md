@@ -545,7 +545,19 @@ The sizes are logical pixels rather than CSS ones and the measure widths are 560
 
 The palette is [`MawyTokens`](../api/#mawytokens), and it is the stylesheet's custom properties under Dart names, value for value — `accent` is `--mawy-accent` and both are `#5b34ea`. `MawyTokens.light` and `MawyTokens.dark` are the two, and the viewer picks between them from `colorScheme` rather than from anything global, which is what lets one document be dark inside a light screen.
 
-**A viewer does not take a palette of its own yet.** There is no argument for one, so the React half of this section has no counterpart here — what the export is for today is an application drawing its own chrome beside a document and wanting the same colours in it:
+Redeclaring one is `tokens`, which takes a function of the brightness rather than a palette: a viewer settles on its brightness after it has been handed everything else — from `colorScheme`, or from the platform where that is `system` — and a document that follows the platform should follow it in both palettes rather than only in the one it opened on. `copyWith` writes one without writing thirty-one colours:
+
+```dart
+MawyViewer(
+  value: document,
+  tokens: (Brightness brightness) =>
+      MawyTokens.of(brightness).copyWith(accent: const Color(0xFFB8005C)),
+);
+```
+
+`MawyEditor` takes the same argument and passes it to its preview, so an editor and the document it is editing are never two palettes.
+
+The export is also for an application drawing its own chrome beside a document and wanting the same colours in it:
 
 ```dart
 final MawyTokens tokens = MawyTokens.of(Theme.of(context).brightness);

@@ -545,7 +545,19 @@ setState(() => _type = _type.copyWith(fontSize: 18));
 
 팔레트는 [`MawyTokens`](../api/#mawytokens)이고, 스타일시트의 커스텀 속성을 Dart 이름으로 옮긴 것입니다. 값 하나까지 그대로여서 `accent`가 `--mawy-accent`이고 둘 다 `#5b34ea`입니다. `MawyTokens.light`과 `MawyTokens.dark`가 그 둘이며, 뷰어는 전역이 아니라 `colorScheme`에서 둘 중 하나를 고릅니다. 문서 하나가 밝은 화면 안에서 어두울 수 있는 것이 그 덕분입니다.
 
-**뷰어가 자기 팔레트를 받지는 아직 못합니다.** 그런 인자가 없어서, 이 절의 React 쪽에 대응하는 것이 여기에는 없습니다. 오늘 이 export가 쓰이는 곳은 문서 옆에 자기 chrome을 그리면서 같은 색을 쓰고 싶은 애플리케이션입니다.
+다시 선언하는 일에 해당하는 것이 `tokens`입니다. 팔레트가 아니라 밝기를 받는 함수인데, 뷰어는 나머지를 다 받은 다음에야 자기 밝기를 정하기 때문입니다 — `colorScheme`에서, 또는 그것이 `system`이면 플랫폼에서. 플랫폼을 따라가는 문서라면 처음 열린 팔레트에서만이 아니라 두 팔레트 모두에서 따라가야 합니다. 서른한 개의 색을 쓰지 않고 하나를 만드는 방법이 `copyWith`입니다.
+
+```dart
+MawyViewer(
+  value: document,
+  tokens: (Brightness brightness) =>
+      MawyTokens.of(brightness).copyWith(accent: const Color(0xFFB8005C)),
+);
+```
+
+`MawyEditor`도 같은 인자를 받아 미리보기에 넘깁니다. 에디터와 그것이 편집하는 문서가 서로 다른 팔레트인 일은 없습니다.
+
+이 export는 문서 옆에 자기 chrome을 그리면서 같은 색을 쓰고 싶은 애플리케이션을 위한 것이기도 합니다.
 
 ```dart
 final MawyTokens tokens = MawyTokens.of(Theme.of(context).brightness);

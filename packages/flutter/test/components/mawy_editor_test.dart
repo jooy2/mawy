@@ -120,6 +120,28 @@ void main() {
     });
   });
 
+  group('the palette', () {
+    testWidgets("reaches the preview as well as the editor's own chrome", (
+      WidgetTester tester,
+    ) async {
+      const Color mine = Color(0xFFB8005C);
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '[link](https://example.com)',
+            colorScheme: MawyColorScheme.light,
+            tokens: (Brightness brightness) => MawyTokens.of(brightness).copyWith(accent: mine),
+          ),
+        ),
+      );
+
+      // The preview is a viewer, and it is handed the same palette rather than
+      // going back to the stylesheet's on its own.
+      expect(styleOf(tester, 'link')?.color, mine);
+    });
+  });
+
   group('the status bar', () {
     testWidgets('counts the document', (WidgetTester tester) async {
       await tester.pumpWidget(

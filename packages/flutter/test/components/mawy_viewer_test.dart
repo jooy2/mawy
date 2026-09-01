@@ -128,6 +128,70 @@ void main() {
 
       expect(styleOf(tester, 'Title')?.color, MawyTokens.light.foreground);
     });
+
+    testWidgets('is the application\'s where it hands the viewer one', (WidgetTester tester) async {
+      const Color mine = Color(0xFFB8005C);
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: sample,
+            colorScheme: MawyColorScheme.light,
+            tokens: (Brightness brightness) => MawyTokens.of(brightness).copyWith(accent: mine),
+          ),
+        ),
+      );
+
+      expect(styleOf(tester, 'link')?.color, mine);
+
+      // Everything it did not name is still the stylesheet's.
+      expect(styleOf(tester, 'Title')?.color, MawyTokens.light.foreground);
+    });
+
+    testWidgets('asks for the palette again when the brightness changes', (
+      WidgetTester tester,
+    ) async {
+      final List<Brightness> asked = <Brightness>[];
+
+      MawyTokens mine(Brightness brightness) {
+        asked.add(brightness);
+
+        return MawyTokens.of(brightness).copyWith(foreground: const Color(0xFF00FF00));
+      }
+
+      await tester.pumpWidget(host(MawyViewer(value: sample, tokens: mine)));
+
+      expect(asked, contains(Brightness.light));
+      expect(styleOf(tester, 'Title')?.color, const Color(0xFF00FF00));
+
+      asked.clear();
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(value: sample, tokens: mine),
+          brightness: Brightness.dark,
+        ),
+      );
+
+      // A document that follows the platform follows it in both palettes: the
+      // builder is a function of the brightness for exactly this.
+      expect(asked, contains(Brightness.dark));
+    });
+
+    test('copies with one colour changed, and compares on every one of them', () {
+      final MawyTokens mine = MawyTokens.light.copyWith(accent: const Color(0xFFB8005C));
+
+      expect(mine.accent, const Color(0xFFB8005C));
+      expect(mine.background, MawyTokens.light.background);
+      expect(mine.caution, MawyTokens.light.caution);
+      expect(mine, isNot(MawyTokens.light));
+
+      // A palette compared on a handful of fields calls two different palettes
+      // the same one, which is only harmless while nobody can build one.
+      expect(MawyTokens.light.copyWith(caution: const Color(0xFF00FF00)), isNot(MawyTokens.light));
+      expect(MawyTokens.light.copyWith(), MawyTokens.light);
+      expect(MawyTokens.light.copyWith().hashCode, MawyTokens.light.hashCode);
+    });
   });
 
   group('typography', () {

@@ -10,13 +10,33 @@
 /// the brightness the viewer was told to draw at and handed down that viewer's
 /// own tree, which is what lets one document be dark inside a light screen.
 ///
-/// It is exported for the application drawing its own chrome beside a document
-/// and wanting the same colours in it. There is no way to hand a viewer a
-/// palette of your own yet — the React package's `--mawy-*` custom properties
-/// have no counterpart here.
+/// It is exported for the two applications that want it: the one drawing its
+/// own chrome beside a document and wanting the same colours in it, and the one
+/// wanting different colours in the document. [MawyTokensBuilder] is the second
+/// of those — the React package's `--mawy-*` custom properties said in Dart,
+/// and a function rather than a palette because a viewer settles on its
+/// brightness after it has been handed everything else.
 library;
 
 import 'package:flutter/widgets.dart';
+
+/// A palette per brightness, for an application that wants its own.
+///
+/// Called with the brightness the viewer settled on — from `colorScheme`, or
+/// from the platform where that is `system` — and every time it settles on a
+/// different one, so a document that follows the platform follows it in both
+/// palettes rather than only in the one it opened on.
+///
+/// Start from one of the two rather than from nothing:
+///
+/// ```dart
+/// MawyViewer(
+///   value: document,
+///   tokens: (Brightness brightness) =>
+///       MawyTokens.of(brightness).copyWith(accent: const Color(0xFFB8005C)),
+/// );
+/// ```
+typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 
 /// One palette: every colour a document and its chrome are drawn in.
 @immutable
@@ -222,19 +242,153 @@ class MawyTokens {
   /// The palette for a brightness.
   static MawyTokens of(Brightness brightness) => brightness == Brightness.dark ? dark : light;
 
+  /// The same palette with whatever is named here changed.
+  ///
+  /// This is how a palette of your own is made: one of the two, and the
+  /// colours that differ. Thirty-one arguments to change one of them is not
+  /// a palette anybody would write twice.
+  MawyTokens copyWith({
+    Brightness? brightness,
+    Color? background,
+    Color? backgroundSunken,
+    Color? backgroundRaised,
+    Color? chrome,
+    Color? foreground,
+    Color? foregroundMuted,
+    Color? foregroundSubtle,
+    Color? border,
+    Color? borderStrong,
+    Color? accent,
+    Color? accentHover,
+    Color? accentForeground,
+    Color? accentSoft,
+    Color? codeBackground,
+    Color? codeForeground,
+    Color? markBackground,
+    Color? markForeground,
+    Color? highlightComment,
+    Color? highlightString,
+    Color? highlightNumber,
+    Color? highlightKeyword,
+    Color? highlightType,
+    Color? highlightFunction,
+    Color? highlightVariable,
+    Color? highlightPunctuation,
+    Color? note,
+    Color? tip,
+    Color? important,
+    Color? warning,
+    Color? caution,
+  }) {
+    return MawyTokens(
+      brightness: brightness ?? this.brightness,
+      background: background ?? this.background,
+      backgroundSunken: backgroundSunken ?? this.backgroundSunken,
+      backgroundRaised: backgroundRaised ?? this.backgroundRaised,
+      chrome: chrome ?? this.chrome,
+      foreground: foreground ?? this.foreground,
+      foregroundMuted: foregroundMuted ?? this.foregroundMuted,
+      foregroundSubtle: foregroundSubtle ?? this.foregroundSubtle,
+      border: border ?? this.border,
+      borderStrong: borderStrong ?? this.borderStrong,
+      accent: accent ?? this.accent,
+      accentHover: accentHover ?? this.accentHover,
+      accentForeground: accentForeground ?? this.accentForeground,
+      accentSoft: accentSoft ?? this.accentSoft,
+      codeBackground: codeBackground ?? this.codeBackground,
+      codeForeground: codeForeground ?? this.codeForeground,
+      markBackground: markBackground ?? this.markBackground,
+      markForeground: markForeground ?? this.markForeground,
+      highlightComment: highlightComment ?? this.highlightComment,
+      highlightString: highlightString ?? this.highlightString,
+      highlightNumber: highlightNumber ?? this.highlightNumber,
+      highlightKeyword: highlightKeyword ?? this.highlightKeyword,
+      highlightType: highlightType ?? this.highlightType,
+      highlightFunction: highlightFunction ?? this.highlightFunction,
+      highlightVariable: highlightVariable ?? this.highlightVariable,
+      highlightPunctuation: highlightPunctuation ?? this.highlightPunctuation,
+      note: note ?? this.note,
+      tip: tip ?? this.tip,
+      important: important ?? this.important,
+      warning: warning ?? this.warning,
+      caution: caution ?? this.caution,
+    );
+  }
+
+  /// Every colour, and not a sample of them.
+  ///
+  /// Six fields would do for the two palettes this package ships, and would
+  /// quietly call two different palettes the same one the moment an
+  /// application built its own.
   @override
   bool operator ==(Object other) =>
       other is MawyTokens &&
       other.brightness == brightness &&
       other.background == background &&
+      other.backgroundSunken == backgroundSunken &&
+      other.backgroundRaised == backgroundRaised &&
+      other.chrome == chrome &&
       other.foreground == foreground &&
-      other.accent == accent &&
+      other.foregroundMuted == foregroundMuted &&
+      other.foregroundSubtle == foregroundSubtle &&
       other.border == border &&
-      other.codeBackground == codeBackground;
+      other.borderStrong == borderStrong &&
+      other.accent == accent &&
+      other.accentHover == accentHover &&
+      other.accentForeground == accentForeground &&
+      other.accentSoft == accentSoft &&
+      other.codeBackground == codeBackground &&
+      other.codeForeground == codeForeground &&
+      other.markBackground == markBackground &&
+      other.markForeground == markForeground &&
+      other.highlightComment == highlightComment &&
+      other.highlightString == highlightString &&
+      other.highlightNumber == highlightNumber &&
+      other.highlightKeyword == highlightKeyword &&
+      other.highlightType == highlightType &&
+      other.highlightFunction == highlightFunction &&
+      other.highlightVariable == highlightVariable &&
+      other.highlightPunctuation == highlightPunctuation &&
+      other.note == note &&
+      other.tip == tip &&
+      other.important == important &&
+      other.warning == warning &&
+      other.caution == caution;
 
   @override
-  int get hashCode =>
-      Object.hash(brightness, background, foreground, accent, border, codeBackground);
+  int get hashCode => Object.hashAll(<Object>[
+    brightness,
+    background,
+    backgroundSunken,
+    backgroundRaised,
+    chrome,
+    foreground,
+    foregroundMuted,
+    foregroundSubtle,
+    border,
+    borderStrong,
+    accent,
+    accentHover,
+    accentForeground,
+    accentSoft,
+    codeBackground,
+    codeForeground,
+    markBackground,
+    markForeground,
+    highlightComment,
+    highlightString,
+    highlightNumber,
+    highlightKeyword,
+    highlightType,
+    highlightFunction,
+    highlightVariable,
+    highlightPunctuation,
+    note,
+    tip,
+    important,
+    warning,
+    caution,
+  ]);
 }
 
 /// The corner radii, which are three sizes and not a scale.
