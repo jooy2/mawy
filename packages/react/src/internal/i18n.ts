@@ -58,6 +58,8 @@ export interface MawyStrings {
   editor: string;
   /** The toolbar's overflow menu, where what did not fit is kept. */
   more: string;
+  /** The bar between the two panes of `split`, which is draggable. */
+  divider: string;
   source: string;
   mode: string;
   modeWysiwyg: string;
@@ -159,6 +161,7 @@ const en: MawyStrings = {
   alertCaution: 'Caution',
   editor: 'Document',
   more: 'More controls',
+  divider: 'Resize the panes',
   source: 'Markdown source',
   mode: 'View',
   modeWysiwyg: 'Formatted',
@@ -252,6 +255,7 @@ const ko: MawyStrings = {
   alertCaution: '경고',
   editor: '문서',
   more: '더 보기',
+  divider: '창 크기 조절',
   source: '마크다운 원문',
   mode: '보기',
   modeWysiwyg: '서식',

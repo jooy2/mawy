@@ -32,6 +32,7 @@ class MawyStrings {
     required this.colorSchemeLight,
     required this.colorSchemeDark,
     required this.colorSchemeSystem,
+    required this.divider,
     required this.outline,
     required this.outlineEmpty,
     required this.copy,
@@ -139,6 +140,9 @@ class MawyStrings {
 
   /// Whatever the platform says.
   final String colorSchemeSystem;
+
+  /// The bar between the two panes of `split`, which can be dragged.
+  final String divider;
 
   /// The outline panel.
   final String outline;
@@ -324,6 +328,7 @@ const MawyStrings _en = MawyStrings(
   colorSchemeLight: 'Light',
   colorSchemeDark: 'Dark',
   colorSchemeSystem: 'Match the system',
+  divider: 'Resize the panes',
   outline: 'Outline',
   outlineEmpty: 'This document has no headings.',
   copy: 'Copy the Markdown',
@@ -399,6 +404,7 @@ const MawyStrings _ko = MawyStrings(
   colorSchemeLight: '라이트',
   colorSchemeDark: '다크',
   colorSchemeSystem: '시스템 설정 따르기',
+  divider: '창 크기 조절',
   outline: '목차',
   outlineEmpty: '제목이 없는 문서입니다.',
   copy: '마크다운 원문 복사',

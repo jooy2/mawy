@@ -24,10 +24,6 @@ Two rules keep it honest:
   using them rather than by reading them. Uploading an image can be mimed; there
   is no server to put one on.
 
-- **The split view's divider does not move.** The source and the preview are
-  half and half, and a reader who wants more of one has no way to say so. Both
-  packages.
-
 ## Reported, not reproduced
 
 - **Most of the Flutter editor's toolbar buttons do nothing in the documentation

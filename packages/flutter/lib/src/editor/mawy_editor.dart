@@ -275,6 +275,19 @@ class _MawyEditorState extends State<MawyEditor> {
   late MawyColorScheme _scheme = widget.colorScheme;
   late MawyTypography _type = widget.typography ?? widget.defaultTypography;
 
+  /// How much of the width the source pane has, in `split`.
+  ///
+  /// Half and half is a guess about what somebody is doing, and it is wrong as
+  /// often as it is right: a wide window wants more preview while reading over
+  /// a draft and more source while writing one. So the bar between them is
+  /// something to take hold of.
+  ///
+  /// Held here rather than taken as an argument, for the reason a scroll offset
+  /// is: where a pane's edge sits is the reader's, for as long as they are
+  /// looking at it, and an application that needs to store it already has
+  /// `value` and `onChange` for the thing worth storing.
+  double _share = 0.5;
+
   /// The find bar, which is closed until somebody asks for it.
   ///
   /// It exists because a platform's own find reaches a page of text and not the
@@ -564,14 +577,32 @@ class _MawyEditorState extends State<MawyEditor> {
               editable: !widget.readOnly,
             ),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                if (showSource) Expanded(child: source),
-                if (showSource && showPreview)
-                  SizedBox(width: 1, child: ColoredBox(color: tokens.border)),
-                if (showPreview) Expanded(child: preview),
-              ],
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints room) => Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (showSource)
+                    // A flex of a thousandth, so the share is a whole number of
+                    // them and the two panes always add up to the width. A
+                    // fractional `flex` is not a thing a `Row` has.
+                    Flexible(flex: (_share * 1000).round(), child: source),
+                  if (showSource && showPreview)
+                    _Divider(
+                      tokens: tokens,
+                      strings: strings,
+                      share: _share,
+                      width: room.maxWidth,
+                      onChange: (double next) => setState(() => _share = _clampShare(next)),
+                    )
+                  else if (showSource || showPreview)
+                    const SizedBox.shrink(),
+                  if (showPreview)
+                    Flexible(
+                      flex: showSource ? 1000 - (_share * 1000).round() : 1000,
+                      child: preview,
+                    ),
+                ],
+              ),
             ),
           ),
           if (widget.status.isNotEmpty)
@@ -975,4 +1006,145 @@ class _Status extends StatelessWidget {
 /// `Mod`+`F`.
 class _FindIntent extends Intent {
   const _FindIntent();
+}
+
+/// How far the bar between the panes of `split` may be pushed, either way.
+const double _splitLeast = 0.15;
+const double _splitMost = 0.85;
+
+double _clampShare(double value) => value.clamp(_splitLeast, _splitMost);
+
+String _percent(double share) => '${(share * 100).round()}%';
+
+/// The bar between the two panes of `split`, which is something to take hold of.
+///
+/// One pixel of line and five of target: the line is the border the two panes
+/// would have had anyway, and the rest is the width a pointer needs to find it.
+/// The React package's bar is the same five pixels over the same one, and for
+/// the same reason.
+///
+/// It is a `Semantics` slider rather than a button, which is what it is: a value
+/// between two ends that the arrows move. A bar nobody can move without a
+/// pointer is a bar half the readers of this editor cannot move at all, so the
+/// arrows are here and `Enter` puts it back to half.
+class _Divider extends StatefulWidget {
+  const _Divider({
+    required this.tokens,
+    required this.strings,
+    required this.share,
+    required this.width,
+    required this.onChange,
+  });
+
+  final MawyTokens tokens;
+  final MawyStrings strings;
+  final double share;
+
+  /// How wide the two panes are together, which is what a drag is measured in.
+  final double width;
+
+  final ValueChanged<double> onChange;
+
+  @override
+  State<_Divider> createState() => _DividerState();
+}
+
+class _DividerState extends State<_Divider> {
+  // The keys are handled on the node itself rather than on a `Focus` inside
+  // the detector: a key event travels from the node that has the focus up
+  // through its ancestors, and a `Focus` under the detector is not one of them.
+  late final FocusNode _node = FocusNode(debugLabel: 'MawyEditor divider', onKeyEvent: _onKey);
+
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
+
+  void _by(double step) => widget.onChange(widget.share + step);
+
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final bool far = HardwareKeyboard.instance.isShiftPressed;
+    final bool rtl = Directionality.of(context) == TextDirection.rtl;
+    final double step = (far ? 0.1 : 0.02) * (rtl ? -1 : 1);
+
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowLeft:
+        _by(-step);
+      case LogicalKeyboardKey.arrowRight:
+        _by(step);
+      case LogicalKeyboardKey.home:
+        widget.onChange(rtl ? _splitMost : _splitLeast);
+      case LogicalKeyboardKey.end:
+        widget.onChange(rtl ? _splitLeast : _splitMost);
+      case LogicalKeyboardKey.enter:
+      case LogicalKeyboardKey.numpadEnter:
+        widget.onChange(0.5);
+      default:
+        return KeyEventResult.ignored;
+    }
+
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final MawyTokens tokens = widget.tokens;
+    final bool lit = _hovered || _focused;
+
+    return Semantics(
+      slider: true,
+      label: widget.strings.divider,
+      value: _percent(widget.share),
+      // Both of these, or neither: a node that says it can be increased and
+      // does not say what to has an assertion of Flutter's waiting for it.
+      increasedValue: _percent(_clampShare(widget.share + 0.02)),
+      decreasedValue: _percent(_clampShare(widget.share - 0.02)),
+      onIncrease: () => _by(0.02),
+      onDecrease: () => _by(-0.02),
+      child: FocusableActionDetector(
+        focusNode: _node,
+        mouseCursor: SystemMouseCursors.resizeColumn,
+        onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          // Taking hold of the bar is asking for it, and the arrows are no
+          // use to somebody who has to press Tab to reach what they are
+          // already pointing at.
+          onTapDown: (TapDownDetails _) => _node.requestFocus(),
+          onHorizontalDragDown: (DragDownDetails _) => _node.requestFocus(),
+          onHorizontalDragUpdate: (DragUpdateDetails drag) {
+            if (widget.width <= 0) {
+              return;
+            }
+
+            final bool rtl = Directionality.of(context) == TextDirection.rtl;
+            final double along = drag.delta.dx * (rtl ? -1 : 1);
+
+            widget.onChange(widget.share + along / widget.width);
+          },
+          onDoubleTap: () => widget.onChange(0.5),
+          child: SizedBox(
+            width: 5,
+            child: Center(
+              child: AnimatedContainer(
+                duration: MawyMotion.durationOf(context),
+                curve: MawyMotion.easing,
+                width: lit ? 3 : 1,
+                color: lit ? tokens.accent : tokens.border,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

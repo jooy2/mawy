@@ -1321,6 +1321,33 @@
   border-inline-start: 1px solid var(--mawy-border);
 }
 
+/* The bar between the two panes of `split`.
+ *
+ * The share is a custom property rather than a width on the pane, so that the
+ * narrow layout below — where the panes are stacked and there is no bar — can
+ * put both back to half without fighting an inline style. */
+.mawy-root .mawy-editor-body[data-mawy-split] > .mawy-editor-pane:first-child {
+  flex: 0 0 calc(var(--mawy-split, 0.5) * 100%);
+}
+
+.mawy-root .mawy-editor-divider {
+  flex: 0 0 5px;
+  margin-inline: -2px;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  /* Over the border the preview draws, so the line stays one pixel and the
+   * thing to take hold of is five. */
+  z-index: 1;
+  touch-action: none;
+}
+
+.mawy-root .mawy-editor-divider:hover,
+.mawy-root .mawy-editor-divider:focus-visible {
+  background: var(--mawy-accent);
+  outline: none;
+}
+
 /* The viewer is a `.mawy-root` of its own, and inside a pane it fills it. */
 .mawy-root .mawy-editor-preview > .mawy-root {
   flex: 1 1 auto;
@@ -1655,6 +1682,16 @@
   .mawy-root .mawy-editor-preview {
     border-inline-start: 0;
     border-top: 1px solid var(--mawy-border);
+  }
+
+  /* Stacked, so a share of the width means nothing and the bar has nothing to
+   * sit between. */
+  .mawy-root .mawy-editor-body[data-mawy-split] > .mawy-editor-pane:first-child {
+    flex: 1 1 0;
+  }
+
+  .mawy-root .mawy-editor-divider {
+    display: none;
   }
 }
 

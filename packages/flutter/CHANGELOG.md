@@ -12,6 +12,10 @@
 
   Following an entry now moves the focus as well as the scroll, so the next `Tab` carries on from the heading rather than from the panel. The heading is `skipTraversal`, which is the web's `tabIndex = -1` said the other way round: somewhere the focus can be put, and not somewhere `Tab` stops on the way past. That was the last thing the viewer guide said this package did not do yet, and the sentence is gone.
 
+- **The bar between the two panes of `split` is something to take hold of.** The React package's, said in Flutter's terms and landing in the same commit: drag it, or focus it and use the arrows — `Shift` for a bigger step, `Home` and `End` for the ends, `Enter` or a double tap for half and half again.
+
+  A `Semantics` slider rather than a button, which is what it is, and it says its value as a percentage. It stops well short of either edge, because a pane pushed to nothing is a pane nobody can get back. `MawyStrings.divider` is the only thing added.
+
 - **The source surface answers the pointer.** Dragging across it selects, a double tap takes the word under it, a triple tap takes the line, and a long press on a touch screen raises the handles. None of that worked: an `EditableText` on its own puts the caret where it is tapped and stops there, and everything else a text field does with a pointer is `TextSelectionGestureDetectorBuilder`, which `TextField` builds around its own field and this did not build around its own.
 
   It costs nothing this package has refused elsewhere — the builder is in `package:flutter/widgets.dart` rather than in Material. `rendererIgnoresPointer` goes with it, because the detector and the renderer both want the gesture and two things reading one drag is a caret that jumps to where a selection was meant to start.

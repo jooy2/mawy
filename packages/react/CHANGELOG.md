@@ -6,6 +6,12 @@
 
 ### Added
 
+- **The bar between the two panes of `split` is something to take hold of.** Half and half is a guess about what somebody is doing, and it is wrong as often as it is right: a wide window wants more preview while reading over a draft and more source while writing one.
+
+  Drag it, or focus it and use the arrows — `Shift` for a bigger step, `Home` and `End` for the ends, `Enter` or a double-click for half and half again. It is a `separator` with a value, which is what it is, and a bar nobody can move without a pointer is a bar half the readers of an editor cannot move at all. It stops well short of either edge, because a pane pushed to nothing is a pane nobody can get back.
+
+  No prop for it, and `strings.divider` is the only thing added. Where a pane's edge sits is the same kind of thing as where a scrollbar sits — the reader's, for as long as they are looking at it — and an application with a reason to store it already has `value` and `onChange` for the thing worth storing. Below the width at which the panes stack there is no bar and nothing for it to be between. 0.5 kB gzipped on the editor and 0.1 kB on the stylesheet.
+
 - **A toolbar too narrow for its buttons keeps what fits and puts the rest in a menu at the end of it.** What happened before was a wrap: the buttons went on to a second row and the bar did not grow, because the layout above it had made room for one. The lower row left the bar.
 
   Whole groups at a time and from the end. The separators an application already writes are the grouping — the surface switch, then what marks up a run of text, then what makes a block of one, then the file and the palette — so reordering `toolbar` reorders what goes first, and there is no second list here saying what belongs with what. The first group never leaves.

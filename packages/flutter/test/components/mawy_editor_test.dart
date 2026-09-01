@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/editor/find_bar.dart' show MawyFindBar;
+import 'package:mawy/src/editor/source_field.dart' show MawySourceField;
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart' show MawyToolbarButton;
 
 import '../support/host.dart';
@@ -151,6 +152,79 @@ void main() {
       final TextSelection selection = field.widget.controller.selection;
 
       expect('one two three'.substring(selection.start, selection.end), 'two');
+    });
+  });
+
+  group('the bar between the panes', () {
+    /// How wide the source pane is drawn, which is what a share means.
+    double sourceWidth(WidgetTester tester) => tester.getSize(find.byType(MawySourceField)).width;
+
+    testWidgets('is only there when there are two panes to be between', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: document, defaultMode: MawyEditorMode.plain)),
+      );
+
+      expect(find.bySemanticsLabel('Resize the panes'), findsNothing);
+
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: document, defaultMode: MawyEditorMode.split)),
+      );
+
+      expect(find.bySemanticsLabel('Resize the panes'), findsOneWidget);
+    });
+
+    testWidgets('moves with a drag, and a double tap puts it back', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: document, defaultMode: MawyEditorMode.split)),
+      );
+
+      final double half = sourceWidth(tester);
+      final Finder bar = find.bySemanticsLabel('Resize the panes');
+
+      await tester.drag(bar, const Offset(120, 0));
+      await tester.pumpAndSettle();
+
+      expect(sourceWidth(tester), greaterThan(half));
+
+      await tester.tap(bar);
+      await tester.pump(kDoubleTapMinTime);
+      await tester.tap(bar);
+      await tester.pumpAndSettle();
+
+      expect(sourceWidth(tester), half);
+    });
+
+    testWidgets('moves with the arrows and goes no further than its ends', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: document, defaultMode: MawyEditorMode.split)),
+      );
+
+      final double half = sourceWidth(tester);
+
+      await tester.tap(find.bySemanticsLabel('Resize the panes'));
+      await tester.pumpAndSettle();
+
+      for (int press = 0; press < 40; press += 1) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      }
+
+      await tester.pumpAndSettle();
+
+      final double wide = sourceWidth(tester);
+
+      expect(wide, greaterThan(half));
+
+      // A pane that can be pushed to nothing is a pane nobody can get back.
+      expect(tester.getSize(find.byType(MawyViewer)).width, greaterThan(0));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.home);
+      await tester.pumpAndSettle();
+
+      expect(sourceWidth(tester), lessThan(half));
     });
   });
 

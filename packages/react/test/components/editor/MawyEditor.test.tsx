@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { page } from '@vitest/browser/context';
 import { render } from 'vitest-browser-react';
 import { MawyEditor } from 'mawy-react';
 // The one test file that needs the real stylesheet. The source surface is two
@@ -242,6 +243,73 @@ describe('the modes', () => {
     expect(
       screen.container.querySelector('.mawy-document-body')?.getAttribute('contenteditable')
     ).toBe('true');
+  });
+});
+
+describe('the bar between the panes of split', () => {
+  // The frame these tests run in is narrower than the breakpoint below which
+  // the panes stack, and stacked panes have nothing for a bar to sit between.
+  // The breakpoint is the viewport's rather than the editor's, so widening a
+  // box around the editor is not enough — the window has to be the wide one.
+  beforeAll(async () => {
+    await page.viewport(1100, 800);
+  });
+
+  afterAll(async () => {
+    await page.viewport(414, 896);
+  });
+
+  const widths = (screen: Awaited<ReturnType<typeof render>>) =>
+    [...screen.container.querySelectorAll<HTMLElement>('.mawy-editor-pane')].map(
+      (pane) => pane.offsetWidth
+    );
+
+  it('is only there when there are two panes to be between', async () => {
+    const screen = await render(<MawyEditor defaultValue={DOCUMENT} mode="plain" />);
+
+    expect(screen.container.querySelector('.mawy-editor-divider')).toBeNull();
+
+    await screen.rerender(<MawyEditor defaultValue={DOCUMENT} mode="split" />);
+    await expect
+      .element(screen.getByRole('separator', { name: 'Resize the panes' }))
+      .toBeInTheDocument();
+  });
+
+  it('moves with the arrows, and Enter puts it back', async () => {
+    const screen = await render(<MawyEditor defaultValue={DOCUMENT} mode="split" />);
+    const bar = screen.container.querySelector('.mawy-editor-divider') as HTMLElement;
+    const [source] = widths(screen);
+
+    bar.focus();
+    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await vi.waitFor(() => expect(widths(screen)[0]).toBeGreaterThan(source));
+
+    expect(bar.getAttribute('aria-valuenow')).toBe('52');
+
+    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await vi.waitFor(() => expect(widths(screen)[0]).toBeLessThan(source));
+
+    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await vi.waitFor(() => expect(widths(screen)[0]).toBe(source));
+  });
+
+  it('goes no further than the ends it says it goes to', async () => {
+    const screen = await render(<MawyEditor defaultValue={DOCUMENT} mode="split" />);
+    const bar = screen.container.querySelector('.mawy-editor-divider') as HTMLElement;
+
+    bar.focus();
+
+    for (let press = 0; press < 40; press += 1) {
+      bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    }
+
+    // A pane that can be pushed to nothing is a pane nobody can get back.
+    await vi.waitFor(() => expect(bar.getAttribute('aria-valuenow')).toBe('85'));
+    expect(widths(screen)[1]).toBeGreaterThan(0);
+
+    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    await vi.waitFor(() => expect(bar.getAttribute('aria-valuenow')).toBe('15'));
   });
 });
 

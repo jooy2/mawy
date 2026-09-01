@@ -60,6 +60,10 @@ import { MawyEditorSource } from './MawyEditorSource.js';
  */
 const DEFAULT_MODES: readonly MawyMode[] = ['wysiwyg', 'plain', 'split', 'preview'];
 
+/** How far the bar between the panes of `split` may be pushed, either way. */
+const SPLIT_LEAST = 0.15;
+const SPLIT_MOST = 0.85;
+
 /**
  * The keyboard, which is the editor's real interface.
  *
@@ -308,6 +312,93 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const showDocument = current === 'wysiwyg';
   const showPreview = current === 'preview' || current === 'split';
   const editable = (showSource || showDocument) && !readOnly;
+
+  /* ---------------------------------------------------------------------
+   * The bar between the two panes of split
+   * ------------------------------------------------------------------ */
+
+  /**
+   * How much of the width the first pane has, and how it is moved.
+   *
+   * Half and half is a guess about what somebody is doing, and it is wrong as
+   * often as it is right: a wide screen wants more preview while reading over a
+   * draft and more source while writing one. So the bar between them is
+   * something to take hold of.
+   *
+   * State rather than a prop. Where a pane's edge sits is the same kind of thing
+   * as where a scrollbar sits — the reader's, for as long as they are looking at
+   * it — and an application that has to store it has a `value` and an `onChange`
+   * for the document and nothing here worth adding a third to.
+   */
+  const body = React.useRef<HTMLDivElement>(null);
+  const [share, setShare] = React.useState(0.5);
+  const splitting = showSource && showPreview;
+
+  /** Where the bar can go. Far enough from either edge to be taken hold of. */
+  const clamp = (fraction: number) => Math.min(SPLIT_MOST, Math.max(SPLIT_LEAST, fraction));
+
+  const onDividerDown = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const box = body.current?.getBoundingClientRect();
+
+    if (!box || box.width === 0) {
+      return;
+    }
+
+    // The pointer is captured so the drag survives leaving the bar, which it
+    // does immediately: the bar is five pixels wide and a hand is not that
+    // steady.
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+
+    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
+
+    const move = (at: PointerEvent) => {
+      const along = rtl ? box.right - at.clientX : at.clientX - box.left;
+
+      setShare(clamp(along / box.width));
+    };
+
+    const up = () => {
+      event.currentTarget.removeEventListener('pointermove', move);
+      event.currentTarget.removeEventListener('pointerup', up);
+      event.currentTarget.removeEventListener('pointercancel', up);
+    };
+
+    event.currentTarget.addEventListener('pointermove', move);
+    event.currentTarget.addEventListener('pointerup', up);
+    event.currentTarget.addEventListener('pointercancel', up);
+  }, []);
+
+  /**
+   * The same bar from the keyboard, which is the half that is easy to leave out.
+   *
+   * A separator nobody can move without a pointer is a separator half the
+   * readers of this editor cannot move at all.
+   */
+  const onDividerKey = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
+    const step = (event.shiftKey ? 0.1 : 0.02) * (rtl ? -1 : 1);
+
+    const to =
+      event.key === 'ArrowLeft'
+        ? (was: number) => clamp(was - step)
+        : event.key === 'ArrowRight'
+          ? (was: number) => clamp(was + step)
+          : event.key === 'Home'
+            ? () => (rtl ? SPLIT_MOST : SPLIT_LEAST)
+            : event.key === 'End'
+              ? () => (rtl ? SPLIT_LEAST : SPLIT_MOST)
+              : event.key === 'Enter'
+                ? () => 0.5
+                : null;
+
+    if (!to) {
+      return;
+    }
+
+    event.preventDefault();
+    setShare(to);
+  }, []);
 
   const items: readonly MawyEditorToolbarItem[] =
     toolbar === false ? [] : toolbar === true ? DEFAULT_EDITOR_TOOLBAR : toolbar;
@@ -1196,7 +1287,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         />
       ) : null}
 
-      <div className="mawy-editor-body">
+      <div
+        className="mawy-editor-body"
+        ref={body}
+        style={splitting ? ({ '--mawy-split': share } as React.CSSProperties) : undefined}
+        data-mawy-split={splitting || undefined}
+      >
         {showSource ? (
           <div className="mawy-editor-pane">
             <MawyEditorSource
@@ -1239,6 +1335,22 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               onImages={onUploadImage ? addImages : undefined}
             />
           </div>
+        ) : null}
+
+        {splitting ? (
+          <div
+            className="mawy-editor-divider"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={strings.divider}
+            aria-valuenow={Math.round(share * 100)}
+            aria-valuemin={Math.round(SPLIT_LEAST * 100)}
+            aria-valuemax={Math.round(SPLIT_MOST * 100)}
+            tabIndex={0}
+            onPointerDown={onDividerDown}
+            onKeyDown={onDividerKey}
+            onDoubleClick={() => setShare(0.5)}
+          />
         ) : null}
 
         {showPreview ? (
