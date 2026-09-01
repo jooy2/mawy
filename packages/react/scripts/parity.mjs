@@ -28,6 +28,7 @@ import { parseMarkdown } from '../src/internal/markdown/parse.ts';
 import { mawyHighlighter } from '../src/highlight.ts';
 import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
 import { commandActive, continueList, indent, runCommand } from '../src/internal/commands.ts';
+import { findMatches, matchFrom, replaceAll, replaceMatch } from '../src/internal/search.ts';
 import { caretAt, countBytes, countLines, countWords } from '../src/internal/status.ts';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
@@ -199,4 +200,30 @@ const edits = JSON.parse(
   return out;
 });
 
-process.stdout.write(JSON.stringify({ trees, highlights, source, edits }, null, 1));
+/**
+ * And finding text, which is a fifth thing written twice.
+ *
+ * The same shape of decision as the commands: what "replace all" does to
+ * overlapping matches, which match "next" goes to from where the caret is, and
+ * whether the two packages agree about what lowercase means. Nothing about any
+ * of it is visible until somebody types in the find box.
+ */
+const searches = JSON.parse(
+  readFileSync(resolve(rootDir, 'packages/flutter/tool/searches.json'), 'utf8')
+).map(([value, query, matchCase, caret, replacement]) => {
+  const matches = findMatches(value, query, matchCase);
+  const first = matches[0];
+  const replaced = first ? replaceMatch(value, first, replacement) : null;
+  const all = replaceAll(value, query, replacement, matchCase);
+
+  return {
+    input: [value, query, matchCase, caret, replacement],
+    matches: matches.map((match) => [match.start, match.end]),
+    forwards: matchFrom(matches, caret, true),
+    backwards: matchFrom(matches, caret, false),
+    replaceFirst: replaced && [replaced.value, replaced.caret],
+    replaceAll: [all.value, all.count]
+  };
+});
+
+process.stdout.write(JSON.stringify({ trees, highlights, source, edits, searches }, null, 1));

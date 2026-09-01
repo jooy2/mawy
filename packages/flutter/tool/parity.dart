@@ -23,6 +23,7 @@ import 'dart:io';
 
 import 'package:mawy/src/code.dart';
 import 'package:mawy/src/editor/commands.dart';
+import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/editor/status.dart';
 import 'package:mawy/src/highlight.dart';
 import 'package:mawy/src/markdown/ast.dart';
@@ -272,6 +273,7 @@ void main() {
       'highlights': _highlights(),
       'source': _source(),
       'edits': _edits(),
+      'searches': _searches(),
     }),
   );
 }
@@ -383,5 +385,41 @@ List<Object?> _edits() {
     out['outdent'] = <Object?>[outdented.value, outdented.start, outdented.end];
 
     return out;
+  }).toList();
+}
+
+/// And finding text, which is a fifth thing written twice.
+///
+/// The same shape of decision as the commands: what "replace all" does to
+/// overlapping matches, which match "next" goes to from where the caret is, and
+/// whether the two packages agree about what lowercase means. Nothing about any
+/// of it is visible until somebody types in the find box.
+List<Object?> _searches() {
+  final Directory tool = File(Platform.script.toFilePath()).parent;
+  final List<Object?> cases =
+      jsonDecode(File('${tool.path}/searches.json').readAsStringSync()) as List<Object?>;
+
+  return cases.map((Object? entry) {
+    final List<Object?> each = entry! as List<Object?>;
+    final String value = each[0]! as String;
+    final String query = each[1]! as String;
+    final bool matchCase = each[2]! as bool;
+    final int caret = each[3]! as int;
+    final String replacement = each[4]! as String;
+
+    final List<MawyMatch> matches = findMatches(value, query, matchCase);
+    final MawyReplaced? replaced = matches.isEmpty
+        ? null
+        : replaceMatch(value, matches.first, replacement);
+    final MawyReplacedAll all = replaceAll(value, query, replacement, matchCase);
+
+    return <String, Object?>{
+      'input': <Object?>[value, query, matchCase, caret, replacement],
+      'matches': matches.map((MawyMatch match) => <int>[match.start, match.end]).toList(),
+      'forwards': matchFrom(matches, caret, forwards: true),
+      'backwards': matchFrom(matches, caret, forwards: false),
+      'replaceFirst': replaced == null ? null : <Object?>[replaced.value, replaced.caret],
+      'replaceAll': <Object?>[all.value, all.count],
+    };
   }).toList();
 }

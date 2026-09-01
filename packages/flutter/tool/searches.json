@@ -1,0 +1,121 @@
+[
+ [
+  "aaaa",
+  "aa",
+  true,
+  0,
+  "b"
+ ],
+ [
+  "aaaa",
+  "a",
+  true,
+  2,
+  "aa"
+ ],
+ [
+  "Some words here.",
+  "words",
+  true,
+  0,
+  "lines"
+ ],
+ [
+  "Some Words here, and words again.",
+  "words",
+  false,
+  0,
+  "lines"
+ ],
+ [
+  "Some Words here, and words again.",
+  "words",
+  true,
+  0,
+  "lines"
+ ],
+ [
+  "a a a",
+  "a",
+  true,
+  3,
+  "aa"
+ ],
+ [
+  "a a a",
+  "a",
+  true,
+  5,
+  "b"
+ ],
+ [
+  "a a a",
+  "a",
+  true,
+  0,
+  ""
+ ],
+ [
+  "",
+  "x",
+  true,
+  0,
+  "y"
+ ],
+ [
+  "abc",
+  "",
+  true,
+  0,
+  "y"
+ ],
+ [
+  "abc",
+  "abcd",
+  true,
+  0,
+  "y"
+ ],
+ [
+  "# Heading\n\nWords.",
+  "\n",
+  true,
+  0,
+  " "
+ ],
+ [
+  "**bold** and **bold**",
+  "**",
+  true,
+  4,
+  "__"
+ ],
+ [
+  "café CAFÉ café",
+  "café",
+  false,
+  6,
+  "tea"
+ ],
+ [
+  "café CAFÉ café",
+  "café",
+  true,
+  0,
+  "tea"
+ ],
+ [
+  "one\ttwo\tthree",
+  "\t",
+  true,
+  4,
+  "  "
+ ],
+ [
+  "Ω omega Ω",
+  "Ω",
+  true,
+  1,
+  "O"
+ ]
+]
