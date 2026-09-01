@@ -476,7 +476,7 @@ function takeIndented(
       break;
     }
 
-    body.push(advance(next, next.text.length - next.text.trimStart().length));
+    body.push({ ...advance(next, next.text.length - next.text.trimStart().length), lazy: true });
     at += 1;
   }
 
@@ -565,6 +565,72 @@ function interrupts(line: string): boolean {
   // empty bullet, or an ordered list starting anywhere but 1, is far more often
   // a line of prose than a list the author meant to begin here.
   return Boolean(marker) && !marker!.empty && (!marker!.ordered || marker!.number === 1);
+}
+
+/**
+ * What a container has open, at the end of the lines it has taken so far.
+ *
+ * Only a paragraph may be continued lazily — a line that arrived without the
+ * `>` its quotation is written with belongs to the quotation because there is
+ * a paragraph up there still waiting for its next line, and for no other
+ * reason. A fence the quotation opened, or code it indented, is not waiting
+ * for anything: the line below belongs to whatever is beside the quotation.
+ *
+ * This is a reading of the lines rather than a parse of them, which is what
+ * makes it affordable — the quotation is scanned once, a line at a time, as it
+ * is taken. It stops reading at the first line that opens a container of its
+ * own: what is open inside a list inside a quotation is a question about the
+ * list, and answering it here would be the block scanner written twice. There
+ * the answer is `unknown`, and an unknown carries on running the line the way
+ * it always has.
+ */
+interface Opened {
+  what: 'paragraph' | 'other' | 'unknown';
+  /** What would close the fenced block, while one is open. */
+  fence: RegExp | null;
+}
+
+const NOTHING_OPEN: Opened = { what: 'other', fence: null };
+
+function opened(state: Opened, text: string): Opened {
+  if (state.fence) {
+    return state.fence.test(text) ? NOTHING_OPEN : state;
+  }
+
+  if (state.what === 'unknown') {
+    return state;
+  }
+
+  if (BLANK.test(text)) {
+    return NOTHING_OPEN;
+  }
+
+  const fence = indentOf(text) < 4 ? FENCE.exec(text) : null;
+
+  if (fence && (fence[2][0] !== '`' || !fence[3].includes('`'))) {
+    return {
+      what: 'other',
+      fence: new RegExp(`^ {0,3}${fence[2][0]}{${fence[2].length},}[ \\t]*$`)
+    };
+  }
+
+  // A container of its own, and the end of what this can say about the lines.
+  if (QUOTE.test(text) || markerAt(text) || FOOTNOTE.test(text) || DESCRIBES.test(text)) {
+    return { what: 'unknown', fence: null };
+  }
+
+  if (state.what === 'paragraph') {
+    return interrupts(text) ? NOTHING_OPEN : { what: 'paragraph', fence: null };
+  }
+
+  // Nothing was open, so four columns of indentation is code rather than the
+  // start of a paragraph — which is the one thing about a lazy continuation
+  // that is easy to get wrong and impossible to see.
+  if (indentOf(text) >= 4 || interrupts(text)) {
+    return NOTHING_OPEN;
+  }
+
+  return { what: 'paragraph', fence: null };
 }
 
 export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
@@ -730,31 +796,30 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
     if (QUOTE.test(line.text)) {
       const inner: Line[] = [];
-      const opened = at;
+      const from = at;
+      let inside: Opened = NOTHING_OPEN;
 
       while (at < lines.length) {
         const current = lines[at];
 
         if (QUOTE.test(current.text)) {
           const prefix = QUOTE_PREFIX.exec(current.text);
+          const taken = advance(current, prefix ? prefix[0].length : 0);
 
-          inner.push(advance(current, prefix ? prefix[0].length : 0));
+          inside = opened(inside, taken.text);
+          inner.push(taken);
           at += 1;
           continue;
         }
 
         // A quotation runs on across a line that forgot its `>`, but only while
-        // the paragraph inside it is still open.
-        if (
-          BLANK.test(current.text) ||
-          inner.length === 0 ||
-          BLANK.test(inner[inner.length - 1].text) ||
-          interrupts(current.text)
-        ) {
+        // there is a paragraph inside it still waiting for its next line.
+        if (BLANK.test(current.text) || inside.what === 'other' || interrupts(current.text)) {
           break;
         }
 
-        inner.push(current);
+        inside = opened(inside, current.text);
+        inner.push({ ...current, lazy: true });
         at += 1;
       }
 
@@ -768,7 +833,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
       blocks.push({
         type: 'blockquote',
-        range: across(opened, at - 1),
+        range: across(from, at - 1),
         alert,
         children: parseBlocks(inner, context)
       });
@@ -850,7 +915,10 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
             break;
           }
 
-          body.push(advance(next, next.text.length - next.text.trimStart().length));
+          body.push({
+            ...advance(next, next.text.length - next.text.trimStart().length),
+            lazy: true
+          });
           at += 1;
         }
 
@@ -1172,7 +1240,12 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         break;
       }
 
-      const setext = SETEXT.exec(next.text);
+      // A setext underline cannot be a lazy continuation line. `> foo`, then
+      // `bar`, then `===` is a quoted paragraph of three lines and not a
+      // heading: the `===` arrived without the `>` that would have made it a
+      // line of the quotation in its own right, and a line taken that way is
+      // the paragraph's next line and nothing else.
+      const setext = next.lazy ? null : SETEXT.exec(next.text);
 
       if (setext) {
         const underline = lines[at];

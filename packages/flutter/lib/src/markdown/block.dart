@@ -510,7 +510,9 @@ _Indented _takeIndented(List<Line> lines, int from, int width, bool opened) {
       break;
     }
 
-    body.add(advance(next, _leading(next.text)));
+    final Line taken = advance(next, _leading(next.text));
+
+    body.add(Line(taken.text, taken.start, lazy: true));
     at += 1;
   }
 
@@ -601,6 +603,80 @@ bool _separates(Line line, List<MdBlock> blocks) {
   }
 
   return false;
+}
+
+/// What a container has open, at the end of the lines it has taken so far.
+///
+/// Only a paragraph may be continued lazily — a line that arrived without the
+/// `>` its quotation is written with belongs to the quotation because there is
+/// a paragraph up there still waiting for its next line, and for no other
+/// reason. A fence the quotation opened, or code it indented, is not waiting
+/// for anything: the line below belongs to whatever is beside the quotation.
+///
+/// This is a reading of the lines rather than a parse of them, which is what
+/// makes it affordable — the quotation is scanned once, a line at a time, as it
+/// is taken. It stops reading at the first line that opens a container of its
+/// own: what is open inside a list inside a quotation is a question about the
+/// list, and answering it here would be the block scanner written twice. There
+/// the answer is [_What.unknown], and an unknown carries on running the line
+/// the way it always has.
+enum _What { paragraph, other, unknown }
+
+class _Opened {
+  const _Opened(this.what, this.fence);
+
+  final _What what;
+
+  /// What would close the fenced block, while one is open.
+  final RegExp? fence;
+}
+
+const _Opened _nothingOpen = _Opened(_What.other, null);
+
+_Opened _opened(_Opened state, String text) {
+  if (state.fence != null) {
+    return state.fence!.hasMatch(text) ? _nothingOpen : state;
+  }
+
+  if (state.what == _What.unknown) {
+    return state;
+  }
+
+  if (_blank.hasMatch(text)) {
+    return _nothingOpen;
+  }
+
+  final RegExpMatch? fence = indentOf(text) < 4 ? _fence.firstMatch(text) : null;
+
+  if (fence != null && (!fence.group(2)!.startsWith('`') || !fence.group(3)!.contains('`'))) {
+    final String marker = fence.group(2)!;
+
+    return _Opened(
+      _What.other,
+      RegExp('^ {0,3}${RegExp.escape(marker[0])}{${marker.length},}[ \\t]*\$'),
+    );
+  }
+
+  // A container of its own, and the end of what this can say about the lines.
+  if (_quote.hasMatch(text) ||
+      _markerAt(text) != null ||
+      _footnote.hasMatch(text) ||
+      _describes.hasMatch(text)) {
+    return const _Opened(_What.unknown, null);
+  }
+
+  if (state.what == _What.paragraph) {
+    return _interrupts(text) ? _nothingOpen : const _Opened(_What.paragraph, null);
+  }
+
+  // Nothing was open, so four columns of indentation is code rather than the
+  // start of a paragraph — which is the one thing about a lazy continuation
+  // that is easy to get wrong and impossible to see.
+  if (indentOf(text) >= 4 || _interrupts(text)) {
+    return _nothingOpen;
+  }
+
+  return const _Opened(_What.paragraph, null);
 }
 
 /// Reads [lines] into blocks, recursing into whatever contains what.
@@ -770,29 +846,32 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
 
     if (_quote.hasMatch(line.text)) {
       final List<Line> inner = <Line>[];
-      final int opened = at;
+      final int from = at;
+      _Opened inside = _nothingOpen;
 
       while (at < lines.length) {
         final Line current = lines[at];
 
         if (_quote.hasMatch(current.text)) {
           final RegExpMatch? prefix = _quotePrefix.firstMatch(current.text);
+          final Line taken = advance(current, prefix == null ? 0 : prefix.group(0)!.length);
 
-          inner.add(advance(current, prefix == null ? 0 : prefix.group(0)!.length));
+          inside = _opened(inside, taken.text);
+          inner.add(taken);
           at += 1;
           continue;
         }
 
         // A quotation runs on across a line that forgot its `>`, but only while
-        // the paragraph inside it is still open.
+        // there is a paragraph inside it still waiting for its next line.
         if (_blank.hasMatch(current.text) ||
-            inner.isEmpty ||
-            _blank.hasMatch(inner.last.text) ||
+            inside.what == _What.other ||
             _interrupts(current.text)) {
           break;
         }
 
-        inner.add(current);
+        inside = _opened(inside, current.text);
+        inner.add(Line(current.text, current.start, lazy: true));
         at += 1;
       }
 
@@ -805,7 +884,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
       }
 
       blocks.add(
-        MdBlockquote(across(opened, at - 1), alert: alert, children: parseBlocks(inner, context)),
+        MdBlockquote(across(from, at - 1), alert: alert, children: parseBlocks(inner, context)),
       );
       continue;
     }
@@ -887,7 +966,9 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
             break;
           }
 
-          body.add(advance(next, _leading(next.text)));
+          final Line taken = advance(next, _leading(next.text));
+
+          body.add(Line(taken.text, taken.start, lazy: true));
           at += 1;
         }
 
@@ -1195,7 +1276,12 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
         break;
       }
 
-      final RegExpMatch? setext = _setext.firstMatch(next.text);
+      // A setext underline cannot be a lazy continuation line. `> foo`, then
+      // `bar`, then `===` is a quoted paragraph of three lines and not a
+      // heading: the `===` arrived without the `>` that would have made it a
+      // line of the quotation in its own right, and a line taken that way is
+      // the paragraph's next line and nothing else.
+      final RegExpMatch? setext = next.lazy ? null : _setext.firstMatch(next.text);
 
       if (setext != null) {
         final Line underline = lines[at];

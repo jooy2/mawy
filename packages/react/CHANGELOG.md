@@ -6,13 +6,23 @@
 
 ### Added
 
+- **Three more of CommonMark, and the number moved from 635 to 638.** All three are the lazy continuation — the line under `> foo` that forgot its own `>` and is part of the quotation anyway.
+
+  **Only a paragraph is continued that way.** A line belongs to the quotation above it because there is a paragraph up there still waiting for its next line, and for no other reason: a fence the quotation opened, or code it indented four columns, is waiting for nothing, and the line below it belongs to whatever is beside the quotation rather than inside it. A quotation whose one line opens a fence, followed by an unquoted line, is an unclosed code block and then a paragraph; it used to be a code block with that line inside it.
+
+  **And a line taken that way is the paragraph's next line and nothing else** — in particular it is not a setext underline. `> foo`, `bar`, `===` is a quoted paragraph of three lines rather than a heading.
+
+  It costs 0.2 kB gzipped, in both the viewer and the editor, which is what reading a quotation's lines twice comes to.
+
+  What the quotation has open is now read as it takes its lines, a line at a time, rather than guessed from whether the last one was blank. It stops reading at the first line that opens a container of its own, because what is open inside a list inside a quotation is a question about the list and answering it there would be the block scanner written twice — so a lazy line under one of those runs the way it always has.
+
 - **One more of CommonMark, and the number moved from 634 to 635.** A document that ends in a newline has that many lines and not one more. The reader ran once past the last character on purpose — a source of nothing at all is still one empty line — and kept the line it made there even when the newline before it had already ended a line that was written. Nowhere did that show except inside a fence the document ended before closing, where the code came out a line taller than it is.
 
   What it cost was a blank line at the end of a _closed_ code block, and it cost it in the test suite rather than in the parser: the writer that turns the tree back into HTML wrote the final newline only where the value did not already end in one, which is a rule that cannot tell a real trailing blank line from an invented one. Both halves are gone, and a fenced block inside a list item whose last two lines are blank is three lines of code again rather than two.
 
 - **The whole Latin-1 block of character references**, which is four more of CommonMark and takes the number from 630 to 634. `&ouml;`, `&eacute;`, `&szlig;`, `&frac12;` — what a document written in a European language reaches for, and what an author who typed `Fr&ouml;hlich` meant a word by. Ninety-seven names, read everywhere the specification asks for a reference: in a destination, a title, a reference definition's label and a fence's info string.
 
-  It costs 0.6 kB gzipped, and the viewer is 22.8 kB. The table is still the names documents actually use rather than all 2,231 of HTML5's, which would be a hundred kilobytes on every page for `&DifferentialD;`.
+  It costs 0.6 kB gzipped, and the viewer was 22.8 kB when this landed. The table is still the names documents actually use rather than all 2,231 of HTML5's, which would be a hundred kilobytes on every page for `&DifferentialD;`.
 
 - **One more of CommonMark, and the number moved from 629 to 630.** A numeric character reference is at most seven digits, or six in hexadecimal, which is the specification's own limit. `&#87654321;` was being read as a reference to a code point that does not exist and drawn as U+FFFD; it is not a reference at all, and is the eleven characters somebody typed.
 

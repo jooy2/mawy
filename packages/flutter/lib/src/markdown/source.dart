@@ -24,13 +24,22 @@ import 'package:mawy/src/markdown/ast.dart';
 /// One line of the document, after whatever contains it took its prefix off.
 class Line {
   /// Creates a line of [text] whose first character sits at [start].
-  const Line(this.text, this.start);
+  const Line(this.text, this.start, {this.lazy = false});
 
   /// The line, without its newline.
   final String text;
 
   /// Where `text[0]` sits in the document.
   final int start;
+
+  /// Whether the container this line is inside took it without its prefix.
+  ///
+  /// The lazy continuation: a line under `> foo` that forgot its own `>` is
+  /// still part of the quotation, because the paragraph up there is still open.
+  /// It is *only* that, though — a lazily taken line is the paragraph's next
+  /// line and cannot be anything else, which is the whole reason this is
+  /// written down rather than inferred from the text.
+  final bool lazy;
 }
 
 /// Where a line's last character ends.

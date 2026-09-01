@@ -28,6 +28,16 @@ export interface Line {
   text: string;
   /** Where `text[0]` sits in the document. */
   start: number;
+  /**
+   * Whether the container this line is inside took it without its prefix.
+   *
+   * The lazy continuation: a line under `> foo` that forgot its own `>` is
+   * still part of the quotation, because the paragraph up there is still open.
+   * It is *only* that, though — a lazily taken line is the paragraph's next
+   * line and cannot be anything else, which is the whole reason this is
+   * written down rather than inferred from the text.
+   */
+  lazy?: boolean;
 }
 
 /** Where a line's last character ends. */
