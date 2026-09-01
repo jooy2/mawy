@@ -6,6 +6,14 @@
 
 ### Added
 
+- **Six more of CommonMark, and the number moved from 612 to 618** — all six about which lists are _loose_, which is the difference between an item's text sitting on the line and sitting in a paragraph of its own with space around it.
+
+  - **An item with nothing in it does not make its list loose.** `- foo`, `-`, `- bar` is three tight items; the middle one being empty was being read as a blank line after it.
+  - **An item may begin with at most one blank line.** `-` followed by a blank line and then an indented paragraph is an empty item and a paragraph beside the list, rather than an item holding the paragraph.
+  - **A blank line loosens the list it is in rather than every list around it.** A blank line between two blocks inside a nested item was making the item's grandparent loose too, which put a `<p>` around every item at every level above it.
+
+  Both parsers, and the parity trees are identical.
+
 - **The highlighter is diffed against the Dart one**, over `packages/flutter/tool/code.json`, as part of the parity check. `src/highlight.ts` and `lib/src/highlight.dart` are one grammar written twice and they drift for exactly the reason the two parsers do; nothing in this package changed, and now nothing can change in it alone.
 
 - **Seven more of CommonMark, and the number moved from 605 to 612.** Four kinds of thing the parser was reading as the characters they were written with rather than as what they say:
@@ -36,7 +44,7 @@
 
 - **A size budget, and a stylesheet with its prose taken out.** `npm run size` bundles the published files for real and compares the result to `size-budget.json`, which CI now fails a change for going over. What it measures is what a consumer's bundler produces: React external because an application already has it, `lucide-react` counted because it arrives with this, and gzip because every server on the path compresses.
 
-  Gzipped, that is **22.1 kB for `MawyViewer`, 37.8 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.5 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
+  Gzipped, that is **22.2 kB for `MawyViewer`, 37.9 kB for `MawyEditor`**, 2.6 kB for the highlighter and 5.5 kB for the stylesheet. The fifteen kilobytes between the first two are the editor falling out of a page that only reads documents — the toolbar, the undo history, the paste pipeline, every `contenteditable` surface — which is the number the package is shaped around and the one nothing but a real bundle can see.
 
   The stylesheet is now minified on its way into `dist/`. Two fifths of `styles.css` is prose written for somebody reading the source, and a reader of a page was paying 3.7 kB gzipped for comments they cannot see; `src/styles.css` is still the file to read and to edit, and what ships is the same rules in the same order. The build checks the two things that would make that a bad trade: every `--mawy-*` custom property still declared, and every `:where()` still a `:where()`, because those are the resets and a reset that gained specificity is one that starts beating the page it was dropped into.
 

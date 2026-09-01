@@ -568,6 +568,25 @@ bool _interrupts(String line) {
   return marker != null && !marker.empty && (!marker.ordered || marker.number == 1);
 }
 
+/// Whether a line falls in the gap between two of a list of blocks.
+///
+/// The question looseness turns on. A list item holds every line under it,
+/// including the ones inside whatever is nested there, and only a blank line
+/// that sits *between* the item's own blocks says anything about the item.
+bool _separates(Line line, List<MdBlock> blocks) {
+  if (!_blank.hasMatch(line.text)) {
+    return false;
+  }
+
+  for (int index = 1; index < blocks.length; index += 1) {
+    if (blocks[index - 1].range.end <= line.start && line.start <= blocks[index].range.start) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// Reads [lines] into blocks, recursing into whatever contains what.
 List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
   final List<MdBlock> blocks = <MdBlock>[];
@@ -804,11 +823,28 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
         at += 1;
 
         bool blankInside = false;
+        // Whether blank lines ended the item rather than being inside it.
+        bool endedOnBlank = false;
 
         while (at < lines.length) {
           final Line next = lines[at];
 
           if (_blank.hasMatch(next.text)) {
+            // An item may begin with at most one blank line. One that is still
+            // empty when a second arrives has ended, and what comes after it is
+            // beside the list rather than inside the item — but the blank lines
+            // belong to the *list*, which is why they are taken here rather
+            // than left for whatever comes next, and why they still separate
+            // this item from the one below it.
+            if (body.every((Line each) => _blank.hasMatch(each.text))) {
+              while (at < lines.length && _blank.hasMatch(lines[at].text)) {
+                at += 1;
+              }
+
+              endedOnBlank = true;
+              break;
+            }
+
             body.add(Line('', next.start));
             blankInside = true;
             at += 1;
@@ -838,7 +874,10 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
           trailing = true;
         }
 
-        separated = trailing;
+        // An item with nothing in it and no blank line after it does not
+        // separate itself from the item below: the emptiness is the item rather
+        // than a gap, and a list of empty items is a tight list.
+        separated = endedOnBlank || (trailing && body.isNotEmpty);
 
         bool? checked;
         final RegExpMatch? task = body.isEmpty ? null : _task.firstMatch(body.first.text);
@@ -850,7 +889,10 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
 
         final List<MdBlock> children = parseBlocks(body, context);
 
-        if (children.length > 1 && body.any((Line each) => _blank.hasMatch(each.text))) {
+        // A blank line loosens the list only where it separates two of *this*
+        // item's own blocks. One further in belongs to whatever is nested
+        // there, and a nested list being loose is not this one being loose.
+        if (children.length > 1 && body.any((Line each) => _separates(each, children))) {
           loose = true;
         }
 

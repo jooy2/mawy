@@ -6,6 +6,8 @@
 
 ### Added
 
+- **Six more of CommonMark, and the number moved from 612 to 618.** The React package's parser change, mirrored here in the same commit: all six are about which lists are loose — an empty item does not loosen its list, an item may begin with at most one blank line, and a blank line loosens the list it is in rather than every list around it.
+
 - **A syntax highlighter, and a code block that uses it.** `mawyHighlighter` is the React package's `src/highlight.ts` in Dart — the same grammars, the same rules, the same approximations — and `tool/parity.dart` now diffs every token the two produce over a piece of every language either of them claims. A code block coloured in a browser is coloured the same way in an app, which is the promise the parser already made and the one this makes now.
 
   ```dart

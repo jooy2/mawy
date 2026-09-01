@@ -6,8 +6,8 @@ import { specExamples, writeHtml } from '../../support/commonmark.js';
  * The parser, against the specification it claims to read.
  *
  * "CommonMark" is written in the README, on the site and in the changelog, and
- * until this file existed it was a word rather than a number. It is 612 of the
- * specification's 652 examples — the other 40 are below, each one with the
+ * until this file existed it was a word rather than a number. It is 618 of the
+ * specification's 652 examples — the other 34 are below, each one with the
  * reason it is there, so that the claim is checkable and a change to it is
  * deliberate.
  *
@@ -70,17 +70,12 @@ const DEVIATIONS = new Map<number, string>([
   [567, 'an empty destination does not shadow a definition of the same label'],
 
   /*
-   * Looseness. A list is loose when blank lines separate its items or the
-   * blocks inside one of them — and the parser reads that more widely than the
-   * specification does, so a `<p>` appears where the specification has none.
+   * Looseness, of which one is left: a blank line loosens a list where it
+   * separates two blocks, and a reference definition is not a block. It is
+   * taken off the paragraph before anything counts what is left, so an item
+   * holding only one has nothing on the far side of the blank line.
    */
-  [280, 'an item with nothing in it takes the paragraph under the blank line'],
-  [281, 'an item with nothing in it makes the list loose'],
-  [282, 'an item with only spaces in it makes the list loose'],
-  [283, 'an item with nothing in it makes the list loose'],
-  [307, 'a blank line inside a nested item makes its ancestors loose'],
   [317, 'a reference definition alone in an item does not make the list loose'],
-  [319, 'a blank line inside a nested item makes its ancestor loose'],
 
   /* What a reference definition's label may be written as. */
   [208, 'a label written over more than one line'],
@@ -161,7 +156,7 @@ describe('CommonMark', () => {
     expect([...DEVIATIONS.keys()].filter((number) => !numbers.has(number))).toEqual([]);
   });
 
-  it('reads 612 of the 652', () => {
-    expect(examples.length - differing.length).toBe(612);
+  it('reads 618 of the 652', () => {
+    expect(examples.length - differing.length).toBe(618);
   });
 });

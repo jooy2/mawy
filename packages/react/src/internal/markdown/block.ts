@@ -511,6 +511,24 @@ function describesAhead(lines: Line[], from: number): boolean {
  * The scanner
  * ---------------------------------------------------------------------- */
 
+/**
+ * Whether a line falls in the gap between two of a list of blocks.
+ *
+ * The question looseness turns on. A list item holds every line under it,
+ * including the ones inside whatever is nested there, and only a blank line
+ * that sits *between* the item's own blocks says anything about the item.
+ */
+function separates(line: Line, blocks: MdBlock[]): boolean {
+  if (!BLANK.test(line.text)) {
+    return false;
+  }
+
+  return blocks.some(
+    (block, index) =>
+      index > 0 && blocks[index - 1].range.end <= line.start && line.start <= block.range.start
+  );
+}
+
 /** Whether a line may cut a paragraph short. */
 function interrupts(line: string): boolean {
   if (THEMATIC.test(line) || atxAt(line) || FENCE.test(line) || QUOTE.test(line)) {
@@ -768,11 +786,28 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         at += 1;
 
         let blankInside = false;
+        /** Whether blank lines ended the item rather than being inside it. */
+        let endedOnBlank = false;
 
         while (at < lines.length) {
           const next = lines[at];
 
           if (BLANK.test(next.text)) {
+            // An item may begin with at most one blank line. One that is still
+            // empty when a second arrives has ended, and what comes after it is
+            // beside the list rather than inside the item — but the blank lines
+            // belong to the *list*, which is why they are taken here rather
+            // than left for whatever comes next, and why they still separate
+            // this item from the one below it.
+            if (body.every((each) => BLANK.test(each.text))) {
+              while (at < lines.length && BLANK.test(lines[at].text)) {
+                at += 1;
+              }
+
+              endedOnBlank = true;
+              break;
+            }
+
             body.push({ text: '', start: next.start });
             blankInside = true;
             at += 1;
@@ -802,7 +837,10 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
           trailing = true;
         }
 
-        separated = trailing;
+        // An item with nothing in it and no blank line after it does not
+        // separate itself from the item below: the emptiness is the item rather
+        // than a gap, and a list of empty items is a tight list.
+        separated = endedOnBlank || (trailing && body.length > 0);
 
         let checked: boolean | null = null;
         const task = /^\[([ xX])\](?=[ \t]|$)[ \t]*/.exec(body[0]?.text ?? '');
@@ -814,7 +852,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
 
         const children = parseBlocks(body, context);
 
-        if (children.length > 1 && body.some((each) => BLANK.test(each.text))) {
+        if (children.length > 1 && body.some((each) => separates(each, children))) {
           loose = true;
         }
 
