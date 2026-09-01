@@ -170,11 +170,13 @@ function writeBlock(out: Out, node: MdBlock, source: string, tight: boolean): vo
       // The info string's first word, and only that: `class="language-ts"` out
       // of ```` ```ts twoslash ````.
       const info = node.lang === null ? '' : ` class="language-${escapeText(node.lang)}"`;
-      // The parser holds the code without the newline that ended its last
-      // line — except where the document ended before a fence closed it, which
-      // is the one place the line ending is still in there. The specification
-      // writes exactly one.
-      const value = node.value === '' || node.value.endsWith('\n') ? node.value : `${node.value}\n`;
+      // The parser holds the code as its lines joined by newlines, without the
+      // one that ended the last of them, and the specification writes that one.
+      // It used to be written only where the value did not already end in a
+      // newline, which was this file compensating for a blank line the reader
+      // invented at the end of a document — and which quietly cost a real blank
+      // line at the end of a code block.
+      const value = node.value === '' ? node.value : `${node.value}\n`;
 
       out.cr();
       out.lit(`<pre><code${info}>${escapeText(value)}</code></pre>\n`);

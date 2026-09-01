@@ -6,6 +6,10 @@
 
 ### Added
 
+- **One more of CommonMark, and the number moved from 634 to 635.** A document that ends in a newline has that many lines and not one more. The reader ran once past the last character on purpose — a source of nothing at all is still one empty line — and kept the line it made there even when the newline before it had already ended a line that was written. Nowhere did that show except inside a fence the document ended before closing, where the code came out a line taller than it is.
+
+  What it cost was a blank line at the end of a _closed_ code block, and it cost it in the test suite rather than in the parser: the writer that turns the tree back into HTML wrote the final newline only where the value did not already end in one, which is a rule that cannot tell a real trailing blank line from an invented one. Both halves are gone, and a fenced block inside a list item whose last two lines are blank is three lines of code again rather than two.
+
 - **The whole Latin-1 block of character references**, which is four more of CommonMark and takes the number from 630 to 634. `&ouml;`, `&eacute;`, `&szlig;`, `&frac12;` — what a document written in a European language reaches for, and what an author who typed `Fr&ouml;hlich` meant a word by. Ninety-seven names, read everywhere the specification asks for a reference: in a destination, a title, a reference definition's label and a fence's info string.
 
   It costs 0.6 kB gzipped, and the viewer is 22.8 kB. The table is still the names documents actually use rather than all 2,231 of HTML5's, which would be a hundred kilobytes on every page for `&DifferentialD;`.

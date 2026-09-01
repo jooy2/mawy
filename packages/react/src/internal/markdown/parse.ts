@@ -129,6 +129,16 @@ function read(source: string): Reading {
     }
   }
 
+  // A document that ends in a newline has that many lines and not one more.
+  // The loop above runs once past the last character on purpose — a source of
+  // nothing at all is still one empty line — and the line it makes there is
+  // real only when nothing ended the one before it. Left in, it is a blank
+  // line nobody wrote, and the one place that shows is inside a fence the
+  // document ended before closing: the code comes out a line taller than it is.
+  if (lines.length > 1 && lines[lines.length - 1].text === '') {
+    lines.pop();
+  }
+
   return { lines, length: out, breaks, origins };
 }
 
