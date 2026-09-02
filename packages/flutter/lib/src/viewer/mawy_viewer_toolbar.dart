@@ -401,16 +401,79 @@ class MawyToolbarButton extends StatefulWidget {
 }
 
 class _MawyToolbarButtonState extends State<MawyToolbarButton> {
+  final LayerLink _link = LayerLink();
+
   bool _hovered = false;
   bool _focused = false;
   FocusNode? _own;
+  OverlayEntry? _tip;
 
   FocusNode get _node => widget.focusNode ?? (_own ??= FocusNode(debugLabel: widget.label));
 
   @override
   void dispose() {
+    _hideTip();
     _own?.dispose();
     super.dispose();
+  }
+
+  /// The button's name, under the button, while a pointer is on it.
+  ///
+  /// An icon with no word beside it is a control nobody can name, and the two
+  /// answers to that are a label on every button — a toolbar twice as wide —
+  /// or the name on demand. This is the second, and it is the React package's
+  /// own tooltip rather than the platform's: it appears the moment the pointer
+  /// arrives rather than a second later, and it is drawn in the palette
+  /// everything else here is drawn in.
+  ///
+  /// Only for a pointer. A finger has nothing to hover with, and a keyboard is
+  /// given the name through [Semantics] rather than through a picture of it.
+  void _showTip() {
+    final OverlayState? overlay = Overlay.maybeOf(context);
+
+    if (_tip != null || overlay == null || !widget.enabled) {
+      return;
+    }
+
+    _tip = OverlayEntry(
+      builder: (BuildContext context) => IgnorePointer(
+        child: CompositedTransformFollower(
+          link: _link,
+          targetAnchor: Alignment.bottomCenter,
+          followerAnchor: Alignment.topCenter,
+          offset: const Offset(0, 6),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 220),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: widget.tokens.foreground,
+                borderRadius: BorderRadius.circular(MawyRadius.small),
+              ),
+              child: Text(
+                widget.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: widget.tokens.background,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  height: 1.45,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(_tip!);
+  }
+
+  void _hideTip() {
+    _tip?.remove();
+    _tip = null;
   }
 
   @override
@@ -443,41 +506,61 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
         // keyboard reached and not on one a pointer pressed. See
         // `internal/focus_visible.dart`.
         onShowFocusHighlight: (bool on) => setState(() => _focused = on && MawyFocusVisible.wanted),
-        child: GestureDetector(
-          onTap: widget.enabled ? widget.onPressed : null,
-          child: AnimatedContainer(
-            duration: MawyMotion.durationOf(context),
-            curve: MawyMotion.easing,
-            width: 30,
-            height: 30,
-            margin: const EdgeInsets.symmetric(horizontal: 1),
-            decoration: BoxDecoration(
-              color: widget.pressed ? tokens.accentSoft : (lit ? tokens.backgroundSunken : null),
-              borderRadius: BorderRadius.circular(MawyRadius.small),
-            ),
-            // A ring, drawn over the button rather than behind it.
-            //
-            // A `BoxShadow` is a filled shape: spread it two pixels behind a
-            // button whose own background is nothing and what is drawn is a
-            // solid block of accent with the glyph lost in it, which is what
-            // the first control on a toolbar looked like the moment the view
-            // took the focus. A foreground border is hollow, and it is the
-            // stylesheet's `outline` said in Flutter — it takes no pixel off
-            // the button, because the button is a fixed thirty either way.
-            foregroundDecoration: _focused
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(MawyRadius.small),
-                    border: Border.all(color: tokens.accent, width: 2),
-                  )
-                : null,
-            child: Opacity(
-              opacity: widget.enabled ? 1 : 0.4,
-              child: Icon(
-                widget.icon,
-                size: 16,
-                color: widget.pressed
-                    ? tokens.accent
-                    : (lit ? tokens.foreground : tokens.foregroundMuted),
+        // The tooltip is hung off the pointer entering rather than off the
+        // focus highlight, because those are two different questions: the
+        // highlight is "is this reader using a keyboard", and this is "is there
+        // a pointer on this button". A finger raises neither.
+        child: MouseRegion(
+          onEnter: (PointerEnterEvent _) => _showTip(),
+          onExit: (PointerExitEvent _) => _hideTip(),
+          child: GestureDetector(
+            onTap: () {
+              // A press is an answer; the name is no longer the question.
+              _hideTip();
+
+              if (widget.enabled) {
+                widget.onPressed();
+              }
+            },
+            child: CompositedTransformTarget(
+              link: _link,
+              child: AnimatedContainer(
+                duration: MawyMotion.durationOf(context),
+                curve: MawyMotion.easing,
+                width: 30,
+                height: 30,
+                margin: const EdgeInsets.symmetric(horizontal: 1),
+                decoration: BoxDecoration(
+                  color: widget.pressed
+                      ? tokens.accentSoft
+                      : (lit ? tokens.backgroundSunken : null),
+                  borderRadius: BorderRadius.circular(MawyRadius.small),
+                ),
+                // A ring, drawn over the button rather than behind it.
+                //
+                // A `BoxShadow` is a filled shape: spread it two pixels behind a
+                // button whose own background is nothing and what is drawn is a
+                // solid block of accent with the glyph lost in it, which is what
+                // the first control on a toolbar looked like the moment the view
+                // took the focus. A foreground border is hollow, and it is the
+                // stylesheet's `outline` said in Flutter — it takes no pixel off
+                // the button, because the button is a fixed thirty either way.
+                foregroundDecoration: _focused
+                    ? BoxDecoration(
+                        borderRadius: BorderRadius.circular(MawyRadius.small),
+                        border: Border.all(color: tokens.accent, width: 2),
+                      )
+                    : null,
+                child: Opacity(
+                  opacity: widget.enabled ? 1 : 0.4,
+                  child: Icon(
+                    widget.icon,
+                    size: 16,
+                    color: widget.pressed
+                        ? tokens.accent
+                        : (lit ? tokens.foreground : tokens.foregroundMuted),
+                  ),
+                ),
               ),
             ),
           ),

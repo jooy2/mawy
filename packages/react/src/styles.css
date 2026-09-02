@@ -259,6 +259,7 @@
  * ------------------------------------------------------------------------- */
 
 .mawy-root .mawy-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -274,6 +275,63 @@
   transition:
     background var(--mawy-duration) var(--mawy-easing),
     color var(--mawy-duration) var(--mawy-easing);
+}
+
+/* ---------------------------------------------------------------------------
+ * Tooltips
+ *
+ * The library's own rather than the browser's `title`, for two reasons a
+ * reader feels immediately: `title` waits about a second before it appears, so
+ * the name of a button is a thing you have to decide to wait for; and it is
+ * drawn by the operating system, so a toolbar in a dark theme grows a light
+ * chip in a system font. This one appears the moment the pointer is on the
+ * button and is drawn in the palette everything else is.
+ *
+ * A pseudo-element on the control itself, so there is nothing to mount, nothing
+ * to position from script, and nothing to leave behind when the button goes.
+ * `aria-label` is what names the button; this is decoration, and a pointer
+ * passes through it.
+ * ------------------------------------------------------------------------- */
+
+.mawy-root [data-mawy-tip]::after {
+  content: attr(data-mawy-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 30;
+  translate: -50% 0;
+  visibility: hidden;
+  max-width: 220px;
+  padding: 3px 7px;
+  border-radius: var(--mawy-radius-sm);
+  background: var(--mawy-fg);
+  color: var(--mawy-bg);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.mawy-root [data-mawy-tip]:hover::after,
+.mawy-root [data-mawy-tip]:focus-visible::after {
+  visibility: visible;
+}
+
+/* A tip that would hang off the end of the bar is hung from its own end
+   instead. The last two controls are the ones near enough the edge to. */
+.mawy-root .mawy-toolbar-controls > *:last-child [data-mawy-tip]::after,
+.mawy-root .mawy-toolbar-group > *:nth-last-child(-n + 2) [data-mawy-tip]::after {
+  left: auto;
+  right: 0;
+  translate: 0 0;
+}
+
+/* Nothing at all where a pointer is not what is being used. */
+@media (hover: none) {
+  .mawy-root [data-mawy-tip]::after {
+    content: none;
+  }
 }
 
 .mawy-root .mawy-button-labelled {

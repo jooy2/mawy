@@ -585,7 +585,7 @@ function CodeBlock({
         data-mawy-state={state}
         onClick={() => copy(value)}
         aria-label={state === 'copied' ? context.strings.copied : context.strings.copyCode}
-        title={state === 'copied' ? context.strings.copied : context.strings.copyCode}
+        data-mawy-tip={state === 'copied' ? context.strings.copied : context.strings.copyCode}
       >
         <Icon className="mawy-icon" aria-hidden="true" />
       </button>

@@ -702,11 +702,11 @@ describe('finding', () => {
 
     type(replacement, 'ONE');
 
-    (screen.container.querySelector('button[title="Replace"]') as HTMLButtonElement).click();
+    (screen.container.querySelector('button[data-mawy-tip="Replace"]') as HTMLButtonElement).click();
 
     await vi.waitFor(() => expect(sourceOf(screen).value).toBe('ONE two one'));
 
-    (screen.container.querySelector('button[title="Replace all"]') as HTMLButtonElement).click();
+    (screen.container.querySelector('button[data-mawy-tip="Replace all"]') as HTMLButtonElement).click();
 
     await vi.waitFor(() => expect(sourceOf(screen).value).toBe('ONE two ONE'));
   });
@@ -758,7 +758,7 @@ describe('files', () => {
 
     await vi.waitFor(() => expect(sourceOf(screen).value).toBe('# Opened'));
 
-    (screen.container.querySelector('button[title="Save"]') as HTMLButtonElement).click();
+    (screen.container.querySelector('button[data-mawy-tip="Save"]') as HTMLButtonElement).click();
 
     expect(saved).toEqual([['# Opened', 'notes.md']]);
   });
@@ -773,7 +773,7 @@ describe('files', () => {
       />
     );
 
-    (screen.container.querySelector('button[title="Save"]') as HTMLButtonElement).click();
+    (screen.container.querySelector('button[data-mawy-tip="Save"]') as HTMLButtonElement).click();
 
     expect(saved).toEqual(['Getting started.md']);
   });

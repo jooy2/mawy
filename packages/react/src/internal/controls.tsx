@@ -34,10 +34,14 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
       className={['mawy-button', text ? 'mawy-button-labelled' : '', className]
         .filter(Boolean)
         .join(' ')}
-      // A label rather than a `title` alone: a tooltip is not read out, and
-      // an icon with nothing else in it is a button with no name.
+      // A label rather than a tip alone: a tooltip is not read out, and an
+      // icon with nothing else in it is a button with no name.
       aria-label={text ? undefined : label}
-      title={label}
+      // The library's own tooltip rather than the browser's `title`, which
+      // waits a second before it appears and is drawn by the operating system
+      // in whatever the operating system draws. See `--mawy-tip` in the
+      // stylesheet. A labelled button says its name already and needs none.
+      data-mawy-tip={text ? undefined : label}
       data-mawy-pressed={pressed ? 'true' : undefined}
     >
       {icon}

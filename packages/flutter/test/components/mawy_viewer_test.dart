@@ -363,6 +363,29 @@ void main() {
       expect(toolbarButton('Theme'), findsOneWidget);
     });
 
+    testWidgets('names a button under the pointer, and stops when it leaves', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: sample)));
+
+      final TestGesture pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+
+      await pointer.addPointer(location: Offset.zero);
+      addTearDown(pointer.removePointer);
+      await tester.pump();
+      await pointer.moveTo(tester.getCenter(toolbarButton('Contents')));
+      await tester.pumpAndSettle();
+
+      // The name a screen reader is already given, drawn for an eye that has
+      // only the glyph.
+      expect(find.text('Contents'), findsOneWidget);
+
+      await pointer.moveTo(const Offset(400, 700));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Contents'), findsNothing);
+    });
+
     testWidgets('opens a menu with no overlay anywhere above it', (WidgetTester tester) async {
       // `host()` provides one, the way a `Navigator` does. This is the tree an
       // application that wanted neither Material nor Cupertino writes — a

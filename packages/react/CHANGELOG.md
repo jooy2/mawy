@@ -191,6 +191,10 @@
 
 - **Two of the library's own sentences say what they mean.** The veil over the editor while a file is being dragged said "Drop to add", which is an instruction with the object left out; it says what will be added now. And the source surface's placeholder said "Write in Markdown" — a reader looking at an empty editor knows what it takes, and what they want to know is that this is where the typing goes.
 
+- **A button says its name in this library's own tooltip rather than the browser's.** `title` waits about a second before it appears, so the name of an icon was a thing a reader had to decide to wait for; and it is drawn by the operating system, so a toolbar in a dark theme grew a light chip in a system font. This one appears the moment the pointer is on the button and is drawn in the same palette as everything else. It is a pseudo-element on the control, so there is nothing to mount and nothing to leave behind, and `aria-label` is still what names the button.
+
+  A `title` written by the _document_ — `[words](url "a title")` — is untouched. That is the author's text and not the library's chrome.
+
 ### Fixed
 
 - **A file dropped on the editor no longer takes the page away.** A dropped file is an image and never a document, which is the rule and stays the rule — but a file the editor would not take was left to the browser, and a browser given a file it was not stopped from taking opens it as a page. The document, the undo history and the caret went with the tab, which is the exact loss the rule exists to prevent.

@@ -152,6 +152,8 @@
 
   A wrapped line is two rows on the screen and one number down the side, which is the awkward half and the reason this took a while: the numbers are painted from the caret rects the laid-out field already reports rather than from a second layout of the same text, so the two cannot drift — there is only one of them.
 
+- **A toolbar button says its name under the pointer.** An icon with no word beside it is a control nobody can name, and until now only a screen reader was told. It is the React package's tooltip in the same palette and the same shape, and it is hung off a pointer entering the button rather than off the focus highlight — those are two different questions, and a finger raises neither.
+
 ### Changed
 
 - **The editor's theme control is a menu rather than a button that cycles.** Light, dark and the platform's, all three at once with a tick beside the one in use — which is what the viewer's toolbar here already offered and what the React package's editor has always offered. A button that cycles is a button pressed twice to reach the value on the other side of the one you did not want, and the list will be longer than three the first time this library ships a palette that is neither light nor dark.
