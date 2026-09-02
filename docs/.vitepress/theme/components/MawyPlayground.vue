@@ -45,8 +45,18 @@ const WORDS = {
   ko: { group: '무엇을 써볼지', editor: '에디터', viewer: '뷰어' }
 };
 
-const { lang } = useData();
+const { lang, page } = useData();
 const words = computed(() => WORDS[lang.value.startsWith('ko') ? 'ko' : 'en']);
+
+/**
+ * The page's own name, drawn here rather than by the Markdown above.
+ *
+ * The switch belongs beside the title and not under it — the stage is what
+ * this page is, and every row above it is a row of editor nobody can see. Two
+ * siblings cannot be put on one line by CSS, so the heading comes into the
+ * component and the frontmatter goes on being where its text is written.
+ */
+const title = computed(() => page.value.title);
 
 const at = ref<Pane['id']>('editor');
 const opened = ref<Record<string, boolean>>({ editor: true });
@@ -89,22 +99,25 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
 
 <template>
   <div class="mawy-play">
-    <div class="mawy-play-track" role="radiogroup" :aria-label="words.group">
-      <label
-        v-for="pane in PANES"
-        :key="pane.id"
-        class="mawy-play-option"
-        :data-on="at === pane.id ? '' : undefined"
-      >
-        <input
-          type="radio"
-          name="mawy-play"
-          :value="pane.id"
-          :checked="at === pane.id"
-          @change="at = pane.id"
-        />
-        <span>{{ words[pane.id] }}</span>
-      </label>
+    <div class="mawy-play-head">
+      <h1>{{ title }}</h1>
+      <div class="mawy-play-track" role="radiogroup" :aria-label="words.group">
+        <label
+          v-for="pane in PANES"
+          :key="pane.id"
+          class="mawy-play-option"
+          :data-on="at === pane.id ? '' : undefined"
+        >
+          <input
+            type="radio"
+            name="mawy-play"
+            :value="pane.id"
+            :checked="at === pane.id"
+            @change="at = pane.id"
+          />
+          <span>{{ words[pane.id] }}</span>
+        </label>
+      </div>
     </div>
     <div ref="stage" class="mawy-play-stage">
       <template v-for="pane in PANES" :key="pane.id">

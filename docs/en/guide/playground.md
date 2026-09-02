@@ -11,6 +11,4 @@ lastUpdated: false
 pageClass: mawy-playground-page
 ---
 
-# Playground
-
 <MawyPlayground />

@@ -11,6 +11,4 @@ lastUpdated: false
 pageClass: mawy-playground-page
 ---
 
-# 직접 써보기
-
 <MawyPlayground />

@@ -72,20 +72,34 @@
   padding-bottom: 0;
 }
 
-/* A heading at document size spends sixty pixels saying a word the navbar and
-   the sidebar are both already saying. */
-.mawy-playground-page .vp-doc h1 {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
-}
-
 .mawy-play {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 14px;
+}
+
+/* The title and the switch on one line, with the switch against the right edge.
+ *
+ * Two rows above the stage is two rows of editor nobody can see, and this is
+ * the one page here whose whole point is how much of the component is on the
+ * screen. The heading is the component's own — see `MawyPlayground.vue` — for
+ * the reason it has to be: siblings cannot be put on a line by CSS. */
+.mawy-play-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+/* A heading at document size spends sixty pixels saying a word the navbar and
+   the sidebar are both already saying. */
+.mawy-playground-page .vp-doc .mawy-play-head h1 {
+  margin: 0;
+  border: 0;
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 /* The framework switch's track, said again for a control that is in the page
@@ -95,7 +109,8 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(88px, auto);
   gap: 3px;
-  justify-self: start;
+  flex: none;
+  margin-inline-start: auto;
   width: fit-content;
   padding: 3px;
   border: 1px solid var(--vp-c-divider);
