@@ -148,15 +148,6 @@ class _EntryState extends State<_Entry> {
             decoration: BoxDecoration(
               color: _hovered || _focused ? tokens.background : null,
               borderRadius: BorderRadius.circular(MawyRadius.small),
-              // A rule down the leading edge on the heading the reader is at,
-              // which is the stylesheet's mark for the same thing. Straight,
-              // and not the rounded bracket an inset shadow would draw.
-              border: BorderDirectional(
-                start: BorderSide(
-                  color: widget.current ? tokens.accent : const Color(0x00000000),
-                  width: 2,
-                ),
-              ),
             ),
             // The ring, drawn over the row rather than behind it: a shadow is a
             // filled shape, and behind a row with no background of its own it
@@ -171,23 +162,42 @@ class _EntryState extends State<_Entry> {
             // said once — up there, where the control says what it is. Drawn
             // again here they are the same string a second time, and a screen
             // reader that is handed both reads the heading twice.
-            child: ExcludeSemantics(
-              child: Text(
-                widget.entry.text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  // The first two levels carry the structure; the rest are
-                  // detail, and drawing them all the same makes a wall of text
-                  // out of what is meant to be a map.
-                  color: widget.current
-                      ? tokens.accent
-                      : (depth <= 2 ? tokens.foreground : tokens.foregroundMuted),
-                  fontSize: depth == 1 ? 13.5 : 13,
-                  fontWeight: widget.current || depth == 1 ? FontWeight.w600 : FontWeight.w400,
-                  height: 1.4,
+            //
+            // The rule beside the current heading is its own box rather than a
+            // border on the one above, because a border follows that box's
+            // corner radius and two pixels of rule bent into a curve is the
+            // bracket the stylesheet was changed away from drawing.
+            child: Stack(
+              // The rule sits outside the row's padding, against the panel's
+              // own leading edge.
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                if (widget.current)
+                  PositionedDirectional(
+                    top: 1,
+                    bottom: 1,
+                    start: -6 - (depth - 1) * 10.0,
+                    child: Container(width: 2, color: tokens.accent),
+                  ),
+                ExcludeSemantics(
+                  child: Text(
+                    widget.entry.text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      // The first two levels carry the structure; the rest are
+                      // detail, and drawing them all the same makes a wall of text
+                      // out of what is meant to be a map.
+                      color: widget.current
+                          ? tokens.accent
+                          : (depth <= 2 ? tokens.foreground : tokens.foregroundMuted),
+                      fontSize: depth == 1 ? 13.5 : 13,
+                      fontWeight: widget.current || depth == 1 ? FontWeight.w600 : FontWeight.w400,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
