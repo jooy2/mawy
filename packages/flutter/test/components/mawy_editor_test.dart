@@ -402,6 +402,35 @@ void main() {
       // going back to the stylesheet's on its own.
       expect(styleOf(tester, 'link')?.color, mine);
     });
+
+    testWidgets('is chosen from a menu rather than cycled through', (WidgetTester tester) async {
+      MawyColorScheme? chosen;
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'Words.',
+            colorScheme: MawyColorScheme.light,
+            onColorSchemeChange: (MawyColorScheme next) => chosen = next,
+          ),
+        ),
+      );
+
+      await tester.tap(toolbarButton('Theme'));
+      await tester.pump();
+
+      // All three at once, the way the viewer's toolbar and the React package's
+      // offer them. A button that cycles is a button pressed twice to reach the
+      // value on the other side of the one you did not want.
+      expect(find.text('Light'), findsOneWidget);
+      expect(find.text('Dark'), findsOneWidget);
+      expect(find.text('Match the system'), findsOneWidget);
+
+      await tester.tap(find.text('Match the system'));
+      await tester.pump();
+
+      expect(chosen, MawyColorScheme.system);
+    });
   });
 
   group('the status bar', () {

@@ -167,7 +167,7 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           label: widget.strings.fontFamily,
           tokens: widget.tokens,
           focusNode: node,
-          builder: (VoidCallback close) => _Choice<MawyFontFamily>(
+          builder: (VoidCallback close) => MawyToolbarChoice<MawyFontFamily>(
             tokens: widget.tokens,
             value: widget.typography.fontFamily,
             options: <(MawyFontFamily, String)>[
@@ -227,7 +227,7 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           label: widget.strings.measure,
           tokens: widget.tokens,
           focusNode: node,
-          builder: (VoidCallback close) => _Choice<MawyMeasure>(
+          builder: (VoidCallback close) => MawyToolbarChoice<MawyMeasure>(
             tokens: widget.tokens,
             value: widget.typography.measure,
             options: <(MawyMeasure, String)>[
@@ -257,7 +257,7 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           label: widget.strings.colorScheme,
           tokens: widget.tokens,
           focusNode: node,
-          builder: (VoidCallback close) => _Choice<MawyColorScheme>(
+          builder: (VoidCallback close) => MawyToolbarChoice<MawyColorScheme>(
             tokens: widget.tokens,
             value: widget.colorScheme,
             options: <(MawyColorScheme, String)>[
@@ -638,17 +638,31 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
 }
 
 /// A list of options, one of them chosen.
-class _Choice<T> extends StatelessWidget {
-  const _Choice({
+///
+/// What goes inside a [MawyToolbarMenu] that is picking one of a few named
+/// values — a typeface, a column width, a theme. Public because there are two
+/// toolbars in this package and the panel a theme is chosen from should not be
+/// two panels that resemble each other.
+class MawyToolbarChoice<T> extends StatelessWidget {
+  /// Creates the list.
+  const MawyToolbarChoice({
     required this.tokens,
     required this.value,
     required this.options,
     required this.onChanged,
+    super.key,
   });
 
+  /// The palette.
   final MawyTokens tokens;
+
+  /// Which option is the chosen one.
   final T value;
+
+  /// Every option, as the value and what to call it.
   final List<(T, String)> options;
+
+  /// Called with whatever was chosen. Closing the menu is the caller's.
   final ValueChanged<T> onChanged;
 
   @override

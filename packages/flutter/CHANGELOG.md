@@ -140,6 +140,10 @@
 
 - **The headings panel is called "Contents".** The React package's change, in the same commit and for the same reason: "Outline" is what the thing is to whoever wrote it rather than what a reader is looking for, and the Korean has always said 목차. `MawyViewerToolbarItem.outline` is unchanged, because that is an application's API.
 
+- **The editor's theme control is a menu rather than a button that cycles.** Light, dark and the platform's, all three at once with a tick beside the one in use — which is what the viewer's toolbar here already offered and what the React package's editor has always offered. A button that cycles is a button pressed twice to reach the value on the other side of the one you did not want, and the list will be longer than three the first time this library ships a palette that is neither light nor dark.
+
+  `MawyToolbarChoice` is the panel behind it, public now, because there are two toolbars in this package and the list a theme is chosen from should not be two lists that resemble each other.
+
 ### Fixed
 
 - **Every menu on both toolbars opens.** They did nothing at all, and in a release build they did nothing loudly: the panels are raised into an [Overlay], `Overlay.of` asserts in debug and throws a null check with asserts stripped, and an application that has neither `MaterialApp` nor routes has no overlay for them to go into. That is not an exotic tree — it is what an application that wanted neither Material nor Cupertino writes, and this package's own gallery is one, which is why every Flutter preview on the documentation site had a toolbar where nothing happened.

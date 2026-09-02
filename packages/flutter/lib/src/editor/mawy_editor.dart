@@ -841,8 +841,13 @@ class _ToolbarState extends State<_Toolbar> {
           continue;
         }
 
+        // A menu rather than a button that cycles, which is what the viewer's
+        // toolbar and the React package's both do. Three values is already one
+        // too many to press through to reach the one you want, and the list
+        // will be longer than three the first time this library ships a palette
+        // that is neither light nor dark.
         children.add(
-          MawyToolbarButton(
+          MawyToolbarMenu(
             icon: switch (widget.colorScheme) {
               MawyColorScheme.light => LucideIcons.sun,
               MawyColorScheme.dark => LucideIcons.moon,
@@ -851,11 +856,19 @@ class _ToolbarState extends State<_Toolbar> {
             label: widget.strings.colorScheme,
             tokens: widget.tokens,
             focusNode: next(),
-            onPressed: () => widget.onColorScheme!(switch (widget.colorScheme) {
-              MawyColorScheme.light => MawyColorScheme.dark,
-              MawyColorScheme.dark => MawyColorScheme.system,
-              MawyColorScheme.system => MawyColorScheme.light,
-            }),
+            builder: (VoidCallback close) => MawyToolbarChoice<MawyColorScheme>(
+              tokens: widget.tokens,
+              value: widget.colorScheme,
+              options: <(MawyColorScheme, String)>[
+                (MawyColorScheme.light, widget.strings.colorSchemeLight),
+                (MawyColorScheme.dark, widget.strings.colorSchemeDark),
+                (MawyColorScheme.system, widget.strings.colorSchemeSystem),
+              ],
+              onChanged: (MawyColorScheme next) {
+                widget.onColorScheme!(next);
+                close();
+              },
+            ),
           ),
         );
 
