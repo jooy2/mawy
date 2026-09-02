@@ -9,6 +9,7 @@
 /// `highlightMarkdown`, diffed between the two by `tool/parity.dart`.
 library;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/internal/i18n.dart';
@@ -125,6 +126,7 @@ class MawySourceField extends StatefulWidget {
     required this.onIndent,
     this.scrollController,
     this.editableKey,
+    this.lineNumbers = true,
     super.key,
   });
 
@@ -163,6 +165,9 @@ class MawySourceField extends StatefulWidget {
   /// The editor does, in `split`: where a line of the source sits is half of
   /// what lines the preview up with it, and only the field knows.
   final GlobalKey<EditableTextState>? editableKey;
+
+  /// Whether the lines are numbered down the leading edge.
+  final bool lineNumbers;
 
   @override
   State<MawySourceField> createState() => _MawySourceFieldState();
@@ -207,81 +212,221 @@ class _MawySourceFieldState extends State<MawySourceField>
       height: 1.7,
     );
 
-    return Container(
-      color: tokens.background,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Stack(
-        children: <Widget>[
-          if (controller.text.isEmpty)
-            Positioned(
-              left: 0,
-              top: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: Text(
-                  widget.placeholder,
-                  style: style.copyWith(color: tokens.foregroundSubtle),
-                ),
+    final Widget field = Stack(
+      children: <Widget>[
+        if (controller.text.isEmpty)
+          Positioned(
+            left: 0,
+            top: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Text(
+                widget.placeholder,
+                style: style.copyWith(color: tokens.foregroundSubtle),
               ),
             ),
-          Shortcuts(
-            shortcuts: const <ShortcutActivator, Intent>{
-              SingleActivator(LogicalKeyboardKey.tab): _IndentIntent(out: false),
-              SingleActivator(LogicalKeyboardKey.tab, shift: true): _IndentIntent(out: true),
-            },
-            child: Actions(
-              actions: <Type, Action<Intent>>{
-                _IndentIntent: CallbackAction<_IndentIntent>(
-                  onInvoke: (_IndentIntent intent) {
-                    widget.onIndent(out: intent.out);
+          ),
+        Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.tab): _IndentIntent(out: false),
+            SingleActivator(LogicalKeyboardKey.tab, shift: true): _IndentIntent(out: true),
+          },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              _IndentIntent: CallbackAction<_IndentIntent>(
+                onInvoke: (_IndentIntent intent) {
+                  widget.onIndent(out: intent.out);
 
-                    return null;
-                  },
-                ),
-              },
-              child: Focus(
-                onKeyEvent: (FocusNode node, KeyEvent event) {
-                  final bool pressed = event is KeyDownEvent || event is KeyRepeatEvent;
-
-                  if (pressed &&
-                      event.logicalKey == LogicalKeyboardKey.enter &&
-                      !HardwareKeyboard.instance.isShiftPressed &&
-                      widget.onEnter()) {
-                    return KeyEventResult.handled;
-                  }
-
-                  return KeyEventResult.ignored;
+                  return null;
                 },
-                child: _gestures.buildGestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  child: EditableText(
-                    key: editableTextKey,
-                    controller: controller,
-                    focusNode: widget.focusNode,
-                    scrollController: widget.scrollController,
-                    readOnly: widget.readOnly,
-                    style: style,
-                    cursorColor: tokens.accent,
-                    backgroundCursorColor: tokens.border,
-                    selectionColor: tokens.accentSoft,
-                    maxLines: null,
-                    expands: true,
-                    textAlign: TextAlign.start,
-                    scrollPadding: const EdgeInsets.all(24),
-                    // The detector above reads the pointer. Two things reading
-                    // one gesture is a caret that jumps to where a selection
-                    // was meant to start.
-                    rendererIgnoresPointer: true,
-                    enableInteractiveSelection: true,
-                  ),
+              ),
+            },
+            child: Focus(
+              onKeyEvent: (FocusNode node, KeyEvent event) {
+                final bool pressed = event is KeyDownEvent || event is KeyRepeatEvent;
+
+                if (pressed &&
+                    event.logicalKey == LogicalKeyboardKey.enter &&
+                    !HardwareKeyboard.instance.isShiftPressed &&
+                    widget.onEnter()) {
+                  return KeyEventResult.handled;
+                }
+
+                return KeyEventResult.ignored;
+              },
+              child: _gestures.buildGestureDetector(
+                behavior: HitTestBehavior.translucent,
+                child: EditableText(
+                  key: editableTextKey,
+                  controller: controller,
+                  focusNode: widget.focusNode,
+                  scrollController: widget.scrollController,
+                  readOnly: widget.readOnly,
+                  style: style,
+                  cursorColor: tokens.accent,
+                  backgroundCursorColor: tokens.border,
+                  selectionColor: tokens.accentSoft,
+                  maxLines: null,
+                  expands: true,
+                  textAlign: TextAlign.start,
+                  scrollPadding: const EdgeInsets.all(24),
+                  // The detector above reads the pointer. Two things reading
+                  // one gesture is a caret that jumps to where a selection
+                  // was meant to start.
+                  rendererIgnoresPointer: true,
+                  enableInteractiveSelection: true,
                 ),
               ),
             ),
           ),
+        ),
+      ],
+    );
+
+    if (!widget.lineNumbers) {
+      return Container(
+        color: tokens.background,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: field,
+      );
+    }
+
+    return Container(
+      color: tokens.background,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          MawySourceGutter(
+            editable: editableTextKey,
+            text: controller.text,
+            style: style.copyWith(color: tokens.foregroundSubtle),
+            scroller: widget.scrollController,
+          ),
+          const SizedBox(width: _gutterGap),
+          Expanded(child: field),
         ],
       ),
     );
   }
+}
+
+/// The gap between the numbers and the text, which is `--mawy-src-gap`.
+const double _gutterGap = 14;
+
+/// The column of line numbers down the leading edge of the source.
+class MawySourceGutter extends StatelessWidget {
+  /// Creates the column.
+  const MawySourceGutter({
+    required this.editable,
+    required this.text,
+    required this.style,
+    required this.scroller,
+    super.key,
+  });
+
+  /// The field the numbers belong to.
+  final GlobalKey<EditableTextState> editable;
+
+  /// The document, which says how many numbers there are and where they go.
+  final String text;
+
+  /// What the numbers are drawn in — the source's own type, in its faintest
+  /// colour.
+  final TextStyle style;
+
+  /// The field's scroller, so the numbers move with the text.
+  final ScrollController? scroller;
+
+  @override
+  Widget build(BuildContext context) {
+    // Monospace, so the column is exactly as wide as its widest number and
+    // nothing has to be measured twice — the arithmetic the stylesheet does
+    // with `ch`.
+    final int digits = '${'\n'.allMatches(text).length + 1}'.length;
+    final TextPainter ruler = TextPainter(
+      text: TextSpan(text: '0' * digits, style: style),
+      textDirection: Directionality.of(context),
+    )..layout();
+
+    return SizedBox(
+      width: ruler.width,
+      child: ClipRect(
+        child: CustomPaint(
+          painter: _Numbers(editable: editable, text: text, style: style, scroller: scroller),
+        ),
+      ),
+    );
+  }
+}
+
+/// The line numbers, painted beside the text they belong to.
+///
+/// Where a line *begins* is a question only the field can answer, because a
+/// line that wrapped is two rows on the screen and one number down the side —
+/// which is what the stylesheet's grid does over there, a row per line with the
+/// number in the first column. So the numbers are painted from the caret rects
+/// the laid-out field reports rather than from a second layout of the same
+/// text: the two cannot drift, because there is only one.
+///
+/// A caret rect comes back where it is drawn, which is where it is in the text
+/// less however far the field has been scrolled — exactly what a number painted
+/// beside the line wants.
+class _Numbers extends CustomPainter {
+  _Numbers({
+    required this.editable,
+    required this.text,
+    required this.style,
+    required this.scroller,
+  }) : super(repaint: scroller);
+
+  final GlobalKey<EditableTextState> editable;
+  final String text;
+  final TextStyle style;
+  final ScrollController? scroller;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final RenderEditable? field = editable.currentState?.renderEditable;
+
+    if (field == null || !field.hasSize) {
+      return;
+    }
+
+    final double line = (style.fontSize ?? 14) * (style.height ?? 1);
+    int at = 0;
+    int number = 1;
+
+    while (at <= text.length) {
+      final double top = field.getLocalRectForCaret(TextPosition(offset: at)).top;
+
+      if (top > size.height) {
+        break;
+      }
+
+      if (top > -line) {
+        final TextPainter drawn = TextPainter(
+          text: TextSpan(text: '$number', style: style),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        // Against the trailing edge, the way `text-align: end` puts it.
+        drawn.paint(canvas, Offset(size.width - drawn.width, top));
+      }
+
+      final int next = text.indexOf('\n', at);
+
+      if (next == -1) {
+        break;
+      }
+
+      at = next + 1;
+      number += 1;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Numbers old) => old.text != text || old.style != style;
 }
 
 /// `Tab`, in whichever direction.

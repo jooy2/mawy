@@ -119,8 +119,9 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | --- | --- | --- | --- |
 | `toolbar` | `List<MawyEditorToolbarItem>` | [`kMawyEditorToolbar`](#kmawyeditortoolbar) | 툴바에 어떤 컨트롤을 어떤 순서로 둘지. 없음은 `const []`. |
 | `status` | `List<MawyEditorStatusItem>` | [`kMawyEditorStatus`](#kmawyeditorstatus) | 상태 표시줄이 세는 것. 없음은 `const []`. |
+| `lineNumbers` | `bool` | `true` | 원문 화면 앞쪽 가장자리의 줄 번호 거터. |
 
-뷰어의 [`toolbar`](#mawyviewer)가 그런 이유와 같은 이유로 `true`가 아니라 리스트입니다. `lineNumbers`는 없습니다. 여기 원문 화면에는 줄 번호 거터가 없습니다.
+뷰어의 [`toolbar`](#mawyviewer)가 그런 이유와 같은 이유로 `true`가 아니라 리스트입니다.
 
 :::
 

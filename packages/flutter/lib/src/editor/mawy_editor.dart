@@ -197,6 +197,7 @@ class MawyEditor extends StatefulWidget {
     this.highlight,
     this.onLinkTap,
     this.readOnly = false,
+    this.lineNumbers = true,
     this.placeholder,
   });
 
@@ -263,6 +264,11 @@ class MawyEditor extends StatefulWidget {
 
   /// Whether the document can be changed.
   final bool readOnly;
+
+  /// Whether the source surface numbers its lines. The React package's default
+  /// is the same, and for the same reason: an editor is a place errors are
+  /// reported by line.
+  final bool lineNumbers;
 
   /// What the source surface says when it is empty.
   final String? placeholder;
@@ -664,6 +670,7 @@ class _MawyEditorState extends State<MawyEditor> {
       onIndent: _indent,
       scrollController: _sourceScroll,
       editableKey: _editable,
+      lineNumbers: widget.lineNumbers,
     );
 
     final Widget preview = MawyViewer(

@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/editor/find_bar.dart' show MawyFindBar;
-import 'package:mawy/src/editor/source_field.dart' show MawySourceField;
+import 'package:mawy/src/editor/source_field.dart' show MawySourceField, MawySourceGutter;
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart' show MawyToolbarButton;
 
 import '../support/host.dart';
@@ -379,6 +379,45 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.bySemanticsLabel('Match case'), findsNothing);
+    });
+  });
+
+  group('the gutter', () {
+    testWidgets('numbers the lines, and gives a wrapped line one number', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '# One\n\n${'A long line that will have to wrap. ' * 8}\n\nThree',
+            defaultMode: MawyEditorMode.plain,
+          ),
+          size: const Size(420, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final RenderBox gutter = tester.renderObject(find.byType(MawySourceGutter)) as RenderBox;
+
+      // A wrapped line is two rows on the screen and one number down the side,
+      // so five lines of source are five numbers however wide the pane is.
+      expect(gutter.size.width, greaterThan(0));
+      // One digit wide: five lines, and the widest number is `5`.
+      expect(gutter.size.width, lessThan(20));
+    });
+
+    testWidgets('draws no gutter when it was told not to', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: 'One\nTwo',
+            defaultMode: MawyEditorMode.plain,
+            lineNumbers: false,
+          ),
+        ),
+      );
+
+      expect(find.byType(MawySourceGutter), findsNothing);
     });
   });
 

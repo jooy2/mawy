@@ -119,8 +119,9 @@ The two ways round are the ones every text field in Flutter offers, and they are
 | --- | --- | --- | --- |
 | `toolbar` | `List<MawyEditorToolbarItem>` | [`kMawyEditorToolbar`](#kmawyeditortoolbar) | Which controls the toolbar has, and in what order. `const []` for none. |
 | `status` | `List<MawyEditorStatusItem>` | [`kMawyEditorStatus`](#kmawyeditorstatus) | What the status bar counts. `const []` for none. |
+| `lineNumbers` | `bool` | `true` | The gutter down the leading edge of the source. |
 
-A list rather than a `true`, for the reason [`toolbar`](#mawyviewer) is one on the viewer. There is no `lineNumbers`: the source surface has no gutter here.
+A list rather than a `true`, for the reason [`toolbar`](#mawyviewer) is one on the viewer.
 
 :::
 

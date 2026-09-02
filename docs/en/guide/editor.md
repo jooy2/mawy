@@ -89,7 +89,7 @@ What that field does not come with is the pointer. A bare `EditableText` puts th
 
 Two things are still the platform's rather than this package's, and both are Cupertino's rather than Flutter's: the magnifier that opens under a hard press on iOS, and the selection toolbar. A gesture that starts something this package cannot finish is worse than one that does nothing, so the force press is off.
 
-There is no `lineNumbers` here. The gutter is a second column that has to stay level with soft-wrapped text, and one text field is not two grids.
+`lineNumbers` turns the gutter off here too. It is on by default, and the numbers are painted from the field's own laid-out lines rather than from a second layout of the same text — so a line that wrapped is two rows on the screen and one number down the side, and the two cannot drift because there is only one of them.
 
 :::
 
