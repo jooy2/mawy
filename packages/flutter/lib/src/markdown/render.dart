@@ -444,6 +444,12 @@ StrutStyle mawyStrutFor(TextStyle style) => StrutStyle(
   fontSize: style.fontSize,
   height: style.height,
   forceStrutHeight: true,
+  // Half the leading above and half below, which is what CSS does with
+  // `line-height` and so what the React package's paragraphs do. Flutter's
+  // default splits it in proportion to the font's own ascent and descent, so
+  // where a baseline sits inside a line depends on which font drew the line —
+  // and a paragraph of Hangul beside a paragraph of Latin is two fonts.
+  leadingDistribution: TextLeadingDistribution.even,
 );
 
 /// A margin below a block, unless it is the last thing in whatever holds it.

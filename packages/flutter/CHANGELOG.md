@@ -206,6 +206,8 @@
 
 - **The mark beside the current heading is a rule and not a bracket.** It was a border on the row, and a border follows that row's corner radius — so two pixels of rule came out bent into the same bracket the stylesheet was changed away from drawing a few entries above this one. Its own box, against the panel's leading edge, straight.
 
+- **The leading is split evenly, which is what a browser does with `line-height`.** Flutter's default divides it in proportion to the font's own ascent and descent, so where a baseline sits inside a line depends on which font drew that line — and a document is two fonts the moment it has Hangul and Latin in it. That is what left the size, the one cell of the status bar with no Hangul in it, sitting off the line the rest of the row was on. It is the browser's half-leading now, in the status bar and in every paragraph.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

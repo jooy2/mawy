@@ -1185,17 +1185,22 @@ class _Status extends StatelessWidget {
         child: Wrap(
           spacing: 14,
           runSpacing: 4,
-          // Down the middle of the row, and every cell the same height as every
-          // other. A cell of ASCII and a cell with a Korean word in it are two
-          // different heights otherwise, because a line box is as tall as what
-          // is on it — which is what left the size sitting off the line the rest
-          // of the row is on.
+          // Down the middle of the row, and every cell on the same line as every
+          // other. Both halves of that are needed: a forced strut makes every
+          // cell the same height, and even leading puts the baseline in the same
+          // place inside it whichever font the cell was drawn from — which is
+          // what the size, the one cell with no Hangul in it, did not have.
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
             for (final String cell in cells)
               Text(
                 cell,
-                strutStyle: const StrutStyle(fontSize: 12, height: 1.35, forceStrutHeight: true),
+                strutStyle: const StrutStyle(
+                  fontSize: 12,
+                  height: 1.35,
+                  forceStrutHeight: true,
+                  leadingDistribution: TextLeadingDistribution.even,
+                ),
                 style: TextStyle(
                   color: tokens.foregroundSubtle,
                   fontSize: 12,
