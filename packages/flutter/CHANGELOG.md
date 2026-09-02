@@ -184,6 +184,8 @@
 
 - **A slider has a thumb, and the way back to the default is always under it.** The track was a bar with no handle on it — a browser draws one on `input[type=range]` and a reader who has moved one is looking for it — and the reset appeared only once a value had moved, so the panel changed height the moment a slider was touched. It is present and inert at the default now, which is the rule the React package's is under.
 
+- **Every line of a paragraph is the same height.** A line box in Flutter is as tall as what is on it, so one line of Hangul and the next line of Latin inside a single paragraph were two different heights — which nothing showed until the document became selectable, and then a selection across a paragraph was a ragged stack of blocks with gaps in it rather than a run of text. A browser does not do that: `line-height` is the line there and a fallback font does not get a vote. A strut says the same thing here.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

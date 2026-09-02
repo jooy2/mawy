@@ -57,6 +57,10 @@ class MawyRenderContext {
   /// The style body text is drawn in. Everything else is relative to it.
   final TextStyle body;
 
+  /// Every line of body text the same height, whatever is on it. See
+  /// [mawyStrutFor].
+  StrutStyle get strut => mawyStrutFor(body);
+
   /// The document's footnotes, by label, so a `[^a]` in the middle of a
   /// sentence knows which number it is.
   final Map<String, MdFootnoteDefinition> footnotes;
@@ -426,6 +430,22 @@ List<Widget> renderBlocks(List<MdBlock> blocks, MawyRenderContext context, {bool
   return out;
 }
 
+/// Every line of a paragraph the same height, whatever is on it.
+///
+/// Without this a line of Hangul and a line of Latin inside one paragraph are
+/// two different heights, because the two are drawn from two different fonts
+/// and a line box is as tall as what is on it. That is not what a browser does
+/// — `line-height` is the line there and a fallback font does not get a vote —
+/// and it is what made a selection across a paragraph a ragged stack of blocks
+/// rather than a run of text.
+StrutStyle mawyStrutFor(TextStyle style) => StrutStyle(
+  fontFamily: style.fontFamily,
+  fontFamilyFallback: style.fontFamilyFallback,
+  fontSize: style.fontSize,
+  height: style.height,
+  forceStrutHeight: true,
+);
+
 /// A margin below a block, unless it is the last thing in whatever holds it.
 Widget _spaced(Widget child, double bottom, {required bool last}) {
   return last
@@ -455,7 +475,10 @@ Widget _block(
       letterSpacing: -0.014 * em * scale,
       color: block.depth >= 5 ? tokens.foregroundMuted : tokens.foreground,
     );
-    final Widget text = Text.rich(renderInline(block.children, context, style));
+    final Widget text = Text.rich(
+      renderInline(block.children, context, style),
+      strutStyle: mawyStrutFor(style),
+    );
 
     return Padding(
       // `2em 0 0.6em`, and no top margin on the first thing in a document.
@@ -474,7 +497,10 @@ Widget _block(
   }
 
   if (block is MdParagraph) {
-    final Widget text = Text.rich(renderInline(block.children, context, context.body));
+    final Widget text = Text.rich(
+      renderInline(block.children, context, context.body),
+      strutStyle: context.strut,
+    );
 
     return tight ? text : _spaced(text, em, last: last);
   }
