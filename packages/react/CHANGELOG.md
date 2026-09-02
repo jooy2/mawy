@@ -2,7 +2,9 @@
 
 > This package's history. Each language Mawy ships for keeps its own changelog beside its own manifest, because they version independently.
 
-## Unreleased
+## 1.0.0 (2026-09-02)
+
+The entries below are a long list of work, and a long list is a minor version. What makes this a major is the promise that comes with the number: from here the exported API is under semantic versioning, so a name that goes away or changes shape waits for another major. Nothing exported changed shape in this release.
 
 ### Added
 
