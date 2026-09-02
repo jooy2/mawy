@@ -557,6 +557,30 @@ The sizes are logical pixels rather than CSS ones and the measure widths are 560
 
 :::
 
+## The language of the chrome
+
+The toolbar's labels, the menus, the panel headings and every sentence a screen reader is given are the library's own words, and `locale` chooses which language they are in:
+
+::: fw react
+
+```tsx
+<MawyViewer value={document} locale="ko" />
+```
+
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(value: document, locale: MawyLocale.ko)
+```
+
+:::
+
+**English and Korean**, and `en` is the default. It says nothing about the document: a Korean document in an English-chrome viewer is the ordinary case, and the two are separate questions on purpose.
+
+Both packages ship the same set of words under the same names, so a screen that reads one way in a browser reads the same way in an app. Adding a language is a table in `src/internal/i18n.ts` and its counterpart in `lib/src/internal/i18n.dart`, and both have to be written for a language to be offered — the two are one vocabulary and a locale that exists in one package and not the other is not a locale this library has.
+
 ## Theming
 
 ::: fw flutter

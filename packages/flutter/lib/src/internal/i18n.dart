@@ -261,7 +261,7 @@ class MawyStrings {
   /// The editor: characters.
   final String statusCharacters;
 
-  /// The editor: Write in Markdown….
+  /// What the source surface says when it is empty.
   final String editorPlaceholder;
 
   /// The find bar's own name, and the field in it.
@@ -368,7 +368,7 @@ const MawyStrings _en = MawyStrings(
   statusLines: 'lines',
   statusWords: 'words',
   statusCharacters: 'characters',
-  editorPlaceholder: 'Write in Markdown…',
+  editorPlaceholder: 'Write here…',
   find: 'Find',
   replace: 'Replace',
   findMatchCase: 'Match case',
@@ -444,7 +444,7 @@ const MawyStrings _ko = MawyStrings(
   statusLines: '줄',
   statusWords: '단어',
   statusCharacters: '자',
-  editorPlaceholder: '마크다운으로 쓰세요…',
+  editorPlaceholder: '여기에 입력…',
   find: '찾기',
   replace: '바꾸기',
   findMatchCase: '대소문자 구분',

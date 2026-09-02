@@ -189,6 +189,8 @@
 
 - **The status bar is the height the Flutter package's is.** It was two pixels taller, and for a reason worth writing down: `.mawy-root` sets a line height of 1.5 because a document is prose, and a strip of counts under an editor is not prose. The number is written down on the bar now rather than inherited, and it is the number the other package's row is drawn at.
 
+- **Two of the library's own sentences say what they mean.** The veil over the editor while a file is being dragged said "Drop to add", which is an instruction with the object left out; it says what will be added now. And the source surface's placeholder said "Write in Markdown" — a reader looking at an empty editor knows what it takes, and what they want to know is that this is where the typing goes.
+
 ### Fixed
 
 - **A file dropped on the editor no longer takes the page away.** A dropped file is an image and never a document, which is the rule and stays the rule — but a file the editor would not take was left to the browser, and a browser given a file it was not stopped from taking opens it as a page. The document, the undo history and the caret went with the tab, which is the exact loss the rule exists to prevent.

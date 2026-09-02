@@ -168,6 +168,8 @@
 
   The panels are hung from the leading edge of the button that opened them and flip to the trailing edge only where that would run them off, which is the rule the React package's menu already followed. It was not one this package needed while every menu lived at the right of a viewer's toolbar; the first menu on the _left_ of an editor's hung off the window.
 
+- **The source surface's placeholder says where the typing goes**, rather than naming the format the reader is already looking at. The React package's placeholder changed with it, so the two still say the same thing.
+
 ### Fixed
 
 - **A task list's box sits on the middle of its first line.** It was nudged down by a number written by hand, which is right at one line height and above the text at every other — and the default is not that one, so every task list in the package was drawn with its boxes riding high. It is half the difference between the line box and the type in it now, which is where the browser's `vertical-align` puts the React package's.

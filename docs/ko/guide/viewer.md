@@ -557,6 +557,30 @@ setState(() => _type = _type.copyWith(fontSize: 18));
 
 :::
 
+## chrome이 쓰는 언어
+
+툴바의 이름표, 메뉴, 패널의 제목, 스크린 리더에게 건네는 모든 문장은 라이브러리 자신의 낱말이고, 그것을 어떤 언어로 할지는 `locale`이 정합니다.
+
+::: fw react
+
+```tsx
+<MawyViewer value={document} locale="ko" />
+```
+
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(value: document, locale: MawyLocale.ko)
+```
+
+:::
+
+**영어와 한국어**이고, 기본값은 `en`입니다. 문서에 대해서는 아무 말도 하지 않습니다. 영어 chrome의 뷰어에 한국어 문서가 들어 있는 것은 평범한 경우이고, 둘은 일부러 분리된 질문입니다.
+
+두 패키지가 같은 이름 아래 같은 낱말을 싣습니다. 브라우저에서 이렇게 읽히는 화면은 앱에서도 똑같이 읽힙니다. 언어를 하나 더하는 일은 `src/internal/i18n.ts`의 표 하나와 `lib/src/internal/i18n.dart`의 짝 하나이고, 어느 한쪽만 쓰인 언어는 이 라이브러리가 가진 언어가 아닙니다.
+
 ## 테마
 
 ::: fw flutter

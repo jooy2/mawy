@@ -572,7 +572,7 @@ enum MawyLocale { en, ko }
 
 :::
 
-The language of the viewer's and the editor's own chrome — toolbar labels, menu entries, the text a screen reader is given. It has nothing to do with the language a document is written in.
+**English and Korean**, and `en` is the default. It is the language of the viewer's and the editor's own chrome — toolbar labels, menu entries, the text a screen reader is given — and has nothing to do with the language a document is written in. Both packages ship the same words under the same names; a locale that exists in one and not the other is not a locale this library has.
 
 ### `MawyParseOptions`
 
