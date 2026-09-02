@@ -553,6 +553,12 @@ const startsWith = (prefix: string) => (item: GeneratedSidebarItem) =>
  * the package yet wants the guide first. The changelog is a loose page with
  * nothing above it, so it is given a group — the place anything that is neither
  * a guide nor reference ends up.
+ *
+ * The playground goes into that group as well, and first in it. It lives under
+ * `guide/` because that is a URL rather than a claim, and it is the one page
+ * here that is not reading: a reader working through the guide should not find
+ * it between two pages of prose, and a reader who has finished should find it
+ * at the top of what is left.
  */
 function arrangeSidebar<T extends GeneratedSidebarItem>(items: T[], lang: string): T[] {
   const labels = groupLabels[lang] ?? groupLabels[defaultLocale];
@@ -560,9 +566,11 @@ function arrangeSidebar<T extends GeneratedSidebarItem>(items: T[], lang: string
   const guide = items.find(startsWith('guide/'));
   const api = items.find(startsWith('api/'));
   const changelog = items.find(startsWith('changelog'));
+  const playground = guide?.items?.find((item) => item.link === 'guide/playground');
 
   if (guide) {
     guide.text = labels.guide;
+    guide.items = guide.items?.filter((item) => item !== playground);
   }
 
   // Only once `api/` holds more than its index. Until then it is a single row
@@ -581,7 +589,8 @@ function arrangeSidebar<T extends GeneratedSidebarItem>(items: T[], lang: string
     api.items = [...([overview].filter(Boolean) as T[]), ...api.items];
   }
 
-  const more = changelog ? ({ text: labels.more, items: [changelog] } as unknown as T) : undefined;
+  const loose = [playground, changelog].filter(Boolean) as T[];
+  const more = loose.length ? ({ text: labels.more, items: loose } as unknown as T) : undefined;
   const moved = new Set([guide, api, changelog].filter(Boolean));
 
   return [
