@@ -213,6 +213,8 @@
 
   A slider is not a value being picked and does not shut: a size is arrived at by moving it, and a panel that closed on the first step would have to be reopened for the second. That is the split the Flutter package already made, and now both make it.
 
+- **`preview` is the same width as every other surface.** The rule down the preview's leading edge is there to separate it from the source beside it, and in `preview` there is no source beside it — so the pane was a pixel narrower than the others and the box read as shifting when the surface switch was pressed. The rule belongs to `split`, and now says so.
+
 ## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

@@ -1343,7 +1343,11 @@
   min-height: 0;
 }
 
-.mawy-root .mawy-editor-preview {
+/* Only where there is a pane on the other side of it. `preview` is one pane
+ * across the whole editor, and a rule down the inside of its leading edge is a
+ * pixel the other surfaces do not spend — which the eye reads as the box
+ * shifting when the switch is pressed. */
+.mawy-root .mawy-editor-body[data-mawy-split] > .mawy-editor-preview {
   border-inline-start: 1px solid var(--mawy-border);
 }
 
@@ -1712,7 +1716,7 @@
     flex-direction: column;
   }
 
-  .mawy-root .mawy-editor-preview {
+  .mawy-root .mawy-editor-body[data-mawy-split] > .mawy-editor-preview {
     border-inline-start: 0;
     border-top: 1px solid var(--mawy-border);
   }
@@ -1800,7 +1804,7 @@
     overflow: visible;
   }
 
-  .mawy-root .mawy-editor-preview {
+  .mawy-root .mawy-editor-body[data-mawy-split] > .mawy-editor-preview {
     border-inline-start: 0;
   }
 
