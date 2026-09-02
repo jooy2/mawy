@@ -28,23 +28,6 @@ Two rules keep it honest:
   into the frame is the shape that would work, and it wants `dart:js_interop` in
   `packages/flutter/example`.
 
-## Reported, not reproduced
-
-- **Most of the Flutter editor's toolbar buttons do nothing in the documentation
-  gallery.** The commands are wired — `_commands` in
-  `packages/flutter/lib/src/editor/mawy_editor.dart` maps every button to a
-  `MawyCommand`, and `mawy_editor_test.dart` presses `Bold` and asserts the
-  document changed. The likeliest cause has since been fixed: the source surface
-  had no pointer selection at all, so every command that acts on one had nothing
-  to act on.
-
-  The gallery has been rebuilt since, with the pointer fix in it and a
-  playground page to try it on, but a Flutter web build does not paint in the
-  environment these sessions run in — the engine loads and the scene stays
-  empty — so it has still not actually been watched. Somebody with a browser
-  should open `/guide/playground` with the switch set to Flutter, select a word
-  and press **Bold**.
-
 ## Deliberate, and not to be quietly fixed
 
 - **CommonMark's remaining twelve**, in `DEVIATIONS`. Nine are decisions with
@@ -57,10 +40,22 @@ Two rules keep it honest:
 - **`wysiwyg` in the Flutter package**, and its file open, its own undo history
   and its image paste. The reasons are in `docs/*/guide/editor.md` and in the
   changelog, in both languages.
+- **What the viewer's find bar does not search**, in `find.ts` and `find.dart`.
+  A match cannot straddle two drawn runs, so `hello` is not found across
+  `he**llo**`; a fenced code block is not searched at all. Both are written down
+  in the doc comment at the top of each file and on the API page. The first is a
+  refusal to report a match nothing can point at, and the second is a refusal to
+  cut a mark into every span the highlighter produced.
 
 ## Release
 
-`0.1.0` is out for both packages and `Unreleased` has a great deal on it.
-Bumping the version, dating the section, tagging, and `--provenance` for npm
-(which wants a workflow with an id token) are the steps; publishing is a person
-with credentials rather than anything here.
+`1.0.0` is the current number for both packages, dated in each changelog. The
+number is a promise as well as a version: from here the exported API is under
+semantic versioning, so a name that goes away or changes shape waits for a major.
+
+The steps are bumping the version in `packages/react/package.json` and
+`packages/flutter/pubspec.yaml`, retitling `## Unreleased` with the number and
+the date, `npm run size -- --update` if a change moved the bundle — the figures
+on the site's getting-started page are those numbers and move with them —
+tagging, and `--provenance` for npm, which wants a workflow with an id token.
+Publishing is a person with credentials rather than anything here.
