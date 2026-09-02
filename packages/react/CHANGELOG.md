@@ -173,6 +173,12 @@
 
   A textarea that swallows `Tab` is a keyboard trap, so the trap is opened rather than avoided: **press `Escape`, then `Tab`, and the focus moves on.** Anything else typed arms indentation again. It is the rule CodeMirror, Monaco and GitHub's editor all use, and the surface says so through `aria-describedby`, because a way out nobody is told about is a way out that does not exist for the person who needed it. The drawn document does not capture `Tab` at all — there is no trap there to open.
 
+### Fixed
+
+- **The toolbar is the same height in every mode.** A component given a height is a column of flex items and a flex item shrinks, so in the surfaces whose body wants more room than there is — the drawn document, `split`, `preview` — the bar was being squeezed onto its `min-height` and springing back in `plain`, which does not. Three pixels, and they moved every time the surface switch was pressed, which is the control immediately under them.
+
+  The find bar and the status bar were the same shape of thing and are fixed with it. Chrome is not what a layout should take its room from.
+
 ## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

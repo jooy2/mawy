@@ -435,11 +435,20 @@
  * The toolbar
  * ------------------------------------------------------------------------- */
 
+/* `flex: none` is what keeps the bar the same height in every mode.
+ *
+ * A component given a height is a column of flex items, and a flex item shrinks
+ * by default: in the modes whose body wants more room than there is, the
+ * toolbar was being squeezed down onto its `min-height` and springing back in
+ * the modes whose body does not. Three pixels, and they moved every time the
+ * surface switch was pressed. Chrome is not what a layout should take its room
+ * from. */
 .mawy-root .mawy-toolbar {
   position: sticky;
   top: 0;
   z-index: 10;
   display: flex;
+  flex: none;
   align-items: center;
   gap: 12px;
   min-height: 44px;
@@ -1267,6 +1276,7 @@
 
 .mawy-root .mawy-find {
   display: flex;
+  flex: none;
   flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
@@ -1658,6 +1668,7 @@
 
 .mawy-root .mawy-status {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   gap: 4px 14px;
   margin: 0;
