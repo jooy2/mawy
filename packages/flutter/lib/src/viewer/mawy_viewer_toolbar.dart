@@ -14,9 +14,12 @@
 /// three of its own.
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:mawy/src/internal/focus_visible.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/theme/tokens.dart';
@@ -170,10 +173,22 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           builder: (VoidCallback close) => MawyToolbarChoice<MawyFontFamily>(
             tokens: widget.tokens,
             value: widget.typography.fontFamily,
-            options: <(MawyFontFamily, String)>[
-              (MawyFontFamily.sans, widget.strings.fontFamilySans),
-              (MawyFontFamily.serif, widget.strings.fontFamilySerif),
-              (MawyFontFamily.mono, widget.strings.fontFamilyMono),
+            options: <MawyToolbarOption<MawyFontFamily>>[
+              MawyToolbarOption<MawyFontFamily>(
+                MawyFontFamily.sans,
+                widget.strings.fontFamilySans,
+                LucideIcons.type,
+              ),
+              MawyToolbarOption<MawyFontFamily>(
+                MawyFontFamily.serif,
+                widget.strings.fontFamilySerif,
+                LucideIcons.bookOpen,
+              ),
+              MawyToolbarOption<MawyFontFamily>(
+                MawyFontFamily.mono,
+                widget.strings.fontFamilyMono,
+                LucideIcons.terminal,
+              ),
             ],
             onChanged: (MawyFontFamily next) {
               widget.onTypographyChange(widget.typography.copyWith(fontFamily: next));
@@ -230,11 +245,27 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           builder: (VoidCallback close) => MawyToolbarChoice<MawyMeasure>(
             tokens: widget.tokens,
             value: widget.typography.measure,
-            options: <(MawyMeasure, String)>[
-              (MawyMeasure.narrow, widget.strings.measureNarrow),
-              (MawyMeasure.normal, widget.strings.measureNormal),
-              (MawyMeasure.wide, widget.strings.measureWide),
-              (MawyMeasure.full, widget.strings.measureFull),
+            options: <MawyToolbarOption<MawyMeasure>>[
+              MawyToolbarOption<MawyMeasure>(
+                MawyMeasure.narrow,
+                widget.strings.measureNarrow,
+                LucideIcons.alignJustify,
+              ),
+              MawyToolbarOption<MawyMeasure>(
+                MawyMeasure.normal,
+                widget.strings.measureNormal,
+                LucideIcons.stretchHorizontal,
+              ),
+              MawyToolbarOption<MawyMeasure>(
+                MawyMeasure.wide,
+                widget.strings.measureWide,
+                LucideIcons.unfoldHorizontal,
+              ),
+              MawyToolbarOption<MawyMeasure>(
+                MawyMeasure.full,
+                widget.strings.measureFull,
+                LucideIcons.moveHorizontal,
+              ),
             ],
             onChanged: (MawyMeasure next) {
               widget.onTypographyChange(widget.typography.copyWith(measure: next));
@@ -260,11 +291,7 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           builder: (VoidCallback close) => MawyToolbarChoice<MawyColorScheme>(
             tokens: widget.tokens,
             value: widget.colorScheme,
-            options: <(MawyColorScheme, String)>[
-              (MawyColorScheme.light, widget.strings.colorSchemeLight),
-              (MawyColorScheme.dark, widget.strings.colorSchemeDark),
-              (MawyColorScheme.system, widget.strings.colorSchemeSystem),
-            ],
+            options: MawyToolbarSchemes.of(widget.strings),
             onChanged: (MawyColorScheme next) {
               change(next);
               close();
@@ -420,7 +447,10 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
           ),
         },
         onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
-        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
+        // Read at the moment the focus arrives: a ring belongs on a control a
+        // keyboard reached and not on one a pointer pressed. See
+        // `internal/focus_visible.dart`.
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on && MawyFocusVisible.wanted),
         child: GestureDetector(
           onTap: widget.enabled ? widget.onPressed : null,
           child: AnimatedContainer(
@@ -536,6 +566,17 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
     }
   }
 
+  /// Whether a pointer went down on the button this panel belongs to.
+  bool _onButton(Offset global) {
+    final RenderObject? object = context.findRenderObject();
+
+    if (object is! RenderBox || !object.attached || !object.hasSize) {
+      return false;
+    }
+
+    return (Offset.zero & object.size).contains(object.globalToLocal(global));
+  }
+
   /// Escape shuts it, and nothing else here does.
   KeyEventResult _onKey(FocusNode _, KeyEvent event) {
     if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.escape) {
@@ -571,10 +612,27 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
     _entry = OverlayEntry(
       builder: (BuildContext context) => Stack(
         children: <Widget>[
-          // A tap anywhere else closes it, which is what a menu does and what a
-          // panel pinned to a button would otherwise not do.
+          // A pointer anywhere else closes it, which is what a menu does and
+          // what a panel pinned to a button would otherwise not do.
+          //
+          // A `Listener` rather than a `GestureDetector`: a detector enters the
+          // gesture arena and wins the tap, so pressing a *second* menu button
+          // while this one is open shut this panel and stopped there, and the
+          // button had to be pressed again. This hears the pointer go down and
+          // takes nothing, which is the `mousedown` on the document that the
+          // React package's menu listens for.
           Positioned.fill(
-            child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _close),
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (PointerDownEvent event) {
+                // Except on this menu's own button, which is about to toggle
+                // the panel shut by itself. Closing here as well would be a
+                // close and an open, and the panel would never shut.
+                if (!_onButton(event.position)) {
+                  _close();
+                }
+              },
+            ),
           ),
           CompositedTransformFollower(
             link: _link,
@@ -659,38 +717,89 @@ class MawyToolbarChoice<T> extends StatelessWidget {
   /// Which option is the chosen one.
   final T value;
 
-  /// Every option, as the value and what to call it.
-  final List<(T, String)> options;
+  /// Every option: the value, what to call it, and the glyph beside it.
+  ///
+  /// The React package's list draws one, and a list of three themes with no
+  /// sun, moon or half-and-half on it is a different control rather than the
+  /// same one in another language.
+  final List<MawyToolbarOption<T>> options;
 
   /// Called with whatever was chosen. Closing the menu is the caller's.
   final ValueChanged<T> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    // Whichever one is in use, and the first where none of them is. The panel
+    // opens with the focus already in it, because it is in the overlay: Tab
+    // from the button would otherwise walk the whole document before it
+    // arrived. On the option that is *already true*, though — the focus landing
+    // on the first of a list is the panel pointing at an answer nobody gave.
+    final int start = options.indexWhere((MawyToolbarOption<T> option) => option.value == value);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        for (final (int at, (T, String) option) in options.indexed)
+        for (final (int at, MawyToolbarOption<T> option) in options.indexed)
           _ChoiceOption(
             tokens: tokens,
-            label: option.$2,
-            chosen: option.$1 == value,
-            // The panel opens with the focus already in it, because it is in
-            // the overlay: Tab from the button would otherwise walk the whole
-            // document before it arrived.
-            autofocus: at == 0,
-            onChosen: () => onChanged(option.$1),
+            icon: option.icon,
+            label: option.label,
+            chosen: option.value == value,
+            autofocus: at == (start == -1 ? 0 : start),
+            onChosen: () => onChanged(option.value),
           ),
       ],
     );
   }
 }
 
+/// The three themes, in the order both toolbars offer them.
+///
+/// Written once because both of them offer it: a list that differs between the
+/// viewer's toolbar and the editor's is a difference nobody chose.
+extension MawyToolbarSchemes on MawyToolbarChoice<MawyColorScheme> {
+  /// Light, dark, and whatever the platform says.
+  static List<MawyToolbarOption<MawyColorScheme>> of(MawyStrings strings) =>
+      <MawyToolbarOption<MawyColorScheme>>[
+        MawyToolbarOption<MawyColorScheme>(
+          MawyColorScheme.light,
+          strings.colorSchemeLight,
+          LucideIcons.sun,
+        ),
+        MawyToolbarOption<MawyColorScheme>(
+          MawyColorScheme.dark,
+          strings.colorSchemeDark,
+          LucideIcons.moon,
+        ),
+        MawyToolbarOption<MawyColorScheme>(
+          MawyColorScheme.system,
+          strings.colorSchemeSystem,
+          LucideIcons.sunMoon,
+        ),
+      ];
+}
+
+/// One row of a [MawyToolbarChoice]: a value, its name and its glyph.
+class MawyToolbarOption<T> {
+  /// Creates an option.
+  const MawyToolbarOption(this.value, this.label, this.icon);
+
+  /// What choosing it means.
+  final T value;
+
+  /// What it is called.
+  final String label;
+
+  /// The glyph beside the name.
+  final IconData icon;
+}
+
 /// One of them.
 class _ChoiceOption extends StatefulWidget {
   const _ChoiceOption({
     required this.tokens,
+    required this.icon,
     required this.label,
     required this.chosen,
     required this.autofocus,
@@ -698,6 +807,7 @@ class _ChoiceOption extends StatefulWidget {
   });
 
   final MawyTokens tokens;
+  final IconData icon;
   final String label;
   final bool chosen;
   final bool autofocus;
@@ -736,7 +846,7 @@ class _ChoiceOptionState extends State<_ChoiceOption> {
             },
           ),
         },
-        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on && MawyFocusVisible.wanted),
         child: GestureDetector(
           onTap: widget.onChosen,
           child: Container(
@@ -748,6 +858,8 @@ class _ChoiceOptionState extends State<_ChoiceOption> {
             ),
             child: Row(
               children: <Widget>[
+                Icon(widget.icon, size: 15, color: chosen ? tokens.accent : tokens.foregroundMuted),
+                const SizedBox(width: 9),
                 Expanded(
                   child: Text(
                     widget.label,
@@ -858,11 +970,18 @@ class _Slider extends StatelessWidget {
             ),
           ],
         ),
-        if (clamped != fallback)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: _Reset(tokens: tokens, label: resetLabel, onPressed: () => onChanged(fallback)),
+        // Present at the default and inert there, so the panel does not change
+        // height the moment a slider is touched. The React package's is the
+        // same word under the same rule.
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: _Reset(
+            tokens: tokens,
+            label: resetLabel,
+            enabled: clamped != fallback,
+            onPressed: () => onChanged(fallback),
           ),
+        ),
       ],
     );
   }
@@ -874,10 +993,16 @@ class _Slider extends StatelessWidget {
 /// is somewhere Tab arrives, and a control the keyboard can reach and not press
 /// is worse than one it cannot reach at all.
 class _Reset extends StatefulWidget {
-  const _Reset({required this.tokens, required this.label, required this.onPressed});
+  const _Reset({
+    required this.tokens,
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+  });
 
   final MawyTokens tokens;
   final String label;
+  final bool enabled;
   final VoidCallback onPressed;
 
   @override
@@ -893,7 +1018,8 @@ class _ResetState extends State<_Reset> {
       button: true,
       label: widget.label,
       child: FocusableActionDetector(
-        mouseCursor: SystemMouseCursors.click,
+        enabled: widget.enabled,
+        mouseCursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
         shortcuts: const <ShortcutActivator, Intent>{
           SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
           SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
@@ -908,14 +1034,14 @@ class _ResetState extends State<_Reset> {
             },
           ),
         },
-        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on && MawyFocusVisible.wanted),
         child: GestureDetector(
-          onTap: widget.onPressed,
+          onTap: widget.enabled ? widget.onPressed : null,
           child: Text(
             widget.label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: widget.tokens.accent,
+              color: widget.enabled ? widget.tokens.accent : widget.tokens.foregroundSubtle,
               fontSize: 12,
               decoration: _focused ? TextDecoration.underline : null,
               decorationColor: widget.tokens.accent,
@@ -926,6 +1052,9 @@ class _ResetState extends State<_Reset> {
     );
   }
 }
+
+/// How wide the thumb is, and so how much of the track its centre cannot reach.
+const double _thumb = 14;
 
 class _Track extends StatelessWidget {
   const _Track({required this.tokens, required this.fraction, required this.onFraction});
@@ -938,36 +1067,60 @@ class _Track extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        void at(Offset local) => onFraction((local.dx / constraints.maxWidth).clamp(0, 1));
+        // Measured over the run the thumb's centre actually travels, which is
+        // the track less the thumb: a pointer at the far right is the maximum
+        // rather than a little short of it.
+        final double run = math.max(constraints.maxWidth - _thumb, 1);
+        final double at = fraction.clamp(0, 1);
+
+        void to(Offset local) => onFraction(((local.dx - _thumb / 2) / run).clamp(0, 1));
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (TapDownDetails details) => at(details.localPosition),
-          onHorizontalDragUpdate: (DragUpdateDetails details) => at(details.localPosition),
+          onTapDown: (TapDownDetails details) => to(details.localPosition),
+          onHorizontalDragUpdate: (DragUpdateDetails details) => to(details.localPosition),
           child: SizedBox(
             height: 30,
             child: Center(
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: <Widget>[
-                  Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: tokens.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: fraction.clamp(0, 1),
-                    child: Container(
+              child: SizedBox(
+                height: _thumb,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: <Widget>[
+                    Container(
                       height: 4,
                       decoration: BoxDecoration(
-                        color: tokens.accent,
+                        color: tokens.border,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ),
-                ],
+                    FractionallySizedBox(
+                      widthFactor: at,
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: tokens.accent,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    // Something to take hold of, which a track without one does
+                    // not have: a browser draws a thumb on `input[type=range]`
+                    // and a reader who has moved one is looking for it.
+                    Positioned(
+                      left: at * run,
+                      child: Container(
+                        width: _thumb,
+                        height: _thumb,
+                        decoration: BoxDecoration(
+                          color: tokens.accent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: tokens.backgroundRaised, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -380,8 +380,8 @@ void main() {
       await tester.tap(toolbarButton('Text size'));
       await tester.pump();
 
-      expect(find.text('Back to the defaults'), findsNothing);
       expect(toolbarButton('Text size +'), findsOneWidget);
+      expect(find.text('Back to the defaults'), findsOneWidget);
     });
 
     testWidgets('opens the outline, and lists the headings', (WidgetTester tester) async {

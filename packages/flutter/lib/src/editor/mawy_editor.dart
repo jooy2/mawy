@@ -1005,11 +1005,7 @@ class _ToolbarState extends State<_Toolbar> {
             builder: (VoidCallback close) => MawyToolbarChoice<MawyColorScheme>(
               tokens: widget.tokens,
               value: widget.colorScheme,
-              options: <(MawyColorScheme, String)>[
-                (MawyColorScheme.light, widget.strings.colorSchemeLight),
-                (MawyColorScheme.dark, widget.strings.colorSchemeDark),
-                (MawyColorScheme.system, widget.strings.colorSchemeSystem),
-              ],
+              options: MawyToolbarSchemes.of(widget.strings),
               onChanged: (MawyColorScheme next) {
                 widget.onColorScheme!(next);
                 close();

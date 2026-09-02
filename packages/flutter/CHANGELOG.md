@@ -170,6 +170,18 @@
 
 - **A focused control is drawn with a ring and not a block.** The focus indicator was a `BoxShadow` spread two pixels behind the button, and a shadow is a filled shape — behind a button whose own background is nothing, what it draws is a solid rectangle of accent with the glyph lost inside it. Flutter gives the first traversable control the focus when a view takes it, so the first button on a toolbar turned into a purple square the moment anybody clicked anywhere. A foreground border is hollow, takes no pixel off the button, and is the stylesheet's `outline` said in Flutter.
 
+- **Four things about the menus, and all four were the React package doing something else.**
+
+  **A second menu button opens on the first press.** The panel's tap-catcher was a `GestureDetector`, which enters the gesture arena and wins the tap — so pressing another menu button while one was open shut the panel and stopped there, and the button had to be pressed again. It hears the pointer go down and takes nothing now, which is the `mousedown` on the document the React package listens for.
+
+  **A ring is drawn where a keyboard put the focus, and not where a pointer did.** Flutter highlights a focused control whenever the platform's highlight mode is `traditional`, which on a desktop it always is — so a click drew a ring, and a panel handing the focus back to its button drew one on a button nobody had touched. `:focus-visible` is the browser's rule and now it is this package's.
+
+  **A panel opens with the focus on the option that is already true**, rather than on the first of the list. Opening the column-width menu on a document set to normal put the highlight on narrow, which is a panel pointing at an answer nobody gave.
+
+  **Every option has the glyph its counterpart has in the browser.** A list of three themes with no sun, moon or half-and-half on it is a different control rather than the same one in another language.
+
+- **A slider has a thumb, and the way back to the default is always under it.** The track was a bar with no handle on it — a browser draws one on `input[type=range]` and a reader who has moved one is looking for it — and the reset appeared only once a value had moved, so the panel changed height the moment a slider was touched. It is present and inert at the default now, which is the rule the React package's is under.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.
