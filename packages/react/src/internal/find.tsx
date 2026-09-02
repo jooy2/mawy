@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import type { MawyStrings } from '../../internal/i18n.js';
-import { IconButton } from '../../internal/controls.js';
+import type { MawyStrings } from './i18n.js';
+import { IconButton } from './controls.js';
 import {
   CaseSensitiveIcon,
   CloseIcon,
@@ -10,40 +10,49 @@ import {
   PreviousMatchIcon,
   ReplaceAllIcon,
   ReplaceIcon
-} from '../../internal/icons.js';
+} from './icons.js';
 
-export interface MawyEditorFindProps {
+export interface FindBarProps {
   query: string;
   onQueryChange: (query: string) => void;
-  replacement: string;
-  onReplacementChange: (replacement: string) => void;
   matchCase: boolean;
   onMatchCaseChange: (matchCase: boolean) => void;
-  /** How many matches there are, and which one the caret is on. `-1` for none. */
+  /** How many matches there are, and which one is being stepped through. */
   total: number;
   current: number;
   onStep: (forwards: boolean) => void;
-  onReplace: () => void;
-  onReplaceAll: () => void;
   onClose: () => void;
-  /** Off while the document cannot be written to. */
-  editable: boolean;
   strings: MawyStrings;
+  /**
+   * The second row, which is the whole of what makes this a *replace* bar.
+   *
+   * Absent in the viewer, where there is nothing to put anything in place of.
+   * A row of two buttons that can never be pressed is not a smaller version of
+   * a feature; it is a promise the surface cannot keep.
+   */
+  replacement?: string;
+  onReplacementChange?: (replacement: string) => void;
+  onReplace?: () => void;
+  onReplaceAll?: () => void;
+  /** Off while the document cannot be written to. */
+  editable?: boolean;
 }
 
 /**
- * The find bar, over the source.
+ * The find bar, over whichever surface asked for one.
  *
- * It exists because the browser's own find cannot reach here: the source
- * surface is a `<textarea>`, and no browser searches the text inside one. That
- * is the whole justification — everywhere else in this library a thing the
- * platform already does is left to the platform.
+ * It exists because the browser's own find cannot reach the editor's source:
+ * that surface is a `<textarea>`, and no browser searches the text inside one.
+ * The viewer is a page of ordinary elements and `Ctrl`+`F` does reach it — but
+ * a viewer inside a scrolling pane of somebody else's application is a window
+ * the browser's find scrolls past rather than into, and a reader who has just
+ * been given a find button on the editor looks for the same button here.
  *
  * A `search` landmark rather than a `<form>`: there is nothing to submit, and
  * `Enter` in either field is the next match rather than a page reload avoided
  * by `preventDefault`.
  */
-export function MawyEditorFind({
+export function FindBar({
   query,
   onQueryChange,
   replacement,
@@ -58,7 +67,7 @@ export function MawyEditorFind({
   onClose,
   editable,
   strings
-}: MawyEditorFindProps): React.ReactElement {
+}: FindBarProps): React.ReactElement {
   const field = React.useRef<HTMLInputElement>(null);
 
   // The bar is opened to be typed in, so it takes the focus when it appears —
@@ -136,32 +145,34 @@ export function MawyEditorFind({
         />
       </div>
 
-      <div className="mawy-find-row">
-        <input
-          type="text"
-          className="mawy-find-input"
-          value={replacement}
-          aria-label={strings.replace}
-          placeholder={strings.replace}
-          spellCheck="false"
-          autoCapitalize="off"
-          autoCorrect="off"
-          autoComplete="off"
-          onChange={(event) => onReplacementChange(event.currentTarget.value)}
-        />
-        <IconButton
-          label={strings.replaceOne}
-          icon={<ReplaceIcon className="mawy-icon" aria-hidden="true" />}
-          disabled={!editable || total === 0}
-          onClick={onReplace}
-        />
-        <IconButton
-          label={strings.replaceAll}
-          icon={<ReplaceAllIcon className="mawy-icon" aria-hidden="true" />}
-          disabled={!editable || total === 0}
-          onClick={onReplaceAll}
-        />
-      </div>
+      {onReplace && onReplaceAll && onReplacementChange ? (
+        <div className="mawy-find-row">
+          <input
+            type="text"
+            className="mawy-find-input"
+            value={replacement ?? ''}
+            aria-label={strings.replace}
+            placeholder={strings.replace}
+            spellCheck="false"
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+            onChange={(event) => onReplacementChange(event.currentTarget.value)}
+          />
+          <IconButton
+            label={strings.replaceOne}
+            icon={<ReplaceIcon className="mawy-icon" aria-hidden="true" />}
+            disabled={!editable || total === 0}
+            onClick={onReplace}
+          />
+          <IconButton
+            label={strings.replaceAll}
+            icon={<ReplaceAllIcon className="mawy-icon" aria-hidden="true" />}
+            disabled={!editable || total === 0}
+            onClick={onReplaceAll}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

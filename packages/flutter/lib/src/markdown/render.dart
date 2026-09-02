@@ -17,6 +17,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/markdown/ast.dart';
+import 'package:mawy/src/markdown/find.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
 
@@ -35,6 +36,8 @@ class MawyRenderContext {
     this.source,
     this.recognizers,
     this.highlighter,
+    this.found,
+    this.currentMatch = -1,
   });
 
   /// The palette.
@@ -94,6 +97,16 @@ class MawyRenderContext {
   /// the document is drawn again. A viewer that made one per build and let it
   /// go would leak one per link per frame.
   final List<GestureRecognizer>? recognizers;
+
+  /// What the viewer's find bar found, if anybody is searching.
+  ///
+  /// See `find.dart`: the search is over what the document draws, and the
+  /// answer is keyed by the node that draws each run — so marking is a lookup
+  /// here rather than a second walk that would have to agree with this one.
+  final MawyFound? found;
+
+  /// Which of [found] is being stepped through, or `-1` for none of them.
+  final int currentMatch;
 
   /// The monospace family, which is a role rather than a font name.
   String? get monoFamily => null;
@@ -233,9 +246,49 @@ TextStyle _codeStyle(MawyRenderContext context, TextStyle style) {
   );
 }
 
+/// A run of text, with whatever the find bar found in it marked.
+///
+/// One span where nothing was found, and that matters: a paragraph in a
+/// document nobody is searching goes on being one span rather than a span
+/// holding one child that holds the text.
+InlineSpan _marked(MdInline node, String value, MawyRenderContext context, TextStyle style) {
+  final List<MawyDocumentMatch>? matches = context.found?.at[node];
+
+  if (matches == null || matches.isEmpty) {
+    return TextSpan(text: value, style: style);
+  }
+
+  final List<InlineSpan> pieces = <InlineSpan>[];
+  int at = 0;
+
+  for (final MawyDocumentMatch match in matches) {
+    if (match.start > at) {
+      pieces.add(TextSpan(text: value.substring(at, match.start)));
+    }
+
+    pieces.add(
+      TextSpan(
+        text: value.substring(match.start, match.end),
+        style: TextStyle(
+          backgroundColor: match.index == context.currentMatch
+              ? context.tokens.findCurrent
+              : context.tokens.find,
+        ),
+      ),
+    );
+    at = match.end;
+  }
+
+  if (at < value.length) {
+    pieces.add(TextSpan(text: value.substring(at)));
+  }
+
+  return TextSpan(style: style, children: pieces);
+}
+
 InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style) {
   if (node is MdText) {
-    return TextSpan(text: node.value, style: style);
+    return _marked(node, node.value, context, style);
   }
 
   if (node is MdEmphasis) {
@@ -259,7 +312,7 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
   }
 
   if (node is MdInlineCode) {
-    return TextSpan(text: node.value, style: _codeStyle(context, style));
+    return _marked(node, node.value, context, _codeStyle(context, style));
   }
 
   if (node is MdLink) {

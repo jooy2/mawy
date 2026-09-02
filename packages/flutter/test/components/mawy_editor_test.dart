@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
-import 'package:mawy/src/editor/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/editor/source_field.dart' show MawySourceField, MawySourceGutter;
+import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart' show MawyToolbarButton;
 
 import '../support/host.dart';
@@ -356,7 +356,9 @@ void main() {
 
       expect(find.text('1 of 3'), findsOneWidget);
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      // The field's own action rather than a raw key, which is what a platform
+      // sends: on the web the browser keeps `Enter` and Flutter is told this.
+      await tester.testTextInput.receiveAction(TextInputAction.unspecified);
       await tester.pumpAndSettle();
 
       expect(find.text('2 of 3'), findsOneWidget);

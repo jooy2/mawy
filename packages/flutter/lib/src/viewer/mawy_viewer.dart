@@ -14,10 +14,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/internal/find_bar.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/overlay.dart';
 import 'package:mawy/src/internal/wheel.dart';
 import 'package:mawy/src/markdown/ast.dart';
+import 'package:mawy/src/markdown/find.dart';
 import 'package:mawy/src/markdown/parse.dart';
 import 'package:mawy/src/markdown/render.dart';
 import 'package:mawy/src/theme/tokens.dart';
@@ -36,6 +38,7 @@ const List<MawyViewerToolbarItem> kMawyViewerToolbar = <MawyViewerToolbarItem>[
   MawyViewerToolbarItem.separator,
   MawyViewerToolbarItem.colorScheme,
   MawyViewerToolbarItem.outline,
+  MawyViewerToolbarItem.find,
   MawyViewerToolbarItem.copy,
 ];
 
@@ -240,6 +243,93 @@ class _MawyViewerState extends State<MawyViewer> {
   /// that outlives the span it was made for is a leak.
   List<GestureRecognizer> _recognizers = <GestureRecognizer>[];
   bool _outlineOpen = false;
+
+  /* ---------------------------------------------------------------------
+   * Finding
+   * ------------------------------------------------------------------ */
+
+  /// The find bar, which is closed until somebody asks for it.
+  ///
+  /// A platform's own find does not reach inside a Flutter view at all on the
+  /// desktop or the web, so a reader who has just been given a find button on
+  /// the editor and goes looking for the same one here has nowhere else to go.
+  bool _finding = false;
+  String _query = '';
+  bool _matchCase = false;
+  int _at = 0;
+
+  /// A key on each top-level block, so a match in one can be scrolled to.
+  final Map<int, GlobalKey> _blocks = <int, GlobalKey>{};
+
+  /// Whether the toolbar was given a find button, which is what decides
+  /// whether `Ctrl`+`F` belongs to this viewer as well.
+  bool get _searchable => widget.toolbar.contains(MawyViewerToolbarItem.find);
+
+  void _openFind() {
+    setState(() => _finding = true);
+  }
+
+  void _closeFind() {
+    setState(() => _finding = false);
+  }
+
+  void _setQuery(String query) {
+    if (query == _query) {
+      return;
+    }
+
+    // A new query starts at the first match rather than at wherever the last
+    // one left off, which is somewhere in a document nobody is reading now.
+    setState(() {
+      _query = query;
+      _at = 0;
+    });
+  }
+
+  void _step(MawyFound found, {required bool forwards}) {
+    if (found.total == 0) {
+      return;
+    }
+
+    setState(() {
+      _at = (_at.clamp(0, found.total - 1) + (forwards ? 1 : -1) + found.total) % found.total;
+    });
+
+    _showMatch(found);
+  }
+
+  /// The block the current match is in, brought into view.
+  ///
+  /// A span is not a widget and has no position of its own, so what can be
+  /// scrolled to is the block that holds it. Close enough to be useful, and
+  /// honest about what it is: the paragraph you are looking at is the one the
+  /// match is in.
+  void _showMatch(MawyFound found) {
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (!mounted || found.total == 0) {
+        return;
+      }
+
+      final int at = _at.clamp(0, found.total - 1);
+      final BuildContext? target = _blocks[found.inBlock[at]]?.currentContext;
+
+      if (target == null) {
+        return;
+      }
+
+      unawaited(
+        Scrollable.ensureVisible(
+          target,
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: 0.2,
+        ),
+      );
+    });
+  }
+
   bool _copied = false;
 
   MdDocument? _document;
@@ -489,6 +579,12 @@ class _MawyViewerState extends State<MawyViewer> {
     final MawyStrings strings = stringsFor(widget.locale);
     final MawyTypography type = _typography;
     final MdDocument document = _parsed;
+    final MawyFound found = _finding
+        ? findInDocument(document.root.children, _query, _matchCase)
+        : MawyFound.nothing();
+
+    /// The one being stepped through, kept inside a count that may have shrunk.
+    final int current = found.total == 0 ? -1 : _at.clamp(0, found.total - 1);
 
     final TextStyle body = TextStyle(
       color: tokens.foreground,
@@ -524,6 +620,8 @@ class _MawyViewerState extends State<MawyViewer> {
       highlighter: widget.highlight,
       source: widget.value,
       recognizers: _recognizers,
+      found: found,
+      currentMatch: current,
     );
 
     final Widget? footnotes = renderFootnotes(document.footnotes, render);
@@ -554,8 +652,26 @@ class _MawyViewerState extends State<MawyViewer> {
                   // on, and an unmeasured panel is one with no mark in it.
                   WidgetsBinding.instance.addPostFrameCallback((Duration _) => _measureActive());
                 },
+                finding: _finding,
+                onFind: document.root.children.isEmpty ? null : _openFind,
                 copied: _copied,
                 onCopy: _copy,
+              ),
+            if (_finding && _searchable)
+              MawyFindBar(
+                tokens: tokens,
+                strings: strings,
+                query: _query,
+                onQueryChange: _setQuery,
+                matchCase: _matchCase,
+                onMatchCaseChange: (bool next) => setState(() {
+                  _matchCase = next;
+                  _at = 0;
+                }),
+                total: found.total,
+                current: current,
+                onStep: (bool forwards) => _step(found, forwards: forwards),
+                onClose: _closeFind,
               ),
             Expanded(
               child: Row(
@@ -594,31 +710,47 @@ class _MawyViewerState extends State<MawyViewer> {
                                 CopySelectionTextIntent.copy,
                             SingleActivator(LogicalKeyboardKey.keyC, meta: true):
                                 CopySelectionTextIntent.copy,
+                            SingleActivator(LogicalKeyboardKey.keyF, control: true): _FindIntent(),
+                            SingleActivator(LogicalKeyboardKey.keyF, meta: true): _FindIntent(),
                           },
-                          child: SelectableRegion(
-                            focusNode: _selection,
-                            // No handles and no context menu: both of those are
-                            // Material's or Cupertino's, and a package that draws
-                            // its own everything else should not pull in a
-                            // toolbar it did not design. Dragging selects, a
-                            // double tap takes the word, and the keys above copy.
-                            selectionControls: emptyTextSelectionControls,
-                            child: SingleChildScrollView(
-                              controller: _scroller,
-                              padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
-                              child: MawyWheelScroll(
+                          child: Actions(
+                            actions: <Type, Action<Intent>>{
+                              _FindIntent: CallbackAction<_FindIntent>(
+                                onInvoke: (_FindIntent _) {
+                                  if (_searchable) {
+                                    _openFind();
+                                  }
+
+                                  return null;
+                                },
+                              ),
+                            },
+                            child: SelectableRegion(
+                              focusNode: _selection,
+                              // No handles and no context menu: both of those are
+                              // Material's or Cupertino's, and a package that draws
+                              // its own everything else should not pull in a
+                              // toolbar it did not design. Dragging selects, a
+                              // double tap takes the word, and the keys above copy.
+                              selectionControls: emptyTextSelectionControls,
+                              child: SingleChildScrollView(
                                 controller: _scroller,
-                                child: Center(
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth: measure ?? double.infinity,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        ..._withAnchors(document, render),
-                                        ?footnotes,
-                                      ],
+                                padding:
+                                    widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
+                                child: MawyWheelScroll(
+                                  controller: _scroller,
+                                  child: Center(
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: measure ?? double.infinity,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          ..._withAnchors(document, render),
+                                          ?footnotes,
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -652,6 +784,17 @@ class _MawyViewerState extends State<MawyViewer> {
         drawn[index] = KeyedSubtree(key: places.keyFor(block.range.start), child: drawn[index]);
       }
 
+      // Only while the bar is open, so that a viewer nobody is searching keeps
+      // the tree it had. The keys are per position and stay put as matches are
+      // stepped through, which is the difference between scrolling to a block
+      // and rebuilding it on every press of next.
+      if (_finding) {
+        drawn[index] = KeyedSubtree(
+          key: _blocks.putIfAbsent(index, GlobalKey.new),
+          child: drawn[index],
+        );
+      }
+
       if (block is MdHeading) {
         final GlobalKey key = _headings.putIfAbsent(block.slug, GlobalKey.new);
         final FocusNode anchor = _anchors.putIfAbsent(
@@ -668,4 +811,9 @@ class _MawyViewerState extends State<MawyViewer> {
 
     return drawn;
   }
+}
+
+/// `Ctrl`+`F`, on its way to the find bar.
+class _FindIntent extends Intent {
+  const _FindIntent();
 }

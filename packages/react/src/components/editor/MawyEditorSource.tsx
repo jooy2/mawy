@@ -142,8 +142,15 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
         source.scrollTop -= view.top + room - box.top;
       } else if (box.bottom > view.bottom - room) {
         source.scrollTop += box.bottom - view.bottom + room;
+      } else {
+        return;
       }
-    }, [matches, currentMatch]);
+
+      // The layer follows the textarea on the textarea's `scroll` event, and a
+      // scroll set from here is one frame ahead of that event — so the two are
+      // put back in step now rather than left crossed for a frame.
+      sync();
+    }, [sync, matches, currentMatch]);
 
     const scrolled = React.useCallback(() => {
       sync();

@@ -20,6 +20,7 @@ import {
   CopyIcon,
   DarkIcon,
   DocumentIcon,
+  FindIcon,
   FontFamilyIcon,
   FontSizeIcon,
   LetterSpacingIcon,
@@ -99,6 +100,9 @@ export interface MawyViewerToolbarProps {
   onColorSchemeChange: (next: MawyColorScheme) => void;
   outlineOpen: boolean;
   onOutlineToggle: () => void;
+  /** Absent where nothing can be searched; the button goes quiet. */
+  onFind?: () => void;
+  finding: boolean;
   /** Absent when a file opened here would go nowhere; the button goes quiet. */
   onOpenFile?: () => void;
   onCopy: () => void;
@@ -138,6 +142,8 @@ export function MawyViewerToolbar({
   onColorSchemeChange,
   outlineOpen,
   onOutlineToggle,
+  onFind,
+  finding,
   onOpenFile,
   onCopy,
   copyState,
@@ -309,6 +315,21 @@ export function MawyViewerToolbar({
           />
         );
 
+      case 'find':
+        return (
+          <IconButton
+            key={key}
+            label={strings.find}
+            icon={<FindIcon className="mawy-icon" aria-hidden="true" />}
+            pressed={finding}
+            aria-pressed={finding}
+            disabled={!onFind || !hasDocument}
+            data-mawy-toolbar-item=""
+            onClick={onFind}
+            {...itemProps(order[key])}
+          />
+        );
+
       case 'copy':
         return (
           <IconButton
@@ -376,6 +397,7 @@ export const DEFAULT_TOOLBAR: readonly MawyViewerToolbarItem[] = [
   'separator',
   'colorScheme',
   'outline',
+  'find',
   'separator',
   'copy',
   'open'

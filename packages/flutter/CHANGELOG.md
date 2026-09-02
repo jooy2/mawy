@@ -6,6 +6,12 @@
 
 ### Added
 
+- **The viewer can be searched too.** A find button on its toolbar, `Ctrl`+`F` (`Cmd`+`F`) while it has the focus, every match marked as the query is typed and the one being stepped through marked apart — the same bar and the same colours the editor has, without the second row, there being nothing in a viewer to put anything in place of.
+
+  What it searches is the text the document _draws_, which is the whole difference between this and the editor's. `**bold**` puts six characters in the source and four on the page, and a reader looking for `bold` is looking at the page: so `bold` is found inside the bold, and `**` is found nowhere. A fenced code block is not searched — it is drawn as the highlighter's own spans, and cutting a mark into those would mean cutting every one of them — and a match cannot straddle two runs, so `hello` is not found across `he**llo**`.
+
+  The button is the `find` toolbar item and the shortcut comes with it: a viewer whose `toolbar` leaves it out leaves `Ctrl`+`F` to the browser, which is the right answer for a viewer that fills the page. Taking it is worth doing for one inside a pane of its own, which the browser's find scrolls past rather than into.
+
 - **Finding marks every match at once, and marks the one you are on apart from the rest.** Before, the only thing on the page saying where a match was was the selection sitting on it — one match, and only after pressing next. Typing a query told you how many there were and nothing about where.
 
   Every match is now painted as the query is typed, in a wash of yellow, with the one being stepped through in a stronger orange. Which turns the count beside the field into something you can check against the document rather than take on faith, and makes "next" a thing that visibly moves.
@@ -184,9 +190,11 @@
 
 ### Fixed
 
-- **`Enter` in the find field goes to the next match instead of handing the document the focus.** It went to the next match too — but it took the focus with it, so the second `Enter` was a newline typed into the document, and every keystroke after that was an edit somebody had asked for a search.
+- **`Enter` in the find field goes to the next match.** It did nothing at all on the web, and took the focus with it everywhere else — so the second `Enter` was a newline typed into the document, and every keystroke after that was an edit somebody had asked for a search.
 
-  The selection still moves to the match, and the document still picks up from there the moment the bar is closed. What it no longer does is take the focus while the bar is open, which is what the marking above is for: the match is shown where it is rather than shown by being selected, and the field the query is being typed into keeps the keyboard.
+  Two things were wrong and the web one is worth writing down. A Flutter view puts a real DOM input under whichever field has the focus, and the browser keeps `Enter` for itself: what arrives in the framework is the field's input _action_, never a key event, so the bar's key handler was listening for something that never came. It listens for the action now — and for `TextInputAction.unspecified`, which is the only one the framework does not read as "finished": every named action gives up the focus and asks the platform for a fresh input, which is the opposite of what pressing `Enter` in a find bar means.
+
+  The selection still moves to the match, and the document still picks up from there the moment the bar is closed. What it no longer does is take the focus while the bar is open, which is what the marking above is for: the match is shown where it is rather than shown by being selected, and the field the query is being typed in keeps the keyboard.
 
 - **A task list's box sits on the middle of its first line.** It was nudged down by a number written by hand, which is right at one line height and above the text at every other — and the default is not that one, so every task list in the package was drawn with its boxes riding high. It is half the difference between the line box and the type in it now, which is where the browser's `vertical-align` puts the React package's.
 

@@ -407,6 +407,7 @@ export type MawyViewerToolbarItem =
   | 'measure'
   | 'colorScheme'
   | 'outline'
+  | 'find'
   | 'copy'
   | 'open'
   | 'separator';

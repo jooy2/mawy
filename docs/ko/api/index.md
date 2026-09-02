@@ -891,6 +891,7 @@ type MawyViewerToolbarItem =
   | 'measure'
   | 'colorScheme'
   | 'outline'
+  | 'find'
   | 'copy'
   | 'open'
   | 'separator';
@@ -909,6 +910,7 @@ enum MawyViewerToolbarItem {
   measure,
   colorScheme,
   outline,
+  find,
   copy,
   separator,
 }
@@ -917,6 +919,8 @@ enum MawyViewerToolbarItem {
 :::
 
 뷰어 툴바의 컨트롤 하나. `separator`는 컨트롤이 아니라 가는 구분선을 그립니다.
+
+`find`는 문서 위에 찾기 바를 열고, 뷰어에 포커스가 있는 동안 `Ctrl`+`F`(`Cmd`+`F`)를 가져갑니다. 빼면 단축키는 다시 브라우저의 것이 되고, 페이지 전체를 채우는 뷰어라면 그편이 맞습니다 — 이건 자기 영역 안에 들어앉은 뷰어를 위한 것이고, 그런 뷰어는 브라우저의 찾기가 안으로 들어오지 않고 지나쳐 갑니다. 찾는 대상은 문서가 _그리는_ 글자입니다. `**bold**` 안의 `bold`는 찾히고 `**`는 아무것도 찾히지 않습니다. 한 매치가 두 런에 걸칠 수는 없어서 `he**llo**`에서 `hello`는 찾히지 않고, 코드 블록은 검색하지 않습니다.
 
 ::: fw flutter
 

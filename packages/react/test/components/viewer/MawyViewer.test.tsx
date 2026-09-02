@@ -245,7 +245,7 @@ describe('the toolbar', () => {
     const all = await render(<MawyViewer value={SAMPLE} />);
 
     await expect.element(all.getByRole('toolbar')).toBeInTheDocument();
-    expect(all.container.querySelectorAll('.mawy-toolbar-controls .mawy-button')).toHaveLength(9);
+    expect(all.container.querySelectorAll('.mawy-toolbar-controls .mawy-button')).toHaveLength(10);
 
     const none = await render(<MawyViewer value={SAMPLE} toolbar={false} />);
 
@@ -349,6 +349,133 @@ describe('the toolbar', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
     await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Finding, in a document rather than in its source.
+ *
+ * What is searched is what the page draws — `text` inside a `**strong**` is
+ * found by looking for `text`, not by looking for the asterisks — which is the
+ * whole difference between this bar and the editor's.
+ */
+describe('finding', () => {
+  const findField = (screen: { container: HTMLElement }) =>
+    screen.container.querySelector('.mawy-find-input') as HTMLInputElement;
+
+  /** Typed into rather than assigned to. See the editor's tests. */
+  const type = (field: HTMLInputElement, text: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+
+    setter?.call(field, text);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  const open = async (screen: { container: HTMLElement }) => {
+    (screen.container.querySelector('button[data-mawy-tip="Find"]') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-find')).not.toBe(null));
+  };
+
+  it('marks every match in the drawn text, and the one it is on apart', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} />);
+
+    await open(screen);
+
+    type(findField(screen), 'a');
+
+    await vi.waitFor(() => {
+      const hits = screen.container.querySelectorAll('.mawy-md .mawy-find-hit');
+
+      expect(hits.length).toBeGreaterThan(1);
+      expect([...hits].filter((hit) => hit.hasAttribute('data-mawy-current')).length).toBe(1);
+    });
+  });
+
+  it('finds a word the markup had split the source of', async () => {
+    const screen = await render(<MawyViewer value="A **strong** word." />);
+
+    await open(screen);
+
+    type(findField(screen), 'strong');
+
+    // One match, inside the `<strong>` rather than beside the asterisks that
+    // are not on the page at all.
+    await vi.waitFor(() => {
+      const hits = screen.container.querySelectorAll('.mawy-md .mawy-find-hit');
+
+      expect(hits.length).toBe(1);
+      expect(hits[0].closest('strong')).not.toBe(null);
+    });
+
+    expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('1 of 1');
+  });
+
+  it('does not find the markup itself', async () => {
+    const screen = await render(<MawyViewer value="A **strong** word." />);
+
+    await open(screen);
+
+    type(findField(screen), '**');
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('No matches')
+    );
+  });
+
+  it('steps on Enter, keeping the keyboard in the field', async () => {
+    const screen = await render(<MawyViewer value="one two one two one" />);
+
+    await open(screen);
+
+    const field = findField(screen);
+
+    type(field, 'one');
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('1 of 3')
+    );
+
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    );
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('2 of 3')
+    );
+
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('offers nothing to replace with', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} />);
+
+    await open(screen);
+
+    // One row and one field: a viewer has nothing to put anything in place of.
+    expect(screen.container.querySelectorAll('.mawy-find-row').length).toBe(1);
+  });
+
+  it('opens on the shortcut, and not where the toolbar left it out', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} />);
+    const scroll = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+    scroll.focus();
+    scroll.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true, cancelable: true })
+    );
+
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-find')).not.toBe(null));
+
+    const without = await render(<MawyViewer value={SAMPLE} toolbar={['copy']} />);
+    const quiet = without.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+    quiet.focus();
+    quiet.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true, cancelable: true })
+    );
+
+    expect(without.container.querySelector('.mawy-find')).toBe(null);
   });
 });
 

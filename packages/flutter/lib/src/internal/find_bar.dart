@@ -1,14 +1,16 @@
-/// The find bar, over the source.
+/// The find bar, over whichever surface asked for one.
 ///
 /// It exists for the reason the React package's does, said in Flutter terms: a
 /// platform's own find reaches a page of text and does not reach the inside of
-/// a text field, and the source surface is one. Everywhere else in this library
-/// a thing the platform already does is left to the platform.
+/// a text field, and the source surface is one. On the desktop and the web
+/// there is no platform find over a Flutter view at all, so the viewer needs
+/// this bar for the plainer reason that nothing else would do it.
 ///
-/// Two fields and six buttons, built on `package:flutter/widgets.dart` like
-/// everything else here — which is why the fields are [EditableText] rather
-/// than a `TextField`, that being Material's and bringing Material's palette
-/// with it.
+/// Two fields and six buttons in the editor, one field and four in the viewer —
+/// there being nothing there to put anything in place of — built on
+/// `package:flutter/widgets.dart` like everything else here, which is why the
+/// fields are [EditableText] rather than a `TextField`, that being Material's
+/// and bringing Material's palette with it.
 library;
 
 import 'package:flutter/services.dart';
@@ -26,17 +28,17 @@ class MawyFindBar extends StatefulWidget {
     required this.strings,
     required this.query,
     required this.onQueryChange,
-    required this.replacement,
-    required this.onReplacementChange,
     required this.matchCase,
     required this.onMatchCaseChange,
     required this.total,
     required this.current,
     required this.onStep,
-    required this.onReplace,
-    required this.onReplaceAll,
     required this.onClose,
-    required this.editable,
+    this.replacement = '',
+    this.onReplacementChange,
+    this.onReplace,
+    this.onReplaceAll,
+    this.editable = false,
     super.key,
   });
 
@@ -55,8 +57,8 @@ class MawyFindBar extends StatefulWidget {
   /// What it would be replaced with.
   final String replacement;
 
-  /// Called as that is typed.
-  final ValueChanged<String> onReplacementChange;
+  /// Called as that is typed. The second row is drawn only where it is given.
+  final ValueChanged<String>? onReplacementChange;
 
   /// Whether `Foo` finds `foo`.
   final bool matchCase;
@@ -74,10 +76,14 @@ class MawyFindBar extends StatefulWidget {
   final ValueChanged<bool> onStep;
 
   /// Replace the one the caret is on.
-  final VoidCallback onReplace;
+  ///
+  /// Absent in the viewer, along with the rest of the second row. A row of two
+  /// buttons that can never be pressed is not a smaller version of a feature;
+  /// it is a promise the surface cannot keep.
+  final VoidCallback? onReplace;
 
   /// Replace every one of them.
-  final VoidCallback onReplaceAll;
+  final VoidCallback? onReplaceAll;
 
   /// Shut the bar.
   final VoidCallback onClose;
@@ -109,7 +115,7 @@ class _MawyFindBarState extends State<MawyFindBar> {
     _replacement.text = widget.replacement;
 
     _query.addListener(() => widget.onQueryChange(_query.text));
-    _replacement.addListener(() => widget.onReplacementChange(_replacement.text));
+    _replacement.addListener(() => widget.onReplacementChange?.call(_replacement.text));
   }
 
   @override
@@ -135,9 +141,7 @@ class _MawyFindBarState extends State<MawyFindBar> {
     super.dispose();
   }
 
-  /// `Enter` is the next match and `Shift`+`Enter` the previous one; `Escape`
-  /// shuts the bar. Neither field submits anything, because there is nothing to
-  /// submit.
+  /// `Escape` shuts the bar, from either field.
   KeyEventResult _onKey(FocusNode _, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
@@ -149,18 +153,21 @@ class _MawyFindBarState extends State<MawyFindBar> {
       return KeyEventResult.handled;
     }
 
-    if (event.logicalKey != LogicalKeyboardKey.enter &&
-        event.logicalKey != LogicalKeyboardKey.numpadEnter) {
-      return KeyEventResult.ignored;
-    }
+    return KeyEventResult.ignored;
+  }
 
+  /// `Enter` in either field: the next match, or the previous one with `Shift`.
+  ///
+  /// Taken from the field's own action rather than from a key event, because a
+  /// Flutter view on the web puts a real DOM input under a focused field and
+  /// the browser keeps `Enter` for itself — what arrives in the framework is
+  /// this. Neither field submits anything; there is nothing to submit.
+  void _submitted() {
     if (widget.total == 0) {
-      return KeyEventResult.handled;
+      return;
     }
 
     widget.onStep(!HardwareKeyboard.instance.isShiftPressed);
-
-    return KeyEventResult.handled;
   }
 
   String get _count {
@@ -210,6 +217,7 @@ class _MawyFindBarState extends State<MawyFindBar> {
                       // The bar is opened to be typed in, so it takes the focus
                       // as it appears. `Escape` gives it back to the surface.
                       autofocus: true,
+                      onSubmitted: _submitted,
                     ),
                   ),
                   // Said rather than only shown: a count nobody reads out is a
@@ -259,34 +267,37 @@ class _MawyFindBarState extends State<MawyFindBar> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _Field(
-                      tokens: tokens,
-                      controller: _replacement,
-                      focusNode: _replacementFocus,
-                      label: strings.replace,
-                      autofocus: false,
+              if (widget.onReplace != null && widget.onReplaceAll != null) ...<Widget>[
+                const SizedBox(height: 6),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _Field(
+                        tokens: tokens,
+                        controller: _replacement,
+                        focusNode: _replacementFocus,
+                        label: strings.replace,
+                        autofocus: false,
+                        onSubmitted: _submitted,
+                      ),
                     ),
-                  ),
-                  MawyToolbarButton(
-                    icon: LucideIcons.replace,
-                    label: strings.replaceOne,
-                    tokens: tokens,
-                    enabled: widget.editable && !none,
-                    onPressed: widget.onReplace,
-                  ),
-                  MawyToolbarButton(
-                    icon: LucideIcons.replaceAll,
-                    label: strings.replaceAll,
-                    tokens: tokens,
-                    enabled: widget.editable && !none,
-                    onPressed: widget.onReplaceAll,
-                  ),
-                ],
-              ),
+                    MawyToolbarButton(
+                      icon: LucideIcons.replace,
+                      label: strings.replaceOne,
+                      tokens: tokens,
+                      enabled: widget.editable && !none,
+                      onPressed: widget.onReplace!,
+                    ),
+                    MawyToolbarButton(
+                      icon: LucideIcons.replaceAll,
+                      label: strings.replaceAll,
+                      tokens: tokens,
+                      enabled: widget.editable && !none,
+                      onPressed: widget.onReplaceAll!,
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -303,6 +314,7 @@ class _Field extends StatelessWidget {
     required this.focusNode,
     required this.label,
     required this.autofocus,
+    required this.onSubmitted,
   });
 
   final MawyTokens tokens;
@@ -310,6 +322,9 @@ class _Field extends StatelessWidget {
   final FocusNode focusNode;
   final String label;
   final bool autofocus;
+
+  /// `Enter`, as the platform reports it rather than as a key.
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -334,6 +349,18 @@ class _Field extends StatelessWidget {
           backgroundCursorColor: tokens.border,
           selectionColor: tokens.accentSoft,
           maxLines: 1,
+          // The action rather than a raw `Enter`, because on the web a field
+          // with the focus is a real DOM input and the browser keeps the
+          // keystroke: what reaches Flutter is this, and not a key event.
+          //
+          // `unspecified` rather than `search` or `done`, and that choice is
+          // the whole of whether this works. Every named action means the
+          // person is finished — the field gives up the focus and the platform
+          // is handed a fresh input — and being finished is exactly what
+          // pressing `Enter` in a find bar does not mean. `unspecified` is the
+          // one the framework describes as not implying that.
+          textInputAction: TextInputAction.unspecified,
+          onSubmitted: (String _) => onSubmitted(),
           textAlign: TextAlign.start,
           enableInteractiveSelection: true,
           rendererIgnoresPointer: false,

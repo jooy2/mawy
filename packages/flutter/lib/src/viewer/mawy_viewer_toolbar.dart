@@ -60,6 +60,8 @@ class MawyViewerToolbar extends StatefulWidget {
     required this.onOutlineToggle,
     required this.copied,
     required this.onCopy,
+    required this.finding,
+    this.onFind,
     super.key,
   });
 
@@ -89,6 +91,12 @@ class MawyViewerToolbar extends StatefulWidget {
 
   /// Called when the outline button is pressed.
   final VoidCallback onOutlineToggle;
+
+  /// Whether the find bar is open.
+  final bool finding;
+
+  /// Opens it. Absent where there is nothing to search; the button goes quiet.
+  final VoidCallback? onFind;
 
   /// Whether the copy button has just copied.
   final bool copied;
@@ -299,6 +307,17 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           focusNode: node,
           pressed: widget.outlineOpen,
           onPressed: widget.onOutlineToggle,
+        );
+
+      case MawyViewerToolbarItem.find:
+        return MawyToolbarButton(
+          icon: LucideIcons.search,
+          label: widget.strings.find,
+          tokens: widget.tokens,
+          focusNode: node,
+          enabled: widget.onFind != null,
+          pressed: widget.finding,
+          onPressed: widget.onFind ?? () {},
         );
 
       case MawyViewerToolbarItem.copy:

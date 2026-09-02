@@ -6,6 +6,12 @@
 
 ### Added
 
+- **The viewer can be searched too.** A find button on its toolbar, `Ctrl`+`F` (`Cmd`+`F`) while it has the focus, every match marked as the query is typed and the one being stepped through marked apart — the same bar and the same colours the editor has, without the second row, there being nothing in a viewer to put anything in place of.
+
+  What it searches is the text the document _draws_, which is the whole difference between this and the editor's. `**bold**` puts six characters in the source and four on the page, and a reader looking for `bold` is looking at the page: so `bold` is found inside the bold, and `**` is found nowhere. A fenced code block is not searched — it is drawn as the highlighter's own spans, and cutting a mark into those would mean cutting every one of them — and a match cannot straddle two runs, so `hello` is not found across `he**llo**`.
+
+  The button is the `find` toolbar item and the shortcut comes with it: a viewer whose `toolbar` leaves it out leaves `Ctrl`+`F` to the browser, which is the right answer for a viewer that fills the page. Taking it is worth doing for one inside a pane of its own, which the browser's find scrolls past rather than into.
+
 - **Finding marks every match at once, and marks the one you are on apart from the rest.** Before, the only thing on the page saying where a match was was the selection sitting on it — one match, and only after pressing next. Typing a query told you how many there were and nothing about where.
 
   Every match is now painted as the query is typed, in a wash of yellow, with the one being stepped through in a stronger orange. Which turns the count beside the field into something you can check against the document rather than take on faith, and makes "next" a thing that visibly moves.
@@ -206,6 +212,8 @@
   A `title` written by the _document_ — `[words](url "a title")` — is untouched. That is the author's text and not the library's chrome.
 
 ### Fixed
+
+- **The document is focusable by a click, so a keystroke has somewhere to land.** It is not a `Tab` stop and does not draw a focus ring; the whole of what it changes is that `Ctrl`+`F` in a viewer somebody has just clicked into reaches that viewer.
 
 - **`Enter` in the find field goes to the next match instead of handing the document the focus.** It went to the next match too — but it took the focus with it, so the second `Enter` was a newline typed into the document, and every keystroke after that was an edit somebody had asked for a search.
 

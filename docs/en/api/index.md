@@ -892,6 +892,7 @@ type MawyViewerToolbarItem =
   | 'measure'
   | 'colorScheme'
   | 'outline'
+  | 'find'
   | 'copy'
   | 'open'
   | 'separator';
@@ -910,6 +911,7 @@ enum MawyViewerToolbarItem {
   measure,
   colorScheme,
   outline,
+  find,
   copy,
   separator,
 }
@@ -918,6 +920,8 @@ enum MawyViewerToolbarItem {
 :::
 
 One control on the viewer's toolbar. `separator` draws a hairline rather than a control.
+
+`find` opens a bar over the document, and takes `Ctrl`+`F` (`Cmd`+`F`) while the viewer has the focus. Leave it out and the shortcut belongs to the browser again, which is the right answer for a viewer that fills the page — this is for one inside a pane of its own, which a browser's find scrolls past rather than into. What it searches is the text the document _draws_: `bold` finds the word inside `**bold**`, and `**` finds nothing at all. A match cannot straddle two runs, so `hello` is not found across `he**llo**`, and a fenced code block is not searched.
 
 ::: fw flutter
 

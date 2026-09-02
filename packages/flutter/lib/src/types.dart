@@ -170,6 +170,9 @@ enum MawyViewerToolbarItem {
   /// The outline of the headings.
   outline,
 
+  /// The find bar.
+  find,
+
   /// The document's source, to the clipboard.
   copy,
 

@@ -21,6 +21,8 @@ import { useControlled } from '../../internal/controlled.js';
 import { stringsFor } from '../../internal/i18n.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
+import { findInDocument, NOTHING_FOUND } from '../../internal/markdown/find.js';
+import { FindBar } from '../../internal/find.js';
 import { useHighlighter } from '../../internal/highlighter.js';
 import { DEFAULT_TYPOGRAPHY, typographyStyle } from '../../internal/typography.js';
 import { MAWY_ACCEPT, readTextFile } from '../../internal/files.js';
@@ -255,6 +257,18 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   }, [fonts, type.fontFamily]);
 
   const [outlineOpen, setOutlineOpen] = React.useState(false);
+  /**
+   * The find bar, which is closed until somebody asks for it.
+   *
+   * A viewer is a page of ordinary elements and the browser's own find does
+   * reach it — but a viewer given a height of its own is a window that find
+   * scrolls past rather than into, and a reader who has just been handed a
+   * find button on the editor goes looking for the same one here.
+   */
+  const [finding, setFinding] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const [matchCase, setMatchCase] = React.useState(false);
+  const [at, setAt] = React.useState(0);
   const [activeHeading, setActiveHeading] = React.useState<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
   const [copyState, copy] = useCopy();
@@ -292,9 +306,25 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
     [document_]
   );
+  const found = React.useMemo(
+    () => (finding ? findInDocument(document_.root.children, query, matchCase) : NOTHING_FOUND),
+    [finding, document_, query, matchCase]
+  );
+  /** The one being stepped through, kept inside a count that may have shrunk. */
+  const currentMatch = found.total ? Math.min(at, found.total - 1) : -1;
   const context = React.useMemo(
-    () => ({ html, strings, highlighter, footnotes, directives, linkTarget, source: text }),
-    [html, strings, highlighter, footnotes, directives, linkTarget, text]
+    () => ({
+      html,
+      strings,
+      highlighter,
+      footnotes,
+      directives,
+      linkTarget,
+      source: text,
+      found,
+      currentMatch
+    }),
+    [html, strings, highlighter, footnotes, directives, linkTarget, text, found, currentMatch]
   );
   const content = React.useMemo(
     () => (
@@ -308,6 +338,95 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
   const items: readonly MawyViewerToolbarItem[] =
     toolbar === false ? [] : toolbar === true ? DEFAULT_TOOLBAR : toolbar;
+
+  /* ---------------------------------------------------------------------
+   * Finding
+   * ------------------------------------------------------------------ */
+
+  /**
+   * The shortcut exists exactly where the button does.
+   *
+   * `Ctrl`+`F` is the browser's, and taking it is worth doing only in a viewer
+   * that offers finding at all — so an application that left `find` out of its
+   * `toolbar` gets the browser's find and none of this.
+   */
+  const searchable = items.includes('find');
+
+  // A new query starts at the first match rather than at wherever the last one
+  // left off, which is somewhere in a document nobody is looking at any more.
+  React.useEffect(() => setAt(0), [query, matchCase]);
+
+  const step = React.useCallback(
+    (forwards: boolean) => {
+      setAt((was) => {
+        const total = found.total;
+
+        if (!total) {
+          return 0;
+        }
+
+        const from = found.total ? Math.min(was, total - 1) : 0;
+
+        return (from + (forwards ? 1 : -1) + total) % total;
+      });
+    },
+    [found.total]
+  );
+
+  /**
+   * The match being stepped through, brought into view.
+   *
+   * By measuring the element rather than by an offset into the text, because
+   * the document is drawn rather than laid out in lines: where a word ends up
+   * depends on the typography, the width, and every picture above it that has
+   * or has not loaded yet.
+   *
+   * And by moving this pane rather than by `scrollIntoView`, which scrolls
+   * every scrolling ancestor it can find — including the page the application
+   * put this viewer on. Pressing next should move the document, not the page
+   * around it. The smoothness is the stylesheet's `scroll-behavior`, which is
+   * off for a reader who asked their platform for less movement.
+   */
+  React.useLayoutEffect(() => {
+    const pane = scroller.current;
+    const mark = pane?.querySelector('.mawy-find-hit[data-mawy-current]');
+
+    if (!finding || !pane || !mark) {
+      return;
+    }
+
+    const view = pane.getBoundingClientRect();
+    const box = mark.getBoundingClientRect();
+    // A third of the pane of slack, so a match arrives inside the text rather
+    // than against the edge it was just scrolled past.
+    const room = Math.min(view.height / 3, 160);
+
+    if (box.top < view.top + room) {
+      pane.scrollTop -= view.top + room - box.top;
+    } else if (box.bottom > view.bottom - room) {
+      pane.scrollTop += box.bottom - view.bottom + room;
+    }
+  }, [finding, currentMatch, found]);
+
+  const openFind = React.useCallback(() => {
+    const selected = window.getSelection()?.toString() ?? '';
+
+    // What is selected is nearly always what somebody is about to look for.
+    if (selected && !selected.includes('\n')) {
+      setQuery(selected);
+    }
+
+    setFinding(true);
+  }, []);
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!searchable || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'f') {
+      return;
+    }
+
+    event.preventDefault();
+    openFind();
+  };
 
   /* ---------------------------------------------------------------------
    * Opening a file
@@ -505,6 +624,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      onKeyDown={onKeyDown}
     >
       {items.length ? (
         <MawyViewerToolbar
@@ -517,11 +637,27 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
           onColorSchemeChange={setScheme}
           outlineOpen={outlineOpen}
           onOutlineToggle={() => setOutlineOpen((was) => !was)}
+          onFind={hasDocument ? openFind : undefined}
+          finding={finding}
           onOpenFile={takesFile ? () => picker.current?.click() : undefined}
           onCopy={() => copy(text)}
           copyState={copyState}
           fileName={fileName}
           hasDocument={hasDocument}
+        />
+      ) : null}
+
+      {finding && searchable ? (
+        <FindBar
+          query={query}
+          onQueryChange={setQuery}
+          matchCase={matchCase}
+          onMatchCaseChange={setMatchCase}
+          total={found.total}
+          current={currentMatch}
+          onStep={step}
+          onClose={() => setFinding(false)}
+          strings={strings}
         />
       ) : null}
 
@@ -536,7 +672,13 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
           />
         ) : null}
 
-        <div className="mawy-viewer-scroll" ref={scroller}>
+        {/* Focusable by click but not by `Tab`: a keystroke has to land
+            somewhere, and `Ctrl`+`F` in a document somebody has just clicked
+            into should reach this viewer rather than the browser's own find.
+            `-1` rather than `0` because a reader Tabbing through a page is on
+            their way somewhere, and a stop on the text they can already see is
+            a stop that says nothing. */}
+        <div className="mawy-viewer-scroll" ref={scroller} tabIndex={-1}>
           {hasDocument ? (
             <article className="mawy-md" aria-label={fileName ?? strings.document}>
               {content}

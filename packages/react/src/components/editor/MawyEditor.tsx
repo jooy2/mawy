@@ -44,7 +44,7 @@ import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
-import { MawyEditorFind } from './MawyEditorFind.js';
+import { FindBar } from '../../internal/find.js';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../../internal/search.js';
 import { MAWY_ACCEPT, fileNameFor, readTextFile, saveTextFile } from '../../internal/files.js';
 import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
@@ -1254,7 +1254,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       ) : null}
 
       {finding && showSource ? (
-        <MawyEditorFind
+        <FindBar
           query={query}
           onQueryChange={setQuery}
           replacement={replacement}

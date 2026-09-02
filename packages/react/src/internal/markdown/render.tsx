@@ -38,6 +38,7 @@ import type {
   MdTextDirective
 } from './ast.js';
 import { toPlainText } from './inline.js';
+import type { MawyFound } from './find.js';
 import { sanitizeHtml } from './html.js';
 import type { MawyStrings } from '../i18n.js';
 import {
@@ -94,6 +95,55 @@ export interface RenderContext {
    * Unset everywhere else. A viewer has no caret and nothing to reveal.
    */
   reveal?: MdRange | null;
+  /**
+   * What the viewer's find bar found, and which of them is being stepped
+   * through. See `find.ts` — the search is over what the document draws, and
+   * the answer is keyed by the node that draws each run, so marking is a
+   * lookup here rather than a second walk that has to agree with this one.
+   */
+  found?: MawyFound;
+  currentMatch?: number;
+}
+
+/**
+ * A run of text, with whatever the find bar found in it marked.
+ *
+ * The bare string where nothing was found, and that matters: a paragraph in a
+ * document nobody is searching goes on being one piece of text rather than a
+ * string wrapped in an element that carries no attributes.
+ */
+function marked(node: MdInline, value: string, context: RenderContext): React.ReactNode {
+  const matches = context.found?.at.get(node);
+
+  if (!matches?.length) {
+    return value;
+  }
+
+  const out: React.ReactNode[] = [];
+  let at = 0;
+
+  for (const match of matches) {
+    if (match.start > at) {
+      out.push(value.slice(at, match.start));
+    }
+
+    out.push(
+      <span
+        key={match.index}
+        className="mawy-find-hit"
+        data-mawy-current={match.index === context.currentMatch ? 'true' : undefined}
+      >
+        {value.slice(match.start, match.end)}
+      </span>
+    );
+    at = match.end;
+  }
+
+  if (at < value.length) {
+    out.push(value.slice(at));
+  }
+
+  return out;
 }
 
 /** Whether a node is inside the run being shown as its own source. */
@@ -197,7 +247,7 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
   return nodes.map((node, index) => {
     switch (node.type) {
       case 'text':
-        return node.value;
+        return marked(node, node.value, context);
 
       case 'emphasis':
         return (
@@ -223,7 +273,7 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
       case 'inlineCode':
         return (
           <code key={index} className="mawy-md-code" {...origin(node)}>
-            {node.value}
+            {marked(node, node.value, context)}
           </code>
         );
 

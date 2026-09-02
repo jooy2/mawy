@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
+import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
 
 import '../support/host.dart';
@@ -332,6 +333,106 @@ void main() {
     });
   });
 
+  /// Finding, in a document rather than in its source.
+  ///
+  /// What is searched is what the page draws — `strong` inside a `**strong**`
+  /// is found by looking for the word, not by looking for the asterisks —
+  /// which is the whole difference between this bar and the editor's.
+  group('finding', () {
+    Finder field() =>
+        find.descendant(of: find.byType(MawyFindBar), matching: find.byType(EditableText));
+
+    Future<void> open(WidgetTester tester) async {
+      await tester.tap(toolbarButton('Find'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('marks every match, and the one it is on apart from the rest', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: 'one two one two one')));
+
+      await open(tester);
+      await tester.enterText(field(), 'one');
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      final List<Color> marked = _marks(tester);
+
+      expect(marked.length, 3);
+      expect(marked.where((Color colour) => colour == MawyTokens.light.findCurrent).length, 1);
+      expect(marked.first, MawyTokens.light.findCurrent);
+    });
+
+    testWidgets('finds a word the markup had split the source of', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: 'A **strong** word.')));
+
+      await open(tester);
+      await tester.enterText(field(), 'strong');
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 1'), findsOneWidget);
+      expect(_marks(tester).length, 1);
+    });
+
+    testWidgets('does not find the markup itself', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: 'A **strong** word.')));
+
+      await open(tester);
+      await tester.enterText(field(), '**');
+      await tester.pumpAndSettle();
+
+      expect(find.text('No matches'), findsOneWidget);
+      expect(_marks(tester), isEmpty);
+    });
+
+    testWidgets('steps on Enter, keeping the keyboard in the field', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: 'one two one two one')));
+
+      await open(tester);
+      await tester.enterText(field(), 'one');
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      // The field's own action rather than a raw key, which is what a platform
+      // sends: on the web the browser keeps `Enter` and Flutter is told this.
+      await tester.testTextInput.receiveAction(TextInputAction.unspecified);
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 of 3'), findsOneWidget);
+      expect(tester.widget<EditableText>(field()).focusNode.hasFocus, isTrue);
+
+      // The stronger colour moved on with the count.
+      expect(_marks(tester)[1], MawyTokens.light.findCurrent);
+    });
+
+    testWidgets('offers nothing to replace with', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: sample)));
+
+      await open(tester);
+
+      // One field: a viewer has nothing to put anything in place of.
+      expect(field(), findsOneWidget);
+      expect(toolbarButton('Replace'), findsNothing);
+    });
+
+    testWidgets('is not offered where the toolbar left it out', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyViewer(
+            value: sample,
+            toolbar: <MawyViewerToolbarItem>[MawyViewerToolbarItem.copy],
+          ),
+        ),
+      );
+
+      expect(toolbarButton('Find'), findsNothing);
+      expect(find.byType(MawyFindBar), findsNothing);
+    });
+  });
+
   group('the toolbar', () {
     testWidgets('draws only the controls it was given', (WidgetTester tester) async {
       await tester.pumpWidget(
@@ -623,4 +724,23 @@ void main() {
       expect(opened, 'https://example.com');
     });
   });
+}
+
+/// The background colour behind every run the find bar marked, in reading order.
+List<Color> _marks(WidgetTester tester) {
+  final List<Color> found = <Color>[];
+
+  for (final Element element in find.byType(Text).evaluate()) {
+    (element.widget as Text).textSpan?.visitChildren((InlineSpan span) {
+      final Color? colour = span.style?.backgroundColor;
+
+      if (colour != null) {
+        found.add(colour);
+      }
+
+      return true;
+    });
+  }
+
+  return found;
 }

@@ -1706,6 +1706,12 @@
  * anything that changed its width would slide the copy out of step.
  */
 
+/* Clicked into so a shortcut has somewhere to land, which is not a reason to
+   draw a ring around the whole document. `:focus-visible` still does. */
+.mawy-root .mawy-viewer-scroll:focus {
+  outline: none;
+}
+
 .mawy-root .mawy-find-hit {
   border-radius: 2px;
   background: var(--mawy-find);
