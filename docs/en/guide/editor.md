@@ -65,7 +65,7 @@ That is the reader's, for as long as they are looking at it, and there is no pro
 
 Below the width at which the two panes stop being side by side and stack, there is no bar and nothing for it to be between.
 
-It goes the other way too. **Click a word in the preview and the caret lands on that word in the source** — on the word, not on the paragraph, so clicking the middle of a bold phrase puts the caret in the middle of it between the asterisks. Neither pane is scrolled to do it: they are already showing the same part of the document, so the word clicked on is a word the source is showing. Links, checkboxes and a code block's copy button are left to do their own jobs, and a click that finished a text selection is a selection rather than a request to go somewhere.
+**The preview is the reading and nothing is edited from it.** A click there does not move the caret in the source, and that is the whole difference between this pane and `wysiwyg`: one surface edits the drawn document, and it is the one that says so. Editing on the left while a click on the right moves the caret is two answers to where the writing happens. Links, checkboxes and a code block's copy button do their own jobs, and everything else there behaves like the page it is — selectable, copyable, and still.
 
 ## The source surface
 

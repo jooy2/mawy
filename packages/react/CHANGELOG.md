@@ -197,6 +197,10 @@
 
 - **The headings panel is called "Contents".** "Outline" is what the thing is to whoever wrote it and not what a reader is looking for: a list of a document's headings, in order, to jump from. The Korean has always said 목차, which is this word. `'outline'` is still the name of the toolbar item and the class on the panel, because those are an application's API and renaming them would cost every consumer a line to save this package a word.
 
+- **A click in the preview no longer moves the caret in the source.** It was the other direction of the question the scrolling asks — a place on the page, read back as a place in the document — and as a piece of arithmetic it worked. As a behaviour it was one answer too many: `wysiwyg` is the surface that edits the drawn document, and a `split` whose right-hand pane also edits is two answers to where the writing happens. A preview is a preview, and now behaves like the page it is.
+
+  The machinery it was built on is untouched and still in use — `caretFromPoint` and `sourceAt` are what put a dropped image where the pointer let go of it, and what the drawn surface reads every keystroke through.
+
 ## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.
