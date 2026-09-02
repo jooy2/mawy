@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/internal/focus_visible.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/markdown/ast.dart';
@@ -24,6 +25,7 @@ class MawyViewerOutline extends StatelessWidget {
     required this.entries,
     required this.tokens,
     required this.strings,
+    required this.active,
     required this.onSelected,
     super.key,
   });
@@ -36,6 +38,9 @@ class MawyViewerOutline extends StatelessWidget {
 
   /// The library's own words.
   final MawyStrings strings;
+
+  /// The heading the reader is currently at, from the document's scroll.
+  final String? active;
 
   /// Called with the slug of whichever entry was chosen.
   final ValueChanged<String> onSelected;
@@ -65,7 +70,12 @@ class MawyViewerOutline extends StatelessWidget {
                 itemBuilder: (BuildContext context, int index) {
                   final MdOutlineEntry entry = entries[index];
 
-                  return _Entry(entry: entry, tokens: tokens, onTap: () => onSelected(entry.slug));
+                  return _Entry(
+                    entry: entry,
+                    tokens: tokens,
+                    current: entry.slug == active,
+                    onTap: () => onSelected(entry.slug),
+                  );
                 },
               ),
       ),
@@ -74,10 +84,19 @@ class MawyViewerOutline extends StatelessWidget {
 }
 
 class _Entry extends StatefulWidget {
-  const _Entry({required this.entry, required this.tokens, required this.onTap});
+  const _Entry({
+    required this.entry,
+    required this.tokens,
+    required this.current,
+    required this.onTap,
+  });
 
   final MdOutlineEntry entry;
   final MawyTokens tokens;
+
+  /// Whether this is the heading the reader is at.
+  final bool current;
+
   final VoidCallback onTap;
 
   @override
@@ -103,6 +122,7 @@ class _EntryState extends State<_Entry> {
 
     return Semantics(
       button: true,
+      selected: widget.current,
       label: widget.entry.text,
       child: FocusableActionDetector(
         focusNode: _node,
@@ -118,23 +138,35 @@ class _EntryState extends State<_Entry> {
           ),
         },
         onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
-        onShowFocusHighlight: (bool on) => setState(() => _focused = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on && MawyFocusVisible.wanted),
         child: GestureDetector(
           onTap: widget.onTap,
           child: AnimatedContainer(
             duration: MawyMotion.durationOf(context),
             curve: MawyMotion.easing,
-            padding: EdgeInsets.fromLTRB(8 + (depth - 1) * 10.0, 6, 8, 6),
+            padding: EdgeInsets.fromLTRB(6 + (depth - 1) * 10.0, 6, 8, 6),
             decoration: BoxDecoration(
               color: _hovered || _focused ? tokens.background : null,
               borderRadius: BorderRadius.circular(MawyRadius.small),
-              // The toolbar's ring, drawn outside the row rather than inside
-              // it, so an entry that has the focus is not a line of text that
-              // has shifted by two pixels.
-              boxShadow: _focused
-                  ? <BoxShadow>[BoxShadow(color: tokens.accent, spreadRadius: 2)]
-                  : null,
+              // A rule down the leading edge on the heading the reader is at,
+              // which is the stylesheet's mark for the same thing. Straight,
+              // and not the rounded bracket an inset shadow would draw.
+              border: BorderDirectional(
+                start: BorderSide(
+                  color: widget.current ? tokens.accent : const Color(0x00000000),
+                  width: 2,
+                ),
+              ),
             ),
+            // The ring, drawn over the row rather than behind it: a shadow is a
+            // filled shape, and behind a row with no background of its own it
+            // is a block of accent with the words lost in it.
+            foregroundDecoration: _focused
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(MawyRadius.small),
+                    border: Border.all(color: tokens.accent, width: 2),
+                  )
+                : null,
             // The heading's words are the name of this control, and they are
             // said once — up there, where the control says what it is. Drawn
             // again here they are the same string a second time, and a screen
@@ -148,9 +180,11 @@ class _EntryState extends State<_Entry> {
                   // The first two levels carry the structure; the rest are
                   // detail, and drawing them all the same makes a wall of text
                   // out of what is meant to be a map.
-                  color: depth <= 2 ? tokens.foreground : tokens.foregroundMuted,
+                  color: widget.current
+                      ? tokens.accent
+                      : (depth <= 2 ? tokens.foreground : tokens.foregroundMuted),
                   fontSize: depth == 1 ? 13.5 : 13,
-                  fontWeight: depth == 1 ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: widget.current || depth == 1 ? FontWeight.w600 : FontWeight.w400,
                   height: 1.4,
                 ),
               ),

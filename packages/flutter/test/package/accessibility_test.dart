@@ -132,6 +132,10 @@ void main() {
         hasTapAction: true,
         isFocusable: true,
         hasFocusAction: true,
+        // Whether this is the heading the reader is at. The React package says
+        // it with `aria-current`, which Flutter has no flag for; selected is
+        // the nearest thing a screen reader here will read out.
+        hasSelectedState: true,
       ),
     );
 

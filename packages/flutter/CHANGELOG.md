@@ -146,6 +146,8 @@
 
 - **`MawyDirective`, `MawyDirectiveBuilder` and `MawyDirectiveKind`**, exported from `package:mawy/mawy.dart` like the rest of the vocabulary.
 
+- **The headings panel marks the heading the reader is at.** It marked nothing at all, so a panel open beside a long document was a list with no answer in it — the React package's has had the rule down the leading edge since it had a panel. Measured from the document's scroll, and pinned to whatever was pressed until the reader scrolls somewhere of their own, which is the same rule and for the same reason: following an entry is an animated scroll that passes over every heading between here and there.
+
 ### Changed
 
 - **The editor's theme control is a menu rather than a button that cycles.** Light, dark and the platform's, all three at once with a tick beside the one in use — which is what the viewer's toolbar here already offered and what the React package's editor has always offered. A button that cycles is a button pressed twice to reach the value on the other side of the one you did not want, and the list will be longer than three the first time this library ships a palette that is neither light nor dark.

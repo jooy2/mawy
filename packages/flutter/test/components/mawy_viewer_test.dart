@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
+import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
 
 import '../support/host.dart';
 import '../support/spans.dart';
@@ -395,6 +396,33 @@ void main() {
       // Twice now: once in the document, once in the panel.
       expect(find.text('Second'), findsNWidgets(2));
       expect(find.text('Title'), findsNWidgets(2));
+    });
+
+    testWidgets('marks the heading the reader is at, and the one they pressed', (
+      WidgetTester tester,
+    ) async {
+      final String long = <String>[
+        for (int at = 1; at <= 8; at += 1) ...<String>['## Chapter $at', '', 'Words. ' * 20, ''],
+      ].join('\n');
+
+      await tester.pumpWidget(host(MawyViewer(value: long), size: const Size(700, 400)));
+
+      await tester.tap(toolbarButton('Contents'));
+      await tester.pumpAndSettle();
+
+      final Finder panel = find.byType(MawyViewerOutline);
+      Finder entry(String text) => find.descendant(of: panel, matching: find.text(text));
+      bool marked(String text) =>
+          tester.widget<Text>(entry(text)).style?.color == MawyTokens.light.accent;
+
+      // At the top of a document, the first heading.
+      expect(marked('Chapter 1'), isTrue);
+
+      await tester.tap(entry('Chapter 5'));
+      await tester.pumpAndSettle();
+
+      expect(marked('Chapter 5'), isTrue);
+      expect(marked('Chapter 1'), isFalse);
     });
 
     testWidgets('says so about a document with no headings', (WidgetTester tester) async {

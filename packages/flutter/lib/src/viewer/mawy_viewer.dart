@@ -11,6 +11,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/internal/i18n.dart';
@@ -195,6 +196,17 @@ class _MawyViewerState extends State<MawyViewer> {
   late final ScrollController _scroller = widget.scrollController ?? ScrollController();
   final Map<String, GlobalKey> _headings = <String, GlobalKey>{};
 
+  /// The heading the reader is at, and the one they asked to be at.
+  ///
+  /// Measured from the scroll while the panel is open, and pinned to whatever
+  /// was pressed until the reader goes somewhere of their own — the React
+  /// package's rule, for the reason it has it: following an entry is an
+  /// animated scroll that passes over every heading between here and there, and
+  /// the last heading of a document cannot reach the top of a box taller than
+  /// what is under it.
+  String? _active;
+  String? _chosen;
+
   /// Where the focus is while a selection is being made in the document.
   ///
   /// A [SelectableRegion] takes the focus when a drag starts in it, and a node
@@ -222,7 +234,15 @@ class _MawyViewerState extends State<MawyViewer> {
   MawyParseOptions? _parsedWith;
 
   @override
+  void initState() {
+    super.initState();
+    _scroller.addListener(_measureActive);
+  }
+
+  @override
   void dispose() {
+    _scroller.removeListener(_measureActive);
+
     for (final GestureRecognizer recognizer in _recognizers) {
       recognizer.dispose();
     }
@@ -311,12 +331,64 @@ class _MawyViewerState extends State<MawyViewer> {
     });
   }
 
+  /// Which heading is at the top of what can be seen.
+  ///
+  /// `_headings` is filled in document order as the blocks are drawn, and a
+  /// `Map` keeps the order things were put into it.
+  void _measureActive() {
+    if (!_outlineOpen || !mounted) {
+      return;
+    }
+
+    if (_chosen != null) {
+      if (_active != _chosen) {
+        setState(() => _active = _chosen);
+      }
+
+      return;
+    }
+
+    final double line = (_scroller.hasClients ? _scroller.offset : 0) + 24;
+    String? current;
+
+    for (final MapEntry<String, GlobalKey> heading in _headings.entries) {
+      final RenderObject? box = heading.value.currentContext?.findRenderObject();
+
+      if (box is! RenderBox || !box.attached || !box.hasSize) {
+        continue;
+      }
+
+      final RenderAbstractViewport? viewport = RenderAbstractViewport.maybeOf(box);
+
+      if (viewport == null) {
+        continue;
+      }
+
+      current ??= heading.key;
+
+      if (viewport.getOffsetToReveal(box, 0).offset > line) {
+        break;
+      }
+
+      current = heading.key;
+    }
+
+    if (current != _active) {
+      setState(() => _active = current);
+    }
+  }
+
   void _goTo(String slug) {
     final BuildContext? target = _headings[slug]?.currentContext;
 
     if (target == null) {
       return;
     }
+
+    setState(() {
+      _chosen = slug;
+      _active = slug;
+    });
 
     unawaited(
       Scrollable.ensureVisible(
@@ -404,7 +476,12 @@ class _MawyViewerState extends State<MawyViewer> {
                 colorScheme: widget.colorScheme,
                 onColorSchemeChange: widget.onColorSchemeChange,
                 outlineOpen: _outlineOpen,
-                onOutlineToggle: () => setState(() => _outlineOpen = !_outlineOpen),
+                onOutlineToggle: () {
+                  setState(() => _outlineOpen = !_outlineOpen);
+                  // Nothing has been laid out yet on the frame the panel opens
+                  // on, and an unmeasured panel is one with no mark in it.
+                  WidgetsBinding.instance.addPostFrameCallback((Duration _) => _measureActive());
+                },
                 copied: _copied,
                 onCopy: _copy,
               ),
@@ -417,45 +494,55 @@ class _MawyViewerState extends State<MawyViewer> {
                       entries: document.outline,
                       tokens: tokens,
                       strings: strings,
+                      active: _active,
                       onSelected: _goTo,
                     ),
                   Expanded(
                     child: Semantics(
                       label: strings.document,
                       container: true,
-                      child: Shortcuts(
-                        // What copies a selection. A browser does this without
-                        // being asked and here only a `WidgetsApp` does, which
-                        // this package does not require — the same reason
-                        // `mawyActivate` writes out Enter and the space bar.
-                        shortcuts: const <ShortcutActivator, Intent>{
-                          SingleActivator(LogicalKeyboardKey.keyC, control: true):
-                              CopySelectionTextIntent.copy,
-                          SingleActivator(LogicalKeyboardKey.keyC, meta: true):
-                              CopySelectionTextIntent.copy,
-                        },
-                        child: SelectableRegion(
-                          focusNode: _selection,
-                          // No handles and no context menu: both of those are
-                          // Material's or Cupertino's, and a package that draws
-                          // its own everything else should not pull in a
-                          // toolbar it did not design. Dragging selects, a
-                          // double tap takes the word, and the keys above copy.
-                          selectionControls: emptyTextSelectionControls,
-                          child: SingleChildScrollView(
-                            controller: _scroller,
-                            padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
-                            child: MawyWheelScroll(
+                      child: Listener(
+                        // A wheel or a hand on the document is the reader
+                        // saying they have gone somewhere of their own, and the
+                        // entry they pressed stops being the answer.
+                        onPointerDown: (PointerDownEvent _) => _chosen = null,
+                        onPointerSignal: (PointerSignalEvent _) => _chosen = null,
+                        child: Shortcuts(
+                          // What copies a selection. A browser does this without
+                          // being asked and here only a `WidgetsApp` does, which
+                          // this package does not require — the same reason
+                          // `mawyActivate` writes out Enter and the space bar.
+                          shortcuts: const <ShortcutActivator, Intent>{
+                            SingleActivator(LogicalKeyboardKey.keyC, control: true):
+                                CopySelectionTextIntent.copy,
+                            SingleActivator(LogicalKeyboardKey.keyC, meta: true):
+                                CopySelectionTextIntent.copy,
+                          },
+                          child: SelectableRegion(
+                            focusNode: _selection,
+                            // No handles and no context menu: both of those are
+                            // Material's or Cupertino's, and a package that draws
+                            // its own everything else should not pull in a
+                            // toolbar it did not design. Dragging selects, a
+                            // double tap takes the word, and the keys above copy.
+                            selectionControls: emptyTextSelectionControls,
+                            child: SingleChildScrollView(
                               controller: _scroller,
-                              child: Center(
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(maxWidth: measure ?? double.infinity),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      ..._withAnchors(document, render),
-                                      ?footnotes,
-                                    ],
+                              padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
+                              child: MawyWheelScroll(
+                                controller: _scroller,
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: measure ?? double.infinity,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        ..._withAnchors(document, render),
+                                        ?footnotes,
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
