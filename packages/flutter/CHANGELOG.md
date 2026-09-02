@@ -6,6 +6,20 @@
 
 ### Added
 
+- **A mouse wheel arrives over a few frames rather than all at once.** Flutter answers a notch by putting the offset where the notch says on the next frame and drawing nothing in between, and it is the nothing in between that reads as hard: every browser and every native application on the platforms this is read on animates the same distance. A second notch while the first is still arriving adds to where it was going rather than starting again from where it has got to, which is what keeps a run of them feeling like one movement.
+
+  Nothing to turn on, and a reader who asked the platform for less movement is given the jump back — the same answer the stylesheet gives under `prefers-reduced-motion`. The source surface keeps the platform's own wheel: a text field scrolls itself rather than being scrolled by something around it, and there is nowhere between the two to stand.
+
+- **In `split`, the preview scrolls with the source.** It did not move at all: the two panes were two scrollers with nothing between them, and a writer who scrolled the source was reading one document and looking at another. The React package has lined the two up since it had a `split` at all, and the guide has been describing behaviour this package did not have.
+
+  To the block rather than to the same fraction of the way down the file, which is the same answer and the same arithmetic: `src/editor/scroll.dart` is `src/internal/scroll.ts` in Dart, function for function. A fenced block is twenty lines of source and twenty lines of page, a paragraph is one long line of source and six of page, and the fraction through the file is not the fraction down the page — so the panes are lined up at the places they can agree on and run straight between them.
+
+  The measuring is the half that cannot be shared, because a browser reads a bounding box off an element and this reads a viewport. `MawyViewerAnchors` is the new piece: hand one to a viewer and it keeps a key on every top-level block, ask it where they are and it measures them. It is what the editor uses, and it is public because an application lining any second view up with a drawn document needs exactly this and has no other way to get it.
+
+- **The document is text a reader can select and copy.** Nothing in one was selectable, in the viewer and in the editor's preview alike — dragging across a paragraph took nothing and there was no way to get a sentence out of a document but to retype it. That is the cost of drawing a document as widgets rather than as markup, which is also what makes the safe default free: a page of widgets selects nothing unless it is put inside a region that says so.
+
+  Dragging selects, a double tap takes the word under it, and `Ctrl`/`Cmd`+`C` copies. No handles and no context menu — both of those are Material's or Cupertino's, and a package that draws its own everything else should not pull in a toolbar it did not design — so the copy keys are written out here for the same reason `Enter` and the space bar are.
+
 - **The outline panel is reachable by a keyboard, and following an entry takes the focus with it.** Every entry is its own tab stop and is pressed with `Enter` or the space bar, the way the React package's `<button>`s in an `<ol>` are — not the toolbar's one stop and a set of arrows, because a list of a document's headings is not a row worth learning a second way of moving through.
 
   It was the one piece of the accessibility work that got left behind: the toolbar, the menus, the sliders and the reset links were all made to take the focus, and the entries stayed a `GestureDetector` — which is a panel a keyboard can open and cannot then use.
@@ -132,33 +146,21 @@
 
 - **`MawyDirective`, `MawyDirectiveBuilder` and `MawyDirectiveKind`**, exported from `package:mawy/mawy.dart` like the rest of the vocabulary.
 
-- **The document is text a reader can select and copy.** Nothing in one was selectable, in the viewer and in the editor's preview alike — dragging across a paragraph took nothing and there was no way to get a sentence out of a document but to retype it. That is the cost of drawing a document as widgets rather than as markup, which is also what makes the safe default free: a page of widgets selects nothing unless it is put inside a region that says so.
-
-  Dragging selects, a double tap takes the word under it, and `Ctrl`/`Cmd`+`C` copies. No handles and no context menu — both of those are Material's or Cupertino's, and a package that draws its own everything else should not pull in a toolbar it did not design — so the copy keys are written out here for the same reason `Enter` and the space bar are.
-
-- **In `split`, the preview scrolls with the source.** It did not move at all: the two panes were two scrollers with nothing between them, and a writer who scrolled the source was reading one document and looking at another. The React package has lined the two up since it had a `split` at all, and the guide has been describing behaviour this package did not have.
-
-  To the block rather than to the same fraction of the way down the file, which is the same answer and the same arithmetic: `src/editor/scroll.dart` is `src/internal/scroll.ts` in Dart, function for function. A fenced block is twenty lines of source and twenty lines of page, a paragraph is one long line of source and six of page, and the fraction through the file is not the fraction down the page — so the panes are lined up at the places they can agree on and run straight between them.
-
-  The measuring is the half that cannot be shared, because a browser reads a bounding box off an element and this reads a viewport. `MawyViewerAnchors` is the new piece: hand one to a viewer and it keeps a key on every top-level block, ask it where they are and it measures them. It is what the editor uses, and it is public because an application lining any second view up with a drawn document needs exactly this and has no other way to get it.
-
-- **A mouse wheel arrives over a few frames rather than all at once.** Flutter answers a notch by putting the offset where the notch says on the next frame and drawing nothing in between, and it is the nothing in between that reads as hard: every browser and every native application on the platforms this is read on animates the same distance. A second notch while the first is still arriving adds to where it was going rather than starting again from where it has got to, which is what keeps a run of them feeling like one movement.
-
-  Nothing to turn on, and a reader who asked the platform for less movement is given the jump back — the same answer the stylesheet gives under `prefers-reduced-motion`. The source surface keeps the platform's own wheel: a text field scrolls itself rather than being scrolled by something around it, and there is nowhere between the two to stand.
-
 ### Changed
-
-- **An outline entry says its heading once.** The panel named each entry after the heading it points at and then drew that heading inside it, and a screen reader handed both read the words out and read them out again — `Second, Second, button`. The drawn words are the drawing now, and the name is the name. The React package's entry is a `<button>` with the heading inside it and has always said it once, which is what makes this a difference between the two rather than a preference.
-
-- **`MawyTokens` compares on every colour rather than on six of them.** Six was enough while the only palettes in existence were this package's own two, and became wrong the moment an application could build a third: two palettes differing in nothing but their alert colours called themselves the same palette, and a viewer handed the second one would not have redrawn.
-
-- **The headings panel is called "Contents".** The React package's change, in the same commit and for the same reason: "Outline" is what the thing is to whoever wrote it rather than what a reader is looking for, and the Korean has always said 목차. `MawyViewerToolbarItem.outline` is unchanged, because that is an application's API.
 
 - **The editor's theme control is a menu rather than a button that cycles.** Light, dark and the platform's, all three at once with a tick beside the one in use — which is what the viewer's toolbar here already offered and what the React package's editor has always offered. A button that cycles is a button pressed twice to reach the value on the other side of the one you did not want, and the list will be longer than three the first time this library ships a palette that is neither light nor dark.
 
   `MawyToolbarChoice` is the panel behind it, public now, because there are two toolbars in this package and the list a theme is chosen from should not be two lists that resemble each other.
 
+- **The headings panel is called "Contents".** The React package's change, in the same commit and for the same reason: "Outline" is what the thing is to whoever wrote it rather than what a reader is looking for, and the Korean has always said 목차. `MawyViewerToolbarItem.outline` is unchanged, because that is an application's API.
+
+- **An outline entry says its heading once.** The panel named each entry after the heading it points at and then drew that heading inside it, and a screen reader handed both read the words out and read them out again — `Second, Second, button`. The drawn words are the drawing now, and the name is the name. The React package's entry is a `<button>` with the heading inside it and has always said it once, which is what makes this a difference between the two rather than a preference.
+
+- **`MawyTokens` compares on every colour rather than on six of them.** Six was enough while the only palettes in existence were this package's own two, and became wrong the moment an application could build a third: two palettes differing in nothing but their alert colours called themselves the same palette, and a viewer handed the second one would not have redrawn.
+
 ### Fixed
+
+- **A task list's box sits on the middle of its first line.** It was nudged down by a number written by hand, which is right at one line height and above the text at every other — and the default is not that one, so every task list in the package was drawn with its boxes riding high. It is half the difference between the line box and the type in it now, which is where the browser's `vertical-align` puts the React package's.
 
 - **Every menu on both toolbars opens.** They did nothing at all, and in a release build they did nothing loudly: the panels are raised into an [Overlay], `Overlay.of` asserts in debug and throws a null check with asserts stripped, and an application that has neither `MaterialApp` nor routes has no overlay for them to go into. That is not an exotic tree — it is what an application that wanted neither Material nor Cupertino writes, and this package's own gallery is one, which is why every Flutter preview on the documentation site had a toolbar where nothing happened.
 
@@ -167,8 +169,6 @@
 - **The editor's toolbar is the width of the editor.** A `Column` centres its children unless it is told otherwise, so the bar was as wide as its buttons and floating in the middle of the window, with the rule under it stopping where the buttons stopped. The viewer's was already full width by accident of what is inside it, and now both say so.
 
 - **A focused control is drawn with a ring and not a block.** The focus indicator was a `BoxShadow` spread two pixels behind the button, and a shadow is a filled shape — behind a button whose own background is nothing, what it draws is a solid rectangle of accent with the glyph lost inside it. Flutter gives the first traversable control the focus when a view takes it, so the first button on a toolbar turned into a purple square the moment anybody clicked anywhere. A foreground border is hollow, takes no pixel off the button, and is the stylesheet's `outline` said in Flutter.
-
-- **A task list's box sits on the middle of its first line.** It was nudged down by a number written by hand, which is right at one line height and above the text at every other — and the default is not that one, so every task list in the package was drawn with its boxes riding high. It is half the difference between the line box and the type in it now, which is where the browser's `vertical-align` puts the React package's.
 
 ## 0.1.0 — 2026-08-31
 

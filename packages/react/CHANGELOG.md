@@ -173,17 +173,15 @@
 
   A textarea that swallows `Tab` is a keyboard trap, so the trap is opened rather than avoided: **press `Escape`, then `Tab`, and the focus moves on.** Anything else typed arms indentation again. It is the rule CodeMirror, Monaco and GitHub's editor all use, and the surface says so through `aria-describedby`, because a way out nobody is told about is a way out that does not exist for the person who needed it. The drawn document does not capture `Tab` at all — there is no trap there to open.
 
+### Changed
+
+- **A click in the preview no longer moves the caret in the source.** It was the other direction of the question the scrolling asks — a place on the page, read back as a place in the document — and as a piece of arithmetic it worked. As a behaviour it was one answer too many: `wysiwyg` is the surface that edits the drawn document, and a `split` whose right-hand pane also edits is two answers to where the writing happens. A preview is a preview, and now behaves like the page it is.
+
+  The machinery it was built on is untouched and still in use — `caretFromPoint` and `sourceAt` are what put a dropped image where the pointer let go of it, and what the drawn surface reads every keystroke through.
+
+- **The headings panel is called "Contents".** "Outline" is what the thing is to whoever wrote it and not what a reader is looking for: a list of a document's headings, in order, to jump from. The Korean has always said 목차, which is this word. `'outline'` is still the name of the toolbar item and the class on the panel, because those are an application's API and renaming them would cost every consumer a line to save this package a word.
+
 ### Fixed
-
-- **The toolbar is the same height in every mode.** A component given a height is a column of flex items and a flex item shrinks, so in the surfaces whose body wants more room than there is — the drawn document, `split`, `preview` — the bar was being squeezed onto its `min-height` and springing back in `plain`, which does not. Three pixels, and they moved every time the surface switch was pressed, which is the control immediately under them.
-
-  The find bar and the status bar were the same shape of thing and are fixed with it. Chrome is not what a layout should take its room from.
-
-- **The entry pressed in the headings panel is the one that stays marked.** Following an entry is a smooth scroll and a smooth scroll passes over every heading between here and there, so the mark walked down the panel with it and settled on whichever heading was at the top when it stopped. That is not always the one that was pressed: the last heading of a document cannot reach the top of a box taller than what is under it, and a short section under a long one is passed straight through.
-
-  What was pressed is not in doubt, so it is no longer measured. The measuring starts again at the next wheel, touch, key or press inside the document — the reader saying they have gone somewhere of their own — and a wheel over the panel is not one of those, because reading the list of headings is not leaving the one you chose.
-
-- **The mark beside the current heading is a rule and not a bracket.** It was an inset shadow, which follows the corner radius the focus ring needs and turns two pixels of rule into three sides of a box. Its own element now, so the radius stays where it is useful.
 
 - **A file dropped on the editor no longer takes the page away.** A dropped file is an image and never a document, which is the rule and stays the rule — but a file the editor would not take was left to the browser, and a browser given a file it was not stopped from taking opens it as a page. The document, the undo history and the caret went with the tab, which is the exact loss the rule exists to prevent.
 
@@ -193,13 +191,15 @@
 
   The empty state says there is nothing here yet, the button under it is not drawn, the toolbar's `open` is disabled, and a drop is not claimed. `strings.emptyNothing` is new, and so is `strings.dropNotDocument` for the line the editor writes.
 
-### Changed
+- **The entry pressed in the headings panel is the one that stays marked.** Following an entry is a smooth scroll and a smooth scroll passes over every heading between here and there, so the mark walked down the panel with it and settled on whichever heading was at the top when it stopped. That is not always the one that was pressed: the last heading of a document cannot reach the top of a box taller than what is under it, and a short section under a long one is passed straight through.
 
-- **The headings panel is called "Contents".** "Outline" is what the thing is to whoever wrote it and not what a reader is looking for: a list of a document's headings, in order, to jump from. The Korean has always said 목차, which is this word. `'outline'` is still the name of the toolbar item and the class on the panel, because those are an application's API and renaming them would cost every consumer a line to save this package a word.
+  What was pressed is not in doubt, so it is no longer measured. The measuring starts again at the next wheel, touch, key or press inside the document — the reader saying they have gone somewhere of their own — and a wheel over the panel is not one of those, because reading the list of headings is not leaving the one you chose.
 
-- **A click in the preview no longer moves the caret in the source.** It was the other direction of the question the scrolling asks — a place on the page, read back as a place in the document — and as a piece of arithmetic it worked. As a behaviour it was one answer too many: `wysiwyg` is the surface that edits the drawn document, and a `split` whose right-hand pane also edits is two answers to where the writing happens. A preview is a preview, and now behaves like the page it is.
+- **The mark beside the current heading is a rule and not a bracket.** It was an inset shadow, which follows the corner radius the focus ring needs and turns two pixels of rule into three sides of a box. Its own element now, so the radius stays where it is useful.
 
-  The machinery it was built on is untouched and still in use — `caretFromPoint` and `sourceAt` are what put a dropped image where the pointer let go of it, and what the drawn surface reads every keystroke through.
+- **The toolbar is the same height in every mode.** A component given a height is a column of flex items and a flex item shrinks, so in the surfaces whose body wants more room than there is — the drawn document, `split`, `preview` — the bar was being squeezed onto its `min-height` and springing back in `plain`, which does not. Three pixels, and they moved every time the surface switch was pressed, which is the control immediately under them.
+
+  The find bar and the status bar were the same shape of thing and are fixed with it. Chrome is not what a layout should take its room from.
 
 ## 0.1.0 (2026-08-31)
 
