@@ -296,6 +296,41 @@ void main() {
     });
   });
 
+  group('scrolling', () {
+    testWidgets('a wheel notch arrives over a few frames rather than in one', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          MawyViewer(value: List<String>.filled(12, sample).join('\n')),
+          size: const Size(600, 400),
+        ),
+      );
+
+      // The first is the document's own; a code block scrolls sideways in one
+      // of its own further down.
+      final ScrollController scroller = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
+          .controller!;
+      final TestPointer pointer = TestPointer(1, PointerDeviceKind.mouse);
+
+      pointer.hover(tester.getCenter(find.byType(MawyViewer)));
+      await tester.sendEventToBinding(pointer.scroll(const Offset(0, 120)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+
+      // Part of the way there, which is the whole of it: Flutter's own answer to
+      // a notch is the offset in the right place on the next frame and nothing
+      // in between, and it is the nothing in between that reads as hard.
+      expect(scroller.offset, greaterThan(0));
+      expect(scroller.offset, lessThan(120));
+
+      await tester.pumpAndSettle();
+
+      expect(scroller.offset, moreOrLessEquals(120, epsilon: 0.5));
+    });
+  });
+
   group('the toolbar', () {
     testWidgets('draws only the controls it was given', (WidgetTester tester) async {
       await tester.pumpWidget(

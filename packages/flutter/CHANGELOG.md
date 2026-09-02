@@ -142,6 +142,10 @@
 
   The measuring is the half that cannot be shared, because a browser reads a bounding box off an element and this reads a viewport. `MawyViewerAnchors` is the new piece: hand one to a viewer and it keeps a key on every top-level block, ask it where they are and it measures them. It is what the editor uses, and it is public because an application lining any second view up with a drawn document needs exactly this and has no other way to get it.
 
+- **A mouse wheel arrives over a few frames rather than all at once.** Flutter answers a notch by putting the offset where the notch says on the next frame and drawing nothing in between, and it is the nothing in between that reads as hard: every browser and every native application on the platforms this is read on animates the same distance. A second notch while the first is still arriving adds to where it was going rather than starting again from where it has got to, which is what keeps a run of them feeling like one movement.
+
+  Nothing to turn on, and a reader who asked the platform for less movement is given the jump back — the same answer the stylesheet gives under `prefers-reduced-motion`. The source surface keeps the platform's own wheel: a text field scrolls itself rather than being scrolled by something around it, and there is nowhere between the two to stand.
+
 ### Changed
 
 - **An outline entry says its heading once.** The panel named each entry after the heading it points at and then drew that heading inside it, and a screen reader handed both read the words out and read them out again — `Second, Second, button`. The drawn words are the drawing now, and the name is the name. The React package's entry is a `<button>` with the heading inside it and has always said it once, which is what makes this a difference between the two rather than a preference.

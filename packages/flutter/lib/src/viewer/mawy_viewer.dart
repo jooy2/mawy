@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/overlay.dart';
+import 'package:mawy/src/internal/wheel.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/parse.dart';
 import 'package:mawy/src/markdown/render.dart';
@@ -444,12 +445,18 @@ class _MawyViewerState extends State<MawyViewer> {
                           child: SingleChildScrollView(
                             controller: _scroller,
                             padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: measure ?? double.infinity),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[..._withAnchors(document, render), ?footnotes],
+                            child: MawyWheelScroll(
+                              controller: _scroller,
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: measure ?? double.infinity),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      ..._withAnchors(document, render),
+                                      ?footnotes,
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

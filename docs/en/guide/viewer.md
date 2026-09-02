@@ -85,6 +85,10 @@ A file larger than five megabytes is refused rather than read. That is about a m
 
 ::: fw flutter
 
+**A mouse wheel arrives over a few frames rather than all at once.** Flutter answers a notch by moving the offset to where the notch says on the next frame and drawing nothing in between, which is why a Flutter document reads as harder under the same hand than the same document in a browser — every browser and every native application on these platforms animates it. Nothing is asked for and there is nothing to turn on; a reader who told the platform they want less movement gets the jump back, which is the same answer the stylesheet gives under `prefers-reduced-motion`.
+
+The source surface is the platform's own, and stays that way. A text field scrolls itself rather than being scrolled by something around it, and there is nowhere between the two to stand.
+
 **The document is text a reader can take.** Drag across it and it selects, and `Ctrl`/`Cmd`+`C` copies what was taken. That is worth saying out loud here because it is not free: a document drawn as widgets is a page nothing selects unless it is put inside a region that says so, and drawing it as widgets is what makes the safe default free in the first place. There are no handles and no context menu — both of those are Material's or Cupertino's, and this package draws its own everything else — so the keys are written out for the same reason `Enter` and the space bar are.
 
 :::
