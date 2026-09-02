@@ -850,7 +850,12 @@ class _List extends StatelessWidget {
                 width: em * 1.5,
                 child: task
                     ? Padding(
-                        padding: EdgeInsets.only(top: em * 0.18),
+                        // Down the middle of the first line, which is the line
+                        // box and not the glyphs in it: a box `em` tall inside
+                        // one `em * lineHeight` tall has half the difference
+                        // above it. A number written by hand was right at one
+                        // line height and above the text at every other.
+                        padding: EdgeInsets.only(top: em * (context.typography.lineHeight - 1) / 2),
                         child: Icon(
                           item.checked! ? LucideIcons.squareCheck : LucideIcons.square,
                           size: em,

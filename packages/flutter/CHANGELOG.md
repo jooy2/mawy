@@ -154,6 +154,8 @@
 
 - **A focused control is drawn with a ring and not a block.** The focus indicator was a `BoxShadow` spread two pixels behind the button, and a shadow is a filled shape — behind a button whose own background is nothing, what it draws is a solid rectangle of accent with the glyph lost inside it. Flutter gives the first traversable control the focus when a view takes it, so the first button on a toolbar turned into a purple square the moment anybody clicked anywhere. A foreground border is hollow, takes no pixel off the button, and is the stylesheet's `outline` said in Flutter.
 
+- **A task list's box sits on the middle of its first line.** It was nudged down by a number written by hand, which is right at one line height and above the text at every other — and the default is not that one, so every task list in the package was drawn with its boxes riding high. It is half the difference between the line box and the type in it now, which is where the browser's `vertical-align` puts the React package's.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.
