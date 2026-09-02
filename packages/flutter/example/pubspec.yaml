@@ -14,6 +14,10 @@ dependencies:
     sdk: flutter
   mawy:
     path: ../
+  # What `onLinkTap` is answered with. The library refuses a plugin — opening a
+  # URL is the application's job and every application has already chosen how it
+  # does that — and this is an application, so it chooses.
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0

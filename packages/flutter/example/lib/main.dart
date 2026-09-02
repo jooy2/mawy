@@ -17,6 +17,7 @@ library;
 import 'package:flutter/widgets.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy_example/samples.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(const GalleryApp());
@@ -100,9 +101,7 @@ class _GalleryAppState extends State<GalleryApp> {
             locale: locale,
             directives: _directives(tokens),
             highlight: mawyHighlighter,
-            onLinkTap: (String url, String? title) {
-              debugPrint('link: \$url');
-            },
+            onLinkTap: _open,
           );
 
           return embedded
@@ -130,9 +129,7 @@ class _GalleryAppState extends State<GalleryApp> {
           // The gallery is where the viewer is looked at, so it asks for the
           // colour an application would have to ask for too.
           highlight: mawyHighlighter,
-          onLinkTap: (String url, String? title) {
-            debugPrint('link: $url');
-          },
+          onLinkTap: _open,
         );
 
         return embedded
@@ -145,6 +142,28 @@ class _GalleryAppState extends State<GalleryApp> {
               );
       },
     );
+  }
+
+  /// What a tapped link does.
+  ///
+  /// The library hands a URL over and stops there, which is the whole of its
+  /// answer: opening one needs a plugin, every application has already chosen
+  /// which, and a Markdown viewer is not the thing that should choose for it.
+  /// This is an application, so it chooses — and a gallery whose links did
+  /// nothing was showing a viewer that looks broken rather than one that is
+  /// waiting to be told.
+  Future<void> _open(String url, String? title) async {
+    final Uri? target = Uri.tryParse(url);
+
+    if (target == null) {
+      return;
+    }
+
+    // Externally, and only where the platform says it can: `launchUrl` throws
+    // on a scheme nothing handles, and a gallery is not the place for that.
+    if (await canLaunchUrl(target)) {
+      await launchUrl(target, mode: LaunchMode.externalApplication);
+    }
   }
 
   /// Which palette the viewer is drawing in, resolved the way it resolves it.
