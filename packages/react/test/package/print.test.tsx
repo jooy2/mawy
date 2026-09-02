@@ -118,7 +118,7 @@ describe('printing', () => {
     // two components are mounted at once and both toolbars have a `Theme` on
     // them — which is a question about this test rather than about either one.
     press(editor.container, 'Find');
-    press(viewer.container, 'Outline');
+    press(viewer.container, 'Contents');
     press(viewer.container, 'Theme');
 
     // `mawy-editor-note` only appears when reading a file failed, and there is

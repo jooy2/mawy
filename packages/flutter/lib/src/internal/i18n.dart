@@ -329,7 +329,7 @@ const MawyStrings _en = MawyStrings(
   colorSchemeDark: 'Dark',
   colorSchemeSystem: 'Match the system',
   divider: 'Resize the panes',
-  outline: 'Outline',
+  outline: 'Contents',
   outlineEmpty: 'This document has no headings.',
   copy: 'Copy the Markdown',
   copied: 'Copied',

@@ -135,7 +135,7 @@ const en: MawyStrings = {
   colorSchemeLight: 'Light',
   colorSchemeDark: 'Dark',
   colorSchemeSystem: 'Match the system',
-  outline: 'Outline',
+  outline: 'Contents',
   outlineEmpty: 'This document has no headings.',
   copy: 'Copy the Markdown',
   copied: 'Copied',

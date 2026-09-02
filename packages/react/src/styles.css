@@ -556,6 +556,7 @@
 }
 
 .mawy-root .mawy-outline-link {
+  position: relative;
   display: block;
   width: 100%;
   padding: 5px 10px;
@@ -588,10 +589,25 @@
   color: var(--mawy-fg);
 }
 
+/* A rule down the left edge, and a straight one.
+ *
+ * An inset shadow follows the corner radius the focus ring needs, which turns
+ * two pixels of rule into a bracket around the entry — a heavier mark than a
+ * list of headings wants, and one that reads as a box somebody has drawn rather
+ * than as the place they are. Its own element instead, so the radius stays
+ * where it is useful. */
 .mawy-root .mawy-outline-link[aria-current='location'] {
   color: var(--mawy-accent);
   font-weight: 550;
-  box-shadow: inset 2px 0 0 var(--mawy-accent);
+}
+
+.mawy-root .mawy-outline-link[aria-current='location']::before {
+  content: '';
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-start: 0;
+  width: 2px;
+  background: var(--mawy-accent);
 }
 
 .mawy-root .mawy-outline-empty {

@@ -247,7 +247,7 @@ void main() {
         ),
       );
 
-      expect(toolbarButton('Outline'), findsOneWidget);
+      expect(toolbarButton('Contents'), findsOneWidget);
       expect(toolbarButton('Text size'), findsNothing);
     });
 
@@ -272,7 +272,7 @@ void main() {
 
       expect(find.text('Second'), findsOneWidget);
 
-      await tester.tap(toolbarButton('Outline'));
+      await tester.tap(toolbarButton('Contents'));
       await tester.pump();
 
       // Twice now: once in the document, once in the panel.
@@ -283,7 +283,7 @@ void main() {
     testWidgets('says so about a document with no headings', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: 'Just words.')));
 
-      await tester.tap(toolbarButton('Outline'));
+      await tester.tap(toolbarButton('Contents'));
       await tester.pump();
 
       expect(find.text('This document has no headings.'), findsOneWidget);

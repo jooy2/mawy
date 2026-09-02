@@ -138,6 +138,8 @@
 
 - **`MawyTokens` compares on every colour rather than on six of them.** Six was enough while the only palettes in existence were this package's own two, and became wrong the moment an application could build a third: two palettes differing in nothing but their alert colours called themselves the same palette, and a viewer handed the second one would not have redrawn.
 
+- **The headings panel is called "Contents".** The React package's change, in the same commit and for the same reason: "Outline" is what the thing is to whoever wrote it rather than what a reader is looking for, and the Korean has always said 목차. `MawyViewerToolbarItem.outline` is unchanged, because that is an application's API.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

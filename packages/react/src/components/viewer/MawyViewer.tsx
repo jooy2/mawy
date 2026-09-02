@@ -238,6 +238,22 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const picker = React.useRef<HTMLInputElement>(null);
   const depth = React.useRef(0);
 
+  /**
+   * The heading the reader asked for, until they scroll somewhere themselves.
+   *
+   * Following an entry is a smooth scroll, and a smooth scroll passes over
+   * every heading between here and there — so the mark walked down the panel
+   * with it and settled on whichever heading happened to be at the top when it
+   * stopped, which is not always the one that was pressed. The last heading in
+   * a document cannot reach the top of a box taller than what is under it, and
+   * a short section under a long one is passed straight through.
+   *
+   * What was pressed is not in doubt, so it is not measured. It is measured
+   * again at the next wheel, touch, key or press inside the document, which is
+   * the reader saying they have gone somewhere of their own.
+   */
+  const chosen = React.useRef<string | null>(null);
+
   /* ---------------------------------------------------------------------
    * The document
    * ------------------------------------------------------------------ */
@@ -318,6 +334,13 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
     const measure = () => {
       queued = 0;
+
+      if (chosen.current) {
+        setActiveHeading(chosen.current);
+
+        return;
+      }
+
       const headings = [...element.querySelectorAll<HTMLElement>('.mawy-md-heading')];
 
       // The viewer scrolls inside itself when it has been given a height, and
@@ -341,14 +364,28 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       queued ||= requestAnimationFrame(measure);
     };
 
+    // Inside the document only. A wheel over the panel is somebody reading the
+    // list of headings, which is not somebody leaving the one they chose.
+    const release = () => {
+      chosen.current = null;
+    };
+
     measure();
     element.addEventListener('scroll', onScroll, { passive: true });
+    element.addEventListener('wheel', release, { passive: true });
+    element.addEventListener('touchstart', release, { passive: true });
+    element.addEventListener('pointerdown', release);
+    element.addEventListener('keydown', release);
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
 
     return () => {
       cancelAnimationFrame(queued);
       element.removeEventListener('scroll', onScroll);
+      element.removeEventListener('wheel', release);
+      element.removeEventListener('touchstart', release);
+      element.removeEventListener('pointerdown', release);
+      element.removeEventListener('keydown', release);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
@@ -362,6 +399,9 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     if (!heading) {
       return;
     }
+
+    chosen.current = slug;
+    setActiveHeading(slug);
 
     heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
     // Moving the page is only half of following a link. The focus has to go

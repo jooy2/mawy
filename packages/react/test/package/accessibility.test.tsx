@@ -98,7 +98,7 @@ describe('the viewer', () => {
   it('has nothing to answer for with the outline open', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} toolbar={['outline']} />);
 
-    await screen.getByRole('button', { name: 'Outline' }).click();
+    await screen.getByRole('button', { name: 'Contents' }).click();
     // Asserted before the audit, because an audit of a panel that never opened
     // is an audit of nothing that passes for the wrong reason.
     await expect.element(screen.getByRole('button', { name: 'Second' })).toBeInTheDocument();

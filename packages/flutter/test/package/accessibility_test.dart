@@ -72,7 +72,7 @@ void main() {
     expect(labels, contains('Typeface'));
     expect(labels, contains('Text size'));
     expect(labels, contains('Theme'));
-    expect(labels, contains('Outline'));
+    expect(labels, contains('Contents'));
     expect(labels, contains('Copy the Markdown'));
     expect(labels, contains('Document'));
 
@@ -87,12 +87,12 @@ void main() {
     await tester.pumpWidget(host(const MawyViewer(value: sample)));
 
     expect(
-      tester.getSemantics(find.bySemanticsLabel('Outline')),
+      tester.getSemantics(find.bySemanticsLabel('Contents')),
       // The tap action is the half that matters: a button a screen reader
       // cannot activate is a picture of a button. Focusable and with a focus
       // action for the same reason — the toolbar is somewhere a keyboard goes.
       matchesSemantics(
-        label: 'Outline',
+        label: 'Contents',
         isButton: true,
         hasToggledState: true,
         hasTapAction: true,
@@ -113,7 +113,7 @@ void main() {
 
     await tester.pumpWidget(host(const MawyViewer(value: chapters)));
 
-    await tester.tap(find.bySemanticsLabel('Outline'));
+    await tester.tap(find.bySemanticsLabel('Contents'));
     await tester.pumpAndSettle();
 
     expect(
@@ -245,7 +245,7 @@ void main() {
     ) async {
       await tester.pumpWidget(host(const MawyViewer(value: chapters)));
 
-      await tester.tap(find.bySemanticsLabel('Outline'));
+      await tester.tap(find.bySemanticsLabel('Contents'));
       await tester.pumpAndSettle();
 
       // Not the toolbar's arrangement: an entry is a tab stop of its own, the
@@ -279,7 +279,7 @@ void main() {
     testWidgets('presses a button with Enter and with the space bar', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: sample)));
 
-      nodeFor(tester, 'Outline').requestFocus();
+      nodeFor(tester, 'Contents').requestFocus();
       await tester.pump();
 
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);

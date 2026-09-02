@@ -179,6 +179,16 @@
 
   The find bar and the status bar were the same shape of thing and are fixed with it. Chrome is not what a layout should take its room from.
 
+- **The entry pressed in the headings panel is the one that stays marked.** Following an entry is a smooth scroll and a smooth scroll passes over every heading between here and there, so the mark walked down the panel with it and settled on whichever heading was at the top when it stopped. That is not always the one that was pressed: the last heading of a document cannot reach the top of a box taller than what is under it, and a short section under a long one is passed straight through.
+
+  What was pressed is not in doubt, so it is no longer measured. The measuring starts again at the next wheel, touch, key or press inside the document — the reader saying they have gone somewhere of their own — and a wheel over the panel is not one of those, because reading the list of headings is not leaving the one you chose.
+
+- **The mark beside the current heading is a rule and not a bracket.** It was an inset shadow, which follows the corner radius the focus ring needs and turns two pixels of rule into three sides of a box. Its own element now, so the radius stays where it is useful.
+
+### Changed
+
+- **The headings panel is called "Contents".** "Outline" is what the thing is to whoever wrote it and not what a reader is looking for: a list of a document's headings, in order, to jump from. The Korean has always said 목차, which is this word. `'outline'` is still the name of the toolbar item and the class on the panel, because those are an application's API and renaming them would cost every consumer a line to save this package a word.
+
 ## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

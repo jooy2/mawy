@@ -791,7 +791,7 @@ describe('the outline', () => {
   it('lists the headings and jumps to one', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} toolbar={['outline']} />);
 
-    await screen.getByRole('button', { name: 'Outline' }).click();
+    await screen.getByRole('button', { name: 'Contents' }).click();
 
     const link = screen.getByRole('button', { name: 'Second' });
     await expect.element(link).toBeInTheDocument();
@@ -804,8 +804,42 @@ describe('the outline', () => {
   it('says so when there is nothing to list', async () => {
     const screen = await render(<MawyViewer value="just a paragraph" toolbar={['outline']} />);
 
-    await screen.getByRole('button', { name: 'Outline' }).click();
+    await screen.getByRole('button', { name: 'Contents' }).click();
 
     await expect.element(screen.getByText('This document has no headings.')).toBeInTheDocument();
+  });
+
+  it('marks the entry that was pressed, and not whatever the scroll passed', async () => {
+    const document_ = `# One\n\n${'Words. '.repeat(200)}\n\n## Two\n\nMore.\n\n## Three\n\nLast.`;
+    const screen = await render(
+      <MawyViewer value={document_} toolbar={['outline']} style={{ height: '20rem' }} />
+    );
+
+    await screen.getByRole('button', { name: 'Contents' }).click();
+    await screen.getByRole('button', { name: 'Three' }).click();
+
+    const scroller = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+    const marked = () => screen.container.querySelector('[aria-current="location"]')?.textContent;
+    // The measuring is one frame behind a scroll, so a check that has not waited
+    // for it is a check that passes either way.
+    const settled = () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+
+    // Where the scroll is on the way to the heading, and where the last heading
+    // of a document leaves it, are both somewhere else. What was pressed is not
+    // measured, so neither of those can take the mark off it.
+    scroller.scrollTop = 0;
+    scroller.dispatchEvent(new Event('scroll'));
+    await settled();
+
+    expect(marked()).toBe('Three');
+
+    // Until the reader goes somewhere of their own.
+    scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true }));
+    scroller.dispatchEvent(new Event('scroll'));
+
+    await vi.waitFor(() => expect(marked()).toBe('One'));
   });
 });
