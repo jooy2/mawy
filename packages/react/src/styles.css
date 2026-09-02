@@ -1682,10 +1682,15 @@
   color: var(--mawy-caution);
 }
 
+/* The line height is written down rather than inherited, and that is the whole
+ * of what makes this bar the height it is: `.mawy-root` sets 1.5 for prose, and
+ * a strip of counts under an editor is not prose. It is the number the Flutter
+ * package's row is drawn at, so the two bars are one bar. */
 .mawy-root .mawy-status {
   display: flex;
   flex: none;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px 14px;
   margin: 0;
   padding: 6px 12px;
@@ -1693,6 +1698,7 @@
   background: var(--mawy-chrome);
   color: var(--mawy-fg-subtle);
   font-size: 12px;
+  line-height: 1.35;
   font-variant-numeric: tabular-nums;
 }
 

@@ -181,6 +181,8 @@
 
 - **The headings panel is called "Contents".** "Outline" is what the thing is to whoever wrote it and not what a reader is looking for: a list of a document's headings, in order, to jump from. The Korean has always said 목차, which is this word. `'outline'` is still the name of the toolbar item and the class on the panel, because those are an application's API and renaming them would cost every consumer a line to save this package a word.
 
+- **The status bar is the height the Flutter package's is.** It was two pixels taller, and for a reason worth writing down: `.mawy-root` sets a line height of 1.5 because a document is prose, and a strip of counts under an editor is not prose. The number is written down on the bar now rather than inherited, and it is the number the other package's row is drawn at.
+
 ### Fixed
 
 - **A file dropped on the editor no longer takes the page away.** A dropped file is an image and never a document, which is the rule and stays the rule — but a file the editor would not take was left to the browser, and a browser given a file it was not stopped from taking opens it as a page. The document, the undo history and the caret went with the tab, which is the exact loss the rule exists to prevent.

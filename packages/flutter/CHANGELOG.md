@@ -196,6 +196,8 @@
 
 - **A table is as wide as what holds it, and no wider unless its columns need it.** It was laid out against the width of the _window_ — a number a renderer drawing into a pane has no business reading — so a table in one pane of `split` was half a screen too wide and scrolled sideways whatever was in it. `width: 100%` inside an `overflow-x: auto` is what the stylesheet says, and it is what this says now.
 
+- **Every cell of the status bar sits on the same line.** A line box is as tall as what is on it, so the size — which is never anything but digits and a unit — was drawn a little off the line the rest of the row was on, and further off in Korean, where every other cell has a Hangul word in it. The row is centred and every cell is strutted to one height.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

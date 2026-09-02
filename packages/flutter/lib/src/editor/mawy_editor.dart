@@ -1185,13 +1185,21 @@ class _Status extends StatelessWidget {
         child: Wrap(
           spacing: 14,
           runSpacing: 4,
+          // Down the middle of the row, and every cell the same height as every
+          // other. A cell of ASCII and a cell with a Korean word in it are two
+          // different heights otherwise, because a line box is as tall as what
+          // is on it — which is what left the size sitting off the line the rest
+          // of the row is on.
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
             for (final String cell in cells)
               Text(
                 cell,
+                strutStyle: const StrutStyle(fontSize: 12, height: 1.35, forceStrutHeight: true),
                 style: TextStyle(
                   color: tokens.foregroundSubtle,
                   fontSize: 12,
+                  height: 1.35,
                   fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
                 ),
               ),
