@@ -208,6 +208,8 @@
 
 - **The leading is split evenly, which is what a browser does with `line-height`.** Flutter's default divides it in proportion to the font's own ascent and descent, so where a baseline sits inside a line depends on which font drew that line — and a document is two fonts the moment it has Hangul and Latin in it. That is what left the size, the one cell of the status bar with no Hangul in it, sitting off the line the rest of the row was on. It is the browser's half-leading now, in the status bar and in every paragraph.
 
+- **A selection in the source is a run of text and not a row of blocks.** Flutter fits a highlight box to each run's own glyphs by default, so a line of Hangul and a line of Latin were highlighted at two different heights with a gap left between the lines. `BoxHeightStyle.max` is the browser's answer, and it is a knob a text field has. The drawn document has no such knob — Flutter paints a selection there itself, with the tight boxes hardcoded — so the gaps between lines are still there when a _document_ is selected rather than the source.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

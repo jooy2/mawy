@@ -9,6 +9,8 @@
 /// `highlightMarkdown`, diffed between the two by `tool/parity.dart`.
 library;
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -270,6 +272,13 @@ class _MawySourceFieldState extends State<MawySourceField>
                   expands: true,
                   textAlign: TextAlign.start,
                   scrollPadding: const EdgeInsets.all(24),
+                  // A selection is a run of text and not a row of blocks. The
+                  // default fits a box to each run's own glyphs, so a line of
+                  // Hangul and a line of Latin are highlighted at two different
+                  // heights with a gap left between the lines. This is the
+                  // browser's answer, and it is a knob a text field has.
+                  selectionHeightStyle: ui.BoxHeightStyle.max,
+                  selectionWidthStyle: ui.BoxWidthStyle.max,
                   // The detector above reads the pointer. Two things reading
                   // one gesture is a caret that jumps to where a selection
                   // was meant to start.

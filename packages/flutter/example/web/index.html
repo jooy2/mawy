@@ -18,7 +18,18 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="The Mawy gallery.">
+
+  <!--
+    Where the glyphs this app does not carry come from.
+
+    A Flutter web build ships no font that covers Hangul: the engine draws the
+    notdef box, notices, and fetches a face that does — which is the flash of
+    boxes on the first Korean document of a session. The fetch cannot be
+    avoided from here, but the connection it needs can be opened before the
+    engine asks for it.
+  -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
