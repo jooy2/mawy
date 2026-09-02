@@ -83,6 +83,12 @@ A file larger than five megabytes is refused rather than read. That is about a m
 
 :::
 
+::: fw flutter
+
+**The document is text a reader can take.** Drag across it and it selects, and `Ctrl`/`Cmd`+`C` copies what was taken. That is worth saying out loud here because it is not free: a document drawn as widgets is a page nothing selects unless it is put inside a region that says so, and drawing it as widgets is what makes the safe default free in the first place. There are no handles and no context menu — both of those are Material's or Cupertino's, and this package draws its own everything else — so the keys are written out for the same reason `Enter` and the space bar are.
+
+:::
+
 ## What it reads
 
 CommonMark, and GitHub's additions on top of it:

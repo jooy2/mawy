@@ -184,6 +184,13 @@ class _MawyViewerState extends State<MawyViewer> {
   late final ScrollController _scroller = widget.scrollController ?? ScrollController();
   final Map<String, GlobalKey> _headings = <String, GlobalKey>{};
 
+  /// Where the focus is while a selection is being made in the document.
+  ///
+  /// A [SelectableRegion] takes the focus when a drag starts in it, and a node
+  /// of its own is what keeps that from being the same node a heading anchor
+  /// uses. It is not a tab stop: reading is not a control.
+  final FocusNode _selection = FocusNode(debugLabel: 'MawyViewer selection', skipTraversal: true);
+
   /// Somewhere for the focus to land on each heading, by slug.
   ///
   /// Not a tab stop — `skipTraversal`, which is the web's `tabIndex = -1` said
@@ -212,6 +219,8 @@ class _MawyViewerState extends State<MawyViewer> {
     for (final FocusNode anchor in _anchors.values) {
       anchor.dispose();
     }
+
+    _selection.dispose();
 
     if (widget.scrollController == null) {
       _scroller.dispose();
@@ -402,15 +411,36 @@ class _MawyViewerState extends State<MawyViewer> {
                     child: Semantics(
                       label: strings.document,
                       container: true,
-                      child: SingleChildScrollView(
-                        controller: _scroller,
-                        padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: measure ?? double.infinity),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[..._withAnchors(document, render), ?footnotes],
+                      child: Shortcuts(
+                        // What copies a selection. A browser does this without
+                        // being asked and here only a `WidgetsApp` does, which
+                        // this package does not require — the same reason
+                        // `mawyActivate` writes out Enter and the space bar.
+                        shortcuts: const <ShortcutActivator, Intent>{
+                          SingleActivator(LogicalKeyboardKey.keyC, control: true):
+                              CopySelectionTextIntent.copy,
+                          SingleActivator(LogicalKeyboardKey.keyC, meta: true):
+                              CopySelectionTextIntent.copy,
+                        },
+                        child: SelectableRegion(
+                          focusNode: _selection,
+                          // No handles and no context menu: both of those are
+                          // Material's or Cupertino's, and a package that draws
+                          // its own everything else should not pull in a
+                          // toolbar it did not design. Dragging selects, a
+                          // double tap takes the word, and the keys above copy.
+                          selectionControls: emptyTextSelectionControls,
+                          child: SingleChildScrollView(
+                            controller: _scroller,
+                            padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(maxWidth: measure ?? double.infinity),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[..._withAnchors(document, render), ?footnotes],
+                                ),
+                              ),
                             ),
                           ),
                         ),

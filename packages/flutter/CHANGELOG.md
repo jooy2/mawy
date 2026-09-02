@@ -132,6 +132,10 @@
 
 - **`MawyDirective`, `MawyDirectiveBuilder` and `MawyDirectiveKind`**, exported from `package:mawy/mawy.dart` like the rest of the vocabulary.
 
+- **The document is text a reader can select and copy.** Nothing in one was selectable, in the viewer and in the editor's preview alike — dragging across a paragraph took nothing and there was no way to get a sentence out of a document but to retype it. That is the cost of drawing a document as widgets rather than as markup, which is also what makes the safe default free: a page of widgets selects nothing unless it is put inside a region that says so.
+
+  Dragging selects, a double tap takes the word under it, and `Ctrl`/`Cmd`+`C` copies. No handles and no context menu — both of those are Material's or Cupertino's, and a package that draws its own everything else should not pull in a toolbar it did not design — so the copy keys are written out here for the same reason `Enter` and the space bar are.
+
 ### Changed
 
 - **An outline entry says its heading once.** The panel named each entry after the heading it points at and then drew that heading inside it, and a screen reader handed both read the words out and read them out again — `Second, Second, button`. The drawn words are the drawing now, and the name is the name. The React package's entry is a `<button>` with the heading inside it and has always said it once, which is what makes this a difference between the two rather than a preference.

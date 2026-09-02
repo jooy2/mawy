@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
@@ -233,6 +235,64 @@ void main() {
 
       expect(reported?.fontSize, 17);
       expect(styleOf(tester, 'A paragraph with ')?.fontSize, 17);
+    });
+  });
+
+  group('selecting', () {
+    testWidgets('a reader can drag across the document and copy what they took', (
+      WidgetTester tester,
+    ) async {
+      final List<String> copied = <String>[];
+
+      // Drawing a document as widgets is what makes the safe default free, and
+      // the cost of it is that nothing in one can be selected unless it is put
+      // inside a region that says so. A page of prose nobody can copy a
+      // sentence out of is a page not doing the reading half of its job.
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
+        MethodCall call,
+      ) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map<Object?, Object?>)['text']! as String);
+        }
+
+        return null;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await tester.pumpWidget(host(const MawyViewer(value: sample)));
+
+      final Offset from = tester.getTopLeft(find.text('Second')) + const Offset(2, 8);
+      // A mouse, because that is the gesture this is about: a drag from a
+      // finger is a scroll until a long press says otherwise, and a reader
+      // dragging across a paragraph to copy it has a pointer in their hand.
+      final TestGesture gesture = await tester.startGesture(from, kind: PointerDeviceKind.mouse);
+
+      addTearDown(gesture.removePointer);
+      await tester.pump();
+      await gesture.moveTo(from + const Offset(48, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+
+      // The keys are written out here for the reason `mawyActivate` writes out
+      // Enter and the space bar: a browser copies a selection without being
+      // asked and here only a `WidgetsApp` does, which this package does not
+      // require.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+
+      // How many characters forty-eight pixels is depends on the test font, so
+      // what is asserted is that the drag took the start of that heading rather
+      // than exactly how much of it.
+      expect(copied.single, isNotEmpty);
+      expect('Second', startsWith(copied.single));
     });
   });
 
