@@ -16,6 +16,7 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -527,6 +528,7 @@ class MawyToolbarMenu extends StatefulWidget {
 
 class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
   final LayerLink _link = LayerLink();
+  final GlobalKey _panelBox = GlobalKey(debugLabel: 'MawyToolbarMenu panel');
 
   /// Which edge of the button the panel is lined up with.
   ///
@@ -551,8 +553,48 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
   }
 
   void _remove() {
-    _entry?.remove();
+    if (_entry == null) {
+      return;
+    }
+
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_anywhere);
+    _entry!.remove();
     _entry = null;
+  }
+
+  /// A pointer that went down somewhere, wherever that was.
+  ///
+  /// This is the `mousedown` on the document that the React package's menu
+  /// listens for, listened for the same way and for the same reason: a panel
+  /// put up over a page has to hear a press it did not receive. A catcher
+  /// inside the overlay is the obvious alternative and it is worse — either it
+  /// takes the press, and the next control needs a second one, or it is
+  /// translucent and has to reach the top of a hit test that runs through an
+  /// overlay, a follower and a stack before it.
+  ///
+  /// Its own button is left out, because the button is about to toggle the
+  /// panel shut by itself; closing here as well would be a close and an open.
+  void _anywhere(PointerEvent event) {
+    if (event is! PointerDownEvent || _entry == null) {
+      return;
+    }
+
+    if (_inside(_panelBox.currentContext, event.position) || _onButton(event.position)) {
+      return;
+    }
+
+    _close();
+  }
+
+  /// Whether a global position is inside whatever [target] is drawn as.
+  static bool _inside(BuildContext? target, Offset global) {
+    final RenderObject? object = target?.findRenderObject();
+
+    if (object is! RenderBox || !object.attached || !object.hasSize) {
+      return false;
+    }
+
+    return (Offset.zero & object.size).contains(object.globalToLocal(global));
   }
 
   /// Shut, with the focus put back where it was before the panel had it.
@@ -582,15 +624,7 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
   }
 
   /// Whether a pointer went down on the button this panel belongs to.
-  bool _onButton(Offset global) {
-    final RenderObject? object = context.findRenderObject();
-
-    if (object is! RenderBox || !object.attached || !object.hasSize) {
-      return false;
-    }
-
-    return (Offset.zero & object.size).contains(object.globalToLocal(global));
-  }
+  bool _onButton(Offset global) => _inside(context, global);
 
   /// Escape shuts it, and nothing else here does.
   KeyEventResult _onKey(FocusNode _, KeyEvent event) {
@@ -629,28 +663,6 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
     _entry = OverlayEntry(
       builder: (BuildContext context) => Stack(
         children: <Widget>[
-          // A pointer anywhere else closes it, which is what a menu does and
-          // what a panel pinned to a button would otherwise not do.
-          //
-          // A `Listener` rather than a `GestureDetector`: a detector enters the
-          // gesture arena and wins the tap, so pressing a *second* menu button
-          // while this one is open shut this panel and stopped there, and the
-          // button had to be pressed again. This hears the pointer go down and
-          // takes nothing, which is the `mousedown` on the document that the
-          // React package's menu listens for.
-          Positioned.fill(
-            child: Listener(
-              behavior: HitTestBehavior.translucent,
-              onPointerDown: (PointerDownEvent event) {
-                // Except on this menu's own button, which is about to toggle
-                // the panel shut by itself. Closing here as well would be a
-                // close and an open, and the panel would never shut.
-                if (!_onButton(event.position)) {
-                  _close();
-                }
-              },
-            ),
-          ),
           CompositedTransformFollower(
             link: _link,
             targetAnchor: _fromEnd ? Alignment.bottomRight : Alignment.bottomLeft,
@@ -662,6 +674,7 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
                 node: _panel,
                 onKeyEvent: _onKey,
                 child: Container(
+                  key: _panelBox,
                   constraints: const BoxConstraints(minWidth: _panelLeast, maxWidth: _panelMost),
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
@@ -686,6 +699,7 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
     );
 
     overlay.insert(_entry!);
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_anywhere);
     setState(() {});
   }
 

@@ -198,6 +198,10 @@
 
 - **Every cell of the status bar sits on the same line.** A line box is as tall as what is on it, so the size — which is never anything but digits and a unit — was drawn a little off the line the rest of the row was on, and further off in Korean, where every other cell has a Hangul word in it. The row is centred and every cell is strutted to one height.
 
+- **A menu shuts when a pointer goes down outside it — including on another menu's button.** A panel put up over a page has to hear a press it did not receive, and the catcher inside the overlay that was doing that only worked some of the time: a `GestureDetector` there takes the press, so the next control needs a second one, and a translucent `Listener` has to survive a hit test that runs through an overlay, a follower and a stack before it reaches the bottom. In a release web build it did not.
+
+  It is a route on the pointer router now, which is the `mousedown` on the document the React package's menu listens for, said in Flutter. Its own button is left out, because that button is about to toggle the panel shut by itself.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

@@ -385,6 +385,44 @@ void main() {
       expect(find.text('Back to the defaults'), findsOneWidget);
     });
 
+    testWidgets('shuts a menu when a pointer goes down somewhere else', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: sample)));
+
+      await tester.tap(toolbarButton('Text size'));
+      await tester.pump();
+
+      expect(find.text('Back to the defaults'), findsOneWidget);
+
+      await tester.tapAt(const Offset(300, 400));
+      await tester.pump();
+
+      expect(find.text('Back to the defaults'), findsNothing);
+    });
+
+    testWidgets('opens the next menu on the first press, not the second', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(MawyViewer(value: sample, onColorSchemeChange: (MawyColorScheme _) {})),
+      );
+
+      await tester.tap(toolbarButton('Text size'));
+      await tester.pump();
+
+      expect(find.text('Back to the defaults'), findsOneWidget);
+
+      await tester.tap(toolbarButton('Theme'));
+      await tester.pump();
+
+      // The one that was open is shut and the one that was pressed is open, on
+      // one press. A tap-catcher that entered the gesture arena took the press
+      // for itself and stopped at the shutting.
+      expect(find.text('Back to the defaults'), findsNothing);
+      expect(find.text('Match the system'), findsOneWidget);
+    });
+
     testWidgets('opens the outline, and lists the headings', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: sample)));
 

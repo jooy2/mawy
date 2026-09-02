@@ -503,6 +503,33 @@ void main() {
       expect(styleOf(tester, 'link')?.color, mine);
     });
 
+    testWidgets('opens the next menu on the first press, not the second', (
+      WidgetTester tester,
+    ) async {
+      // No overlay above it, which is the tree the gallery is — and so the one
+      // where the editor brings an overlay of its own.
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: MediaQuery(
+            data: const MediaQueryData(size: Size(800, 600)),
+            child: MawyEditor(defaultValue: 'Words.', onColorSchemeChange: (MawyColorScheme _) {}),
+          ),
+        ),
+      );
+
+      await tester.tap(toolbarButton('Heading'));
+      await tester.pump();
+
+      expect(find.text('Body text'), findsOneWidget);
+
+      await tester.tap(toolbarButton('Theme'));
+      await tester.pump();
+
+      expect(find.text('Body text'), findsNothing);
+      expect(find.text('Match the system'), findsOneWidget);
+    });
+
     testWidgets('is chosen from a menu rather than cycled through', (WidgetTester tester) async {
       MawyColorScheme? chosen;
 
