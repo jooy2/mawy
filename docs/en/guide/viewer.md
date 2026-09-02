@@ -79,6 +79,8 @@ Which half you get follows from which props you pass:
 
 A file larger than five megabytes is refused rather than read. That is about a million words of Markdown, and the failure it prevents is a browser tab that stops answering because somebody dropped a database dump on it.
 
+**A viewer that cannot be given a document does not offer to open one.** `value` with no `onValueChange` is an application saying the document is its own, and a file chosen here would have nothing to become — so the empty state says there is nothing here yet, the button under it is not drawn, and the toolbar's `open` is disabled. A control that does nothing when it is pressed is worse than no control.
+
 :::
 
 ## What it reads

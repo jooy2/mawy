@@ -185,6 +185,14 @@
 
 - **The mark beside the current heading is a rule and not a bracket.** It was an inset shadow, which follows the corner radius the focus ring needs and turns two pixels of rule into three sides of a box. Its own element now, so the radius stays where it is useful.
 
+- **A file dropped on the editor no longer takes the page away.** A dropped file is an image and never a document, which is the rule and stays the rule — but a file the editor would not take was left to the browser, and a browser given a file it was not stopped from taking opens it as a page. The document, the undo history and the caret went with the tab, which is the exact loss the rule exists to prevent.
+
+  Any file dragged over the editor is the editor's now. An image lands where the pointer let go of it and everything else is refused with a line under the document saying so, and saying that `open` is the control that does what was being asked for. A run of text dragged in from another window is not a file, is not claimed, and is still the surface's own business.
+
+- **A viewer that cannot be given a document does not offer to open one.** `value` with no `onValueChange` is an application saying the document is its own, and a file chosen there has nothing to become — so the picker was a button that did nothing, and it was the one the editor's preview drew over an empty document: an "Open a Markdown file" panel inside an editor, with a file picker that could not open a file.
+
+  The empty state says there is nothing here yet, the button under it is not drawn, the toolbar's `open` is disabled, and a drop is not claimed. `strings.emptyNothing` is new, and so is `strings.dropNotDocument` for the line the editor writes.
+
 ### Changed
 
 - **The headings panel is called "Contents".** "Outline" is what the thing is to whoever wrote it and not what a reader is looking for: a list of a document's headings, in order, to jump from. The Korean has always said 목차, which is this word. `'outline'` is still the name of the toolbar item and the class on the panel, because those are an application's API and renaming them would cost every consumer a line to save this package a word.

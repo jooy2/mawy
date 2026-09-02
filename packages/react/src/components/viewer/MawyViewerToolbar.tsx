@@ -99,7 +99,8 @@ export interface MawyViewerToolbarProps {
   onColorSchemeChange: (next: MawyColorScheme) => void;
   outlineOpen: boolean;
   onOutlineToggle: () => void;
-  onOpenFile: () => void;
+  /** Absent when a file opened here would go nowhere; the button goes quiet. */
+  onOpenFile?: () => void;
   onCopy: () => void;
   copyState: CopyState;
   /** Shown at the head of the toolbar once a file has been opened. */
@@ -340,6 +341,7 @@ export function MawyViewerToolbar({
             key={key}
             label={strings.open}
             icon={<OpenFileIcon className="mawy-icon" aria-hidden="true" />}
+            disabled={!onOpenFile}
             data-mawy-toolbar-item=""
             onClick={onOpenFile}
             {...itemProps(order[key])}

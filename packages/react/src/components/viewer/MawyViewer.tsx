@@ -194,9 +194,19 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const gfm = parse?.gfm ?? true;
   const breaks = parse?.breaks ?? false;
   const definitionLists = parse?.definitionLists ?? true;
-  const droppable = fileDrop ?? value === undefined;
 
   const controlled = value !== undefined;
+  /**
+   * Whether a file opened here would go anywhere.
+   *
+   * An application that passes `value` owns the document, and without
+   * `onValueChange` there is nothing for a chosen file to become. Every
+   * affordance that offers one is off in that case rather than present and
+   * inert — which is what the editor's preview was drawing over an empty
+   * document, a file picker that could not open a file.
+   */
+  const takesFile = !controlled || onValueChange !== undefined;
+  const droppable = (fileDrop ?? !controlled) && takesFile;
   const [held, setHeld] = React.useState(defaultValue ?? '');
   const text = controlled ? value : held;
 
@@ -492,7 +502,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
           onColorSchemeChange={setScheme}
           outlineOpen={outlineOpen}
           onOutlineToggle={() => setOutlineOpen((was) => !was)}
-          onOpenFile={() => picker.current?.click()}
+          onOpenFile={takesFile ? () => picker.current?.click() : undefined}
           onCopy={() => copy(text)}
           copyState={copyState}
           fileName={fileName}
@@ -522,7 +532,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
                 strings={strings}
                 droppable={droppable}
                 error={readError}
-                onOpenFile={() => picker.current?.click()}
+                onOpenFile={takesFile ? () => picker.current?.click() : undefined}
               />
             ))
           )}

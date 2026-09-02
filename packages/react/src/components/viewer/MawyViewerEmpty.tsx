@@ -9,7 +9,15 @@ export interface MawyViewerEmptyProps {
   /** Whether the viewer accepts a dropped file, which changes what it says. */
   droppable: boolean;
   error: string | null;
-  onOpenFile: () => void;
+  /**
+   * Opens the file picker.
+   *
+   * Absent when a file opened here would go nowhere — an application that
+   * passes `value` and no `onValueChange` owns the document, and there is
+   * nothing for a chosen file to become. The picker is not offered then, and
+   * neither is the sentence inviting one.
+   */
+  onOpenFile?: () => void;
 }
 
 /**
@@ -19,6 +27,11 @@ export interface MawyViewerEmptyProps {
  * to open a file, so the empty state is the control. The same `<input>` the
  * toolbar's Open button uses is behind the button here — one file picker for
  * the component rather than one per affordance.
+ *
+ * A viewer that cannot be given a file says the other true thing instead, which
+ * is that there is nothing here yet. A button that does nothing when it is
+ * pressed is worse than no button, and the editor's preview of an empty
+ * document used to draw one.
  */
 export function MawyViewerEmpty({
   strings,
@@ -26,6 +39,17 @@ export function MawyViewerEmpty({
   error,
   onOpenFile
 }: MawyViewerEmptyProps): React.ReactElement {
+  if (!onOpenFile) {
+    return (
+      <div className="mawy-empty">
+        <div className="mawy-empty-mark" aria-hidden="true">
+          <DocumentIcon />
+        </div>
+        <p className="mawy-empty-hint">{strings.emptyNothing}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mawy-empty" data-mawy-droppable={droppable ? 'true' : undefined}>
       <div className="mawy-empty-mark" aria-hidden="true">

@@ -248,7 +248,7 @@ Three ways in, and they are three because an image can arrive already having a U
 
 Answer with the URL to write, or with `{ url, alt, title }` to say what goes around it — the file's own name, without its extension, is the description otherwise. Throw, or answer with nothing, and the editor says the image could not be added and writes nothing at all.
 
-**Without `onUploadImage`, a dropped file does nothing.** Not refused, not half-inserted: the drop is simply not one the editor is taking. That is the honest default rather than a gap — the alternative is quietly turning a two-megabyte screenshot into a `data:` URI inside somebody's document.
+**Without `onUploadImage`, a dropped file is refused.** Not half-inserted, and not handed back to the browser either: the editor takes the drop, writes nothing, and says so on the line under the document. That is the honest default rather than a gap — the alternative is quietly turning a two-megabyte screenshot into a `data:` URI inside somebody's document.
 
 Where the image lands is where it was put: a drop goes to the point the pointer let go of it, and a paste goes to the caret. Several files dropped together are one upload after another and then **one** edit, so `Mod`+`Z` takes back the thing you did rather than the last file of it.
 
@@ -283,6 +283,8 @@ The name is the file's own, when one was opened. Otherwise it is **the document'
 `open` has no shortcut on purpose. The browser's own `Mod`+`O` is a reasonable thing to leave alone, and opening a file is a rare and deliberate act rather than one done mid-flow.
 
 **A file dropped on the editor is an image, never a document.** The drop is already the way an image gets in, and that is the smaller half of it: replacing a document somebody has been writing because a file landed on it is how work is lost. The viewer opens what is dropped on it because a viewer has nothing to lose; an editor asks to be asked.
+
+It is still the editor's drop. **A file it will not take is refused rather than left to the browser**, which opens one as a page — and the document, the undo history and the caret go with the tab. The line under the document says what happened and which control does what was being asked for.
 
 ::: fw flutter
 

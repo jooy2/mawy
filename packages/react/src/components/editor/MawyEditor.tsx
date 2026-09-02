@@ -738,27 +738,47 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [showDocument, text, selection.start]
   );
 
-  const carriesImage = (event: React.DragEvent) =>
-    Boolean(upload.current) && editable && [...event.dataTransfer.types].includes('Files');
+  /**
+   * A file dragged over the editor is the editor's, whatever is in it.
+   *
+   * Adding an image where it lands is the only thing a drop here does, and that
+   * is deliberate: replacing a document somebody has been writing because a
+   * file landed on it is how work is lost, and opening one is a button, which
+   * is a thing done on purpose.
+   *
+   * Every other file is refused *by this component* rather than handed back.
+   * A browser given a file it was not stopped from taking opens it as a page,
+   * and the document, the undo history and the caret go with the tab — which is
+   * what a `.md` dropped on an editor with no `onUploadImage` used to do. A run
+   * of text dragged in from another window is not a file, is not claimed, and
+   * is still the surface's own business.
+   */
+  const carriesFile = (event: React.DragEvent) => [...event.dataTransfer.types].includes('Files');
+
+  const takesImage = () => Boolean(upload.current) && editable;
 
   const onDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!carriesImage(event)) {
+    if (!carriesFile(event)) {
       return;
     }
 
     event.preventDefault();
     depth.current += 1;
-    setDragging(true);
+
+    // The veil says "drop to add", so it is only shown where that is true.
+    if (takesImage()) {
+      setDragging(true);
+    }
   };
 
   const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!carriesImage(event)) {
+    if (!carriesFile(event)) {
       return;
     }
 
     // Without this the browser opens the file itself, replacing the page.
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
+    event.dataTransfer.dropEffect = takesImage() ? 'copy' : 'none';
   };
 
   const onDragLeave = () => {
@@ -772,25 +792,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   };
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!carriesImage(event)) {
-      return;
-    }
-
-    const files = imageFilesIn(event.dataTransfer);
-    const at = dropPoint(event);
-
-    depth.current = 0;
-    setDragging(false);
-
-    // Only a drop that is being taken is refused to the browser. Everything
-    // else — a run of text dragged from another window — is still the surface's
-    // own business, and it has rules for that already.
-    if (!files.length) {
+    if (!carriesFile(event)) {
       return;
     }
 
     event.preventDefault();
-    void addImages(files, at);
+    depth.current = 0;
+    setDragging(false);
+
+    const files = takesImage() ? imageFilesIn(event.dataTransfer) : [];
+
+    if (!files.length) {
+      // Said rather than ignored: somebody who drops a document on an editor
+      // is asking for something, and there is a control that does it.
+      setNote({ text: strings.dropNotDocument, failed: true });
+
+      return;
+    }
+
+    void addImages(files, dropPoint(event));
   };
 
   /**
@@ -1154,9 +1174,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   /**
    * A file dropped on the editor is an image, never a document.
    *
-   * The drop is already claimed, and that is the smaller half of it: replacing
-   * a document somebody has been writing because a file landed on it is how
-   * work is lost. Opening is a button, which is a thing done on purpose.
+   * Replacing a document somebody has been writing because a file landed on it
+   * is how work is lost. Opening is a button, which is a thing done on purpose
+   * — and a drop that is not an image is refused rather than left to the
+   * browser, which would open it as a page and take the document with it. See
+   * `carriesFile` above.
    */
   const openFile = React.useCallback(() => picker.current?.click(), []);
 

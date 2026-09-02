@@ -200,6 +200,18 @@ describe('with no document', () => {
 
     await expect.element(screen.getByText('Nothing here')).toBeInTheDocument();
   });
+
+  it('offers nothing to open when a file opened here would go nowhere', async () => {
+    const screen = await render(<MawyViewer value="" toolbar={['open']} />);
+
+    // The document is the application's and there is no `onValueChange`, so a
+    // chosen file has nothing to become. A control that cannot do what it says
+    // is worse than no control — this is what the editor's preview of an empty
+    // document was drawing.
+    await expect.element(screen.getByText('Nothing to show yet.')).toBeInTheDocument();
+    expect(screen.container.querySelector('.mawy-empty-action')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open a file' }).element()).toBeDisabled();
+  });
 });
 
 describe('the toolbar', () => {

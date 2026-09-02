@@ -1994,7 +1994,7 @@ describe('images', () => {
     );
   });
 
-  it('does nothing at all with a file when nobody said where an image goes', async () => {
+  it('refuses a file it cannot use rather than letting the browser open it', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <MawyEditor defaultValue="Before." modes={['plain']} onChange={onChange} />
@@ -2002,10 +2002,41 @@ describe('images', () => {
 
     const event = drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
 
-    // Not even refused: Mawy has nowhere to put bytes, so the drop is not one
-    // it is taking, and the page is left to do whatever it was going to.
-    expect(event.defaultPrevented).toBe(false);
+    // Nowhere to put the bytes, and still the editor's drop: a browser given a
+    // file it was not stopped from taking opens it as a page, and the document
+    // goes with the tab.
+    expect(event.defaultPrevented).toBe(true);
     expect(onChange).not.toHaveBeenCalled();
+
+    await expect
+      .element(
+        screen.getByText('A dropped file does not replace the document — use Open for that.')
+      )
+      .toBeInTheDocument();
+  });
+
+  it('says so when the file dropped on it was a document', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onChange={onChange}
+        onUploadImage={async () => '/a.png'}
+      />
+    );
+
+    const file = new File(['# Somewhere else'], 'other.md', { type: 'text/markdown' });
+    const event = drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [file]);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
+
+    await expect
+      .element(
+        screen.getByText('A dropped file does not replace the document — use Open for that.')
+      )
+      .toBeInTheDocument();
   });
 
   it('takes a screenshot off the clipboard, on both surfaces', async () => {

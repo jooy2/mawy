@@ -43,6 +43,8 @@ export interface MawyStrings {
   emptyTitle: string;
   emptyHint: string;
   emptyAction: string;
+  /** What a viewer with no document says when it cannot be given one. */
+  emptyNothing: string;
   dropHere: string;
   readFailed: string;
   fileTooLarge: string;
@@ -113,6 +115,8 @@ export interface MawyStrings {
   saveFile: string;
   saved: string;
   dropImage: string;
+  /** Said when a file was dropped on the editor and was not an image. */
+  dropNotDocument: string;
   uploading: string;
   uploadFailed: string;
 }
@@ -147,6 +151,7 @@ const en: MawyStrings = {
   emptyTitle: 'Open a Markdown file',
   emptyHint: 'Drop a .md file here, or choose one to read.',
   emptyAction: 'Choose a file',
+  emptyNothing: 'Nothing to show yet.',
   dropHere: 'Drop to open',
   readFailed: 'That file could not be read.',
   fileTooLarge: 'That file is too large to open here.',
@@ -207,6 +212,7 @@ const en: MawyStrings = {
   saveFile: 'Save',
   saved: 'Saved as %N',
   dropImage: 'Drop to add',
+  dropNotDocument: 'A dropped file does not replace the document — use Open for that.',
   uploading: 'Adding the image…',
   uploadFailed: 'That image could not be added.'
 };
@@ -241,6 +247,7 @@ const ko: MawyStrings = {
   emptyTitle: '마크다운 파일 열기',
   emptyHint: '여기에 .md 파일을 놓거나, 읽을 파일을 고르세요.',
   emptyAction: '파일 선택',
+  emptyNothing: '아직 보여줄 내용이 없습니다.',
   dropHere: '놓으면 열립니다',
   readFailed: '파일을 읽지 못했습니다.',
   fileTooLarge: '여기서 열기에는 너무 큰 파일입니다.',
@@ -301,6 +308,7 @@ const ko: MawyStrings = {
   saveFile: '저장',
   saved: '%N(으)로 저장했습니다',
   dropImage: '놓으면 넣습니다',
+  dropNotDocument: '파일을 놓아도 문서가 바뀌지는 않습니다. 문서를 바꾸려면 열기를 쓰세요.',
   uploading: '이미지를 넣는 중…',
   uploadFailed: '이미지를 넣지 못했습니다.'
 };
