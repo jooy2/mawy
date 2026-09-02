@@ -207,6 +207,19 @@ class _MawyViewerState extends State<MawyViewer> {
   String? _active;
   String? _chosen;
 
+  /// Where a press started, and whether the link under it has been followed.
+  ///
+  /// A link inside the document is a span with a tap recognizer on it, and on a
+  /// desktop that recognizer loses: the selection around it watches the mouse
+  /// for a drag and takes the gesture before a tap can be declared. So the
+  /// press is read here as well, by a `Listener`, which is not in the gesture
+  /// arena and cannot lose it. The recognizer stays because it is what makes a
+  /// link a tappable thing to a screen reader, and what answers on a touch
+  /// screen — whichever of the two gets there first follows the link, and the
+  /// other stands down.
+  Offset? _pressed;
+  bool _followed = false;
+
   /// Where the focus is while a selection is being made in the document.
   ///
   /// A [SelectableRegion] takes the focus when a drag starts in it, and a node
@@ -378,6 +391,65 @@ class _MawyViewerState extends State<MawyViewer> {
     }
   }
 
+  /// The link a place on the screen belongs to, if it belongs to one.
+  ///
+  /// A paragraph puts the span under the pointer into the hit-test path itself
+  /// — that is how a tap ever reaches a span's recognizer — so this is the same
+  /// answer the arena would have used, read from the same place and without
+  /// having to win anything to get it.
+  TapGestureRecognizer? _linkAt(Offset global) {
+    final RenderObject? document = context.findRenderObject();
+
+    if (document is! RenderBox || !document.attached) {
+      return null;
+    }
+
+    final BoxHitTestResult hit = BoxHitTestResult();
+
+    document.hitTest(hit, position: document.globalToLocal(global));
+
+    for (final HitTestEntry<HitTestTarget> entry in hit.path) {
+      final HitTestTarget target = entry.target;
+
+      if (target is TextSpan && target.recognizer is TapGestureRecognizer) {
+        return target.recognizer! as TapGestureRecognizer;
+      }
+    }
+
+    return null;
+  }
+
+  /// A press that went down and came up on the same link follows it.
+  ///
+  /// In a microtask, because the gesture arena is swept as soon as this event
+  /// has finished being dispatched: a frame later is too late to feel like a
+  /// tap, and now is too early to know whether the recognizer won.
+  void _release(PointerUpEvent event) {
+    final Offset? from = _pressed;
+
+    _pressed = null;
+
+    if (from == null || (event.position - from).distance > 4) {
+      _followed = false;
+
+      return;
+    }
+
+    scheduleMicrotask(() {
+      if (!_followed && mounted) {
+        _linkAt(event.position)?.onTap?.call();
+      }
+
+      _followed = false;
+    });
+  }
+
+  /// What the document's links are handed, so one is never followed twice.
+  void _tapLink(String url, String? title) {
+    _followed = true;
+    widget.onLinkTap?.call(url, title);
+  }
+
   void _goTo(String slug) {
     final BuildContext? target = _headings[slug]?.currentContext;
 
@@ -447,7 +519,7 @@ class _MawyViewerState extends State<MawyViewer> {
       footnotes: <String, MdFootnoteDefinition>{
         for (final MdFootnoteDefinition footnote in document.footnotes) footnote.label: footnote,
       },
-      onLinkTap: widget.onLinkTap,
+      onLinkTap: widget.onLinkTap == null ? null : _tapLink,
       directives: widget.directives,
       highlighter: widget.highlight,
       source: widget.value,
@@ -505,7 +577,12 @@ class _MawyViewerState extends State<MawyViewer> {
                         // A wheel or a hand on the document is the reader
                         // saying they have gone somewhere of their own, and the
                         // entry they pressed stops being the answer.
-                        onPointerDown: (PointerDownEvent _) => _chosen = null,
+                        onPointerDown: (PointerDownEvent event) {
+                          _chosen = null;
+                          _pressed = event.position;
+                          _followed = false;
+                        },
+                        onPointerUp: _release,
                         onPointerSignal: (PointerSignalEvent _) => _chosen = null,
                         child: Shortcuts(
                           // What copies a selection. A browser does this without

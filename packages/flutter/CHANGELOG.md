@@ -202,6 +202,8 @@
 
   It is a route on the pointer router now, which is the `mousedown` on the document the React package's menu listens for, said in Flutter. Its own button is left out, because that button is about to toggle the panel shut by itself.
 
+- **A link is followed by a click, and not only by a tap.** The selection around the document watches the mouse for a drag, and two pixels of hand movement is a drag — so on a desktop it took the gesture before the link's own recognizer could declare a tap, and clicking a link selected a word instead of going anywhere. The press is read by a `Listener` as well now, which is not in the gesture arena and cannot lose it; the recognizer stays, because it is what makes a link tappable to a screen reader and what answers on a touch screen. Whichever of the two gets there first follows the link, and the other stands down.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.

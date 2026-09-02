@@ -14,6 +14,8 @@
 /// showing what a consumer of this package actually gets.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy_example/samples.dart';
@@ -152,18 +154,21 @@ class _GalleryAppState extends State<GalleryApp> {
   /// This is an application, so it chooses — and a gallery whose links did
   /// nothing was showing a viewer that looks broken rather than one that is
   /// waiting to be told.
-  Future<void> _open(String url, String? title) async {
+  void _open(String url, String? title) {
     final Uri? target = Uri.tryParse(url);
 
     if (target == null) {
       return;
     }
 
-    // Externally, and only where the platform says it can: `launchUrl` throws
-    // on a scheme nothing handles, and a gallery is not the place for that.
-    if (await canLaunchUrl(target)) {
-      await launchUrl(target, mode: LaunchMode.externalApplication);
-    }
+    // Launched at once rather than after asking whether it can be. On the web
+    // this is `window.open`, and a browser only allows that while it is still
+    // handling the press that asked for it — an `await canLaunchUrl(...)` first
+    // spends the press, and the tab is refused with nothing said. Whatever goes
+    // wrong is this callback's rather than the reader's.
+    unawaited(
+      launchUrl(target, mode: LaunchMode.externalApplication).catchError((Object _) => false),
+    );
   }
 
   /// Which palette the viewer is drawing in, resolved the way it resolves it.

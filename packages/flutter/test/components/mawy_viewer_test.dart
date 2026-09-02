@@ -542,6 +542,39 @@ void main() {
   });
 
   group('links', () {
+    testWidgets('is followed by a mouse press the selection took for a drag', (
+      WidgetTester tester,
+    ) async {
+      String? opened;
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: '[go](https://example.com)',
+            onLinkTap: (String url, String? _) => opened = url,
+          ),
+        ),
+      );
+
+      final Offset at = tester.getCenter(find.textContaining('go'));
+      final TestGesture gesture = await tester.startGesture(at, kind: PointerDeviceKind.mouse);
+
+      addTearDown(gesture.removePointer);
+      await tester.pump(const Duration(milliseconds: 30));
+
+      // Two pixels, which is nothing to a hand and a drag to a mouse: past the
+      // precise slop, the selection around the document declares a drag and
+      // takes the gesture, and the span's own recognizer never gets to say a
+      // tap happened. That is every click on a link on a desktop.
+      await gesture.moveTo(at + const Offset(2, 0));
+      await tester.pump(const Duration(milliseconds: 30));
+      await gesture.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(opened, 'https://example.com');
+    });
+
     testWidgets('does nothing with one until an application says what to do', (
       WidgetTester tester,
     ) async {
@@ -558,7 +591,10 @@ void main() {
         ),
       );
 
-      await tester.tap(find.textContaining('go'));
+      // With a mouse, because a mouse is what a reader on a desktop has and
+      // because the selection this document sits in watches one: a region that
+      // takes the tap for itself is a link nobody can follow.
+      await tester.tap(find.textContaining('go'), kind: PointerDeviceKind.mouse);
       await tester.pump();
 
       expect(opened, 'https://example.com');
