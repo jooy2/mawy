@@ -939,37 +939,43 @@ class _Table extends StatelessWidget {
     final TextStyle cellStyle = context.body.copyWith(fontSize: em * 0.94);
     int body = 0;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: MediaQuery.sizeOf(buildContext).width - em * 3.5),
-        child: Table(
-          border: TableBorder.all(color: tokens.border),
-          defaultColumnWidth: const IntrinsicColumnWidth(),
-          children: block.children.map((MdTableRow row) {
-            final bool striped = !row.header && body++ % 2 == 1;
+    // As wide as what holds it, and wider only where the columns need it —
+    // which is `width: 100%` inside an `overflow-x: auto`, said in Flutter. The
+    // width was the *window's* before, so a table in one pane of `split` was
+    // half a screen too wide and scrolled sideways whatever was in it.
+    return LayoutBuilder(
+      builder: (BuildContext _, BoxConstraints room) => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: room.hasBoundedWidth ? room.maxWidth : 0),
+          child: Table(
+            border: TableBorder.all(color: tokens.border),
+            defaultColumnWidth: const IntrinsicColumnWidth(),
+            children: block.children.map((MdTableRow row) {
+              final bool striped = !row.header && body++ % 2 == 1;
 
-            return TableRow(
-              decoration: BoxDecoration(
-                color: row.header
-                    ? tokens.backgroundSunken
-                    : (striped ? tokens.backgroundSunken.withValues(alpha: 0.55) : null),
-              ),
-              children: row.children.asMap().entries.map((MapEntry<int, MdTableCell> cell) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: em * 0.8, vertical: em * 0.5),
-                  child: Text.rich(
-                    renderInline(
-                      cell.value.children,
-                      context,
-                      row.header ? cellStyle.copyWith(fontWeight: FontWeight.w600) : cellStyle,
+              return TableRow(
+                decoration: BoxDecoration(
+                  color: row.header
+                      ? tokens.backgroundSunken
+                      : (striped ? tokens.backgroundSunken.withValues(alpha: 0.55) : null),
+                ),
+                children: row.children.asMap().entries.map((MapEntry<int, MdTableCell> cell) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: em * 0.8, vertical: em * 0.5),
+                    child: Text.rich(
+                      renderInline(
+                        cell.value.children,
+                        context,
+                        row.header ? cellStyle.copyWith(fontWeight: FontWeight.w600) : cellStyle,
+                      ),
+                      textAlign: _align(cell.key),
                     ),
-                    textAlign: _align(cell.key),
-                  ),
-                );
-              }).toList(),
-            );
-          }).toList(),
+                  );
+                }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );

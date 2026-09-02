@@ -186,6 +186,8 @@
 
 - **Every line of a paragraph is the same height.** A line box in Flutter is as tall as what is on it, so one line of Hangul and the next line of Latin inside a single paragraph were two different heights — which nothing showed until the document became selectable, and then a selection across a paragraph was a ragged stack of blocks with gaps in it rather than a run of text. A browser does not do that: `line-height` is the line there and a fallback font does not get a vote. A strut says the same thing here.
 
+- **A table is as wide as what holds it, and no wider unless its columns need it.** It was laid out against the width of the _window_ — a number a renderer drawing into a pane has no business reading — so a table in one pane of `split` was half a screen too wide and scrolled sideways whatever was in it. `width: 100%` inside an `overflow-x: auto` is what the stylesheet says, and it is what this says now.
+
 ## 0.1.0 — 2026-08-31
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.
