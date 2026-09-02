@@ -14,6 +14,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/markdown/highlight.dart';
 import 'package:mawy/src/theme/tokens.dart';
@@ -29,6 +30,18 @@ class MawySourceController extends TextEditingController {
   /// Whether GitHub's additions are read, which changes what is coloured.
   bool gfm = true;
 
+  /// What the find bar found. Set by the field before every build.
+  ///
+  /// Painted here rather than selected, because a field has one selection and
+  /// the find bar is holding the focus in a box of its own. Both packages draw
+  /// it the same way: every match marked at once as the query is typed, and
+  /// the one being stepped through marked more strongly, so that "next" goes
+  /// somewhere visible rather than only moving a count.
+  List<MawyMatch> matches = const <MawyMatch>[];
+
+  /// Which of [matches] is being stepped through, or `-1` for none of them.
+  int currentMatch = -1;
+
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
@@ -37,6 +50,7 @@ class MawySourceController extends TextEditingController {
   }) {
     final List<InlineSpan> spans = <InlineSpan>[];
     final List<MdHighlightedLine> lines = highlightMarkdown(text, gfm: gfm);
+    int from = 0;
 
     for (int index = 0; index < lines.length; index += 1) {
       if (index > 0) {
@@ -44,6 +58,7 @@ class MawySourceController extends TextEditingController {
       }
 
       final MdHighlightedLine line = lines[index];
+      final List<MdToken> runs = <MdToken>[];
       int at = 0;
 
       for (final MdToken token in line.tokens) {
@@ -54,26 +69,107 @@ class MawySourceController extends TextEditingController {
           continue;
         }
 
-        if (token.start > at) {
-          spans.add(TextSpan(text: line.text.substring(at, token.start)));
-        }
-
-        spans.add(
-          TextSpan(
-            text: line.text.substring(token.start, token.end),
-            style: _styleFor(token.kind, tokens),
-          ),
-        );
+        runs.add(token);
         at = token.end;
       }
 
-      if (at < line.text.length) {
-        spans.add(TextSpan(text: line.text.substring(at)));
+      final List<_Hit> hits = _hitsOn(line.text.length, from);
+
+      // The colours and the matches are two separate answers about the same
+      // characters — what the Markdown means, and what somebody is looking for
+      // — so the line is cut at the edges of both and every piece is drawn
+      // with whichever of them it falls inside.
+      final Set<int> cuts = <int>{0, line.text.length};
+
+      for (final MdToken run in runs) {
+        cuts.addAll(<int>[run.start, run.end]);
       }
+
+      for (final _Hit hit in hits) {
+        cuts.addAll(<int>[hit.start, hit.end]);
+      }
+
+      final List<int> edges = cuts.toList()..sort();
+
+      for (int edge = 0; edge < edges.length - 1; edge += 1) {
+        final int start = edges[edge];
+        final int end = edges[edge + 1];
+
+        if (end <= start) {
+          continue;
+        }
+
+        final MdToken? run = _runOver(runs, start, end);
+        final _Hit? hit = _hitOver(hits, start, end);
+        TextStyle? piece = run == null ? null : _styleFor(run.kind, tokens);
+
+        if (hit != null) {
+          piece = (piece ?? const TextStyle()).copyWith(
+            backgroundColor: hit.current ? tokens.findCurrent : tokens.find,
+          );
+        }
+
+        spans.add(TextSpan(text: line.text.substring(start, end), style: piece));
+      }
+
+      from += line.text.length + 1;
     }
 
     return TextSpan(style: style, children: spans);
   }
+
+  /// [matches] cut down to one line, in that line's own offsets.
+  ///
+  /// A match can only be on one line — the query comes from a field with no
+  /// newline in it — but it is clamped anyway, so that a stale match arriving
+  /// a frame before the document it was found in cannot index past the end.
+  List<_Hit> _hitsOn(int length, int from) {
+    final List<_Hit> hits = <_Hit>[];
+
+    for (int index = 0; index < matches.length; index += 1) {
+      final int start = matches[index].start - from;
+      final int end = matches[index].end - from;
+
+      if (end > 0 && start < length) {
+        hits.add(
+          _Hit(start.clamp(0, length), end.clamp(0, length), current: index == currentMatch),
+        );
+      }
+    }
+
+    return hits;
+  }
+}
+
+/// One match, on the line it was found on.
+class _Hit {
+  const _Hit(this.start, this.end, {required this.current});
+
+  final int start;
+  final int end;
+  final bool current;
+}
+
+/// The coloured run a piece of a line sits inside, where there is one.
+MdToken? _runOver(List<MdToken> runs, int start, int end) {
+  for (final MdToken run in runs) {
+    if (run.start <= start && end <= run.end) {
+      return run;
+    }
+  }
+
+  return null;
+}
+
+/// The match a piece of a line sits inside, where there is one.
+_Hit? _hitOver(List<_Hit> hits, int start, int end) {
+  for (final _Hit hit in hits) {
+    if (hit.start <= start && end <= hit.end) {
+      return hit;
+    }
+  }
+
+  return null;
 }
 
 /// What each kind of run is drawn in.
@@ -129,6 +225,8 @@ class MawySourceField extends StatefulWidget {
     this.scrollController,
     this.editableKey,
     this.lineNumbers = true,
+    this.matches = const <MawyMatch>[],
+    this.currentMatch = -1,
     super.key,
   });
 
@@ -171,6 +269,12 @@ class MawySourceField extends StatefulWidget {
   /// Whether the lines are numbered down the leading edge.
   final bool lineNumbers;
 
+  /// What the find bar found, drawn behind the text. See the controller.
+  final List<MawyMatch> matches;
+
+  /// Which of [matches] is being stepped through, or `-1` for none of them.
+  final int currentMatch;
+
   @override
   State<MawySourceField> createState() => _MawySourceFieldState();
 }
@@ -205,6 +309,8 @@ class _MawySourceFieldState extends State<MawySourceField>
 
     controller.tokens = tokens;
     controller.gfm = widget.gfm;
+    controller.matches = widget.matches;
+    controller.currentMatch = widget.currentMatch;
 
     final TextStyle style = TextStyle(
       color: tokens.foreground,

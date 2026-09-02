@@ -6,6 +6,12 @@
 
 ### Added
 
+- **Finding marks every match at once, and marks the one you are on apart from the rest.** Before, the only thing on the page saying where a match was was the selection sitting on it — one match, and only after pressing next. Typing a query told you how many there were and nothing about where.
+
+  Every match is now painted as the query is typed, in a wash of yellow, with the one being stepped through in a stronger orange. Which turns the count beside the field into something you can check against the document rather than take on faith, and makes "next" a thing that visibly moves.
+
+  In the source pane it goes in the coloured layer under the textarea rather than into the textarea's own selection, so a match inside a heading or a link keeps the colour the highlighter gave it and gains a background. `--mawy-find` and `--mawy-find-current` are the two colours, and they are palette variables like every other colour here.
+
 - **A mouse wheel arrives over a few frames rather than all at once.** Flutter answers a notch by putting the offset where the notch says on the next frame and drawing nothing in between, and it is the nothing in between that reads as hard: every browser and every native application on the platforms this is read on animates the same distance. A second notch while the first is still arriving adds to where it was going rather than starting again from where it has got to, which is what keeps a run of them feeling like one movement.
 
   Nothing to turn on, and a reader who asked the platform for less movement is given the jump back — the same answer the stylesheet gives under `prefers-reduced-motion`. The source surface keeps the platform's own wheel: a text field scrolls itself rather than being scrolled by something around it, and there is nowhere between the two to stand.
@@ -177,6 +183,10 @@
 - **The source surface's placeholder says where the typing goes**, rather than naming the format the reader is already looking at. The React package's placeholder changed with it, so the two still say the same thing.
 
 ### Fixed
+
+- **`Enter` in the find field goes to the next match instead of handing the document the focus.** It went to the next match too — but it took the focus with it, so the second `Enter` was a newline typed into the document, and every keystroke after that was an edit somebody had asked for a search.
+
+  The selection still moves to the match, and the document still picks up from there the moment the bar is closed. What it no longer does is take the focus while the bar is open, which is what the marking above is for: the match is shown where it is rather than shown by being selected, and the field the query is being typed into keeps the keyboard.
 
 - **A task list's box sits on the middle of its first line.** It was nudged down by a number written by hand, which is right at one line height and above the text at every other — and the default is not that one, so every task list in the package was drawn with its boxes riding high. It is half the difference between the line box and the type in it now, which is where the browser's `vertical-align` puts the React package's.
 

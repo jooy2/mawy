@@ -6,6 +6,12 @@
 
 ### Added
 
+- **Finding marks every match at once, and marks the one you are on apart from the rest.** Before, the only thing on the page saying where a match was was the selection sitting on it — one match, and only after pressing next. Typing a query told you how many there were and nothing about where.
+
+  Every match is now painted as the query is typed, in a wash of yellow, with the one being stepped through in a stronger orange. Which turns the count beside the field into something you can check against the document rather than take on faith, and makes "next" a thing that visibly moves.
+
+  In the source pane it goes in the coloured layer under the textarea rather than into the textarea's own selection, so a match inside a heading or a link keeps the colour the highlighter gave it and gains a background. `--mawy-find` and `--mawy-find-current` are the two colours, and they are palette variables like every other colour here.
+
 - **The bar between the two panes of `split` is something to take hold of.** Half and half is a guess about what somebody is doing, and it is wrong as often as it is right: a wide window wants more preview while reading over a draft and more source while writing one.
 
   Drag it, or focus it and use the arrows — `Shift` for a bigger step, `Home` and `End` for the ends, `Enter` or a double-click for half and half again. It is a `separator` with a value, which is what it is, and a bar nobody can move without a pointer is a bar half the readers of an editor cannot move at all. It stops well short of either edge, because a pane pushed to nothing is a pane nobody can get back.
@@ -200,6 +206,10 @@
   A `title` written by the _document_ — `[words](url "a title")` — is untouched. That is the author's text and not the library's chrome.
 
 ### Fixed
+
+- **`Enter` in the find field goes to the next match instead of handing the document the focus.** It went to the next match too — but it took the focus with it, so the second `Enter` was a newline typed into the document, and every keystroke after that was an edit somebody had asked for a search.
+
+  The selection still moves to the match, and the document still picks up from there the moment the bar is closed. What it no longer does is take the focus while the bar is open, which is what the marking above is for: the match is shown where it is rather than shown by being selected, and the field the query is being typed into keeps the keyboard.
 
 - **A file dropped on the editor no longer takes the page away.** A dropped file is an image and never a document, which is the rule and stays the rule — but a file the editor would not take was left to the browser, and a browser given a file it was not stopped from taking opens it as a page. The document, the undo history and the caret went with the tab, which is the exact loss the rule exists to prevent.
 

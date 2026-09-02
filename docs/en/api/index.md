@@ -970,6 +970,7 @@ The tokens are declared on **`.mawy-root`** rather than on `:root`. A component 
 | Lines | `--mawy-border`, `--mawy-border-strong` |
 | Accent | `--mawy-accent`, `--mawy-accent-hover`, `--mawy-accent-fg`, `--mawy-accent-soft` |
 | Code | `--mawy-code-bg`, `--mawy-code-fg`, `--mawy-mark-bg`, `--mawy-mark-fg` |
+| Finding | `--mawy-find`, `--mawy-find-current` |
 | Alerts | `--mawy-note`, `--mawy-tip`, `--mawy-important`, `--mawy-warning`, `--mawy-caution` |
 | Shape and motion | `--mawy-radius-sm`, `--mawy-radius-md`, `--mawy-radius-lg`, `--mawy-shadow-1`, `--mawy-shadow-2`, `--mawy-duration`, `--mawy-easing` |
 
@@ -994,7 +995,7 @@ class MawyTokens {
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
-Every colour a document and its chrome are drawn in, as one object. The fields are the React package's `--mawy-*` custom properties under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
+Every colour a document and its chrome are drawn in, as one object. The fields are the React package's `--mawy-*` custom properties under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
 
 The viewer picks `light` or `dark` from its own `colorScheme` and does not read a global, which is what lets one document be dark inside a light screen.
 

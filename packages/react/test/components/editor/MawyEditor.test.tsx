@@ -676,6 +676,47 @@ describe('finding', () => {
     await vi.waitFor(() => expect([input.selectionStart, input.selectionEnd]).toEqual([8, 11]));
   });
 
+  it('marks every match as the query is typed, and the current one apart', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
+
+    await open(screen);
+
+    type(findField(screen), 'one');
+
+    await vi.waitFor(() => {
+      const hits = screen.container.querySelectorAll('.mawy-find-hit');
+
+      expect(hits.length).toBe(2);
+      expect([...hits].filter((hit) => hit.hasAttribute('data-mawy-current')).length).toBe(1);
+    });
+  });
+
+  it('steps to the next match on Enter without handing the document the focus', async () => {
+    const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
+
+    await open(screen);
+
+    const field = findField(screen);
+
+    type(field, 'one');
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('1 of 2')
+    );
+
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    );
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('2 of 2')
+    );
+
+    // The whole point of the change: the query is still being typed, so the
+    // next keystroke has to reach the field and not the document.
+    expect(document.activeElement).toBe(field);
+  });
+
   it('opens with what was selected already in it', async () => {
     const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
     const input = sourceOf(screen);

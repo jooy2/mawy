@@ -57,6 +57,8 @@ class MawyTokens {
     required this.accentHover,
     required this.accentForeground,
     required this.accentSoft,
+    required this.find,
+    required this.findCurrent,
     required this.codeBackground,
     required this.codeForeground,
     required this.markBackground,
@@ -142,6 +144,15 @@ class MawyTokens {
   /// [accent] at the strength a background can carry.
   final Color accentSoft;
 
+  /// Behind every match the find bar found.
+  ///
+  /// Translucent rather than opaque, so a match landing inside a coloured run
+  /// of the source keeps that run's colour and gains a background.
+  final Color find;
+
+  /// Behind the one match being stepped through, and stronger than [find].
+  final Color findCurrent;
+
   /// Behind a code span or a code block.
   final Color codeBackground;
 
@@ -185,6 +196,8 @@ class MawyTokens {
     accentHover: Color(0xFF4A29E0),
     accentForeground: Color(0xFFFFFFFF),
     accentSoft: Color(0x1A5B34EA),
+    find: Color(0x73FFD60A),
+    findCurrent: Color(0xB8FF9500),
     codeBackground: Color(0xFFF3F3F6),
     codeForeground: Color(0xFF24242C),
     markBackground: Color(0xFFFFF3A8),
@@ -220,6 +233,8 @@ class MawyTokens {
     accentHover: Color(0xFFAD9AFF),
     accentForeground: Color(0xFF14101F),
     accentSoft: Color(0x299D86FF),
+    find: Color(0x42FFD60A),
+    findCurrent: Color(0x7AFF9500),
     codeBackground: Color(0xFF22222A),
     codeForeground: Color(0xFFDCDCE6),
     markBackground: Color(0xFF4A3D00),
@@ -262,6 +277,8 @@ class MawyTokens {
     Color? accentHover,
     Color? accentForeground,
     Color? accentSoft,
+    Color? find,
+    Color? findCurrent,
     Color? codeBackground,
     Color? codeForeground,
     Color? markBackground,
@@ -295,6 +312,8 @@ class MawyTokens {
       accentHover: accentHover ?? this.accentHover,
       accentForeground: accentForeground ?? this.accentForeground,
       accentSoft: accentSoft ?? this.accentSoft,
+      find: find ?? this.find,
+      findCurrent: findCurrent ?? this.findCurrent,
       codeBackground: codeBackground ?? this.codeBackground,
       codeForeground: codeForeground ?? this.codeForeground,
       markBackground: markBackground ?? this.markBackground,
@@ -337,6 +356,8 @@ class MawyTokens {
       other.accentHover == accentHover &&
       other.accentForeground == accentForeground &&
       other.accentSoft == accentSoft &&
+      other.find == find &&
+      other.findCurrent == findCurrent &&
       other.codeBackground == codeBackground &&
       other.codeForeground == codeForeground &&
       other.markBackground == markBackground &&
@@ -371,6 +392,8 @@ class MawyTokens {
     accentHover,
     accentForeground,
     accentSoft,
+    find,
+    findCurrent,
     codeBackground,
     codeForeground,
     markBackground,

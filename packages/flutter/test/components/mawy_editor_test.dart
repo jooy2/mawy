@@ -317,6 +317,56 @@ void main() {
       expect(find.text('3 of 3'), findsOneWidget);
     });
 
+    testWidgets('marks every match, and the one it is on apart from the rest', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one two one two one', mode: MawyEditorMode.plain)),
+      );
+
+      await press(tester, 'Find');
+      await tester.enterText(findField(0), 'one');
+      await tester.pumpAndSettle();
+
+      final List<Color> marked = _marks(tester);
+
+      expect(marked.length, 3);
+      expect(marked.where((Color colour) => colour == MawyTokens.light.findCurrent).length, 1);
+      expect(marked.where((Color colour) => colour == MawyTokens.light.find).length, 2);
+
+      await press(tester, 'Next match');
+
+      // The stronger colour moved on with the count rather than staying put.
+      final List<Color> after = _marks(tester);
+
+      expect(after[1], MawyTokens.light.findCurrent);
+      expect(after[0], MawyTokens.light.find);
+    });
+
+    testWidgets('steps on Enter without handing the document the focus', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one two one two one', mode: MawyEditorMode.plain)),
+      );
+
+      await press(tester, 'Find');
+      await tester.enterText(findField(0), 'one');
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 of 3'), findsOneWidget);
+
+      // The whole point: the query is still being typed, so the next keystroke
+      // has to reach the find field and not the document.
+      expect(tester.widget<EditableText>(findField(0)).focusNode.hasFocus, isTrue);
+      expect(tester.widget<EditableText>(_sourceField).focusNode.hasFocus, isFalse);
+    });
+
     testWidgets('says when there is nothing to find', (WidgetTester tester) async {
       await tester.pumpWidget(
         host(const MawyEditor(defaultValue: 'one two', mode: MawyEditorMode.plain)),
@@ -641,4 +691,32 @@ void main() {
       expect(written, isNull);
     });
   });
+}
+
+/// The source's own field, as opposed to the two in the find bar.
+final Finder _sourceField = find.descendant(
+  of: find.byType(MawySourceField),
+  matching: find.byType(EditableText),
+);
+
+/// The background colour behind every run the find bar marked, in order.
+///
+/// Read off the render object rather than the controller, so what is asserted
+/// is what the field was actually given to paint.
+List<Color> _marks(WidgetTester tester) {
+  final List<Color> found = <Color>[];
+
+  tester.state<EditableTextState>(_sourceField).renderEditable.text?.visitChildren((
+    InlineSpan span,
+  ) {
+    final Color? colour = span.style?.backgroundColor;
+
+    if (colour != null) {
+      found.add(colour);
+    }
+
+    return true;
+  });
+
+  return found;
 }

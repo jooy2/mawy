@@ -63,6 +63,11 @@
   --mawy-accent-fg: #ffffff;
   --mawy-accent-soft: rgb(91 52 234 / 10%);
 
+  /* What the find bar paints over what it found. Translucent rather than
+     opaque, so a match inside a coloured token keeps its colour. */
+  --mawy-find: rgb(255 214 10 / 45%);
+  --mawy-find-current: rgb(255 149 0 / 72%);
+
   --mawy-code-bg: #f3f3f6;
   --mawy-code-fg: #24242c;
   --mawy-mark-bg: #fff3a8;
@@ -119,6 +124,9 @@
   --mawy-accent-fg: #14101f;
   --mawy-accent-soft: rgb(157 134 255 / 16%);
 
+  --mawy-find: rgb(255 214 10 / 26%);
+  --mawy-find-current: rgb(255 149 0 / 48%);
+
   --mawy-code-bg: #22222a;
   --mawy-code-fg: #dcdce6;
   --mawy-mark-bg: #4a3d00;
@@ -168,6 +176,9 @@
     --mawy-accent-hover: #ad9aff;
     --mawy-accent-fg: #14101f;
     --mawy-accent-soft: rgb(157 134 255 / 16%);
+
+    --mawy-find: rgb(255 214 10 / 26%);
+    --mawy-find-current: rgb(255 149 0 / 48%);
 
     --mawy-code-bg: #22222a;
     --mawy-code-fg: #dcdce6;
@@ -1680,6 +1691,28 @@
 .mawy-root .mawy-tok-strike {
   color: var(--mawy-fg-subtle);
   text-decoration: line-through;
+}
+
+/* What the find bar found ---------------------------------------------------
+ *
+ * Painted in the layer under the textarea rather than selected in it, because
+ * a textarea has exactly one selection and the find bar is holding the focus
+ * in a field of its own. Every match is marked at once as the query is typed;
+ * the one being stepped through is marked more strongly, so that "next" is
+ * visibly somewhere rather than merely counted.
+ *
+ * A background and nothing else — no radius, no padding — since a match sits
+ * over transparent text whose real glyphs are in the textarea above, and
+ * anything that changed its width would slide the copy out of step.
+ */
+
+.mawy-root .mawy-find-hit {
+  border-radius: 2px;
+  background: var(--mawy-find);
+}
+
+.mawy-root .mawy-find-hit[data-mawy-current] {
+  background: var(--mawy-find-current);
 }
 
 /* A code block's own syntax, from whichever highlighter drew it -------------

@@ -1110,17 +1110,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       const match = matches[index];
       const element = source.current;
 
-      if (!match) {
+      if (!match || !element) {
         return;
       }
 
-      if (element) {
+      // The selection moves; the focus stays where it is. Somebody stepping
+      // through matches is typing in the find bar, and a document that takes
+      // the focus back on Enter is a document the next keystroke is typed
+      // into — which is how a search turns into an edit nobody asked for.
+      // The match is still shown, drawn in the layer under the text, and the
+      // selection set here is what the textarea comes back to when the find
+      // bar closes and hands it the focus.
+      if (!finding) {
         element.focus({ preventScroll: true });
-        element.setSelectionRange(match.start, match.end);
-        readSelection();
       }
+
+      element.setSelectionRange(match.start, match.end);
+      readSelection();
     },
-    [matches, readSelection]
+    [finding, matches, readSelection]
   );
 
   const step = React.useCallback(
@@ -1312,6 +1320,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               onPaste={onPaste}
               gfm={parse?.gfm ?? true}
               lineNumbers={lineNumbers}
+              matches={matches}
+              currentMatch={currentMatch}
               readOnly={readOnly}
               label={strings.source}
               escapeHint={strings.sourceEscape}

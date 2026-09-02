@@ -969,6 +969,7 @@ const List<MawyViewerToolbarItem> kMawyViewerToolbar;
 | 선 | `--mawy-border`, `--mawy-border-strong` |
 | 강조색 | `--mawy-accent`, `--mawy-accent-hover`, `--mawy-accent-fg`, `--mawy-accent-soft` |
 | 코드 | `--mawy-code-bg`, `--mawy-code-fg`, `--mawy-mark-bg`, `--mawy-mark-fg` |
+| 찾기 | `--mawy-find`, `--mawy-find-current` |
 | 알림 | `--mawy-note`, `--mawy-tip`, `--mawy-important`, `--mawy-warning`, `--mawy-caution` |
 | 모양과 움직임 | `--mawy-radius-sm`, `--mawy-radius-md`, `--mawy-radius-lg`, `--mawy-shadow-1`, `--mawy-shadow-2`, `--mawy-duration`, `--mawy-easing` |
 
@@ -993,7 +994,7 @@ class MawyTokens {
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
-문서와 그 chrome을 그리는 모든 색을 한 객체로 담은 것입니다. 항목은 React 패키지의 `--mawy-*` 커스텀 속성을 Dart식 이름으로 옮긴 것들 — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, 그리고 알림 종류마다 하나씩 — 이고, 값은 스타일시트의 값을 다시 고른 것이 아니라 그대로 옮긴 것입니다. 브라우저에서 `#5b34ea`인 색은 앱에서도 `#5b34ea`입니다.
+문서와 그 chrome을 그리는 모든 색을 한 객체로 담은 것입니다. 항목은 React 패키지의 `--mawy-*` 커스텀 속성을 Dart식 이름으로 옮긴 것들 — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, 그리고 알림 종류마다 하나씩 — 이고, 값은 스타일시트의 값을 다시 고른 것이 아니라 그대로 옮긴 것입니다. 브라우저에서 `#5b34ea`인 색은 앱에서도 `#5b34ea`입니다.
 
 뷰어는 자기 `colorScheme`에서 `light`이나 `dark`를 고르며 전역을 읽지 않습니다. 문서 하나가 밝은 화면 안에서 어두울 수 있는 것이 그 덕분입니다.
 

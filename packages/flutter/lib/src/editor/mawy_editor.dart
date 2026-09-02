@@ -599,6 +599,21 @@ class _MawyEditorState extends State<MawyEditor> {
 
   void _goTo(MawyMatch match) {
     _controller.selection = TextSelection(baseOffset: match.start, extentOffset: match.end);
+
+    // The selection moves; the focus does not follow it while the bar is open.
+    // Somebody stepping through matches is typing in the find field, and a
+    // document that takes the focus back on `Enter` is a document the next
+    // keystroke is typed into — which is how a search turns into an edit
+    // nobody asked for. What is set here is where the field picks up again
+    // when the bar closes and hands it the focus.
+    if (_finding) {
+      // A field without the focus does not scroll to its own selection, so
+      // the match is brought into view by hand.
+      _editable.currentState?.bringIntoView(TextPosition(offset: match.start));
+
+      return;
+    }
+
     _focus.requestFocus();
   }
 
@@ -628,7 +643,10 @@ class _MawyEditorState extends State<MawyEditor> {
       text: after.value,
       selection: TextSelection.collapsed(offset: after.caret),
     );
-    _focus.requestFocus();
+
+    if (!_finding) {
+      _focus.requestFocus();
+    }
   }
 
   void _replaceEvery() {
@@ -648,7 +666,10 @@ class _MawyEditorState extends State<MawyEditor> {
       // the end would lose the reader's place over one replacement.
       selection: TextSelection.collapsed(offset: _findCaret.clamp(0, after.value.length)),
     );
-    _focus.requestFocus();
+
+    if (!_finding) {
+      _focus.requestFocus();
+    }
   }
 
   void _openFind() {
@@ -679,6 +700,7 @@ class _MawyEditorState extends State<MawyEditor> {
     final MawyStrings strings = stringsFor(widget.locale);
     final bool showSource = _current != MawyEditorMode.preview;
     final bool showPreview = _current != MawyEditorMode.plain;
+    final List<MawyMatch> matches = _matches;
 
     final Widget source = MawySourceField(
       controller: _controller,
@@ -693,6 +715,8 @@ class _MawyEditorState extends State<MawyEditor> {
       scrollController: _sourceScroll,
       editableKey: _editable,
       lineNumbers: widget.lineNumbers,
+      matches: matches,
+      currentMatch: _currentMatch(matches),
     );
 
     // A document with nothing in it draws nothing, and a pane drawing nothing
@@ -721,8 +745,6 @@ class _MawyEditorState extends State<MawyEditor> {
             // what lines the two panes up. See `_syncScroll`.
             anchors: _anchors,
           );
-
-    final List<MawyMatch> matches = _matches;
 
     final Widget editor = Container(
       color: tokens.background,

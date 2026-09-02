@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { highlightMarkdown, type MdHighlightedLine } from '../../internal/markdown/highlight.js';
+import type { MawyMatch } from '../../internal/search.js';
 
 export interface MawyEditorSourceProps {
   value: string;
@@ -17,6 +18,16 @@ export interface MawyEditorSourceProps {
   onPaste: React.ClipboardEventHandler<HTMLTextAreaElement>;
   gfm: boolean;
   lineNumbers: boolean;
+  /**
+   * What the find bar found, and which of them the caret is on.
+   *
+   * Drawn in the layer underneath rather than by selecting them, because a
+   * textarea has one selection and the find bar has a field of its own to keep
+   * the focus in — a reader typing a query would otherwise be typing into a
+   * document that had just taken the focus back.
+   */
+  matches: readonly MawyMatch[];
+  currentMatch: number;
   readOnly: boolean;
   label: string;
   /** How to leave, for a screen reader. `Tab` indents here. */
@@ -53,6 +64,8 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
       onPaste,
       gfm,
       lineNumbers,
+      matches,
+      currentMatch,
       readOnly,
       label,
       escapeHint,
@@ -69,6 +82,19 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
     React.useImperativeHandle(ref, () => input.current as HTMLTextAreaElement);
 
     const lines = React.useMemo(() => highlightMarkdown(value, gfm), [value, gfm]);
+
+    /** Where each line begins, so a match can be cut down to the line it is on. */
+    const starts = React.useMemo(() => {
+      const out: number[] = [];
+      let at = 0;
+
+      for (const line of lines) {
+        out.push(at);
+        at += line.text.length + 1;
+      }
+
+      return out;
+    }, [lines]);
 
     /**
      * The two layers scroll as one, and the textarea is the one that scrolls.
@@ -88,6 +114,36 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
 
     // A document that arrives already scrolled, or one that got shorter.
     React.useLayoutEffect(sync, [sync, value]);
+
+    /**
+     * The match being stepped through, brought into view.
+     *
+     * A textarea scrolls to its own selection, but only when it has the focus,
+     * and while the find bar is open it deliberately does not have it. So the
+     * scrolling is done from the layer underneath, where the match is an
+     * element with a position — and moving the textarea moves both, since the
+     * layer follows it.
+     */
+    React.useLayoutEffect(() => {
+      const source = input.current;
+      const mark = back.current?.querySelector<HTMLElement>('.mawy-find-hit[data-mawy-current]');
+
+      if (!source || !mark) {
+        return;
+      }
+
+      const view = source.getBoundingClientRect();
+      const box = mark.getBoundingClientRect();
+      // A line of slack, so the match lands inside the text rather than
+      // against the edge it was just scrolled past.
+      const room = Math.min(box.height, view.height / 3);
+
+      if (box.top < view.top + room) {
+        source.scrollTop -= view.top + room - box.top;
+      } else if (box.bottom > view.bottom - room) {
+        source.scrollTop += box.bottom - view.bottom + room;
+      }
+    }, [matches, currentMatch]);
 
     const scrolled = React.useCallback(() => {
       sync();
@@ -111,7 +167,9 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
             {lines.map((line, index) => (
               <React.Fragment key={index}>
                 {lineNumbers ? <span className="mawy-source-number">{index + 1}</span> : null}
-                <span className="mawy-source-line">{renderLine(line)}</span>
+                <span className="mawy-source-line">
+                  {renderLine(line, starts[index], matches, currentMatch)}
+                </span>
               </React.Fragment>
             ))}
           </div>
@@ -141,9 +199,31 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
   }
 );
 
-/** One line, cut into the coloured runs the highlighter found and the rest. */
-function renderLine(line: MdHighlightedLine): React.ReactNode {
-  if (!line.tokens.length) {
+/**
+ * One line, cut into the coloured runs the highlighter found and what the find
+ * bar found, and then into the pieces where those two overlap.
+ *
+ * The two are separate answers about the same characters — one is what the
+ * Markdown means and the other is what somebody is looking for — so the cuts
+ * are taken from both and each piece is drawn with whichever of them it is
+ * inside. A match is never split across lines: the query comes from a field
+ * that has no newline in it.
+ */
+function renderLine(
+  line: MdHighlightedLine,
+  from: number,
+  matches: readonly MawyMatch[],
+  currentMatch: number
+): React.ReactNode {
+  const hits = matches
+    .map((match, index) => ({
+      start: match.start - from,
+      end: match.end - from,
+      current: index === currentMatch
+    }))
+    .filter((hit) => hit.end > 0 && hit.start < line.text.length);
+
+  if (!line.tokens.length && !hits.length) {
     // An empty line still has to be a line, or the copy underneath drifts a row
     // out of step with the textarea for the whole rest of the file. The height
     // comes from `min-height` in the stylesheet rather than from a placeholder
@@ -151,24 +231,50 @@ function renderLine(line: MdHighlightedLine): React.ReactNode {
     return line.text;
   }
 
-  const out: React.ReactNode[] = [];
-  let at = 0;
+  const cuts = new Set<number>([0, line.text.length]);
 
-  for (const [index, token] of line.tokens.entries()) {
-    if (token.start > at) {
-      out.push(line.text.slice(at, token.start));
+  for (const token of line.tokens) {
+    cuts.add(Math.max(token.start, 0));
+    cuts.add(Math.min(token.end, line.text.length));
+  }
+
+  for (const hit of hits) {
+    cuts.add(Math.max(hit.start, 0));
+    cuts.add(Math.min(hit.end, line.text.length));
+  }
+
+  const edges = [...cuts].sort((a, b) => a - b);
+  const out: React.ReactNode[] = [];
+
+  for (let index = 0; index < edges.length - 1; index += 1) {
+    const start = edges[index];
+    const end = edges[index + 1];
+
+    if (end <= start) {
+      continue;
+    }
+
+    const piece = line.text.slice(start, end);
+    const token = line.tokens.find((each) => each.start <= start && end <= each.end);
+    const hit = hits.find((each) => each.start <= start && end <= each.end);
+
+    if (!token && !hit) {
+      out.push(piece);
+
+      continue;
     }
 
     out.push(
-      <span key={index} className={`mawy-tok mawy-tok-${token.kind}`}>
-        {line.text.slice(token.start, token.end)}
+      <span
+        key={index}
+        className={[token ? `mawy-tok mawy-tok-${token.kind}` : '', hit ? 'mawy-find-hit' : '']
+          .filter(Boolean)
+          .join(' ')}
+        data-mawy-current={hit?.current ? 'true' : undefined}
+      >
+        {piece}
       </span>
     );
-    at = token.end;
-  }
-
-  if (at < line.text.length) {
-    out.push(line.text.slice(at));
   }
 
   return out;
