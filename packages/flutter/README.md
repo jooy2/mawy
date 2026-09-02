@@ -2,16 +2,18 @@
 
 # Mawy for Flutter
 
-**A Markdown viewer that draws the document rather than a string of HTML.**
+**A Markdown editor and viewer that draw the document rather than a string of HTML.**
 
 [![pub package](https://img.shields.io/pub/v/mawy.svg)](https://pub.dev/packages/mawy)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 
 </div>
 
-> [!IMPORTANT] **`0.1.0`, and early.** The viewer is written and tested; the
-> editor is the React package's for now. It is a `0.x`, which means the API can
-> still change between minor versions — pin the version if that matters to you.
+> [!IMPORTANT] **`1.0.0`.** The parser, the viewer and the editor are written
+> and tested. `wysiwyg` is the one surface this package does not have, and [the
+> guide says why](https://mawy.cdget.com/guide/editor). The exported API is
+> under semantic versioning from here: a name that goes away or changes shape
+> waits for a major version.
 
 ```bash
 flutter pub add mawy

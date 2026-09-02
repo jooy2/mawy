@@ -90,7 +90,7 @@ jobs:
         run: flutter pub get
         working-directory: ./packages/flutter
 
-      # `--silent`, because npm writes `> mawy-react@0.1.0 parity` to stdout on
+      # `--silent`, because npm writes `> mawy-react@1.0.0 parity` to stdout on
       # the runner and that banner lands in the file being diffed.
       - name: Print the React parser's trees
         run: npm run --silent parity > /tmp/react.json

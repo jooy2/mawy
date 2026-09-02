@@ -10,11 +10,11 @@ Mawy ships as one package per framework, and they are one library rather than tw
 |  |  |  |
 | --- | --- | --- |
 | **React** | [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm | The viewer **and** the editor |
-| **Flutter** | [`mawy`](https://pub.dev/packages/mawy) on pub.dev | The viewer |
+| **Flutter** | [`mawy`](https://pub.dev/packages/mawy) on pub.dev | The viewer **and** the editor |
 
-::: warning Early, and versioned as such
+::: tip `1.0.0`, and versioned as such
 
-`0.1.0` is the first release of both. Everything on this page is real and runs — this site draws both packages from the same source you install — but a `0.x` may change its API between minor versions. Pin the version if that matters, and follow the [changelog](../changelog).
+Both packages are published at `1.0.0`. Everything on this page is real and runs — this site draws both packages from the same source you install — and from here the exported API is under semantic versioning, so a name that goes away or changes shape waits for a major version. The [changelog](../changelog) is where each release is written down.
 
 :::
 

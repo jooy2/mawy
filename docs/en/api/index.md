@@ -7,9 +7,9 @@ order: 2
 
 Everything the package exports. Each entry says what it is, what it takes and what it gives back.
 
-:::: warning Early
+:::: tip `1.0.0`
 
-Both packages are published at `0.1.0`. They are a `0.x`, which means the API can still change between minor versions — pin the version if that matters to you.
+Both packages are published at `1.0.0`. From here the names on this page are under semantic versioning: one that goes away or changes shape waits for a major version.
 
 Everything on this page exists and runs, in whichever package the switch above the menu is set to. A name only the other package has is not on this page at all while that one is selected.
 

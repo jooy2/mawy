@@ -13,7 +13,7 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
 > [!IMPORTANT]
-> **Mawy is in early development, and most of it works.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested. The `wysiwyg` surface — editing the drawn document in place — is on the default list of surfaces now that the two things it could not do are done. `0.1.0` is the first release of both packages — [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev; since then the Flutter one has grown a syntax highlighter and an editor of its own. They are a `0.x`, so the API can still change between minor versions.
+> **`1.0.0`, and the version number is a promise now.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested in both packages — [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. `wysiwyg` — editing the drawn document in place — is on the React editor's default list of surfaces; the Flutter editor has the other three and says why. From here the exported names are under semantic versioning: one that goes away or changes shape waits for a major.
 
 ## Why Mawy
 
@@ -29,7 +29,7 @@ Guides and the full API, in English and Korean. This README is the map; each pac
 | Package                                | Registry                                                       | Requires                               | Ships                | Quick start                          |
 | -------------------------------------- | -------------------------------------------------------------- | -------------------------------------- | -------------------- | ------------------------------------ |
 | [`packages/react`](packages/react)     | [npm: `mawy-react`](https://www.npmjs.com/package/mawy-react)  | React 18 or 19, Node.js 20.19 or later | Viewer and editor    | [README](packages/react/README.md)   |
-| [`packages/flutter`](packages/flutter) | [pub.dev: `mawy`](https://pub.dev/packages/mawy)               | Flutter 3.32 or later, Dart 3.8        | Viewer, for now      | [README](packages/flutter/README.md) |
+| [`packages/flutter`](packages/flutter) | [pub.dev: `mawy`](https://pub.dev/packages/mawy)               | Flutter 3.32 or later, Dart 3.8        | Viewer and editor    | [README](packages/flutter/README.md) |
 
 Each language's package **versions independently and keeps its own changelog** beside its own manifest — [`packages/react/CHANGELOG.md`](packages/react/CHANGELOG.md) and [`packages/flutter/CHANGELOG.md`](packages/flutter/CHANGELOG.md) — so a release on one side is not a release on the other and the numbers will not always agree.
 
