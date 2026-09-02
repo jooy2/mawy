@@ -173,21 +173,26 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           builder: (VoidCallback close) => MawyToolbarChoice<MawyFontFamily>(
             tokens: widget.tokens,
             value: widget.typography.fontFamily,
+            // Each one read in the typeface it names, which is the React
+            // package's list: what a typeface is cannot be said in words, and a
+            // glyph beside it would say less than the word already does.
             options: <MawyToolbarOption<MawyFontFamily>>[
               MawyToolbarOption<MawyFontFamily>(
                 MawyFontFamily.sans,
                 widget.strings.fontFamilySans,
-                LucideIcons.type,
+                style: const TextStyle(fontFamilyFallback: <String>['Pretendard', 'Noto Sans KR']),
               ),
               MawyToolbarOption<MawyFontFamily>(
                 MawyFontFamily.serif,
                 widget.strings.fontFamilySerif,
-                LucideIcons.bookOpen,
+                style: const TextStyle(fontFamilyFallback: <String>['Georgia', 'Noto Serif KR']),
               ),
               MawyToolbarOption<MawyFontFamily>(
                 MawyFontFamily.mono,
                 widget.strings.fontFamilyMono,
-                LucideIcons.terminal,
+                style: const TextStyle(
+                  fontFamilyFallback: <String>['Menlo', 'Consolas', 'Roboto Mono'],
+                ),
               ),
             ],
             onChanged: (MawyFontFamily next) {
@@ -245,27 +250,13 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           builder: (VoidCallback close) => MawyToolbarChoice<MawyMeasure>(
             tokens: widget.tokens,
             value: widget.typography.measure,
+            // No glyphs, because the React package's list has none: four names
+            // for four widths, and a picture of a width is not a thing.
             options: <MawyToolbarOption<MawyMeasure>>[
-              MawyToolbarOption<MawyMeasure>(
-                MawyMeasure.narrow,
-                widget.strings.measureNarrow,
-                LucideIcons.alignJustify,
-              ),
-              MawyToolbarOption<MawyMeasure>(
-                MawyMeasure.normal,
-                widget.strings.measureNormal,
-                LucideIcons.stretchHorizontal,
-              ),
-              MawyToolbarOption<MawyMeasure>(
-                MawyMeasure.wide,
-                widget.strings.measureWide,
-                LucideIcons.unfoldHorizontal,
-              ),
-              MawyToolbarOption<MawyMeasure>(
-                MawyMeasure.full,
-                widget.strings.measureFull,
-                LucideIcons.moveHorizontal,
-              ),
+              MawyToolbarOption<MawyMeasure>(MawyMeasure.narrow, widget.strings.measureNarrow),
+              MawyToolbarOption<MawyMeasure>(MawyMeasure.normal, widget.strings.measureNormal),
+              MawyToolbarOption<MawyMeasure>(MawyMeasure.wide, widget.strings.measureWide),
+              MawyToolbarOption<MawyMeasure>(MawyMeasure.full, widget.strings.measureFull),
             ],
             onChanged: (MawyMeasure next) {
               widget.onTypographyChange(widget.typography.copyWith(measure: next));
@@ -536,6 +527,15 @@ class MawyToolbarMenu extends StatefulWidget {
 
 class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
   final LayerLink _link = LayerLink();
+
+  /// Which edge of the button the panel is lined up with.
+  ///
+  /// The leading one, until that would run the panel off the far side — which
+  /// is the rule the React package's menu follows, and it is not decoration:
+  /// this toolbar's buttons start at the leading edge now, and a panel pinned
+  /// to a button's trailing edge hangs off the window from the first one.
+  bool _fromEnd = false;
+
   final FocusScopeNode _panel = FocusScopeNode(debugLabel: 'MawyToolbarMenu');
   FocusNode? _own;
   OverlayEntry? _entry;
@@ -564,6 +564,21 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
     if (held) {
       _button.requestFocus();
     }
+  }
+
+  /// Whether a panel hung from the button's leading edge would run off the far
+  /// side of what it is drawn into.
+  bool _runsOff(OverlayState overlay) {
+    final RenderObject? button = context.findRenderObject();
+    final RenderObject? into = overlay.context.findRenderObject();
+
+    if (button is! RenderBox || into is! RenderBox || !button.attached || !into.attached) {
+      return false;
+    }
+
+    final double start = into.globalToLocal(button.localToGlobal(Offset.zero)).dx;
+
+    return start + _panelMost > into.size.width - 8;
   }
 
   /// Whether a pointer went down on the button this panel belongs to.
@@ -609,6 +624,8 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
       return;
     }
 
+    _fromEnd = _runsOff(overlay);
+
     _entry = OverlayEntry(
       builder: (BuildContext context) => Stack(
         children: <Widget>[
@@ -636,16 +653,16 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
           ),
           CompositedTransformFollower(
             link: _link,
-            targetAnchor: Alignment.bottomRight,
-            followerAnchor: Alignment.topRight,
+            targetAnchor: _fromEnd ? Alignment.bottomRight : Alignment.bottomLeft,
+            followerAnchor: _fromEnd ? Alignment.topRight : Alignment.topLeft,
             offset: const Offset(0, 6),
             child: Align(
-              alignment: Alignment.topRight,
+              alignment: _fromEnd ? Alignment.topRight : Alignment.topLeft,
               child: FocusScope(
                 node: _panel,
                 onKeyEvent: _onKey,
                 child: Container(
-                  constraints: const BoxConstraints(minWidth: 190, maxWidth: 260),
+                  constraints: const BoxConstraints(minWidth: _panelLeast, maxWidth: _panelMost),
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: widget.tokens.backgroundRaised,
@@ -694,6 +711,11 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
     );
   }
 }
+
+/// How wide a panel is allowed to be, which is also what deciding which edge to
+/// hang it from is measured against.
+const double _panelLeast = 190;
+const double _panelMost = 260;
 
 /// A list of options, one of them chosen.
 ///
@@ -744,6 +766,7 @@ class MawyToolbarChoice<T> extends StatelessWidget {
           _ChoiceOption(
             tokens: tokens,
             icon: option.icon,
+            style: option.style,
             label: option.label,
             chosen: option.value == value,
             autofocus: at == (start == -1 ? 0 : start),
@@ -765,25 +788,30 @@ extension MawyToolbarSchemes on MawyToolbarChoice<MawyColorScheme> {
         MawyToolbarOption<MawyColorScheme>(
           MawyColorScheme.light,
           strings.colorSchemeLight,
-          LucideIcons.sun,
+          icon: LucideIcons.sun,
         ),
         MawyToolbarOption<MawyColorScheme>(
           MawyColorScheme.dark,
           strings.colorSchemeDark,
-          LucideIcons.moon,
+          icon: LucideIcons.moon,
         ),
         MawyToolbarOption<MawyColorScheme>(
           MawyColorScheme.system,
           strings.colorSchemeSystem,
-          LucideIcons.sunMoon,
+          icon: LucideIcons.sunMoon,
         ),
       ];
 }
 
-/// One row of a [MawyToolbarChoice]: a value, its name and its glyph.
+/// One row of a [MawyToolbarChoice]: a value, its name, and how it is shown.
+///
+/// A glyph beside the name, or the name drawn as the thing it selects, or
+/// neither — whichever the React package's list does for the same control. A
+/// typeface is shown by being read in, a theme by a sun or a moon, and a column
+/// width by nothing but its name.
 class MawyToolbarOption<T> {
   /// Creates an option.
-  const MawyToolbarOption(this.value, this.label, this.icon);
+  const MawyToolbarOption(this.value, this.label, {this.icon, this.style});
 
   /// What choosing it means.
   final T value;
@@ -791,8 +819,11 @@ class MawyToolbarOption<T> {
   /// What it is called.
   final String label;
 
-  /// The glyph beside the name.
-  final IconData icon;
+  /// The glyph beside the name, where there is one.
+  final IconData? icon;
+
+  /// What the name is drawn in, for an option that is a way of drawing text.
+  final TextStyle? style;
 }
 
 /// One of them.
@@ -800,6 +831,7 @@ class _ChoiceOption extends StatefulWidget {
   const _ChoiceOption({
     required this.tokens,
     required this.icon,
+    required this.style,
     required this.label,
     required this.chosen,
     required this.autofocus,
@@ -807,7 +839,8 @@ class _ChoiceOption extends StatefulWidget {
   });
 
   final MawyTokens tokens;
-  final IconData icon;
+  final IconData? icon;
+  final TextStyle? style;
   final String label;
   final bool chosen;
   final bool autofocus;
@@ -858,12 +891,18 @@ class _ChoiceOptionState extends State<_ChoiceOption> {
             ),
             child: Row(
               children: <Widget>[
-                Icon(widget.icon, size: 15, color: chosen ? tokens.accent : tokens.foregroundMuted),
-                const SizedBox(width: 9),
+                if (widget.icon != null) ...<Widget>[
+                  Icon(
+                    widget.icon,
+                    size: 15,
+                    color: chosen ? tokens.accent : tokens.foregroundMuted,
+                  ),
+                  const SizedBox(width: 9),
+                ],
                 Expanded(
                   child: Text(
                     widget.label,
-                    style: TextStyle(
+                    style: (widget.style ?? const TextStyle()).copyWith(
                       color: chosen ? tokens.accent : tokens.foreground,
                       fontSize: 13.5,
                       fontWeight: chosen ? FontWeight.w600 : FontWeight.w400,

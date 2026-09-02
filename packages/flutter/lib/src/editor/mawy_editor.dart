@@ -136,19 +136,18 @@ const List<MawyEditorMode> kMawyEditorModes = <MawyEditorMode>[
 const List<MawyEditorToolbarItem> kMawyEditorToolbar = <MawyEditorToolbarItem>[
   MawyEditorToolbarItem.mode,
   MawyEditorToolbarItem.separator,
+  MawyEditorToolbarItem.heading,
   MawyEditorToolbarItem.bold,
   MawyEditorToolbarItem.italic,
   MawyEditorToolbarItem.strikethrough,
   MawyEditorToolbarItem.code,
+  MawyEditorToolbarItem.link,
+  MawyEditorToolbarItem.image,
   MawyEditorToolbarItem.separator,
-  MawyEditorToolbarItem.heading,
   MawyEditorToolbarItem.quote,
   MawyEditorToolbarItem.bulletList,
   MawyEditorToolbarItem.orderedList,
   MawyEditorToolbarItem.taskList,
-  MawyEditorToolbarItem.separator,
-  MawyEditorToolbarItem.link,
-  MawyEditorToolbarItem.image,
   MawyEditorToolbarItem.codeBlock,
   MawyEditorToolbarItem.rule,
   MawyEditorToolbarItem.separator,
@@ -1018,26 +1017,56 @@ class _ToolbarState extends State<_Toolbar> {
       }
 
       if (item == MawyEditorToolbarItem.heading) {
-        for (final MapEntry<MawyCommand, IconData> each in const <MawyCommand, IconData>{
-          MawyCommand.heading1: LucideIcons.heading1,
-          MawyCommand.heading2: LucideIcons.heading2,
-          MawyCommand.heading3: LucideIcons.heading3,
-        }.entries) {
-          children.add(
-            MawyToolbarButton(
-              icon: each.value,
-              label: switch (each.key) {
-                MawyCommand.heading1 => widget.strings.heading1,
-                MawyCommand.heading2 => widget.strings.heading2,
-                _ => widget.strings.heading3,
-              },
+        // One menu rather than three buttons, which is what the React
+        // package's toolbar does: the three levels and body text are four
+        // answers to one question, and four buttons in a row is four questions.
+        const List<MawyCommand> levels = <MawyCommand>[
+          MawyCommand.heading1,
+          MawyCommand.heading2,
+          MawyCommand.heading3,
+        ];
+
+        children.add(
+          MawyToolbarMenu(
+            icon: LucideIcons.heading,
+            label: widget.strings.heading,
+            tokens: widget.tokens,
+            focusNode: next(),
+            builder: (VoidCallback close) => MawyToolbarChoice<MawyCommand>(
               tokens: widget.tokens,
-              focusNode: next(),
-              pressed: commandActive(each.key, widget.state),
-              onPressed: () => widget.onCommand?.call(each.key),
+              value: levels.firstWhere(
+                (MawyCommand level) => commandActive(level, widget.state),
+                orElse: () => MawyCommand.paragraph,
+              ),
+              options: <MawyToolbarOption<MawyCommand>>[
+                MawyToolbarOption<MawyCommand>(
+                  MawyCommand.heading1,
+                  widget.strings.heading1,
+                  icon: LucideIcons.heading1,
+                ),
+                MawyToolbarOption<MawyCommand>(
+                  MawyCommand.heading2,
+                  widget.strings.heading2,
+                  icon: LucideIcons.heading2,
+                ),
+                MawyToolbarOption<MawyCommand>(
+                  MawyCommand.heading3,
+                  widget.strings.heading3,
+                  icon: LucideIcons.heading3,
+                ),
+                MawyToolbarOption<MawyCommand>(
+                  MawyCommand.paragraph,
+                  widget.strings.paragraph,
+                  icon: LucideIcons.pilcrow,
+                ),
+              ],
+              onChanged: (MawyCommand chosen) {
+                widget.onCommand?.call(chosen);
+                close();
+              },
             ),
-          );
-        }
+          ),
+        );
 
         continue;
       }

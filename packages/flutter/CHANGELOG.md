@@ -160,6 +160,10 @@
 
 - **`MawyTokens` compares on every colour rather than on six of them.** Six was enough while the only palettes in existence were this package's own two, and became wrong the moment an application could build a third: two palettes differing in nothing but their alert colours called themselves the same palette, and a viewer handed the second one would not have redrawn.
 
+- **The editor's toolbar is the React package's toolbar, control for control and in the same order.** The two had drifted into different arrangements of the same buttons, and the three heading levels were three buttons in a row rather than one menu — which is four answers to one question drawn as four questions. `heading` opens a list now, with body text on it, the way the browser's does.
+
+  The panels are hung from the leading edge of the button that opened them and flip to the trailing edge only where that would run them off, which is the rule the React package's menu already followed. It was not one this package needed while every menu lived at the right of a viewer's toolbar; the first menu on the _left_ of an editor's hung off the window.
+
 ### Fixed
 
 - **A task list's box sits on the middle of its first line.** It was nudged down by a number written by hand, which is right at one line height and above the text at every other — and the default is not that one, so every task list in the package was drawn with its boxes riding high. It is half the difference between the line box and the type in it now, which is where the browser's `vertical-align` puts the React package's.
