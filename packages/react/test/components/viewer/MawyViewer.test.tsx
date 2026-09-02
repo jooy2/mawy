@@ -257,7 +257,7 @@ describe('the toolbar', () => {
     expect(document.activeElement).toBe(buttons[1]);
   });
 
-  it('changes the theme through its menu', async () => {
+  it('changes the theme through its menu, and shuts it again', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} toolbar={['colorScheme']} />);
     const root = screen.container.querySelector('.mawy-viewer') as HTMLElement;
 
@@ -267,6 +267,26 @@ describe('the toolbar', () => {
     await screen.getByRole('radio', { name: 'Dark' }).click();
 
     expect(root.dataset.mawyColorScheme).toBe('dark');
+    // Picking one is the end of what the panel was opened for, and a panel
+    // still standing over the thing it has just changed is a panel hiding the
+    // answer to the question it was asked.
+    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Theme' }).element());
+  });
+
+  it('keeps a menu open while a slider inside it is being moved', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['fontSize']} />);
+
+    await screen.getByRole('button', { name: 'Text size' }).click();
+
+    const slider = screen.getByRole('slider').element() as HTMLInputElement;
+
+    slider.value = '21';
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // A size is arrived at by moving it, and a panel that shut on the first
+    // step would have to be reopened for the second.
+    await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('sets the document type from the typography controls', async () => {

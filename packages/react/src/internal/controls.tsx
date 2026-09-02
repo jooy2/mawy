@@ -55,6 +55,21 @@ export interface MenuProps {
 }
 
 /**
+ * How something inside a panel shuts the panel it is in.
+ *
+ * A `Choice` is a value being picked, and picking one is the end of what the
+ * panel was opened for — so it closes, the way a menu does everywhere else. A
+ * `Slider` is not: a size is arrived at by moving it, and a panel that shut on
+ * the first step would have to be reopened for the second.
+ *
+ * Through a context rather than a prop, because the thing that has to close is
+ * the panel and the thing that knows a value was picked is two elements further
+ * in. It is the callback the Flutter package's `builder` is handed, said in the
+ * way React says that.
+ */
+const Dismiss = React.createContext<(() => void) | null>(null);
+
+/**
  * A button and the panel it opens.
  *
  * The panel is placed by measuring: it is left-aligned with its button until
@@ -72,6 +87,12 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
   const wrapper = React.useRef<HTMLDivElement>(null);
   const panel = React.useRef<HTMLDivElement>(null);
   const button = React.useRef<HTMLButtonElement>(null);
+
+  /** Shut, with the focus put back on the button the panel came from. */
+  const close = React.useCallback(() => {
+    setOpen(false);
+    button.current?.focus();
+  }, []);
 
   React.useImperativeHandle(ref, () => button.current as HTMLButtonElement);
 
@@ -100,8 +121,7 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        setOpen(false);
-        button.current?.focus();
+        close();
       }
     };
 
@@ -112,7 +132,7 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open]);
+  }, [open, close]);
 
   return (
     <div className="mawy-menu" ref={wrapper}>
@@ -136,7 +156,7 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
           aria-label={label}
           data-mawy-align={align}
         >
-          {children}
+          <Dismiss.Provider value={close}>{children}</Dismiss.Provider>
         </div>
       ) : null}
     </div>
@@ -158,13 +178,21 @@ export interface ChoiceProps<T extends string> {
   onChange: (next: T) => void;
 }
 
-/** One of a few named values, as a radio group that looks like a list. */
+/**
+ * One of a few named values, as a radio group that looks like a list.
+ *
+ * Picking one shuts the panel it is in, where it is in one. That is what a menu
+ * does, and a panel still open over the thing it has just changed is a panel
+ * hiding the answer to the question it was asked.
+ */
 export function Choice<T extends string>({
   label,
   value,
   options,
   onChange
 }: ChoiceProps<T>): React.ReactElement {
+  const dismiss = React.useContext(Dismiss);
+
   return (
     <div className="mawy-choice" role="radiogroup" aria-label={label}>
       {options.map((option) => (
@@ -175,7 +203,10 @@ export function Choice<T extends string>({
           className="mawy-choice-option"
           aria-checked={option.value === value}
           style={option.style}
-          onClick={() => onChange(option.value)}
+          onClick={() => {
+            onChange(option.value);
+            dismiss?.();
+          }}
         >
           {option.icon}
           <span>{option.label}</span>

@@ -201,6 +201,10 @@
 
   The find bar and the status bar were the same shape of thing and are fixed with it. Chrome is not what a layout should take its room from.
 
+- **A menu shuts when a value is picked in it.** The theme, the typeface and the column width all changed the document and left the panel standing over it — a menu still open on top of the thing it has just changed is a menu hiding the answer to the question it was asked. The focus goes back to the button it came from, the way it already did on Escape.
+
+  A slider is not a value being picked and does not shut: a size is arrived at by moving it, and a panel that closed on the first step would have to be reopened for the second. That is the split the Flutter package already made, and now both make it.
+
 ## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.
