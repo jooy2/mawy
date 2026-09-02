@@ -42,4 +42,5 @@ export 'src/markdown/ast.dart';
 export 'src/markdown/parse.dart' show MawyParseOptions, parseMarkdown, slugify;
 export 'src/theme/tokens.dart';
 export 'src/types.dart';
+export 'src/viewer/anchors.dart' show MawyViewerAnchors;
 export 'src/viewer/mawy_viewer.dart' show MawyViewer, kMawyViewerToolbar;

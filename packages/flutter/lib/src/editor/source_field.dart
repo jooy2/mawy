@@ -123,6 +123,8 @@ class MawySourceField extends StatefulWidget {
     required this.placeholder,
     required this.onEnter,
     required this.onIndent,
+    this.scrollController,
+    this.editableKey,
     super.key,
   });
 
@@ -153,6 +155,15 @@ class MawySourceField extends StatefulWidget {
   /// `Tab` and `Shift`+`Tab`.
   final void Function({required bool out}) onIndent;
 
+  /// The field's own scroller, where somebody outside wants to watch it.
+  final ScrollController? scrollController;
+
+  /// The key on the [EditableText], for whoever needs to measure the text.
+  ///
+  /// The editor does, in `split`: where a line of the source sits is half of
+  /// what lines the preview up with it, and only the field knows.
+  final GlobalKey<EditableTextState>? editableKey;
+
   @override
   State<MawySourceField> createState() => _MawySourceFieldState();
 }
@@ -164,7 +175,8 @@ class _MawySourceFieldState extends State<MawySourceField>
   );
 
   @override
-  final GlobalKey<EditableTextState> editableTextKey = GlobalKey<EditableTextState>();
+  late final GlobalKey<EditableTextState> editableTextKey =
+      widget.editableKey ?? GlobalKey<EditableTextState>();
 
   /// The iOS gesture that opens a selection under a hard press.
   ///
@@ -246,6 +258,7 @@ class _MawySourceFieldState extends State<MawySourceField>
                     key: editableTextKey,
                     controller: controller,
                     focusNode: widget.focusNode,
+                    scrollController: widget.scrollController,
                     readOnly: widget.readOnly,
                     style: style,
                     cursorColor: tokens.accent,

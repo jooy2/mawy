@@ -16,11 +16,15 @@
 /// under the same names, and `tool/parity.dart` diffs all three.
 library;
 
+import 'dart:math' as math;
+
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/editor/commands.dart';
 import 'package:mawy/src/editor/find_bar.dart';
+import 'package:mawy/src/editor/scroll.dart';
 import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/editor/source_field.dart';
 import 'package:mawy/src/editor/status.dart';
@@ -30,6 +34,7 @@ import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/markdown/parse.dart' show MawyParseOptions;
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
+import 'package:mawy/src/viewer/anchors.dart';
 import 'package:mawy/src/viewer/mawy_viewer.dart';
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
 
@@ -272,6 +277,17 @@ class _MawyEditorState extends State<MawyEditor> {
     text: widget.value ?? widget.defaultValue,
   );
   final FocusNode _focus = FocusNode();
+
+  /// The two scrollers, and what lines them up. See `_syncScroll`.
+  final ScrollController _sourceScroll = ScrollController();
+  final ScrollController _previewScroll = ScrollController();
+  final GlobalKey<EditableTextState> _editable = GlobalKey<EditableTextState>();
+  final MawyViewerAnchors _anchors = MawyViewerAnchors();
+  List<MawyScrollAnchor>? _places;
+  double _measuredSource = -1;
+  double _measuredPreview = -1;
+  bool _syncing = false;
+
   late MawyEditorMode _mode = widget.mode ?? widget.defaultMode;
   late MawyColorScheme _scheme = widget.colorScheme;
   late MawyTypography _type = widget.typography ?? widget.defaultTypography;
@@ -305,6 +321,7 @@ class _MawyEditorState extends State<MawyEditor> {
   void initState() {
     super.initState();
     _controller.addListener(_changed);
+    _sourceScroll.addListener(_syncScroll);
   }
 
   @override
@@ -333,6 +350,9 @@ class _MawyEditorState extends State<MawyEditor> {
     _controller.removeListener(_changed);
     _controller.dispose();
     _focus.dispose();
+    _sourceScroll.removeListener(_syncScroll);
+    _sourceScroll.dispose();
+    _previewScroll.dispose();
     super.dispose();
   }
 
@@ -344,6 +364,11 @@ class _MawyEditorState extends State<MawyEditor> {
       widget.onChange?.call(_controller.text);
     }
 
+    // The document moved under both panes, so what was measured is wrong and
+    // the preview has to catch up without waiting for somebody to scroll.
+    _places = null;
+    _afterLayout(_syncScroll);
+
     // The status bar and the toolbar's pressed states both read the selection,
     // so a caret that only moved is still a rebuild.
     setState(() {});
@@ -354,6 +379,116 @@ class _MawyEditorState extends State<MawyEditor> {
     MawyColorScheme.dark => Brightness.dark,
     MawyColorScheme.system => MediaQuery.platformBrightnessOf(context),
   };
+
+  /* ---------------------------------------------------------------------
+   * The two panes, scrolling together
+   * ------------------------------------------------------------------ */
+
+  /// Runs [work] once the frame being built has been laid out.
+  void _afterLayout(VoidCallback work) {
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (mounted) {
+        work();
+      }
+    });
+  }
+
+  /// How tall what is inside a scroller is, which is what changes when
+  /// something moved: an edit, a font, a window, an image that arrived.
+  double _extentOf(ScrollController scroller) => scroller.hasClients
+      ? scroller.position.maxScrollExtent + scroller.position.viewportDimension
+      : -1;
+
+  /// The places the two panes agree on, in each one's own pixels.
+  ///
+  /// The source half is where a line begins in the field; the preview half is
+  /// where the block that line opens ended up. Pairs that do not move both
+  /// panes forward are dropped rather than kept and sorted — a block and the
+  /// first block inside it start on the same line, and a pair that went
+  /// backwards would take the preview back up in the middle of a scroll.
+  List<MawyScrollAnchor> _measureAnchors() {
+    final RenderEditable? field = _editable.currentState?.renderEditable;
+    final List<(int, double)> blocks = _anchors.places();
+
+    if (field == null || blocks.isEmpty) {
+      return const <MawyScrollAnchor>[];
+    }
+
+    final List<int> starts = lineStarts(_value);
+    final List<MawyScrollAnchor> found = <MawyScrollAnchor>[const MawyScrollAnchor(from: 0, to: 0)];
+
+    // A `RenderEditable` scrolls itself rather than being scrolled by a viewport
+    // around it, so a caret rect comes back where it is drawn — which is where
+    // it is in the text, less however far the field has been scrolled. Adding
+    // that back is what makes these the same kind of number the block offsets
+    // beside them are, and what the source's own offset is compared against.
+    final double scrolled = _sourceScroll.hasClients ? _sourceScroll.offset : 0;
+
+    for (final (int start, double to) in blocks) {
+      final int at = starts[lineAt(starts, start)];
+      final double from = field.getLocalRectForCaret(TextPosition(offset: at)).top + scrolled;
+      final MawyScrollAnchor last = found.last;
+
+      if (from > last.from && to > last.to) {
+        found.add(MawyScrollAnchor(from: from, to: to));
+      }
+    }
+
+    final MawyScrollAnchor last = found.last;
+
+    // The ends, so a document scrolled all the way down in one pane is all the
+    // way down in the other rather than wherever the last block left it.
+    found.add(
+      MawyScrollAnchor(
+        from: math.max(_extentOf(_sourceScroll), last.from + 1),
+        to: math.max(_extentOf(_previewScroll), last.to + 1),
+      ),
+    );
+
+    return found;
+  }
+
+  /// The preview follows the source, at the places the two of them agree on.
+  ///
+  /// Which places those are has to be measured, and measuring is a layout read
+  /// per block — so the pairs are kept until something moves. The two content
+  /// heights answer for nearly all of that, and an edit that leaves both
+  /// exactly where they were drops the table anyway, from `_changed`.
+  void _syncScroll() {
+    if (_current != MawyEditorMode.split || _syncing) {
+      return;
+    }
+
+    if (!_sourceScroll.hasClients || !_previewScroll.hasClients) {
+      return;
+    }
+
+    final double source = _extentOf(_sourceScroll);
+    final double preview = _extentOf(_previewScroll);
+
+    if (_places == null || _measuredSource != source || _measuredPreview != preview) {
+      _places = _measureAnchors();
+      _measuredSource = source;
+      _measuredPreview = preview;
+    }
+
+    final ScrollPosition position = _previewScroll.position;
+    final List<MawyScrollAnchor> places = _places!;
+    // Nothing to line up against — an empty document, or a preview that has not
+    // been drawn yet. A fraction of the way through is the honest answer to a
+    // question with nothing else in it.
+    final double wanted = places.length > 1
+        ? previewScrollFor(places, _sourceScroll.offset)
+        : (_sourceScroll.offset / math.max(_sourceScroll.position.maxScrollExtent, 1)) *
+              position.maxScrollExtent;
+
+    // Jumped rather than animated. The preview is being dragged by the source,
+    // and an animation started again on every frame of a scroll is one that
+    // never arrives.
+    _syncing = true;
+    position.jumpTo(wanted.clamp(0, math.max(position.maxScrollExtent, 0)));
+    _syncing = false;
+  }
 
   EditState get _state {
     final TextSelection selection = _controller.selection;
@@ -385,6 +520,11 @@ class _MawyEditorState extends State<MawyEditor> {
     if (widget.mode == null) {
       setState(() => _mode = mode);
     }
+
+    // A pane that has just arrived has not been laid out and has nothing to
+    // measure, and one that has just gone took its measurements with it.
+    _places = null;
+    _afterLayout(_syncScroll);
   }
 
   void _setScheme(MawyColorScheme scheme) {
@@ -523,6 +663,8 @@ class _MawyEditorState extends State<MawyEditor> {
       placeholder: widget.placeholder ?? strings.editorPlaceholder,
       onEnter: _enter,
       onIndent: _indent,
+      scrollController: _sourceScroll,
+      editableKey: _editable,
     );
 
     final Widget preview = MawyViewer(
@@ -536,6 +678,10 @@ class _MawyEditorState extends State<MawyEditor> {
       directives: widget.directives,
       highlight: widget.highlight,
       onLinkTap: widget.onLinkTap,
+      scrollController: _previewScroll,
+      // Where each block of the drawn document ended up, which is half of what
+      // lines the two panes up. See `_syncScroll`.
+      anchors: _anchors,
     );
 
     final List<MawyMatch> matches = _matches;

@@ -320,6 +320,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | --- | --- | --- | --- |
 | `padding` | `EdgeInsetsGeometry?` | React 패키지의 값 그대로 | 문서 둘레의 여백. |
 | `scrollController` | `ScrollController?` | 자기 것 하나 | 문서의 스크롤러. 애플리케이션이 몰거나 지켜볼 수 있도록. |
+| `anchors` | `MawyViewerAnchors?` | — | 문서의 최상위 블록 각각이 어디에 놓였는지. 그리면서 채워집니다. 다른 화면을 이 화면에 맞춰 세우려는 쪽을 위한 것입니다. |
 
 :::
 

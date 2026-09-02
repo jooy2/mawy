@@ -382,6 +382,67 @@ void main() {
     });
   });
 
+  group('the two panes of split', () {
+    /// A code block is the shape that catches a preview scrolled by the
+    /// fraction of the way through the file: sixty lines of source that are
+    /// sixty lines of page, with prose on either side that is neither.
+    final String long = <String>[
+      '# Title',
+      '',
+      '```text',
+      for (int at = 0; at < 60; at += 1) 'code line $at',
+      '```',
+      '',
+      for (int at = 1; at <= 14; at += 1) ...<String>['## Section $at', '', 'Some words.', ''],
+    ].join('\n');
+
+    testWidgets('the preview follows the source to the block', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          MawyEditor(defaultValue: long, defaultMode: MawyEditorMode.split),
+          size: const Size(900, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final EditableTextState field = tester.state(find.byType(EditableText));
+      final ScrollController source = tester
+          .widget<EditableText>(find.byType(EditableText))
+          .scrollController!;
+      final double top = tester.getTopLeft(find.byType(MawyViewer)).dy;
+
+      // Two of them, because the top could be a fraction that happened to be
+      // right; two cannot, since a fraction is one straight line and this
+      // document is not.
+      final List<double> landed = <double>[];
+
+      for (final String heading in <String>['## Section 2', '## Section 9']) {
+        // A `RenderEditable` scrolls itself, so a caret rect comes back where
+        // it is drawn rather than where it is in the text.
+        final double at =
+            field.renderEditable
+                .getLocalRectForCaret(TextPosition(offset: long.indexOf(heading)))
+                .top +
+            source.offset;
+
+        source.jumpTo(at.clamp(0, source.position.maxScrollExtent));
+        await tester.pump();
+        await tester.pump();
+
+        landed.add(tester.getTopLeft(find.text(heading.substring(3))).dy - top);
+      }
+
+      // Near the top of the preview, and the same distance from it both times.
+      // A fraction of the way through the file is one straight line and this
+      // document is not, so it cannot land twice in the same place.
+      for (final double delta in landed) {
+        expect(delta, inInclusiveRange(0, 120));
+      }
+
+      expect((landed.first - landed.last).abs(), lessThan(8));
+    });
+  });
+
   group('the palette', () {
     testWidgets("reaches the preview as well as the editor's own chrome", (
       WidgetTester tester,

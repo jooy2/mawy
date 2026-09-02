@@ -320,6 +320,7 @@ Nothing here: this package does not open files, and `value` above says why.
 | --- | --- | --- | --- |
 | `padding` | `EdgeInsetsGeometry?` | the React package's own numbers | The space around the document. |
 | `scrollController` | `ScrollController?` | one of its own | The document's scroller, so an application can drive it or watch it. |
+| `anchors` | `MawyViewerAnchors?` | — | Where each top-level block of the document ends up, filled in as it draws — for anything lining a second view up with this one. |
 
 :::
 

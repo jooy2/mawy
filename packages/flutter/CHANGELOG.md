@@ -136,6 +136,12 @@
 
   Dragging selects, a double tap takes the word under it, and `Ctrl`/`Cmd`+`C` copies. No handles and no context menu — both of those are Material's or Cupertino's, and a package that draws its own everything else should not pull in a toolbar it did not design — so the copy keys are written out here for the same reason `Enter` and the space bar are.
 
+- **In `split`, the preview scrolls with the source.** It did not move at all: the two panes were two scrollers with nothing between them, and a writer who scrolled the source was reading one document and looking at another. The React package has lined the two up since it had a `split` at all, and the guide has been describing behaviour this package did not have.
+
+  To the block rather than to the same fraction of the way down the file, which is the same answer and the same arithmetic: `src/editor/scroll.dart` is `src/internal/scroll.ts` in Dart, function for function. A fenced block is twenty lines of source and twenty lines of page, a paragraph is one long line of source and six of page, and the fraction through the file is not the fraction down the page — so the panes are lined up at the places they can agree on and run straight between them.
+
+  The measuring is the half that cannot be shared, because a browser reads a bounding box off an element and this reads a viewport. `MawyViewerAnchors` is the new piece: hand one to a viewer and it keeps a key on every top-level block, ask it where they are and it measures them. It is what the editor uses, and it is public because an application lining any second view up with a drawn document needs exactly this and has no other way to get it.
+
 ### Changed
 
 - **An outline entry says its heading once.** The panel named each entry after the heading it points at and then drew that heading inside it, and a screen reader handed both read the words out and read them out again — `Second, Second, button`. The drawn words are the drawing now, and the name is the name. The React package's entry is a `<button>` with the heading inside it and has always said it once, which is what makes this a difference between the two rather than a preference.

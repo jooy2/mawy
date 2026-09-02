@@ -20,6 +20,7 @@ import 'package:mawy/src/markdown/parse.dart';
 import 'package:mawy/src/markdown/render.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
+import 'package:mawy/src/viewer/anchors.dart';
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
 
@@ -66,6 +67,7 @@ class MawyViewer extends StatefulWidget {
     this.highlight,
     this.padding,
     this.scrollController,
+    this.anchors,
   });
 
   /// The document, as Markdown.
@@ -175,6 +177,14 @@ class MawyViewer extends StatefulWidget {
   /// it or watch it.
   final ScrollController? scrollController;
 
+  /// Where each top-level block of the document ends up, filled in as it draws.
+  ///
+  /// For anything lining a second view up with this one — the editor's `split`
+  /// is what it exists for, and it is how the preview follows the source to the
+  /// block rather than to the same fraction of the way down the file. Leave it
+  /// out and nothing is kept.
+  final MawyViewerAnchors? anchors;
+
   @override
   State<MawyViewer> createState() => _MawyViewerState();
 }
@@ -250,6 +260,7 @@ class _MawyViewerState extends State<MawyViewer> {
       _parsedWith = widget.parse;
       _headings.clear();
       _dropAnchors();
+      widget.anchors?.reset();
     }
 
     return _document!;
@@ -456,13 +467,19 @@ class _MawyViewerState extends State<MawyViewer> {
     );
   }
 
-  /// The blocks, with a key on every heading so the outline can reach it.
+  /// The blocks, with a key on every heading so the outline can reach it, and
+  /// one on every block where somebody asked where the blocks are.
   List<Widget> _withAnchors(MdDocument document, MawyRenderContext render) {
     final List<Widget> drawn = renderBlocks(document.root.children, render);
     final List<MdBlock> blocks = document.root.children;
+    final MawyViewerAnchors? places = widget.anchors;
 
     for (int index = 0; index < blocks.length; index += 1) {
       final MdBlock block = blocks[index];
+
+      if (places != null) {
+        drawn[index] = KeyedSubtree(key: places.keyFor(block.range.start), child: drawn[index]);
+      }
 
       if (block is MdHeading) {
         final GlobalKey key = _headings.putIfAbsent(block.slug, GlobalKey.new);
