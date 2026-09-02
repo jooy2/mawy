@@ -7,10 +7,11 @@
 /// Lucide's in both, so the two are the same toolbar rather than two toolbars
 /// that resemble each other.
 ///
-/// Built on `package:flutter/widgets.dart`, with the menus put up through the
-/// [Overlay] the application already has. Material would have been less code
-/// and would have brought its own palette, its own ripple and its own sizes
-/// into a viewer that has all three of its own.
+/// Built on `package:flutter/widgets.dart`, with the menus put up through an
+/// [Overlay] — the application's where it has one, and the component's own
+/// where it has not. Material would have been less code and would have brought
+/// its own palette, its own ripple and its own sizes into a viewer that has all
+/// three of its own.
 library;
 
 import 'package:flutter/services.dart';
@@ -431,13 +432,22 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
             decoration: BoxDecoration(
               color: widget.pressed ? tokens.accentSoft : (lit ? tokens.backgroundSunken : null),
               borderRadius: BorderRadius.circular(MawyRadius.small),
-              // A ring around the outside rather than a border inside it: the
-              // stylesheet's `outline` does not take a pixel off the button it
-              // is drawn on, and neither should this.
-              boxShadow: _focused
-                  ? <BoxShadow>[BoxShadow(color: tokens.accent, spreadRadius: 2)]
-                  : null,
             ),
+            // A ring, drawn over the button rather than behind it.
+            //
+            // A `BoxShadow` is a filled shape: spread it two pixels behind a
+            // button whose own background is nothing and what is drawn is a
+            // solid block of accent with the glyph lost in it, which is what
+            // the first control on a toolbar looked like the moment the view
+            // took the focus. A foreground border is hollow, and it is the
+            // stylesheet's `outline` said in Flutter — it takes no pixel off
+            // the button, because the button is a fixed thirty either way.
+            foregroundDecoration: _focused
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(MawyRadius.small),
+                    border: Border.all(color: tokens.accent, width: 2),
+                  )
+                : null,
             child: Opacity(
               opacity: widget.enabled ? 1 : 0.4,
               child: Icon(
@@ -548,7 +558,15 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
       return;
     }
 
-    final OverlayState overlay = Overlay.of(context);
+    // `Overlay.of` asserts in debug and throws a null check in release, and a
+    // component that has one of its own is the answer to that — see
+    // `internal/overlay.dart`. Asked rather than asserted all the same: a
+    // toolbar is not the place to bring an application down.
+    final OverlayState? overlay = Overlay.maybeOf(context);
+
+    if (overlay == null) {
+      return;
+    }
 
     _entry = OverlayEntry(
       builder: (BuildContext context) => Stack(

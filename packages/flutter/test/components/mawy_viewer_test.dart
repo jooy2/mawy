@@ -267,6 +267,28 @@ void main() {
       expect(toolbarButton('Theme'), findsOneWidget);
     });
 
+    testWidgets('opens a menu with no overlay anywhere above it', (WidgetTester tester) async {
+      // `host()` provides one, the way a `Navigator` does. This is the tree an
+      // application that wanted neither Material nor Cupertino writes — a
+      // `WidgetsApp` with nothing but a `builder`, which is what this package's
+      // own gallery is — and every menu button did nothing at all in it.
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: MediaQuery(
+            data: MediaQueryData(size: Size(900, 1400)),
+            child: MawyViewer(value: sample),
+          ),
+        ),
+      );
+
+      await tester.tap(toolbarButton('Text size'));
+      await tester.pump();
+
+      expect(find.text('Back to the defaults'), findsNothing);
+      expect(toolbarButton('Text size +'), findsOneWidget);
+    });
+
     testWidgets('opens the outline, and lists the headings', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: sample)));
 

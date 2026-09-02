@@ -66,7 +66,7 @@
   );
   ```
 
-  It is a `MawyTokensBuilder` rather than one palette because a viewer settles on its brightness *after* it has been handed everything else — from `colorScheme`, or from the platform where that is `system` — and a document that follows the platform has to be able to follow it in both palettes rather than only in the one it opened on. An editor passes what it is given to its preview, so an editor and the document it is editing are never two palettes.
+  It is a `MawyTokensBuilder` rather than one palette because a viewer settles on its brightness _after_ it has been handed everything else — from `colorScheme`, or from the platform where that is `system` — and a document that follows the platform has to be able to follow it in both palettes rather than only in the one it opened on. An editor passes what it is given to its preview, so an editor and the document it is editing are never two palettes.
 
 - **`MawyTokens.copyWith`**, which is how one of those is written: start from `MawyTokens.of(brightness)` and name what differs. Thirty-one arguments to change one colour is not a palette anybody writes twice.
 
@@ -114,7 +114,7 @@
 
 - **How much CommonMark, as a number.** The React package's parser answers 605 of the specification's 652 examples, and this parser is that parser: `tool/parity.dart` diffs the two trees over every awkward case and every Markdown file in the repository, so the suite is run once rather than twice. What the remaining 47 are, and why, is written down beside the test over there.
 
-- **Directives — a way for a document to carry a construct this package does not know about.** The parser reads a shape and stops there: `:::name[label]{key=value}` … `:::` around blocks, `::name[label]{attrs}` on a line of its own, and `:name[label]{attrs}` inside a sentence. What each one *means* is the application's, through `directives`:
+- **Directives — a way for a document to carry a construct this package does not know about.** The parser reads a shape and stops there: `:::name[label]{key=value}` … `:::` around blocks, `::name[label]{attrs}` on a line of its own, and `:name[label]{attrs}` inside a sentence. What each one _means_ is the application's, through `directives`:
 
   ```dart
   MawyViewer(
@@ -139,6 +139,16 @@
 - **`MawyTokens` compares on every colour rather than on six of them.** Six was enough while the only palettes in existence were this package's own two, and became wrong the moment an application could build a third: two palettes differing in nothing but their alert colours called themselves the same palette, and a viewer handed the second one would not have redrawn.
 
 - **The headings panel is called "Contents".** The React package's change, in the same commit and for the same reason: "Outline" is what the thing is to whoever wrote it rather than what a reader is looking for, and the Korean has always said 목차. `MawyViewerToolbarItem.outline` is unchanged, because that is an application's API.
+
+### Fixed
+
+- **Every menu on both toolbars opens.** They did nothing at all, and in a release build they did nothing loudly: the panels are raised into an [Overlay], `Overlay.of` asserts in debug and throws a null check with asserts stripped, and an application that has neither `MaterialApp` nor routes has no overlay for them to go into. That is not an exotic tree — it is what an application that wanted neither Material nor Cupertino writes, and this package's own gallery is one, which is why every Flutter preview on the documentation site had a toolbar where nothing happened.
+
+  A viewer and an editor bring an overlay when they cannot find one, and use the application's when there is one. The typeface, the three sliders, the column width and the theme are all a menu, and all of them were affected.
+
+- **The editor's toolbar is the width of the editor.** A `Column` centres its children unless it is told otherwise, so the bar was as wide as its buttons and floating in the middle of the window, with the rule under it stopping where the buttons stopped. The viewer's was already full width by accident of what is inside it, and now both say so.
+
+- **A focused control is drawn with a ring and not a block.** The focus indicator was a `BoxShadow` spread two pixels behind the button, and a shadow is a filled shape — behind a button whose own background is nothing, what it draws is a solid rectangle of accent with the glyph lost inside it. Flutter gives the first traversable control the focus when a view takes it, so the first button on a toolbar turned into a purple square the moment anybody clicked anywhere. A foreground border is hollow, takes no pixel off the button, and is the stylesheet's `outline` said in Flutter.
 
 ## 0.1.0 — 2026-08-31
 

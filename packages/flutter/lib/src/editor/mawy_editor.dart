@@ -25,6 +25,7 @@ import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/editor/source_field.dart';
 import 'package:mawy/src/editor/status.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/overlay.dart';
 import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/markdown/parse.dart' show MawyParseOptions;
 import 'package:mawy/src/theme/tokens.dart';
@@ -541,73 +542,81 @@ class _MawyEditorState extends State<MawyEditor> {
 
     final Widget editor = Container(
       color: tokens.background,
-      child: Column(
-        children: <Widget>[
-          if (widget.toolbar.isNotEmpty)
-            _Toolbar(
-              items: widget.toolbar,
-              tokens: tokens,
-              strings: strings,
-              state: _state,
-              mode: _current,
-              modes: widget.modes,
-              onMode: _setMode,
-              colorScheme: _scheme,
-              onColorScheme: widget.onColorSchemeChange == null ? null : _setScheme,
-              onCommand: widget.readOnly ? null : _run,
-              finding: _finding && showSource,
-              onFind: showSource ? _openFind : null,
-            ),
-          if (_finding && showSource)
-            MawyFindBar(
-              tokens: tokens,
-              strings: strings,
-              query: _query,
-              onQueryChange: (String query) => setState(() => _query = query),
-              replacement: _replacement,
-              onReplacementChange: (String value) => setState(() => _replacement = value),
-              matchCase: _matchCase,
-              onMatchCaseChange: (bool on) => setState(() => _matchCase = on),
-              total: matches.length,
-              current: _currentMatch(matches),
-              onStep: (bool forwards) => _step(matches, forwards: forwards),
-              onReplace: () => _replaceOne(matches),
-              onReplaceAll: _replaceEvery,
-              onClose: _closeFind,
-              editable: !widget.readOnly,
-            ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints room) => Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  if (showSource)
-                    // A flex of a thousandth, so the share is a whole number of
-                    // them and the two panes always add up to the width. A
-                    // fractional `flex` is not a thing a `Row` has.
-                    Flexible(flex: (_share * 1000).round(), child: source),
-                  if (showSource && showPreview)
-                    _Divider(
-                      tokens: tokens,
-                      strings: strings,
-                      share: _share,
-                      width: room.maxWidth,
-                      onChange: (double next) => setState(() => _share = _clampShare(next)),
-                    )
-                  else if (showSource || showPreview)
-                    const SizedBox.shrink(),
-                  if (showPreview)
-                    Flexible(
-                      flex: showSource ? 1000 - (_share * 1000).round() : 1000,
-                      child: preview,
-                    ),
-                ],
+      child: mawyOverlay(
+        context,
+        Column(
+          // Every row here is the width of the editor and not the width of what
+          // is in it. A `Column` centres its children by default, which left the
+          // toolbar as wide as its buttons and floating in the middle of the bar
+          // — with the rule under it stopping where the buttons stopped.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (widget.toolbar.isNotEmpty)
+              _Toolbar(
+                items: widget.toolbar,
+                tokens: tokens,
+                strings: strings,
+                state: _state,
+                mode: _current,
+                modes: widget.modes,
+                onMode: _setMode,
+                colorScheme: _scheme,
+                onColorScheme: widget.onColorSchemeChange == null ? null : _setScheme,
+                onCommand: widget.readOnly ? null : _run,
+                finding: _finding && showSource,
+                onFind: showSource ? _openFind : null,
+              ),
+            if (_finding && showSource)
+              MawyFindBar(
+                tokens: tokens,
+                strings: strings,
+                query: _query,
+                onQueryChange: (String query) => setState(() => _query = query),
+                replacement: _replacement,
+                onReplacementChange: (String value) => setState(() => _replacement = value),
+                matchCase: _matchCase,
+                onMatchCaseChange: (bool on) => setState(() => _matchCase = on),
+                total: matches.length,
+                current: _currentMatch(matches),
+                onStep: (bool forwards) => _step(matches, forwards: forwards),
+                onReplace: () => _replaceOne(matches),
+                onReplaceAll: _replaceEvery,
+                onClose: _closeFind,
+                editable: !widget.readOnly,
+              ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints room) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    if (showSource)
+                      // A flex of a thousandth, so the share is a whole number of
+                      // them and the two panes always add up to the width. A
+                      // fractional `flex` is not a thing a `Row` has.
+                      Flexible(flex: (_share * 1000).round(), child: source),
+                    if (showSource && showPreview)
+                      _Divider(
+                        tokens: tokens,
+                        strings: strings,
+                        share: _share,
+                        width: room.maxWidth,
+                        onChange: (double next) => setState(() => _share = _clampShare(next)),
+                      )
+                    else if (showSource || showPreview)
+                      const SizedBox.shrink(),
+                    if (showPreview)
+                      Flexible(
+                        flex: showSource ? 1000 - (_share * 1000).round() : 1000,
+                        child: preview,
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          if (widget.status.isNotEmpty)
-            _Status(items: widget.status, tokens: tokens, strings: strings, state: _state),
-        ],
+            if (widget.status.isNotEmpty)
+              _Status(items: widget.status, tokens: tokens, strings: strings, state: _state),
+          ],
+        ),
       ),
     );
 
@@ -977,7 +986,6 @@ class _Status extends StatelessWidget {
       container: true,
       label: strings.status,
       child: Container(
-        width: double.infinity,
         padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
         decoration: BoxDecoration(
           color: tokens.chrome,

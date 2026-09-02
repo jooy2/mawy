@@ -14,6 +14,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/overlay.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/parse.dart';
 import 'package:mawy/src/markdown/render.dart';
@@ -365,56 +366,62 @@ class _MawyViewerState extends State<MawyViewer> {
 
     return Container(
       color: tokens.background,
-      child: Column(
-        children: <Widget>[
-          if (widget.toolbar.isNotEmpty)
-            MawyViewerToolbar(
-              items: widget.toolbar,
-              tokens: tokens,
-              strings: strings,
-              typography: type,
-              onTypographyChange: _setTypography,
-              colorScheme: widget.colorScheme,
-              onColorSchemeChange: widget.onColorSchemeChange,
-              outlineOpen: _outlineOpen,
-              onOutlineToggle: () => setState(() => _outlineOpen = !_outlineOpen),
-              copied: _copied,
-              onCopy: _copy,
-            ),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                if (_outlineOpen)
-                  MawyViewerOutline(
-                    entries: document.outline,
-                    tokens: tokens,
-                    strings: strings,
-                    onSelected: _goTo,
-                  ),
-                Expanded(
-                  child: Semantics(
-                    label: strings.document,
-                    container: true,
-                    child: SingleChildScrollView(
-                      controller: _scroller,
-                      padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: measure ?? double.infinity),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[..._withAnchors(document, render), ?footnotes],
+      child: mawyOverlay(
+        context,
+        Column(
+          // The toolbar is the width of the viewer, not the width of its buttons.
+          // A `Column` centres its children unless it is told otherwise.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (widget.toolbar.isNotEmpty)
+              MawyViewerToolbar(
+                items: widget.toolbar,
+                tokens: tokens,
+                strings: strings,
+                typography: type,
+                onTypographyChange: _setTypography,
+                colorScheme: widget.colorScheme,
+                onColorSchemeChange: widget.onColorSchemeChange,
+                outlineOpen: _outlineOpen,
+                onOutlineToggle: () => setState(() => _outlineOpen = !_outlineOpen),
+                copied: _copied,
+                onCopy: _copy,
+              ),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (_outlineOpen)
+                    MawyViewerOutline(
+                      entries: document.outline,
+                      tokens: tokens,
+                      strings: strings,
+                      onSelected: _goTo,
+                    ),
+                  Expanded(
+                    child: Semantics(
+                      label: strings.document,
+                      container: true,
+                      child: SingleChildScrollView(
+                        controller: _scroller,
+                        padding: widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: measure ?? double.infinity),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[..._withAnchors(document, render), ?footnotes],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
