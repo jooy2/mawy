@@ -11,6 +11,7 @@ import type {
   MawyFont,
   MawyHighlight,
   MawyHtmlPolicy,
+  MawyLinkTarget,
   MawyImageUpload,
   MawyLocale,
   MawyMode,
@@ -148,6 +149,12 @@ export interface MawyEditorProps extends Omit<
   parse?: MawyParseOptions;
   html?: MawyHtmlPolicy;
   /**
+   * Where a link in the document opens, in the preview and on the drawn
+   * surface. A new tab by default, because behind that link there is unsaved
+   * work. See `MawyViewer`.
+   */
+  linkTarget?: MawyLinkTarget;
+  /**
    * What colours a fenced code block in the preview. The drawn document is not
    * coloured and will not be: an editing surface where the caret has to find
    * its way back into the source is not the place for a second opinion about
@@ -199,6 +206,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     onUploadImage,
     parse,
     html = 'escape',
+    linkTarget = 'blank',
     highlight,
     directives,
     onSave,
@@ -1300,6 +1308,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               placeholder={placeholder ?? strings.editorPlaceholder}
               parse={parse}
               html={html}
+              linkTarget={linkTarget}
               directives={directives}
               strings={strings}
               room={room}
@@ -1333,6 +1342,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               fileDrop={false}
               parse={parse}
               html={html}
+              linkTarget={linkTarget}
               highlight={highlight}
               directives={directives}
               fonts={fonts}

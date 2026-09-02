@@ -237,6 +237,7 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | --- | --- | --- | --- |
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `{ gfm: true, breaks: false, definitionLists: true }` | How the Markdown is read. |
 | `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | What becomes of raw HTML written inside the document. |
+| `linkTarget` | `'blank' \| 'self'` | `'blank'` | Where a link the document wrote opens. |
 | `locale` | [`MawyLocale`](#mawylocale) | `'en'` | The language of the viewer's own chrome. Nothing to do with the document. |
 | `directives` | [`MawyDirectives`](#mawydirectives) | — | What draws the constructs this package does not know about. |
 
@@ -250,6 +251,8 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | The language of the viewer's own chrome. Nothing to do with the document. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | What a tapped link does. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>?` | — | What draws the constructs this package does not know about. |
+
+There is no `linkTarget` either. What opening a link means is `onLinkTap`'s whole subject here, and where it opens is part of what an application answers with.
 
 There is no `html` argument, and there will not be one: raw HTML written inside a document is shown as the characters it was written with, because there is no HTML here to draw it as.
 

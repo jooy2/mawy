@@ -237,6 +237,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | --- | --- | --- | --- |
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `{ gfm: true, breaks: false, definitionLists: true }` | 마크다운을 어떻게 읽을지. |
 | `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | 문서 안에 쓰인 원본 HTML을 어떻게 할지. |
+| `linkTarget` | `'blank' \| 'self'` | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
 | `locale` | [`MawyLocale`](#mawylocale) | `'en'` | 뷰어 자신의 chrome이 쓰는 언어. 문서와는 무관합니다. |
 | `directives` | [`MawyDirectives`](#mawydirectives) | — | 이 패키지가 모르는 구성을 무엇으로 그릴지. |
 
@@ -250,6 +251,8 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | 뷰어 자신의 chrome이 쓰는 언어. 문서와는 무관합니다. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | 링크를 눌렀을 때 무엇을 할지. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>?` | — | 이 패키지가 모르는 구성을 무엇으로 그릴지. |
+
+`linkTarget`도 없습니다. 링크를 연다는 것이 무슨 뜻인지가 여기서는 `onLinkTap`의 주제 전부이고, 어디서 열지도 애플리케이션이 함께 답하는 것입니다.
 
 `html` 인자는 없고, 생기지도 않을 것입니다. 문서 안에 쓰인 원본 HTML은 쓰인 글자 그대로 보입니다. 여기에는 그것을 그릴 HTML이라는 것이 없기 때문입니다.
 

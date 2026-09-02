@@ -47,6 +47,32 @@ describe('the document', () => {
       .toHaveAttribute('href', 'https://example.com');
   });
 
+  it('opens a link in a new tab, and in this one when asked', async () => {
+    const away = await render(<MawyViewer value={SAMPLE} />);
+    const link = away.container.querySelector('.mawy-md-link') as HTMLElement;
+
+    // A viewer is usually a piece of a page rather than the page, and in an
+    // editor there is unsaved work behind that link.
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+
+    const here = await render(<MawyViewer value={SAMPLE} linkTarget="self" />);
+    const same = here.container.querySelector('.mawy-md-link') as HTMLElement;
+
+    expect(same.hasAttribute('target')).toBe(false);
+    expect(same.hasAttribute('rel')).toBe(false);
+  });
+
+  it('keeps a footnote and its way back in the tab they are on', async () => {
+    const screen = await render(<MawyViewer value={'Words.[^a]\n\n[^a]: A note.'} />);
+    const reference = screen.container.querySelector('.mawy-md-footnote-ref a') as HTMLElement;
+    const back = screen.container.querySelector('.mawy-md-footnote-back') as HTMLElement;
+
+    // Both point at this page, so `linkTarget` has nothing to say about them.
+    expect(reference.hasAttribute('target')).toBe(false);
+    expect(back.hasAttribute('target')).toBe(false);
+  });
+
   it('gives every heading the id its outline links to', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} />);
     const heading = screen.getByRole('heading', { name: 'Second' }).element();

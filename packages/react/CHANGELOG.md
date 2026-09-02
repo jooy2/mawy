@@ -173,6 +173,12 @@
 
   A textarea that swallows `Tab` is a keyboard trap, so the trap is opened rather than avoided: **press `Escape`, then `Tab`, and the focus moves on.** Anything else typed arms indentation again. It is the rule CodeMirror, Monaco and GitHub's editor all use, and the surface says so through `aria-describedby`, because a way out nobody is told about is a way out that does not exist for the person who needed it. The drawn document does not capture `Tab` at all — there is no trap there to open.
 
+- **`linkTarget`, and a link opens in a new tab by default.** `'blank'` puts `target="_blank"` and `rel="noopener noreferrer"` on every link the document wrote; `'self'` is for an application showing a document _as_ its page.
+
+  A new tab is the default because of where this component usually is: a viewer is a piece of a page rather than the page, so a reader who follows a link out and comes back should find the document where they left it — and in an editor, what is behind that link is unsaved work. A footnote's number and the arrow back from it point at the same page and are unaffected either way. `MawyEditor` takes it too, for the preview and the drawn surface.
+
+  The Flutter package has no counterpart and will not: what opening a link means is `onLinkTap`'s whole subject there, and where it opens is part of what an application answers with.
+
 ### Changed
 
 - **A click in the preview no longer moves the caret in the source.** It was the other direction of the question the scrolling asks — a place on the page, read back as a place in the document — and as a piece of arithmetic it worked. As a behaviour it was one answer too many: `wysiwyg` is the surface that edits the drawn document, and a `split` whose right-hand pane also edits is two answers to where the writing happens. A preview is a preview, and now behaves like the page it is.

@@ -1,7 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import type { MawyDirectives, MawyHtmlPolicy, MawyParseOptions } from '../../types.js';
+import type {
+  MawyDirectives,
+  MawyHtmlPolicy,
+  MawyLinkTarget,
+  MawyParseOptions
+} from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
@@ -50,6 +55,8 @@ export interface MawyEditorDocumentProps {
   placeholder?: string;
   parse?: MawyParseOptions;
   html: MawyHtmlPolicy;
+  /** Where a link the document wrote opens. See `MawyViewer.linkTarget`. */
+  linkTarget?: MawyLinkTarget;
   /** What draws the constructs this package does not know about. */
   directives?: MawyDirectives;
   strings: MawyStrings;
@@ -195,6 +202,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       placeholder,
       parse,
       html,
+      linkTarget,
       directives,
       strings,
       room,
@@ -241,8 +249,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       [document_, focused, selection.start, selection.end]
     );
     const context: RenderContext = React.useMemo(
-      () => ({ html, strings, footnotes, directives, source: value, reveal }),
-      [html, strings, footnotes, directives, value, reveal]
+      () => ({ html, strings, footnotes, directives, linkTarget, source: value, reveal }),
+      [html, strings, footnotes, directives, linkTarget, value, reveal]
     );
 
     /**

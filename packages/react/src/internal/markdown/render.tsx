@@ -22,7 +22,8 @@ import type {
   MawyDirectiveKind,
   MawyDirectives,
   MawyHighlighter,
-  MawyHtmlPolicy
+  MawyHtmlPolicy,
+  MawyLinkTarget
 } from '../../types.js';
 import type {
   MdBlock,
@@ -77,6 +78,8 @@ export interface RenderContext {
    * range in the tree indexes this string.
    */
   source?: string;
+  /** Where a link the document wrote opens. @default 'blank' */
+  linkTarget?: MawyLinkTarget;
   /**
    * A run of the document to draw as the characters it was written with rather
    * than as what it means.
@@ -235,6 +238,11 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
             className="mawy-md-link"
             href={node.url}
             title={node.title ?? undefined}
+            // `noopener` is what makes the new tab safe and `noreferrer` is
+            // what keeps the document's own address out of it; a browser that
+            // has one without the other is a browser this has to say both to.
+            target={context.linkTarget === 'self' ? undefined : '_blank'}
+            rel={context.linkTarget === 'self' ? undefined : 'noopener noreferrer'}
             {...origin(node)}
           >
             {renderInline(node.children, context)}

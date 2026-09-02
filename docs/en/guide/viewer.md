@@ -331,6 +331,12 @@ A viewer renders content that the person running it did not write, so the defaul
 
 :::
 
+::: fw react
+
+**A link opens in a new tab.** `linkTarget` is `'blank'` by default, which puts `target="_blank"` and `rel="noopener noreferrer"` on it — a viewer is usually a piece of a page rather than the page, so a reader who follows a link out and comes back should find the document where they left it, and in an editor there is unsaved work behind that link. `linkTarget="self"` is for an application showing a document _as_ its page. A footnote's number and the arrow back from it point at the same page and are unaffected either way.
+
+:::
+
 **Every URL is checked, in Markdown as much as in HTML.** `[click](javascript:…)` is plain Markdown with no HTML anywhere near it, so the scheme allowlist is not part of the HTML option and is not switched off with it. A refused destination is drawn as the words the author wrote, with no link around them — a reader sees the sentence rather than a control that does nothing.
 
 ::: fw flutter

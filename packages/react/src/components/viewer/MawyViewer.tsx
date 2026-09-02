@@ -7,6 +7,7 @@ import type {
   MawyFont,
   MawyHighlight,
   MawyHtmlPolicy,
+  MawyLinkTarget,
   MawyLocale,
   MawyParseOptions,
   MawyTypography,
@@ -99,6 +100,19 @@ export interface MawyViewerProps extends Omit<
    */
   html?: MawyHtmlPolicy;
 
+  /**
+   * Where a link the document wrote opens.
+   *
+   * A new tab by default, with `rel="noopener noreferrer"` on it. A viewer is
+   * usually a piece of a page rather than the page, so a reader who follows a
+   * link out and comes back should find the document where they left it — and
+   * in an editor there is unsaved work behind that link. `'self'` is for an
+   * application showing a document *as* its page.
+   *
+   * @default 'blank'
+   */
+  linkTarget?: MawyLinkTarget;
+
   /** The language of the viewer's own chrome. @default 'en' */
   locale?: MawyLocale;
 
@@ -178,6 +192,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     toolbar = true,
     parse,
     html = 'escape',
+    linkTarget = 'blank',
     locale = 'en',
     fileDrop,
     accept = MAWY_ACCEPT,
@@ -278,8 +293,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     [document_]
   );
   const context = React.useMemo(
-    () => ({ html, strings, highlighter, footnotes, directives, source: text }),
-    [html, strings, highlighter, footnotes, directives, text]
+    () => ({ html, strings, highlighter, footnotes, directives, linkTarget, source: text }),
+    [html, strings, highlighter, footnotes, directives, linkTarget, text]
   );
   const content = React.useMemo(
     () => (
