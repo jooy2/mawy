@@ -16,6 +16,8 @@ library;
 
 import 'dart:async';
 
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy_example/samples.dart';
@@ -57,6 +59,14 @@ class _GalleryAppState extends State<GalleryApp> {
   int _at = 0;
   MawyColorScheme _scheme = MawyColorScheme.system;
 
+  /// The document, once one has been opened over the sample.
+  ///
+  /// The gallery hands `MawyEditor` a `defaultValue` and lets it hold its own
+  /// string, so opening a file means handing it a different one — a key on the
+  /// document is what makes that a new editor rather than an argument the old
+  /// one ignores.
+  String? _opened;
+
   Sample get _sample {
     final String? wanted = _wanted;
 
@@ -96,22 +106,31 @@ class _GalleryAppState extends State<GalleryApp> {
         // write, so they are the editor rather than the viewer.
         if (sample.editor) {
           final Widget editor = MawyEditor(
-            key: ValueKey<String>(sample.id),
-            defaultValue: sample.valueFor(locale),
+            key: ValueKey<String>('${sample.id}${_opened?.length ?? ''}'),
+            defaultValue: _opened ?? sample.valueFor(locale),
             colorScheme: _scheme,
             onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
             locale: locale,
             directives: _directives(tokens),
             highlight: mawyHighlighter,
             onLinkTap: _open,
+            onOpen: _chooseFile,
+          );
+
+          // A file dropped on the window opens in the editor, which is the
+          // other half of `onOpen` and the same argument: catching a drop is a
+          // plugin, and the library refuses plugins.
+          final Widget dropping = DropTarget(
+            onDragDone: (DropDoneDetails details) => _readFirst(details.files),
+            child: editor,
           );
 
           return embedded
-              ? editor
+              ? dropping
               : Column(
                   children: <Widget>[
                     _Switch(sample: sample, onChange: _choose),
-                    Expanded(child: editor),
+                    Expanded(child: dropping),
                   ],
                 );
         }
@@ -169,6 +188,36 @@ class _GalleryAppState extends State<GalleryApp> {
     unawaited(
       launchUrl(target, mode: LaunchMode.externalApplication).catchError((Object _) => false),
     );
+  }
+
+  /// A document, chosen from wherever this machine keeps them.
+  Future<void> _chooseFile() async {
+    const XTypeGroup markdown = XTypeGroup(
+      label: 'Markdown',
+      extensions: <String>['md', 'markdown', 'mdown', 'mkd', 'mdx', 'txt'],
+      // Safari and Firefox read the extensions; every other browser wants a
+      // MIME type, and a picker that offers nothing is a picker nobody can use.
+      mimeTypes: <String>['text/markdown', 'text/plain'],
+    );
+
+    final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[markdown]);
+
+    if (file != null) {
+      await _readFirst(<XFile>[file]);
+    }
+  }
+
+  /// The first of whatever arrived, read as text and put in the editor.
+  Future<void> _readFirst(List<XFile> files) async {
+    if (files.isEmpty) {
+      return;
+    }
+
+    final String text = await files.first.readAsString();
+
+    if (mounted) {
+      setState(() => _opened = text);
+    }
   }
 
   /// Which palette the viewer is drawing in, resolved the way it resolves it.

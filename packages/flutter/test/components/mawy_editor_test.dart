@@ -421,6 +421,33 @@ void main() {
     });
   });
 
+  group('an empty document', () {
+    testWidgets('offers to open one where the application knows how', (WidgetTester tester) async {
+      bool asked = false;
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultMode: MawyEditorMode.split, onOpen: () => asked = true)),
+      );
+
+      expect(find.text('Open a Markdown file'), findsOneWidget);
+
+      await tester.tap(find.text('Choose a file'));
+      await tester.pump();
+
+      expect(asked, isTrue);
+      expect(toolbarButton('Open a file'), findsOneWidget);
+    });
+
+    testWidgets('says nothing where it does not', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyEditor(defaultMode: MawyEditorMode.split)));
+
+      // A control that cannot do what it says is worse than no control, and an
+      // editor whose application has no answer has nothing to offer here.
+      expect(find.text('Open a Markdown file'), findsNothing);
+      expect(toolbarButton('Open a file'), findsNothing);
+    });
+  });
+
   group('the two panes of split', () {
     /// A code block is the shape that catches a preview scrolled by the
     /// fraction of the way through the file: sixty lines of source that are

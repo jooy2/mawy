@@ -18,6 +18,12 @@ dependencies:
   # URL is the application's job and every application has already chosen how it
   # does that — and this is an application, so it chooses.
   url_launcher: ^6.3.0
+  # What `MawyEditor.onOpen` is answered with, and what catches a file dropped
+  # on the window. Both are the same refusal the library makes: reading a file
+  # is a plugin, and which plugin is the application's choice. This is an
+  # application, so it chooses.
+  file_selector: ^1.0.3
+  desktop_drop: ^0.7.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0

@@ -154,6 +154,10 @@
 
 - **A toolbar button says its name under the pointer.** An icon with no word beside it is a control nobody can name, and until now only a screen reader was told. It is the React package's tooltip in the same palette and the same shape, and it is hung off a pointer entering the button rather than off the focus highlight — those are two different questions, and a finger raises neither.
 
+- **`MawyEditor.onOpen`, and an editor holding nothing offers to be filled.** The `open` button is on the default toolbar now, and where the document is empty the preview stops being a blank rectangle and becomes the way in — the React package's empty state, in the pane the document is going to appear in. Both are drawn only where `onOpen` was given, because a control that cannot do what it says is worse than none.
+
+  It is the button and not the picker. Reading a file is still a plugin and still the application's, which is what this package has said about `open` and `save` from the start; what is new is that the editor draws the control and says when it is worth offering, instead of leaving an application to build its own. `MawyStrings` gains `openFile`, `emptyTitle`, `emptyHint` and `emptyAction`, which the React package already had.
+
 ### Changed
 
 - **The editor's theme control is a menu rather than a button that cycles.** Light, dark and the platform's, all three at once with a tick beside the one in use — which is what the viewer's toolbar here already offered and what the React package's editor has always offered. A button that cycles is a button pressed twice to reach the value on the other side of the one you did not want, and the list will be longer than three the first time this library ships a palette that is neither light nor dark.

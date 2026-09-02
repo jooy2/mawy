@@ -141,7 +141,13 @@ The name is the file's own when one was opened, and the document's first heading
 
 ::: fw flutter
 
-**Not here, and deliberately.** There is no `onSave`, no `accept`, and no `open` or `save` on [`MawyEditorToolbarItem`](#mawyeditortoolbaritem). A file picker is a plugin rather than a widget, and which one an application has already chosen is not a decision a Markdown editor should make on its behalf. `value` and `onChange` are the whole of the seam: read the file, hand over the string, take the string back.
+| Argument | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `onOpen` | `VoidCallback?` | — | What opening a document means. Without one there is no `open` button and no empty state offering to fill the editor. |
+
+**No `onSave`, no `accept`, and no `save`.** A file picker is a plugin rather than a widget, and which one an application has already chosen is not a decision a Markdown editor should make on its behalf. `value` and `onChange` are the whole of the seam: read the file, hand over the string, take the string back.
+
+`onOpen` is the button and not the picker. The editor draws the control and says when it is worth offering — on the toolbar, and in the pane of an editor holding nothing — and what a press of it opens is entirely yours.
 
 :::
 

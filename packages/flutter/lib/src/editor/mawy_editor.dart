@@ -28,6 +28,7 @@ import 'package:mawy/src/editor/scroll.dart';
 import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/editor/source_field.dart';
 import 'package:mawy/src/editor/status.dart';
+import 'package:mawy/src/internal/focus_visible.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/overlay.dart';
 import 'package:mawy/src/internal/roving.dart';
@@ -97,6 +98,14 @@ enum MawyEditorToolbarItem {
   /// The find bar, over the source.
   find,
 
+  /// A document, opened from wherever the application keeps them.
+  ///
+  /// Drawn only where [MawyEditor.onOpen] was given, because a file picker is
+  /// a plugin rather than a widget: which one an application has already chosen
+  /// is not a decision a Markdown editor should make on its behalf. The button
+  /// is this package's; what it opens is yours.
+  open,
+
   /// Light, dark, or whatever the platform says.
   colorScheme,
 
@@ -152,6 +161,7 @@ const List<MawyEditorToolbarItem> kMawyEditorToolbar = <MawyEditorToolbarItem>[
   MawyEditorToolbarItem.rule,
   MawyEditorToolbarItem.separator,
   MawyEditorToolbarItem.find,
+  MawyEditorToolbarItem.open,
   MawyEditorToolbarItem.colorScheme,
 ];
 
@@ -197,6 +207,7 @@ class MawyEditor extends StatefulWidget {
     this.highlight,
     this.onLinkTap,
     this.readOnly = false,
+    this.onOpen,
     this.lineNumbers = true,
     this.placeholder,
   });
@@ -264,6 +275,17 @@ class MawyEditor extends StatefulWidget {
 
   /// Whether the document can be changed.
   final bool readOnly;
+
+  /// What opening a document means, where the application has an answer.
+  ///
+  /// Without one there is no `open` button and no empty state offering to fill
+  /// the editor: a control that cannot do what it says is worse than none. With
+  /// one, an editor holding nothing says so and offers it — an empty editor is
+  /// a place to bring a document to, and this is the way in.
+  ///
+  /// Reading the file is the application's; the string comes back through
+  /// [value] and [onChange] like every other change to the document.
+  final VoidCallback? onOpen;
 
   /// Whether the source surface numbers its lines. The React package's default
   /// is the same, and for the same reason: an editor is a place errors are
@@ -673,22 +695,32 @@ class _MawyEditorState extends State<MawyEditor> {
       lineNumbers: widget.lineNumbers,
     );
 
-    final Widget preview = MawyViewer(
-      value: _value,
-      parse: widget.parse,
-      colorScheme: _scheme,
-      tokens: widget.tokens,
-      typography: _type,
-      toolbar: const <MawyViewerToolbarItem>[],
-      locale: widget.locale,
-      directives: widget.directives,
-      highlight: widget.highlight,
-      onLinkTap: widget.onLinkTap,
-      scrollController: _previewScroll,
-      // Where each block of the drawn document ended up, which is half of what
-      // lines the two panes up. See `_syncScroll`.
-      anchors: _anchors,
-    );
+    // A document with nothing in it draws nothing, and a pane drawing nothing
+    // beside an empty editor is a rectangle that says less than a sentence
+    // would. Where the application knows how to open one, this is the way in —
+    // the React package's empty state, in the pane the document will appear in.
+    // A document with nothing in it draws nothing, and a pane drawing nothing
+    // beside an empty editor is a rectangle that says less than a sentence
+    // would. Where the application knows how to open one, this is the way in —
+    // the React package's empty state, in the pane the document will appear in.
+    final Widget preview = _value.trim().isEmpty && widget.onOpen != null && !widget.readOnly
+        ? _Empty(tokens: tokens, strings: strings, onOpen: widget.onOpen!)
+        : MawyViewer(
+            value: _value,
+            parse: widget.parse,
+            colorScheme: _scheme,
+            tokens: widget.tokens,
+            typography: _type,
+            toolbar: const <MawyViewerToolbarItem>[],
+            locale: widget.locale,
+            directives: widget.directives,
+            highlight: widget.highlight,
+            onLinkTap: widget.onLinkTap,
+            scrollController: _previewScroll,
+            // Where each block of the drawn document ended up, which is half of
+            // what lines the two panes up. See `_syncScroll`.
+            anchors: _anchors,
+          );
 
     final List<MawyMatch> matches = _matches;
 
@@ -717,6 +749,7 @@ class _MawyEditorState extends State<MawyEditor> {
                 onCommand: widget.readOnly ? null : _run,
                 finding: _finding && showSource,
                 onFind: showSource ? _openFind : null,
+                onOpen: widget.readOnly ? null : widget.onOpen,
               ),
             if (_finding && showSource)
               MawyFindBar(
@@ -834,6 +867,7 @@ class _Toolbar extends StatefulWidget {
     required this.onCommand,
     required this.finding,
     required this.onFind,
+    required this.onOpen,
   });
 
   final List<MawyEditorToolbarItem> items;
@@ -848,6 +882,7 @@ class _Toolbar extends StatefulWidget {
   final ValueChanged<MawyCommand>? onCommand;
   final bool finding;
   final VoidCallback? onFind;
+  final VoidCallback? onOpen;
 
   @override
   State<_Toolbar> createState() => _ToolbarState();
@@ -988,6 +1023,27 @@ class _ToolbarState extends State<_Toolbar> {
         continue;
       }
 
+      if (item == MawyEditorToolbarItem.open) {
+        // Not drawn where the application has no answer: a file picker is a
+        // plugin, and a button that cannot open anything is one nobody should
+        // reach.
+        if (widget.onOpen == null) {
+          continue;
+        }
+
+        children.add(
+          MawyToolbarButton(
+            icon: LucideIcons.folderOpen,
+            label: widget.strings.openFile,
+            tokens: widget.tokens,
+            focusNode: next(),
+            onPressed: widget.onOpen!,
+          ),
+        );
+
+        continue;
+      }
+
       if (item == MawyEditorToolbarItem.colorScheme) {
         if (widget.onColorScheme == null) {
           continue;
@@ -1111,6 +1167,130 @@ class _ToolbarState extends State<_Toolbar> {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: children),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * No document yet
+ * ---------------------------------------------------------------------- */
+
+/// What the preview is when there is nothing to preview.
+///
+/// Not an error and not a blank rectangle: an editor holding nothing is a place
+/// to bring a document to, so the empty state is the way in. It is drawn here
+/// rather than in the viewer because what opening one *means* is the editor's
+/// argument — see [MawyEditor.onOpen].
+class _Empty extends StatelessWidget {
+  const _Empty({required this.tokens, required this.strings, required this.onOpen});
+
+  final MawyTokens tokens;
+  final MawyStrings strings;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: tokens.background,
+      padding: const EdgeInsets.all(28),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: tokens.backgroundSunken,
+              borderRadius: BorderRadius.circular(MawyRadius.large),
+            ),
+            child: Icon(LucideIcons.fileText, size: 22, color: tokens.foregroundSubtle),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            strings.emptyTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: tokens.foreground, fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            strings.emptyHint,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: tokens.foregroundMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          _EmptyAction(tokens: tokens, label: strings.emptyAction, onPressed: onOpen),
+        ],
+      ),
+    );
+  }
+}
+
+/// The button under it. A word in a box, which is what the stylesheet's is.
+class _EmptyAction extends StatefulWidget {
+  const _EmptyAction({required this.tokens, required this.label, required this.onPressed});
+
+  final MawyTokens tokens;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  State<_EmptyAction> createState() => _EmptyActionState();
+}
+
+class _EmptyActionState extends State<_EmptyAction> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final MawyTokens tokens = widget.tokens;
+
+    return Semantics(
+      button: true,
+      label: widget.label,
+      child: FocusableActionDetector(
+        mouseCursor: SystemMouseCursors.click,
+        shortcuts: mawyActivate,
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (ActivateIntent _) {
+              widget.onPressed();
+
+              return null;
+            },
+          ),
+        },
+        onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on && MawyFocusVisible.wanted),
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: _hovered ? tokens.backgroundSunken : tokens.background,
+              borderRadius: BorderRadius.circular(MawyRadius.medium),
+              border: Border.all(color: _hovered ? tokens.borderStrong : tokens.border),
+            ),
+            foregroundDecoration: _focused
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(MawyRadius.medium),
+                    border: Border.all(color: tokens.accent, width: 2),
+                  )
+                : null,
+            child: ExcludeSemantics(
+              child: Text(
+                widget.label,
+                style: TextStyle(
+                  color: tokens.foreground,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ),
       ),

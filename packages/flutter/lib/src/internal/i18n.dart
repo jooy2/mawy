@@ -73,6 +73,10 @@ class MawyStrings {
     required this.statusWords,
     required this.statusCharacters,
     required this.editorPlaceholder,
+    required this.openFile,
+    required this.emptyTitle,
+    required this.emptyHint,
+    required this.emptyAction,
     required this.find,
     required this.replace,
     required this.findMatchCase,
@@ -264,6 +268,18 @@ class MawyStrings {
   /// What the source surface says when it is empty.
   final String editorPlaceholder;
 
+  /// The control that opens a document.
+  final String openFile;
+
+  /// What an editor with no document at all says.
+  final String emptyTitle;
+
+  /// The line under it, which says the two ways of answering.
+  final String emptyHint;
+
+  /// The button under that.
+  final String emptyAction;
+
   /// The find bar's own name, and the field in it.
   final String find;
 
@@ -369,6 +385,10 @@ const MawyStrings _en = MawyStrings(
   statusWords: 'words',
   statusCharacters: 'characters',
   editorPlaceholder: 'Write here…',
+  openFile: 'Open a file',
+  emptyTitle: 'Open a Markdown file',
+  emptyHint: 'Drop a .md file here, or choose one to open.',
+  emptyAction: 'Choose a file',
   find: 'Find',
   replace: 'Replace',
   findMatchCase: 'Match case',
@@ -445,6 +465,10 @@ const MawyStrings _ko = MawyStrings(
   statusWords: '단어',
   statusCharacters: '자',
   editorPlaceholder: '여기에 입력…',
+  openFile: '파일 열기',
+  emptyTitle: '마크다운 파일 열기',
+  emptyHint: '여기에 .md 파일을 놓거나, 열 파일을 고르세요.',
+  emptyAction: '파일 선택',
   find: '찾기',
   replace: '바꾸기',
   findMatchCase: '대소문자 구분',
