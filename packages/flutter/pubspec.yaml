@@ -1,17 +1,17 @@
 name: mawy
 description: >-
-  A Markdown viewer that draws the document rather than a string of HTML — its
-  own CommonMark and GFM parser, typography the reader controls, dark mode.
-version: 0.1.0
+  A Markdown editor and viewer that draw the document rather than a string of
+  HTML — their own CommonMark and GFM parser, typography the reader controls.
+version: 1.0.0
 repository: https://github.com/jooy2/mawy
 homepage: https://mawy.cdget.com
 issue_tracker: https://github.com/jooy2/mawy/issues
 topics:
   - markdown
+  - editor
   - viewer
   - commonmark
   - gfm
-  - rich-text
 
 environment:
   sdk: ^3.8.0

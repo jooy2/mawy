@@ -2,7 +2,9 @@
 
 > This package's history. Each language Mawy ships for keeps its own changelog beside its own manifest, because they version independently.
 
-## Unreleased
+## 1.0.0 (2026-09-02)
+
+The entries below are a long list of work, and a long list is a minor version. What makes this a major is the promise that comes with the number: from here the exported API is under semantic versioning, so a name that goes away or changes shape waits for another major. The one break in this release is `MawyTokens`, under Changed.
 
 ### Added
 
@@ -16,7 +18,7 @@
 
   Every match is now painted as the query is typed, in a wash of yellow, with the one being stepped through in a stronger orange. Which turns the count beside the field into something you can check against the document rather than take on faith, and makes "next" a thing that visibly moves.
 
-  In the source pane it goes in the coloured layer under the textarea rather than into the textarea's own selection, so a match inside a heading or a link keeps the colour the highlighter gave it and gains a background. `--mawy-find` and `--mawy-find-current` are the two colours, and they are palette variables like every other colour here.
+  In the source pane it goes into the spans the controller hands the field rather than into the field's own selection, so a match inside a heading or a link keeps the colour the highlighter gave it and gains a background. `MawyTokens.find` and `MawyTokens.findCurrent` are the two colours, and they are palette entries like every other colour here.
 
 - **A mouse wheel arrives over a few frames rather than all at once.** Flutter answers a notch by putting the offset where the notch says on the next frame and drawing nothing in between, and it is the nothing in between that reads as hard: every browser and every native application on the platforms this is read on animates the same distance. A second notch while the first is still arriving adds to where it was going rather than starting again from where it has got to, which is what keeps a run of them feeling like one movement.
 
@@ -172,6 +174,8 @@
 
 ### Changed
 
+- **`MawyTokens` has two more colours, and its constructor asks for them.** `find` and `findCurrent` are what the find bar paints over what it found. Every field on that class is `required` and these are no exception, so an application that builds a palette with `MawyTokens(...)` from nothing has two more arguments to pass; one that starts from `MawyTokens.of(brightness)` or `.copyWith(...)`, which is nearly everybody, has nothing to change. This is the sort of thing a major version is for, and there is not another one due.
+
 - **The editor's theme control is a menu rather than a button that cycles.** Light, dark and the platform's, all three at once with a tick beside the one in use — which is what the viewer's toolbar here already offered and what the React package's editor has always offered. A button that cycles is a button pressed twice to reach the value on the other side of the one you did not want, and the list will be longer than three the first time this library ships a palette that is neither light nor dark.
 
   `MawyToolbarChoice` is the panel behind it, public now, because there are two toolbars in this package and the list a theme is chosen from should not be two lists that resemble each other.
@@ -236,7 +240,7 @@
 
 - **A selection in the source is a run of text and not a row of blocks.** Flutter fits a highlight box to each run's own glyphs by default, so a line of Hangul and a line of Latin were highlighted at two different heights with a gap left between the lines. `BoxHeightStyle.max` is the browser's answer, and it is a knob a text field has. The drawn document has no such knob — Flutter paints a selection there itself, with the tight boxes hardcoded — so the gaps between lines are still there when a _document_ is selected rather than the source.
 
-## 0.1.0 — 2026-08-31
+## 0.1.0 (2026-08-31)
 
 The first release. Everything in it is new, so each entry says what a thing is rather than what it became.
 
