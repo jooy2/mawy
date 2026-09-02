@@ -16,6 +16,11 @@ import { PLAYGROUND } from './document.js';
  * `onSave` is deliberately absent, which is what makes `Mod`+`S` real: without
  * it the editor hands the document to the browser as a download, and a download
  * is a thing that actually happens rather than a callback nobody can see.
+ *
+ * `fileDrop` is on for the same kind of reason. It is off by default because an
+ * editor is usually somewhere a document already lives; this one starts empty
+ * the moment a reader clears it, and an empty editor is a place to bring a file
+ * to.
  */
 export default function PlaygroundEditor({
   colorScheme,
@@ -34,6 +39,11 @@ export default function PlaygroundEditor({
       highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
       directives={DEMO_DIRECTIVES}
       onUploadImage={readAsDataUrl}
+      // On, because this editor is a place to bring a file to: clear it and the
+      // preview becomes somewhere to drop a `.md`, or to choose one. It is off
+      // by default, because replacing a document somebody has been writing
+      // because a file landed on it is how work is lost.
+      fileDrop
       style={{ height }}
     />
   );

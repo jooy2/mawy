@@ -179,6 +179,10 @@
 
   The Flutter package has no counterpart and will not: what opening a link means is `onLinkTap`'s whole subject there, and where it opens is part of what an application answers with.
 
+- **`fileDrop` on the editor: a Markdown file dropped on it opens as the document.** Off by default, because replacing a document somebody has been writing because a file landed on it is how work is lost and `open` is the control that does it on purpose. On, for an editor that starts empty and is a place to bring a file _to_ — the playground on this site is one, and has it on.
+
+  With it on, an empty preview stops saying there is nothing here and offers the picker instead: the viewer's own empty state, in the pane the document is going to appear in. A dropped image is still an image wherever `onUploadImage` is given, and the drop is still the editor's whichever pane it lands in — one answer for the whole component rather than two that have to agree.
+
 ### Changed
 
 - **A click in the preview no longer moves the caret in the source.** It was the other direction of the question the scrolling asks — a place on the page, read back as a place in the document — and as a piece of arithmetic it worked. As a behaviour it was one answer too many: `wysiwyg` is the surface that edits the drawn document, and a `split` whose right-hand pane also edits is two answers to where the writing happens. A preview is a preview, and now behaves like the page it is.

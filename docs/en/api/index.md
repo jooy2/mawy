@@ -133,8 +133,9 @@ A list rather than a `true`, for the reason [`toolbar`](#mawyviewer) is one on t
 | --- | --- | --- | --- |
 | `onSave` | `(value: string, name: string) => void` | — | Where a saved document goes. Without it the browser is handed a download. |
 | `accept` | `string` | every Markdown and text extension | What the file picker offers. |
+| `fileDrop` | `boolean` | `false` | Whether a Markdown file dropped on the editor opens as the document. |
 
-The name is the file's own when one was opened, and the document's first heading otherwise. A file dropped on the editor is an image rather than a document — see [opening and saving](../guide/editor#opening-and-saving) for why.
+The name is the file's own when one was opened, and the document's first heading otherwise. A file dropped on the editor is an image rather than a document unless `fileDrop` says otherwise — see [opening and saving](../guide/editor#opening-and-saving) for why, and for what turning it on changes.
 
 :::
 
@@ -305,6 +306,7 @@ There is no `fonts` argument. The package ships no typefaces and names none, so 
 | --- | --- | --- | --- |
 | `fileDrop` | `boolean` | `true`, unless `value` is passed | Whether a file dropped on the viewer opens in it. |
 | `accept` | `string` | every Markdown and text extension | What the file picker offers. |
+| `fileDrop` | `boolean` | `false` | Whether a Markdown file dropped on the editor opens as the document. |
 
 A file larger than five megabytes is refused rather than read.
 

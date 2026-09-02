@@ -286,6 +286,8 @@ The name is the file's own, when one was opened. Otherwise it is **the document'
 
 It is still the editor's drop. **A file it will not take is refused rather than left to the browser**, which opens one as a page — and the document, the undo history and the caret go with the tab. The line under the document says what happened and which control does what was being asked for.
 
+**`fileDrop` turns that rule off**, for an editor that starts empty and is a place to bring a file _to_ rather than one a document already lives in. With it on, a dropped `.md` opens as the document, and the preview of an empty one stops saying there is nothing here and offers the picker instead — which is the viewer's empty state, in the pane where the document is going to appear. A dropped image is still an image wherever `onUploadImage` is given; only the files that were being refused are read.
+
 ::: fw flutter
 
 This section is the React package's. Opening a file and writing one back are the application's here: a file picker is a plugin rather than a widget, and which one an app has already chosen is not a decision a Markdown editor should make on its behalf. `MawyEditorToolbarItem` has no `open` or `save` for the same reason — `onChange` hands over the document, and where it goes is yours.

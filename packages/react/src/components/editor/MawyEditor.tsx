@@ -145,6 +145,23 @@ export interface MawyEditorProps extends Omit<
   /** What the file picker offers. @default every Markdown and text extension */
   accept?: string;
 
+  /**
+   * Whether a Markdown file dropped on the editor opens as the document.
+   *
+   * Off, and that is the careful answer rather than the useful one: replacing a
+   * document somebody has been writing because a file landed on it is how work
+   * is lost, and `open` is the control that does it on purpose. Turn it on for
+   * an editor that starts empty and is a place to bring a file *to* — the
+   * playground on this library's own site is one — and an empty preview becomes
+   * somewhere to drop one, the way the viewer's empty state already is.
+   *
+   * A dropped image is still an image wherever `onUploadImage` is given. Only
+   * the files that were being refused are read now.
+   *
+   * @default false
+   */
+  fileDrop?: boolean;
+
   /* The preview's half of the props, passed straight through to the viewer. */
   parse?: MawyParseOptions;
   html?: MawyHtmlPolicy;
@@ -211,6 +228,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     directives,
     onSave,
     accept = MAWY_ACCEPT,
+    fileDrop = false,
     fonts = MAWY_SYSTEM_FONTS,
     typography,
     defaultTypography,
@@ -764,6 +782,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const carriesFile = (event: React.DragEvent) => [...event.dataTransfer.types].includes('Files');
 
   const takesImage = () => Boolean(upload.current) && editable;
+  const takesDocument = () => fileDrop && !readOnly;
 
   const onDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
     if (!carriesFile(event)) {
@@ -810,15 +829,23 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     const files = takesImage() ? imageFilesIn(event.dataTransfer) : [];
 
-    if (!files.length) {
-      // Said rather than ignored: somebody who drops a document on an editor
-      // is asking for something, and there is a control that does it.
-      setNote({ text: strings.dropNotDocument, failed: true });
+    if (files.length) {
+      void addImages(files, dropPoint(event));
 
       return;
     }
 
-    void addImages(files, dropPoint(event));
+    const document_ = takesDocument() ? event.dataTransfer.files[0] : undefined;
+
+    if (document_) {
+      void read(document_);
+
+      return;
+    }
+
+    // Said rather than ignored: somebody who drops a document on an editor is
+    // asking for something, and there is a control that does it.
+    setNote({ text: strings.dropNotDocument, failed: true });
   };
 
   /**
@@ -1339,7 +1366,22 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             <MawyViewer
               value={text}
               toolbar={false}
+              // The drop is the editor's, whichever pane it lands in — one
+              // answer for the whole component rather than two that have to
+              // agree. What the preview is given is the *picker*: with a
+              // callback to hand a file to, its empty state stops being a
+              // notice that there is nothing here and becomes the place to
+              // bring one, which is what an empty editor is for.
               fileDrop={false}
+              onValueChange={
+                fileDrop && !readOnly
+                  ? (next, file) => {
+                      setNote(null);
+                      setFileName(file?.name ?? null);
+                      write(next);
+                    }
+                  : undefined
+              }
               parse={parse}
               html={html}
               linkTarget={linkTarget}

@@ -702,11 +702,15 @@ describe('finding', () => {
 
     type(replacement, 'ONE');
 
-    (screen.container.querySelector('button[data-mawy-tip="Replace"]') as HTMLButtonElement).click();
+    (
+      screen.container.querySelector('button[data-mawy-tip="Replace"]') as HTMLButtonElement
+    ).click();
 
     await vi.waitFor(() => expect(sourceOf(screen).value).toBe('ONE two one'));
 
-    (screen.container.querySelector('button[data-mawy-tip="Replace all"]') as HTMLButtonElement).click();
+    (
+      screen.container.querySelector('button[data-mawy-tip="Replace all"]') as HTMLButtonElement
+    ).click();
 
     await vi.waitFor(() => expect(sourceOf(screen).value).toBe('ONE two ONE'));
   });
@@ -1972,6 +1976,33 @@ describe('images', () => {
         screen.getByText('A dropped file does not replace the document — use Open for that.')
       )
       .toBeInTheDocument();
+  });
+
+  it('opens a dropped document when it was told to take one', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Before." modes={['plain']} onChange={onChange} fileDrop />
+    );
+
+    const file = new File(['# Somewhere else'], 'other.md', { type: 'text/markdown' });
+    const event = drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [file]);
+
+    expect(event.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('# Somewhere else'));
+  });
+
+  it('offers the picker in an empty preview when it takes a document', async () => {
+    const screen = await render(<MawyEditor defaultValue="" defaultMode="split" fileDrop />);
+
+    // An editor that starts empty and is a place to bring a file to says so,
+    // rather than saying there is nothing here.
+    await expect.element(screen.getByRole('button', { name: 'Choose a file' })).toBeInTheDocument();
+  });
+
+  it('says there is nothing to show when it does not take one', async () => {
+    const screen = await render(<MawyEditor defaultValue="" defaultMode="split" />);
+
+    await expect.element(screen.getByText('Nothing to show yet.')).toBeInTheDocument();
   });
 
   it('says so when the file dropped on it was a document', async () => {
