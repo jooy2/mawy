@@ -943,7 +943,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // the drawn document `Enter` is an `insertParagraph`, which the surface
       // answers for in the container it was pressed in — this one is a list,
       // and that one is every one of them.
-      const next = showDocument ? null : continueList(state);
+      const next = showDocument ? null : continueList(state, parse?.definitionLists ?? true);
 
       if (next) {
         event.preventDefault();

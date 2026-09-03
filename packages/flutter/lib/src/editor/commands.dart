@@ -433,7 +433,12 @@ final RegExp _item = RegExp(r'^([ \t]*)([-*+]|:|(\d{1,9})[.)])([ \t]+)(\[[ xX]\]
 /// helpfully added.
 ///
 /// `null` when the line is not a list item at all, and Enter is just Enter.
-EditState? continueList(EditState state) {
+///
+/// [definitionLists] is the parser's own option, and it is here because the `:`
+/// on the list above is only a marker where the parser reads one. An editor
+/// told not to read definition lists would otherwise carry a marker down a line
+/// the document it is editing does not think is a definition at all.
+EditState? continueList(EditState state, {bool definitionLists = true}) {
   if (state.start != state.end) {
     return null;
   }
@@ -452,6 +457,10 @@ EditState? continueList(EditState state) {
   final String space = item.group(4)!;
   final String? task = item.group(5);
   final String content = item.group(6)!;
+
+  if (marker == ':' && !definitionLists) {
+    return null;
+  }
 
   if (content.trim().isEmpty) {
     // An empty item: the marker goes, and so does the list.

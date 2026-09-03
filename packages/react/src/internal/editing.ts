@@ -346,7 +346,8 @@ function breakAt(
   value: string,
   start: number,
   end: number,
-  node: Node
+  node: Node,
+  definitionLists: boolean
 ): MawyEdit | null {
   const block = blockAt(root, node);
   const tag = block?.tagName;
@@ -360,7 +361,7 @@ function breakAt(
   }
 
   if (start === end) {
-    const item = continueList({ value, start, end });
+    const item = continueList({ value, start, end }, definitionLists);
 
     if (item) {
       return {
@@ -521,7 +522,8 @@ export function editFor(
   event: InputEvent,
   root: HTMLElement,
   value: string,
-  aim: MawyAim | null
+  aim: MawyAim | null,
+  definitionLists = true
 ): MawyEdit | null {
   const place = placeOf(root, value, aim);
 
@@ -554,7 +556,7 @@ export function editFor(
       return event.data === null ? null : splice(value, start, end, event.data);
 
     case 'insertParagraph':
-      return breakAt(root, value, start, end, range.startContainer);
+      return breakAt(root, value, start, end, range.startContainer, definitionLists);
 
     case 'insertLineBreak': {
       const block = blockAt(root, range.startContainer);

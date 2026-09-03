@@ -400,8 +400,13 @@ const ITEM = /^([ \t]*)([-*+]|:|(\d{1,9})[.)])([ \t]+)(\[[ xX]\][ \t]+)?(.*)$/;
  * added.
  *
  * `null` when the line is not a list item at all, and Enter is just Enter.
+ *
+ * `definitionLists` is the parser's own option, and it is here because the `:`
+ * on the list above is only a marker where the parser reads one. An editor
+ * told not to read definition lists would otherwise carry a marker down a line
+ * the document it is editing does not think is a definition at all.
  */
-export function continueList(state: EditState): EditState | null {
+export function continueList(state: EditState, definitionLists = true): EditState | null {
   if (state.start !== state.end) {
     return null;
   }
@@ -415,6 +420,10 @@ export function continueList(state: EditState): EditState | null {
   }
 
   const [, indent, marker, ordinal, space, task, content] = item;
+
+  if (marker === ':' && !definitionLists) {
+    return null;
+  }
 
   if (!content.trim()) {
     // An empty item: the marker goes, and so does the list.

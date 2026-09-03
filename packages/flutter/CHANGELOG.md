@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **`Enter` stops carrying a definition marker down in an editor that does not read definition lists.** `parse.definitionLists: false` turns the syntax off in the parser, and the line `: like this` is then a paragraph — but `Enter` on it still wrote another `: ` on the next line, so the editor was helping with a construct the document it was editing does not have. `continueList` takes the option now, and defaults to reading them, which is what it did before.
+
 - **The status bar says the column in the same characters as the count beside it.** The column was counted in UTF-16 units and the selection in code points, so a caret moved past an emoji jumped two columns while the selection count said one character. Both are code points now.
 
 - **Finding without case sensitivity reports the match where it is.** A letter whose lower case is more than one character — `İ` is the everyday one — made the folded copy longer than the document, and every match after it was reported one place to the left. Replace then took out the wrong letters. The folding keeps the length now, at the cost of `İ` matching only itself.

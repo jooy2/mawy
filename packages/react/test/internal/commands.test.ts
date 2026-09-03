@@ -135,6 +135,17 @@ describe('line markers', () => {
     expect(run('orderedList', '«a\n\nb»')).toBe('«1. a\n\n2. b»');
   });
 
+  it('carries a definition marker down only where the parser reads one', () => {
+    const at = (value: string) => ({ value, start: value.length, end: value.length });
+
+    expect(continueList(at('Term\n: what it means'))?.value).toBe('Term\n: what it means\n: ');
+    // An editor told not to read definition lists is editing a document where
+    // that line is a paragraph, and `Enter` on a paragraph is `Enter`.
+    expect(continueList(at('Term\n: what it means'), false)).toBe(null);
+    // Every other marker is a marker either way.
+    expect(continueList(at('- one'), false)?.value).toBe('- one\n- ');
+  });
+
   it('reads a heading off the lines with something on them', () => {
     // A blank line is not a heading that failed to be one, so a selection with
     // a paragraph break in it still toggles off.

@@ -324,7 +324,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
-        const edit = editFor(event as InputEvent, element, value, aim.current);
+        const edit = editFor(event as InputEvent, element, value, aim.current, definitionLists);
 
         if (edit) {
           onEdit(edit);
@@ -380,7 +380,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('beforeinput', refuse);
         element.removeEventListener('paste', paste);
       };
-    }, [value, readOnly, onEdit, onImages, aim]);
+    }, [value, readOnly, onEdit, onImages, aim, definitionLists]);
 
     /**
      * `selectionchange` on the document rather than anything on the element:
