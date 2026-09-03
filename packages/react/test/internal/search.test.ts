@@ -90,4 +90,20 @@ describe('replacing', () => {
   it('replaces with nothing, which is how a thing is deleted everywhere', () => {
     expect(replaceAll('a-b-c', '-', '', false)).toEqual({ value: 'abc', count: 2 });
   });
+
+  /**
+   * `İ` lower-cases to two characters, so folding the whole document moved
+   * every offset after it — a match reported one place to the left, and a
+   * replacement that took out the wrong letters.
+   */
+  it('keeps the offsets where a letter would grow in lower case', () => {
+    const value = 'İstanbul and one';
+
+    expect(findMatches(value, 'one', false)).toEqual([{ start: 13, end: 16 }]);
+    expect(value.slice(13, 16)).toBe('one');
+    expect(replaceAll(value, 'one', 'two', false)).toEqual({
+      value: 'İstanbul and two',
+      count: 1
+    });
+  });
 });

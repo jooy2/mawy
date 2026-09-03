@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **Finding without case sensitivity reports the match where it is.** A letter whose lower case is more than one character — `İ` is the everyday one — made the folded copy longer than the document, and every match after it was reported one place to the left. Replace then took out the wrong letters. The folding keeps the length now, at the cost of `İ` matching only itself.
+
 - **A heading toggles off over a selection with a paragraph break in it.** Whether the lines were already headings was read from every line including the blank ones, and a blank line is not a heading — so the toggle never turned off, and pressing it again put `#` on the blank line instead. Blank lines are read past now, and left alone, which is what every other line marker already did.
 
 - **Making two paragraphs a list no longer leaves an empty item between them.** The blank line separating them took a bullet of its own, so `- a`, `- `, `- b` came out of what was asked for as two items. A blank line inside a list is left alone now, which is what the ordered list beside it has always done.

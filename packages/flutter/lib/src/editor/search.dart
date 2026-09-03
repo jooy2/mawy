@@ -60,13 +60,42 @@ class MawyReplacedAll {
 /// Matches never overlap: the search carries on from the end of the one it just
 /// found, so `aa` in `aaaa` is two rather than three. Which is what makes
 /// replacing all of them one pass rather than a fixed point.
+/// A copy in lower case that is exactly as long as what went in.
+///
+/// `toLowerCase` over a whole string is not length-preserving — `İ` becomes two
+/// characters — and every offset this file reports is an offset into the
+/// original. One character that grew puts every match after it in the wrong
+/// place, and a replacement then takes out the wrong letters.
+///
+/// So the folding is done a character at a time and the ones that would change
+/// length are left as they were written. What that costs is that `İ` matches
+/// only itself, which is a match not found rather than a match reported in the
+/// wrong place.
+String _fold(String text) {
+  final StringBuffer out = StringBuffer();
+
+  for (final int rune in text.runes) {
+    final String character = String.fromCharCode(rune);
+    final String lower = character.toLowerCase();
+
+    out.write(lower.length == character.length ? lower : character);
+  }
+
+  return out.toString();
+}
+
+/// Every match, in the order they appear.
+///
+/// Matches never overlap: the search carries on from the end of the one it just
+/// found, so `aa` in `aaaa` is two rather than three. Which is what makes
+/// replacing all of them one pass rather than a fixed point.
 List<MawyMatch> findMatches(String value, String query, bool matchCase) {
   if (query.isEmpty) {
     return <MawyMatch>[];
   }
 
-  final String haystack = matchCase ? value : value.toLowerCase();
-  final String needle = matchCase ? query : query.toLowerCase();
+  final String haystack = matchCase ? value : _fold(value);
+  final String needle = matchCase ? query : _fold(query);
   final List<MawyMatch> out = <MawyMatch>[];
   int at = 0;
 
@@ -77,8 +106,8 @@ List<MawyMatch> findMatches(String value, String query, bool matchCase) {
       return out;
     }
 
-    out.add(MawyMatch(found, found + query.length));
-    at = found + query.length;
+    out.add(MawyMatch(found, found + needle.length));
+    at = found + needle.length;
   }
 }
 

@@ -26,13 +26,38 @@ export interface MawyMatch {
  * found, so `aa` in `aaaa` is two rather than three. Which is what makes
  * replacing all of them one pass rather than a fixed point.
  */
+/**
+ * A copy in lower case that is exactly as long as what went in.
+ *
+ * `toLowerCase` over a whole string is not length-preserving — `İ` becomes two
+ * characters — and every offset this file reports is an offset into the
+ * original. One character that grew puts every match after it in the wrong
+ * place, and a replacement then takes out the wrong letters.
+ *
+ * So the folding is done a character at a time and the ones that would change
+ * length are left as they were written. What that costs is that `İ` matches
+ * only itself, which is a match not found rather than a match reported in the
+ * wrong place.
+ */
+function fold(text: string): string {
+  let out = '';
+
+  for (const character of text) {
+    const lower = character.toLowerCase();
+
+    out += lower.length === character.length ? lower : character;
+  }
+
+  return out;
+}
+
 export function findMatches(value: string, query: string, matchCase: boolean): MawyMatch[] {
   if (!query) {
     return [];
   }
 
-  const haystack = matchCase ? value : value.toLowerCase();
-  const needle = matchCase ? query : query.toLowerCase();
+  const haystack = matchCase ? value : fold(value);
+  const needle = matchCase ? query : fold(query);
   const out: MawyMatch[] = [];
   let at = 0;
 
@@ -43,8 +68,8 @@ export function findMatches(value: string, query: string, matchCase: boolean): M
       return out;
     }
 
-    out.push({ start: found, end: found + query.length });
-    at = found + query.length;
+    out.push({ start: found, end: found + needle.length });
+    at = found + needle.length;
   }
 }
 
