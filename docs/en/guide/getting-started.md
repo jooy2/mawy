@@ -24,7 +24,7 @@ Both packages are published at `1.0.0`. Everything on this page is real and runs
 
 - **React 18 or 19**, as a peer dependency, along with `react-dom`.
 - **Node.js 20.19 or later** to build with.
-- A browser with `contenteditable`, `Selection` and `beforeinput` — every current one.
+- A browser with `contenteditable`, `Selection` and `beforeinput`, which every current one has.
 
 :::
 
@@ -43,7 +43,7 @@ Both packages are published at `1.0.0`. Everything on this page is real and runs
 npm install mawy-react
 ```
 
-`react` and `react-dom` are peer dependencies. If your project already has one of them, that is the copy Mawy uses.
+`react` and `react-dom` are peer dependencies. If your project already has them, those are the copies Mawy uses.
 
 The one runtime dependency is [`lucide-react`](https://lucide.dev), which is where the toolbar's icons come from. It is ISC-licensed, brings nothing else with it, and is tree-shaken down to the dozen glyphs actually drawn.
 
@@ -59,7 +59,7 @@ The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_i
 
 :::
 
-### How big it is
+### Bundle size
 
 ::: fw react
 
@@ -70,9 +70,9 @@ The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_i
 | `mawy-react/highlight`  | 2.8 kB  |
 | `mawy-react/styles.css` | 5.9 kB  |
 
-React is not counted, because your application already has it; `lucide-react` is, because it arrives with this. **A page that only reads documents does not ship the editor** — the toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, and the sixteen kilobytes between the first two rows are what that is worth.
+React is not counted, because your application already has it; `lucide-react` is, because it arrives with the package. **A page that only reads documents does not ship the editor** — the toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, and the sixteen kilobytes between the first two rows are what that is worth.
 
-The numbers are a real bundle of the published files rather than an estimate, they are recorded in `packages/react/size-budget.json`, and CI fails a change that goes over one. So they are what you get rather than what we hope.
+The numbers come from a real bundle of the published files rather than from an estimate. They are recorded in `packages/react/size-budget.json`, and CI fails a change that goes over one — so they are what you get rather than what we hope for.
 
 :::
 

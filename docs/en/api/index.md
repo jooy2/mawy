@@ -5,7 +5,7 @@ order: 2
 
 # API
 
-Everything the package exports. Each entry says what it is, what it takes and what it gives back.
+This page lists everything the package exports, with what each one is, what it takes and what it gives back.
 
 :::: tip `1.0.0`
 
@@ -69,7 +69,7 @@ Built on `package:flutter/widgets.dart` alone, like the viewer, and holding its 
 | `readOnly` | `bool` | `false` | The document can still be read, selected and copied. |
 | `placeholder` | `String?` | a localised prompt | Shown while the document is empty. |
 
-The two ways round are the ones every text field in Flutter offers, and they are the React package's two as well.
+The two arrangements are the ones every text field in Flutter offers, and they are the React package's as well.
 
 :::
 
@@ -101,7 +101,7 @@ The two ways round are the ones every text field in Flutter offers, and they are
 
 :::
 
-#### Chrome
+#### The interface
 
 ::: fw react
 
@@ -110,6 +110,7 @@ The two ways round are the ones every text field in Flutter offers, and they are
 | `toolbar` | [`MawyEditorToolbarOption`](#mawyeditortoolbaroption) | `true` | Which controls the toolbar has, and in what order. |
 | `status` | [`MawyEditorStatusOption`](#mawyeditorstatusoption) | `true` | What the status bar counts. |
 | `lineNumbers` | `boolean` | `true` | The gutter down the left of the source. |
+| `locale` | [`MawyLocale`](#mawylocale) | `'en'` | The language of the editor's own interface — toolbar labels, menu entries, the words along the status bar, the text a screen reader is given. Handed to the preview as well. Nothing to do with the document. |
 
 :::
 
@@ -120,8 +121,9 @@ The two ways round are the ones every text field in Flutter offers, and they are
 | `toolbar` | `List<MawyEditorToolbarItem>` | [`kMawyEditorToolbar`](#kmawyeditortoolbar) | Which controls the toolbar has, and in what order. `const []` for none. |
 | `status` | `List<MawyEditorStatusItem>` | [`kMawyEditorStatus`](#kmawyeditorstatus) | What the status bar counts. `const []` for none. |
 | `lineNumbers` | `bool` | `true` | The gutter down the leading edge of the source. |
+| `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | The language of the editor's own interface — toolbar labels, menu entries, the words along the status bar, the text a screen reader is given. Handed to the preview as well. Nothing to do with the document. |
 
-A list rather than a `true`, for the reason [`toolbar`](#mawyviewer) is one on the viewer.
+A list rather than a `true`, for the same reason the viewer's [`toolbar`](#mawyviewer) is one.
 
 :::
 
@@ -157,13 +159,13 @@ The name is the file's own when one was opened, and the document's first heading
 
 `Mod`+`F` opens a find bar over the source, and [`MawyEditorToolbarItem.find`](#mawyeditortoolbaritem) is the button that does the same thing. `Enter` is the next match, `Shift`+`Enter` the one before, `Escape` closes it and gives the focus back to the document.
 
-It is there because a platform's own find reaches a page of text and not the inside of a text field, and the source surface is one. The arithmetic is exported as well — `findMatches`, `matchFrom`, `replaceMatch`, `replaceAll` and `MawyMatch` — for an application that would rather drive it from its own chrome.
+It is there because a platform's own find reaches a page of text and not the inside of a text field, and the source surface is one. The arithmetic is exported as well — `findMatches`, `matchFrom`, `replaceMatch`, `replaceAll` and `MawyMatch` — for an application that would rather drive it from its own interface.
 
 :::
 
 ::: fw react
 
-`Mod`+`F` opens the find bar over whichever surface is showing. See [finding and replacing](../guide/editor#finding-and-replacing).
+`Mod`+`F` opens the find bar over whichever surface is showing. See [finding](../guide/editor#finding).
 
 :::
 
@@ -171,13 +173,13 @@ It is there because a platform's own find reaches a page of text and not the ins
 
 ::: fw react
 
-`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first six are passed straight through to the preview. `directives` reaches the drawn document as well.
+`parse`, `html`, `fonts`, `directives`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and the first six are passed straight through to the preview. `directives` reaches the drawn document as well.
 
 :::
 
 ::: fw flutter
 
-`parse`, `directives`, `highlight`, `onLinkTap`, `typography`, `defaultTypography`, `colorScheme`, `onColorSchemeChange`, `tokens` and `locale` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and are passed straight through to the preview.
+`parse`, `directives`, `highlight`, `onLinkTap`, `typography`, `defaultTypography`, `colorScheme`, `onColorSchemeChange` and `tokens` mean exactly what they mean on [`MawyViewer`](#mawyviewer), and are passed straight through to the preview.
 
 `tokens` reaches further than the preview: the editor's own toolbar, status bar and find bar are drawn from the palette it returns, so an editor and the document it is editing are never two palettes.
 
@@ -245,7 +247,7 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `{ gfm: true, breaks: false, definitionLists: true }` | How the Markdown is read. |
 | `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | What becomes of raw HTML written inside the document. |
 | `linkTarget` | `'blank' \| 'self'` | `'blank'` | Where a link the document wrote opens. |
-| `locale` | [`MawyLocale`](#mawylocale) | `'en'` | The language of the viewer's own chrome. Nothing to do with the document. |
+| `locale` | [`MawyLocale`](#mawylocale) | `'en'` | The language of the viewer's own interface. Nothing to do with the document. |
 | `directives` | [`MawyDirectives`](#mawydirectives) | — | What draws the constructs this package does not know about. |
 
 :::
@@ -255,7 +257,7 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | Argument | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `parse` | [`MawyParseOptions`](#mawyparseoptions) | `MawyParseOptions()` | How the Markdown is read. |
-| `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | The language of the viewer's own chrome. Nothing to do with the document. |
+| `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | The language of the viewer's own interface. Nothing to do with the document. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | What a tapped link does. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>?` | — | What draws the constructs this package does not know about. |
 
@@ -312,7 +314,6 @@ There is no `fonts` argument. The package ships no typefaces and names none, so 
 | --- | --- | --- | --- |
 | `fileDrop` | `boolean` | `true`, unless `value` is passed | Whether a file dropped on the viewer opens in it. |
 | `accept` | `string` | every Markdown and text extension | What the file picker offers. |
-| `fileDrop` | `boolean` | `false` | Whether a Markdown file dropped on the editor opens as the document. |
 
 A file larger than five megabytes is refused rather than read.
 
@@ -324,7 +325,7 @@ Nothing here: this package does not open files, and `value` above says why.
 
 :::
 
-#### The screen
+#### Layout and scrolling
 
 ::: fw flutter
 
@@ -366,7 +367,7 @@ type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 
 Which surface a document is shown on. These are views of one document rather than four editors — see [the editor](../guide/editor).
 
-- `'wysiwyg'` — the rendered document, edited in place. Partly built, and not on the default list.
+- `'wysiwyg'` — the rendered document, edited in place.
 - `'plain'` — the Markdown source, edited as text.
 - `'preview'` — the rendered document, read-only.
 - `'split'` — the source on one side and the preview on the other, at once.
@@ -580,7 +581,7 @@ enum MawyLocale { en, ko }
 
 :::
 
-**English and Korean**, and `en` is the default. It is the language of the viewer's and the editor's own chrome — toolbar labels, menu entries, the text a screen reader is given — and has nothing to do with the language a document is written in. Both packages ship the same words under the same names; a locale that exists in one and not the other is not a locale this library has.
+**English and Korean**, and `en` is the default. It is the language of the viewer's and the editor's own interface — toolbar labels, menu entries, the text a screen reader is given — and has nothing to do with the language a document is written in. Both packages ship the same words under the same names; a locale that exists in one and not the other is not a locale this library has.
 
 ### `MawyParseOptions`
 
@@ -999,7 +1000,7 @@ class MawyTokens {
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
-Every colour a document and its chrome are drawn in, as one object. The fields are the React package's `--mawy-*` custom properties under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
+Every colour a document and its interface are drawn in, as one object. The fields are the React package's `--mawy-*` custom properties under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
 
 The viewer picks `light` or `dark` from its own `colorScheme` and does not read a global, which is what lets one document be dark inside a light screen.
 
@@ -1013,7 +1014,7 @@ MawyViewer(
 );
 ```
 
-The export is also for an application drawing its own chrome beside a document and wanting the same colours in it.
+The export is also for an application drawing its own interface beside a document and wanting the same colours in it.
 
 ### `MawyRadius` and `MawyMotion`
 

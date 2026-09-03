@@ -58,13 +58,13 @@ MawyEditor(defaultValue: document, onChange: save);
 
 [^1]: Written wherever it suits the author and read at the bottom, which is the whole of what a footnote is.
 `,
-  ko: `# 전부 켜 둔 채로
+  ko: `# 전부 켜 둔 에디터
 
 이 페이지에 있는 것은 패키지에 들어 있는 그 에디터입니다. 사진도 아니고 줄여 놓은 사본도 아닙니다. 여기에 입력하는 것이 곧 마크다운이고, 나머지 화면은 전부 그 마크다운을 보는 방법입니다.
 
-## 왼쪽 끝의 전환
+## 왼쪽 끝의 전환 버튼
 
-하나의 질문에 대한 네 가지 답입니다. \`wysiwyg\`는 그려진 문서를 그 자리에서 고치고, \`plain\`은 원문, \`preview\`는 읽기, \`split\`은 둘 다입니다. \`split\`에서 가운데 막대는 잡고 움직이는 것입니다. 끌어도 되고, 포커스를 준 뒤 방향키를 눌러도 됩니다.
+한 가지 질문에 대한 네 가지 답입니다. \`wysiwyg\`는 그려진 문서를 그 자리에서 고치고, \`plain\`은 원문, \`preview\`는 읽기, \`split\`은 둘 다입니다. \`split\`에서 가운데 막대는 잡고 움직이는 것입니다. 끌어도 되고, 포커스를 준 뒤 방향키를 눌러도 됩니다.
 
 ## 툴바의 나머지
 

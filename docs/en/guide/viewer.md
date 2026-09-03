@@ -85,7 +85,7 @@ A file larger than five megabytes is refused rather than read. That is about a m
 
 ::: fw flutter
 
-**A mouse wheel arrives over a few frames rather than all at once.** Flutter answers a notch by moving the offset to where the notch says on the next frame and drawing nothing in between, which is why a Flutter document reads as harder under the same hand than the same document in a browser — every browser and every native application on these platforms animates it. Nothing is asked for and there is nothing to turn on; a reader who told the platform they want less movement gets the jump back, which is the same answer the stylesheet gives under `prefers-reduced-motion`.
+**A mouse wheel arrives over a few frames rather than all at once.** Flutter on its own answers a notch by moving the offset to where the notch says on the next frame and drawing nothing in between, which is why a Flutter document reads as harder under the same hand than the same document in a browser — every browser and every native application on these platforms animates it. Nothing is asked for and there is nothing to turn on; a reader who told the platform they want less movement gets the jump back, which is the same answer the stylesheet gives under `prefers-reduced-motion`.
 
 The source surface is the platform's own, and stays that way. A text field scrolls itself rather than being scrolled by something around it, and there is nowhere between the two to stand.
 
@@ -130,7 +130,7 @@ MawyViewer(
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. Markdown says it is not. Chat clients and issue trackers say it is, which is what a reader who has never written Markdown expects, and the reason this is an option rather than a decision.
 - **`definitionLists`** (default `true`) — whether `: ` under a line of text is a term and what it means. See below.
 
-### How much of it
+### How much of the specification
 
 **640 of the specification's 652 examples**, run against the parser on every change. CommonMark is a document with a test suite in it, so "reads CommonMark" is a number rather than a claim, and the number is in `packages/react/test/internal/markdown/commonmark.test.ts` beside the list of what the other 12 are.
 
@@ -557,7 +557,7 @@ The sizes are logical pixels rather than CSS ones and the measure widths are 560
 
 :::
 
-## The language of the chrome
+## The language of the interface
 
 The toolbar's labels, the menus, the panel headings and every sentence a screen reader is given are the library's own words, and `locale` chooses which language they are in:
 
@@ -577,7 +577,7 @@ MawyViewer(value: document, locale: MawyLocale.ko)
 
 :::
 
-**English and Korean**, and `en` is the default. It says nothing about the document: a Korean document in an English-chrome viewer is the ordinary case, and the two are separate questions on purpose.
+**English and Korean**, and `en` is the default. It says nothing about the document: a Korean document in a viewer whose interface is English is the ordinary case, and the two are separate questions on purpose.
 
 Both packages ship the same set of words under the same names, so a screen that reads one way in a browser reads the same way in an app. Adding a language is a table in `src/internal/i18n.ts` and its counterpart in `lib/src/internal/i18n.dart`, and both have to be written for a language to be offered — the two are one vocabulary and a locale that exists in one package and not the other is not a locale this library has.
 
@@ -599,7 +599,7 @@ MawyViewer(
 
 `MawyEditor` takes the same argument and passes it to its preview, so an editor and the document it is editing are never two palettes.
 
-The export is also for an application drawing its own chrome beside a document and wanting the same colours in it:
+The export is also for an application drawing its own interface beside a document and wanting the same colours in it:
 
 ```dart
 final MawyTokens tokens = MawyTokens.of(Theme.of(context).brightness);

@@ -32,7 +32,7 @@ export function Page() {
 }
 ```
 
-## Two views, one value
+## Several surfaces, one value
 
 The usual arrangement is a WYSIWYG editor with a "source mode" bolted on, where switching serialises out of one model and parses into another. Every round trip through that pair loses whatever the other side could not express — a footnote, an HTML block, the exact spelling of a list marker — and the loss is silent.
 
@@ -61,7 +61,7 @@ In `split`, the preview scrolls with the source **to the block** rather than to 
 
 **The bar between the two panes is something to take hold of.** Half and half is a guess about what somebody is doing and it is wrong as often as it is right: a wide window wants more preview while reading over a draft and more source while writing one. Drag it, or focus it and use the arrows — `Shift` for a bigger step, `Home` and `End` for the ends, `Enter` or a double-click for half and half again. It stops well short of either edge, because a pane pushed to nothing is a pane nobody can get back.
 
-That is the reader's, for as long as they are looking at it, and there is no prop for it. Where a pane's edge sits is the same kind of thing as where a scrollbar sits; an application with a reason to store it already has `value` and `onChange` for the thing worth storing.
+Where the bar sits is the reader's, for as long as they are looking at it, and there is no prop for it. Where a pane's edge sits is the same kind of thing as where a scrollbar sits; an application with a reason to store it already has `value` and `onChange` for the thing worth storing.
 
 Below the width at which the two panes stop being side by side and stack, there is no bar and nothing for it to be between.
 
@@ -103,7 +103,7 @@ The syntax colouring is Mawy's own parser's vocabulary, but not Mawy's own parse
 
 ## The document surface
 
-`wysiwyg` draws the document and lets you edit it where it is drawn. What follows is exactly what that means, because it is the surface with the most in it that could be assumed and is not.
+`wysiwyg` draws the document and lets you edit it where it is drawn. What follows is exactly what that means, because it is the surface where the most could be taken for granted — so none of it is.
 
 <MawyDemo name="editor/document" />
 
@@ -115,7 +115,7 @@ There is no second model behind it. What is on screen is a drawing of the Markdo
 <MawyEditor defaultValue={document} modes={['plain', 'split', 'preview']} />
 ```
 
-What works: typing and deleting **anywhere there is text to type in** — a paragraph, a heading, a list item, a quotation, a table cell, a code block — replacing a selection, `Shift`+`Enter` for a hard break, the shorthands that turn into formatting as they are typed, and every command on the toolbar. Those last needed nothing new: they are pure functions of the source and its selection and neither surface is mentioned anywhere in them.
+What works: typing and deleting **anywhere there is text to type in** — a paragraph, a heading, a list item, a quotation, a table cell, a code block — replacing a selection, `Shift`+`Enter` for a hard break, the shorthands that turn into formatting as they are typed, and every command on the toolbar. The last of those needed nothing new: the commands are pure functions of the source and its selection, and no surface is named anywhere in them.
 
 Edits land on the **drawn** character rather than the written one, and that is the difference the whole surface turns on. The caret after `bold` in `**bold**` has an asterisk in front of it in the file and a `d` in front of it on the page. `Backspace` there takes the `d`. An image and a hard break come out in one piece, because each of them is one character to a reader and none at all to a walk over the runs of text.
 
@@ -385,6 +385,30 @@ This section is the React package's. A clipboard here holds what the platform sa
 `'position'`, `'selection'`, `'lines'`, `'words'`, `'characters'` and `'size'` — or `false` for none.
 
 Two of those count more carefully than they look. **Characters** are code points, so an emoji is one rather than two. **Words** add every Han, hiragana and katakana character to the space-separated count, because those languages are written without spaces and a whitespace split calls a page of them one word — Korean is spaced, so an eojeol is a word and it is counted as one. **Size** is UTF-8 bytes, which is what a file on disk will be and is not the same number as the character count the moment anything is not ASCII.
+
+## The language of the interface
+
+The toolbar's labels and tooltips, the surface switch, the words along the status bar, the find bar, the line an empty editor offers and every sentence a screen reader is given are the library's own words, and `locale` chooses which language they are in:
+
+::: fw react
+
+```tsx
+<MawyEditor defaultValue={document} locale="ko" />
+```
+
+:::
+
+::: fw flutter
+
+```dart
+MawyEditor(defaultValue: document, locale: MawyLocale.ko);
+```
+
+:::
+
+**English and Korean**, and `en` is the default. It is the same prop the viewer takes and it means the same thing here — [the language of the interface](./viewer#the-language-of-the-interface) has the rest of it, including what adding a language is.
+
+The editor hands it to the viewer inside the preview, so the source surface and the drawn one are never two languages. And it says nothing about the document: an English-interface editor with a Korean document in it is the ordinary case, and the two are separate questions on purpose.
 
 ## Accessibility
 

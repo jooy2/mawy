@@ -100,7 +100,7 @@ const vitePressI18nConfig: VitePressI18nOptions = {
   searchProvider: 'local',
   description: {
     en: 'A Markdown editor that also does the reading — write in WYSIWYG or in the source, switch freely, and show the finished document through a read-only viewer.',
-    ko: '마크다운을 쓰고 보여주는 일을 하나로 묶은 에디터. 위지윅 화면과 원문 화면을 오가며 쓰고, 다 쓴 문서는 읽기 전용 뷰어로 그대로 보여줍니다.'
+    ko: '마크다운을 쓰는 일과 보여주는 일을 한 패키지에 담았습니다. 위지윅 화면과 원문 화면을 오가며 쓰고, 다 쓴 문서는 읽기 전용 뷰어로 그대로 보여줍니다.'
   },
   themeConfig: {
     en: { nav: navFor('en', ['Guide', 'Playground', 'API']) },

@@ -30,7 +30,7 @@ hero:
 
 features:
   - title: Write it as it will look
-    details: The WYSIWYG surface shows the finished document while you are still writing it — headings at the size they will be, the table laid out, the image in place. Nothing to picture in your head, and nothing to preview first.
+    details: The WYSIWYG surface shows the finished document while you are still writing it — headings at the size they will be, the table laid out, the image in place. There is nothing to picture in your head and nothing to preview first.
     link: /guide/editor
     linkText: The editor
   - title: Or write the Markdown
@@ -38,21 +38,21 @@ features:
     link: /guide/editor
     linkText: The editor
   - title: Then hand it to a reader
-    details: When the writing is done, the viewer takes the same document and only shows it. What a reader sees is what the author had in front of them, down to the last line break.
+    details: When the writing is done, the viewer takes the same document and only shows it. What a reader sees is what the author had in front of them, down to the line breaks.
     link: /guide/viewer
     linkText: The viewer
   - title: Nothing to assemble first
-    details: One package and one line of CSS. No theme file to fill in before the first screen looks like something, no build-side plugin, and no second library to render what you wrote.
+    details: One package and one line of CSS. There is no theme file to fill in before the first screen looks like anything, no build-side plugin, and no second library to render what you wrote.
     link: /guide/getting-started
     linkText: Getting started
 ---
 
-## Where this is
+## Where it stands
 
-Mawy is at `1.0.0`. A parser of ours reads CommonMark and GitHub's additions; `MawyViewer` draws the result; and `MawyEditor` puts the Markdown source, a live preview and a formatting toolbar around the same string. The demos on [the editor](./guide/editor) and [the viewer](./guide/viewer) pages are those components, running.
+Mawy is at `1.0.0`. Its own parser reads CommonMark and GitHub's additions, `MawyViewer` draws the result, and `MawyEditor` puts the Markdown source, a live preview and a formatting toolbar around the same string. The demos on [the editor](./guide/editor) and [the viewer](./guide/viewer) pages are those components, running.
 
-It ships twice: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. They are one library rather than two — the Dart parser _is_ the TypeScript parser, and a check in the repository diffs both parsers' trees over every document it can find. Both have the viewer and the editor; the Flutter editor has three surfaces where the React one has four, and says why. Pick yours in the sidebar; it changes what every page here says.
+It ships twice: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. They are one library rather than two — the Dart parser _is_ the TypeScript parser, and a check in the repository diffs both parsers' trees over every document in it. Both have the viewer and the editor, and the Flutter editor has three surfaces where the React one has four — the editor page says why. Pick yours in the sidebar; it changes what every page here says.
 
-The `wysiwyg` surface — editing the drawn document in place — is on the React editor's default list of surfaces. Both packages are published at `1.0.0`, which is a promise as well as a number: from here the exported API is under semantic versioning, so a name that goes away or changes shape waits for a major version.
+The `wysiwyg` surface — editing the drawn document in place — is on the React editor's default list of surfaces. Both packages are published at `1.0.0`, which is a promise as well as a number: from here the exported API is under semantic versioning, so a name only goes away or changes shape in a major version.
 
 [Getting started](./guide/getting-started) has what exists today. The [changelog](./changelog) is where each release is written down.
