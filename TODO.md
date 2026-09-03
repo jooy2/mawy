@@ -36,8 +36,7 @@ public API. Those are last, and they are not to be started without an answer.
   per render, `R11` footnote slugs collide in quadratic time, `R12` definitions
   re-slice the paragraph, `R13` a span per code token.
 - SEO and accessibility — `?R16` heading `id`s collide between two viewers,
-  `R21` a hard-coded `h2`, `R23` images without dimensions, `R24` sanitised HTML
-  hydrates differently, `?R25` no server-only render path.
+  `?R25` no server-only render path.
 - Security — `R29` the sanitiser round-trips through a string, `R30` `id` and
   `name` survive into the host page, `R31` `raw` needs a louder warning, `R32` a
   font link with no referrer policy.
@@ -48,7 +47,7 @@ public API. Those are last, and they are not to be started without an answer.
 - Bugs — `R59` text dragged from one place in the drawn document to another is
   copied rather than moved.
 - Tests — `R55` a large document, `R56` the history's ceiling, `R57` the
-  sanitiser as a fixed point, `R58` server render and hydration.
+  sanitiser as a fixed point.
 
 ### packages/flutter
 
@@ -96,6 +95,17 @@ public API. Those are last, and they are not to be started without an answer.
 - **`wysiwyg` in the Flutter package**, and its file open, its own undo history
   and its image paste. The reasons are in `docs/*/guide/editor.md` and in the
   changelog, in both languages.
+- **The two headings this library writes being `h2`.** The read of both
+  packages had this down as something to make configurable. The document's own
+  headings are the author's and cannot be moved anyway, and these two are the
+  outline panel's title and the empty state's — restyled or relabelled from
+  outside through `.mawy-outline-title` and `.mawy-empty-title`. Written down
+  in `docs/*/guide/viewer.md` under Accessibility.
+- **Writing an image's dimensions in the document.** `--mawy-doc-image-aspect`
+  is the answer for now: an application that knows what shape its pictures are
+  reserves the box, and nothing is reserved otherwise. A syntax the parser reads
+  — `![alt](url =800x600)` — is the other answer and may come later; it would
+  want the same syntax in both parsers and a line in the parity corpus.
 - **The Flutter toolbar scrolling sideways rather than folding into a menu.**
   The read of both packages had this down as a difference to close; it is a
   decision, and `docs/*/guide/editor.md` gives the reason under the toolbar —
