@@ -77,7 +77,11 @@ MawyCaretAt caretAt(String value, int start, int end) {
 
   return MawyCaretAt(
     before.length,
-    before.last.length + 1,
+    // Code points, the way the count beside it on the same line is. An emoji is
+    // one character to a reader and two to a `length`, and a status bar that
+    // says "column 5" and "3 selected" about the same three characters is
+    // saying one of them wrong.
+    countCharacters(before.last) + 1,
     countCharacters(value.substring(start, end)),
   );
 }

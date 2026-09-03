@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **The status bar says the column in the same characters as the count beside it.** The column was counted in UTF-16 units and the selection in code points, so a caret moved past an emoji jumped two columns while the selection count said one character. Both are code points now.
+
 - **Finding without case sensitivity reports the match where it is.** A letter whose lower case is more than one character — `İ` is the everyday one — made the folded copy longer than the document, and every match after it was reported one place to the left. Replace then took out the wrong letters. The folding keeps the length now, at the cost of `İ` matching only itself.
 
 - **A heading toggles off over a selection with a paragraph break in it.** Whether the lines were already headings was read from every line including the blank ones, and a blank line is not a heading — so the toggle never turned off, and pressing it again put `#` on the blank line instead. Blank lines are read past now, and left alone, which is what every other line marker already did.
