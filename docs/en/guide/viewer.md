@@ -663,7 +663,12 @@ Text is the one thing on the page with no range on it, having no attributes to p
 - Menus close on `Escape` and give the focus back to the control that opened them.
 - Following an outline entry moves the focus as well as the scroll, so the next `Tab` carries on from the heading rather than from the panel.
 - A code block's copy button is invisible until the pointer or the focus is on it, and is never removed from the layout — a button that is not in the layout is a button `Tab` walks past.
+- A wide table and a long line of code each scroll sideways inside their own box, and each is a tab stop, so a keyboard reaches the right-hand end of them.
+- `Escape` puts the tooltips away, and the next move of the pointer brings them back. Nothing is lost by putting them away: every button they name says the same words to a screen reader already.
+- The interface says which language its own words are in, and does not say it about the document — that language is the author's and is not something this library knows.
 - Animation is dropped under `prefers-reduced-motion`.
+
+**The two headings this library writes are `h2`, and they do not move.** They are the outline panel's title and the empty state's, and the document's own headings are the document's — `# ` is an `h1` wherever the viewer is put. Inside a page whose own outline makes `h2` wrong, restyle or relabel them from the outside: they are `.mawy-outline-title` and `.mawy-empty-title`, and a level that could be passed in would still leave the document's own levels where the author put them.
 
 :::
 
