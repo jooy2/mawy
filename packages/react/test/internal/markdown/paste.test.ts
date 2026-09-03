@@ -91,6 +91,16 @@ describe('HTML, read back as Markdown', () => {
     expect(markdownFromHtml('<p>a<span class="x">b</span>c</p>')).toBe('abc');
   });
 
+  /**
+   * A drawing is not prose, and `tagName` does not say so in the case the rest
+   * of the file is written in: an `<svg>` answers `svg`, so it matched nothing
+   * and its labels came through as a sentence.
+   */
+  it('drops a drawing rather than pasting the words inside it', () => {
+    expect(markdownFromHtml('<p>a</p><svg><text>label</text></svg><p>b</p>')).toBe('a\n\nb');
+    expect(markdownFromHtml('<p>a<math><mi>x</mi></math>b</p>')).toBe('ab');
+  });
+
   it('gives nothing back for nothing', () => {
     expect(markdownFromHtml('')).toBe('');
     expect(markdownFromHtml('<div>   </div>')).toBe('');

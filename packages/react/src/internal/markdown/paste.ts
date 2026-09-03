@@ -31,7 +31,28 @@ const BLOCKS = new Set(
 );
 
 /** Elements whose contents are not prose and are not wanted. */
-const DROPPED = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'IFRAME', 'OBJECT', 'SVG']);
+const DROPPED = new Set([
+  'SCRIPT',
+  'STYLE',
+  'NOSCRIPT',
+  'TEMPLATE',
+  'IFRAME',
+  'OBJECT',
+  'SVG',
+  'MATH'
+]);
+
+/**
+ * An element's name, in the one case everything here is written in.
+ *
+ * `tagName` is upper case for HTML and is the source's own case for anything
+ * else — an `<svg>` copied out of a page answers `svg`, which matched none of
+ * the names above and fell through to "unknown container, keep what is inside
+ * it". So the drawing's labels arrived in the document as prose.
+ */
+function tagOf(element: Element): string {
+  return element.tagName.toUpperCase();
+}
 
 /* -------------------------------------------------------------------------
  * Text
@@ -124,7 +145,7 @@ function inlineOf(nodes: Iterable<Node>): string {
     const element = node as HTMLElement;
     const inside = () => inlineOf(element.childNodes);
 
-    switch (element.tagName) {
+    switch (tagOf(element)) {
       case 'BR':
         out += '  \n';
         break;
@@ -170,7 +191,7 @@ function inlineOf(nodes: Iterable<Node>): string {
       }
 
       default:
-        if (!DROPPED.has(element.tagName)) {
+        if (!DROPPED.has(tagOf(element))) {
           out += inside();
         }
     }
@@ -217,7 +238,7 @@ function blocksOf(parent: Node): string[] {
   };
 
   for (const node of parent.childNodes) {
-    if (node.nodeType === 1 && BLOCKS.has((node as HTMLElement).tagName)) {
+    if (node.nodeType === 1 && BLOCKS.has(tagOf(node as HTMLElement))) {
       flush();
 
       const block = blockOf(node as HTMLElement);
@@ -247,9 +268,9 @@ function joinItem(parts: string[]): string {
 }
 
 function listOf(element: HTMLElement): string {
-  const ordered = element.tagName === 'OL';
+  const ordered = tagOf(element) === 'OL';
   const from = Number.parseInt(element.getAttribute('start') ?? '1', 10) || 1;
-  const items = [...element.children].filter((child) => child.tagName === 'LI');
+  const items = [...element.children].filter((child) => tagOf(child) === 'LI');
 
   return items
     .map((item, index) => {
@@ -294,11 +315,11 @@ function preOf(element: HTMLElement): string {
 }
 
 function blockOf(element: HTMLElement): string {
-  if (DROPPED.has(element.tagName)) {
+  if (DROPPED.has(tagOf(element))) {
     return '';
   }
 
-  const heading = /^H([1-6])$/.exec(element.tagName);
+  const heading = /^H([1-6])$/.exec(tagOf(element));
 
   if (heading) {
     const text = inlineOf(element.childNodes).replace(/\s+/g, ' ').trim();
@@ -306,7 +327,7 @@ function blockOf(element: HTMLElement): string {
     return text ? `${'#'.repeat(Number(heading[1]))} ${text}` : '';
   }
 
-  switch (element.tagName) {
+  switch (tagOf(element)) {
     case 'HR':
       return '---';
 

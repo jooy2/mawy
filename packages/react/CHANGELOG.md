@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **Pasting a page with a drawing in it no longer brings the drawing's words along.** `<svg>` and `<math>` were on the list of things that are not prose, and the list was never reached for either of them: an element outside HTML answers `tagName` in its own case rather than in upper case, so `svg` matched nothing and was treated as a container worth keeping the inside of. A chart copied out of a page arrived as its axis labels, run together as a sentence.
+
 - **A directive's `attributes` answers for a key the document did not write with nothing.** An attribute key is spelled the way `constructor` and `toString` are, so reading one out of the bag handed to a directive component returned something off `Object.prototype` rather than `undefined`. The bag has no prototype now. Reading, spreading and `Object.entries` are unchanged; only a key nobody wrote answers differently.
 
 - **`mawyHighlighter` no longer claims to know a language named after a property every object has.** ` ```constructor ` was answered with yes, and what `highlight` then reached for was not a grammar. The block came out plain either way, because the renderer refuses tokens that are not the code — but the question was being answered wrongly, and a highlighter of your own asking `supports` got the wrong answer too. The Flutter package was never affected; a Dart `Map` has nothing to inherit.
