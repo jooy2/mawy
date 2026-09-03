@@ -440,7 +440,13 @@ export function MawyEditorToolbar({
   };
 
   return (
-    <div className="mawy-toolbar" role="toolbar" aria-label={strings.editor} onKeyDown={onKeyDown}>
+    <div
+      className="mawy-toolbar"
+      role="toolbar"
+      aria-label={strings.editor}
+      lang={strings.lang}
+      onKeyDown={onKeyDown}
+    >
       <div className="mawy-toolbar-controls mawy-toolbar-editor" ref={row}>
         {groups.map((group, index) => (
           <React.Fragment key={index}>

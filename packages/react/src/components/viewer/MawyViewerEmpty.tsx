@@ -41,7 +41,7 @@ export function MawyViewerEmpty({
 }: MawyViewerEmptyProps): React.ReactElement {
   if (!onOpenFile) {
     return (
-      <div className="mawy-empty">
+      <div className="mawy-empty" lang={strings.lang}>
         <div className="mawy-empty-mark" aria-hidden="true">
           <DocumentIcon />
         </div>
@@ -51,7 +51,11 @@ export function MawyViewerEmpty({
   }
 
   return (
-    <div className="mawy-empty" data-mawy-droppable={droppable ? 'true' : undefined}>
+    <div
+      className="mawy-empty"
+      lang={strings.lang}
+      data-mawy-droppable={droppable ? 'true' : undefined}
+    >
       <div className="mawy-empty-mark" aria-hidden="true">
         {droppable ? <UploadIcon /> : <DocumentIcon />}
       </div>

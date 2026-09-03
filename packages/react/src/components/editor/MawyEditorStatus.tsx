@@ -98,7 +98,7 @@ export function MawyEditorStatus({
   }
 
   return (
-    <p className="mawy-status" aria-label={strings.status}>
+    <p className="mawy-status" aria-label={strings.status} lang={strings.lang}>
       {cells.map((cell, index) => (
         <span key={index} className="mawy-status-cell">
           {cell}

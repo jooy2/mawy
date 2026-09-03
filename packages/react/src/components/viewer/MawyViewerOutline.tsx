@@ -37,7 +37,7 @@ export function MawyViewerOutline({
   const top = entries.reduce((least, entry) => Math.min(least, entry.depth), 6);
 
   return (
-    <nav className="mawy-outline" aria-label={strings.outline}>
+    <nav className="mawy-outline" aria-label={strings.outline} lang={strings.lang}>
       <div className="mawy-outline-head">
         <h2 className="mawy-outline-title">{strings.outline}</h2>
         <IconButton

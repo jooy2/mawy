@@ -1428,7 +1428,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         // interruption, and a screen reader is told at the next pause either
         // way. The failure keeps the line until the next attempt, the way the
         // viewer keeps a file it could not read.
-        <p className="mawy-editor-note" role="status" data-mawy-failed={note.failed || undefined}>
+        <p
+          className="mawy-editor-note"
+          role="status"
+          lang={strings.lang}
+          data-mawy-failed={note.failed || undefined}
+        >
           {note.text}
         </p>
       ) : null}

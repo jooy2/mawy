@@ -375,7 +375,13 @@ export function MawyViewerToolbar({
   };
 
   return (
-    <div className="mawy-toolbar" role="toolbar" aria-label={strings.toolbar} onKeyDown={onKeyDown}>
+    <div
+      className="mawy-toolbar"
+      role="toolbar"
+      aria-label={strings.toolbar}
+      lang={strings.lang}
+      onKeyDown={onKeyDown}
+    >
       {fileName ? (
         <p className="mawy-toolbar-title" title={fileName}>
           <DocumentIcon className="mawy-icon" aria-hidden="true" />

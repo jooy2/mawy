@@ -761,7 +761,9 @@ export function renderFootnotes(
     // one page would be two elements claiming the same `id`, and a link that
     // lands on whichever the browser met first.
     <section className="mawy-md-footnotes" aria-label={context.strings.footnotes}>
-      <h2 className="mawy-md-footnotes-title">{context.strings.footnotes}</h2>
+      <h2 className="mawy-md-footnotes-title" lang={context.strings.lang}>
+        {context.strings.footnotes}
+      </h2>
       <ol>
         {footnotes.map((footnote, index) => (
           <li key={index} id={footnoteId(footnote.slug)} {...origin(footnote)}>

@@ -106,6 +106,27 @@ describe('the viewer', () => {
     expect(await violations(screen.container)).toEqual([]);
   });
 
+  it('says which language its own words are in, and does not say it about the document', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} locale="ko" />);
+    const root = screen.container.querySelector('.mawy-root') as HTMLElement;
+    const toolbar = screen.container.querySelector('.mawy-toolbar') as HTMLElement;
+    const article = screen.container.querySelector('.mawy-md') as HTMLElement;
+    const claimed: string[] = [];
+
+    for (let at = article; at && at !== root.parentElement; at = at.parentElement as HTMLElement) {
+      if (at.hasAttribute('lang')) {
+        claimed.push(at.className);
+      }
+    }
+
+    // The toolbar's words are this library's, and a page that declares itself
+    // English reads them in an English voice whatever language they are in.
+    expect(toolbar.getAttribute('lang')).toBe('ko');
+    // The document's is the author's and is not known here, so nothing between
+    // it and the root claims one for it.
+    expect(claimed).toEqual([]);
+  });
+
   it('has nothing to answer for with a menu open', async () => {
     const screen = await render(
       <MawyViewer value={SAMPLE} onColorSchemeChange={() => {}} toolbar={['colorScheme']} />

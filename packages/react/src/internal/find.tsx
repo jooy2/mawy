@@ -99,7 +99,13 @@ export function FindBar({
   };
 
   return (
-    <div className="mawy-find" role="search" aria-label={strings.find} onKeyDown={onKeyDown}>
+    <div
+      className="mawy-find"
+      role="search"
+      aria-label={strings.find}
+      lang={strings.lang}
+      onKeyDown={onKeyDown}
+    >
       <div className="mawy-find-row">
         <input
           ref={field}

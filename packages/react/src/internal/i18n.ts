@@ -15,6 +15,16 @@
 import type { MawyLocale } from '../types.js';
 
 export interface MawyStrings {
+  /**
+   * The language these words are in, for a `lang` attribute.
+   *
+   * It goes on what this library says and never on the document: a Korean
+   * interface around an English document is an ordinary thing, and the
+   * document's language is the author's and unknown here. Without it a screen
+   * reader reads the toolbar's Korean in whatever voice the page around it
+   * declared.
+   */
+  lang: string;
   toolbar: string;
   fontFamily: string;
   fontFamilySans: string;
@@ -123,6 +133,7 @@ export interface MawyStrings {
 }
 
 const en: MawyStrings = {
+  lang: 'en',
   toolbar: 'Document settings',
   fontFamily: 'Typeface',
   fontFamilySans: 'Sans serif',
@@ -219,6 +230,7 @@ const en: MawyStrings = {
 };
 
 const ko: MawyStrings = {
+  lang: 'ko',
   toolbar: '문서 설정',
   fontFamily: '글꼴',
   fontFamilySans: '고딕',
