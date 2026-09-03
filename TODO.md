@@ -56,7 +56,8 @@ public API. Those are last, and they are not to be started without an answer.
   offsets, `R45` the status bar mixes two units, `R46` `domAt` uses the global
   `document`, `R47` the outline writes `tabIndex` into the DOM, `R48` `Enter`
   continues a definition list that is off, `R49` `svg` is compared uppercase,
-  `R50` `fileDrop` reads anything as text.
+  `R50` `fileDrop` reads anything as text, `R59` text dragged from one place in
+  the drawn document to another is copied rather than moved.
 - Tests — `R51` the divider under a pointer, `R52` a table over `beforeinput`
   types, `R53` blank lines inside a multi-paragraph selection, `R54` a document
   full of prototype names, `R55` a large document, `R56` the history's ceiling,
