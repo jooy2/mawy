@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **The bar between the panes of `split` is something a finger can hit.** It was five pixels, which is a target a hand misses — and the bar is the only way to change the split without a keyboard. Thirteen now, with the same one pixel drawn down the middle of it.
+
 - **The status line says what it is in a word a screen reader reads.** It carried an `aria-label`, and an `aria-label` on a paragraph names something that has no name to give — most screen readers read the text and drop the label, so the counts arrived with nothing saying what they counted. The word is in the line now, hidden from the page and not from a reader.
 
 - **A choice in a toolbar menu is one tab stop, with the arrows inside it.** Every option was its own stop, so getting past a question with one answer took four presses of `Tab`; the stop is now the option already chosen, and `Up`/`Down`/`Left`/`Right`/`Home`/`End` move between them — which is what `radiogroup` had been claiming all along. The arrows move the focus and do not pick: what a choice changes may be a command run against the document, and arrowing past `Heading 2` on the way to `Heading 3` would leave an edit behind.

@@ -1543,8 +1543,13 @@ class _DividerState extends State<_Divider> {
             widget.onChange(widget.share + along / widget.width);
           },
           onDoubleTap: () => widget.onChange(0.5),
+          // Thirteen pixels to take hold of and one drawn: five is a target a
+          // finger misses, and the bar is the only way to change the split
+          // without a keyboard. The React package widens the same way and pulls
+          // the extra back over the panes; a `Row` has no negative margin, so
+          // here the eight pixels come out of the two panes instead.
           child: SizedBox(
-            width: 5,
+            width: 13,
             child: Center(
               child: AnimatedContainer(
                 duration: MawyMotion.durationOf(context),

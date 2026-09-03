@@ -1430,21 +1430,38 @@
 }
 
 .mawy-root .mawy-editor-divider {
-  flex: 0 0 5px;
-  margin-inline: -2px;
+  /* Thirteen pixels to take hold of, one pixel of layout. The negative margin
+   * pulls the extra width back over the panes on either side, so widening what
+   * a hand has to hit does not move anything — five pixels is a target a
+   * finger misses, and the bar is the only way to change the split without a
+   * keyboard. */
+  flex: 0 0 13px;
+  margin-inline: -6px;
+  position: relative;
   border: 0;
   background: transparent;
   cursor: col-resize;
   /* Over the border the preview draws, so the line stays one pixel and the
-   * thing to take hold of is five. */
+   * thing to take hold of is the whole of it. */
   z-index: 1;
   touch-action: none;
 }
 
-.mawy-root .mawy-editor-divider:hover,
+/* What is seen, as opposed to what is hit: the five pixels down the middle. */
+.mawy-root .mawy-editor-divider::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 4px;
+}
+
 .mawy-root .mawy-editor-divider:focus-visible {
-  background: var(--mawy-accent);
   outline: none;
+}
+
+.mawy-root .mawy-editor-divider:hover::before,
+.mawy-root .mawy-editor-divider:focus-visible::before {
+  background: var(--mawy-accent);
 }
 
 /* The viewer is a `.mawy-root` of its own, and inside a pane it fills it. */
