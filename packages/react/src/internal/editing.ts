@@ -544,6 +544,14 @@ export function editFor(
         ? deleteAfter(root, value, range.startContainer, range.startOffset, start)
         : splice(value, start, end, '');
 
+    // The run is on the clipboard by the time this arrives — the browser puts
+    // it there before it asks — so what is left is taking it out of the
+    // document, which is the selection and nothing else. Without this the
+    // event was refused like any other the switch did not name, and a cut was
+    // a copy.
+    case 'deleteByCut':
+      return start === end ? null : splice(value, start, end, '');
+
     case 'insertFromDrop': {
       const block = blockAt(root, range.startContainer);
       const text = markdownFor(event.dataTransfer, block?.tagName === 'PRE');

@@ -1234,6 +1234,36 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('First.Second');
   });
 
+  /**
+   * A cut is a copy the browser has already made, and a deletion it asks for.
+   * Refused like an input type nothing here names, it was only ever the copy.
+   */
+  it('takes the selection out on a cut', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One two three.', 4, 8);
+    type(body, 'deleteByCut');
+
+    expect(onChange).toHaveBeenLastCalledWith('One three.');
+  });
+
+  it('leaves the document alone on a cut with nothing selected', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One two three.', 4);
+    type(body, 'deleteByCut');
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('deletes forward, and across a block boundary', async () => {
     const onChange = vi.fn();
     const screen = await render(

@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **Cutting on the drawn surface takes the words out of the document.** It only ever copied them. Every `beforeinput` on `wysiwyg` is refused and turned into an edit to the Markdown instead, and a cut is one of the types that had no answer written for it — so the browser was told no and nothing took its place. The run still reaches the clipboard, because the browser puts it there before it asks.
+
 - **Pasting a page with a drawing in it no longer brings the drawing's words along.** `<svg>` and `<math>` were on the list of things that are not prose, and the list was never reached for either of them: an element outside HTML answers `tagName` in its own case rather than in upper case, so `svg` matched nothing and was treated as a container worth keeping the inside of. A chart copied out of a page arrived as its axis labels, run together as a sentence.
 
 - **A directive's `attributes` answers for a key the document did not write with nothing.** An attribute key is spelled the way `constructor` and `toString` are, so reading one out of the bag handed to a directive component returned something off `Object.prototype` rather than `undefined`. The bag has no prototype now. Reading, spreading and `Object.entries` are unchanged; only a key nobody wrote answers differently.
