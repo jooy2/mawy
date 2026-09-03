@@ -14,6 +14,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/editor/commands.dart';
 import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/markdown/highlight.dart';
@@ -197,6 +198,49 @@ TextStyle? _styleFor(MdTokenKind kind, MawyTokens tokens) => switch (kind) {
   MdTokenKind.escape => TextStyle(color: tokens.foregroundSubtle),
 };
 
+/// One formatting command, on its way from a chord to [MawySourceField].
+class _CommandIntent extends Intent {
+  const _CommandIntent(this.command);
+
+  final MawyCommand command;
+}
+
+/// The keyboard, which is the editor's other interface.
+///
+/// `src/components/editor/MawyEditor.tsx` has the same table under the same
+/// name, and the two are meant to stay the same keyboard: a toolbar that is the
+/// only way to reach a command is a toolbar an editor cannot be used without a
+/// pointer for.
+///
+/// Both spellings of the modifier, because which one a platform means by it is
+/// the platform's business rather than something to sniff for. Undo is not here
+/// and is Flutter's own, which is the decision written down in the guide; there
+/// is nothing here for `Mod`+`S` to save to, and `Mod`+`F` is the editor's.
+const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.keyB, control: true): _CommandIntent(MawyCommand.bold),
+  SingleActivator(LogicalKeyboardKey.keyB, meta: true): _CommandIntent(MawyCommand.bold),
+  SingleActivator(LogicalKeyboardKey.keyI, control: true): _CommandIntent(MawyCommand.italic),
+  SingleActivator(LogicalKeyboardKey.keyI, meta: true): _CommandIntent(MawyCommand.italic),
+  SingleActivator(LogicalKeyboardKey.keyK, control: true): _CommandIntent(MawyCommand.link),
+  SingleActivator(LogicalKeyboardKey.keyK, meta: true): _CommandIntent(MawyCommand.link),
+  SingleActivator(LogicalKeyboardKey.keyE, control: true): _CommandIntent(MawyCommand.code),
+  SingleActivator(LogicalKeyboardKey.keyE, meta: true): _CommandIntent(MawyCommand.code),
+  SingleActivator(LogicalKeyboardKey.digit1, control: true): _CommandIntent(MawyCommand.heading1),
+  SingleActivator(LogicalKeyboardKey.digit1, meta: true): _CommandIntent(MawyCommand.heading1),
+  SingleActivator(LogicalKeyboardKey.digit2, control: true): _CommandIntent(MawyCommand.heading2),
+  SingleActivator(LogicalKeyboardKey.digit2, meta: true): _CommandIntent(MawyCommand.heading2),
+  SingleActivator(LogicalKeyboardKey.digit3, control: true): _CommandIntent(MawyCommand.heading3),
+  SingleActivator(LogicalKeyboardKey.digit3, meta: true): _CommandIntent(MawyCommand.heading3),
+  SingleActivator(LogicalKeyboardKey.digit0, control: true): _CommandIntent(MawyCommand.paragraph),
+  SingleActivator(LogicalKeyboardKey.digit0, meta: true): _CommandIntent(MawyCommand.paragraph),
+  SingleActivator(LogicalKeyboardKey.keyX, control: true, shift: true): _CommandIntent(
+    MawyCommand.strikethrough,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyX, meta: true, shift: true): _CommandIntent(
+    MawyCommand.strikethrough,
+  ),
+};
+
 /// The source surface: one text field, coloured, with the keys an editor needs.
 ///
 /// A bare [EditableText] puts the caret where it is tapped and does nothing
@@ -222,6 +266,7 @@ class MawySourceField extends StatefulWidget {
     required this.placeholder,
     required this.onEnter,
     required this.onIndent,
+    required this.onCommand,
     this.scrollController,
     this.editableKey,
     this.lineNumbers = true,
@@ -256,6 +301,9 @@ class MawySourceField extends StatefulWidget {
 
   /// `Tab` and `Shift`+`Tab`.
   final void Function({required bool out}) onIndent;
+
+  /// What a formatting shortcut runs. Absent while the document is read only.
+  final void Function(MawyCommand)? onCommand;
 
   /// The field's own scroller, where somebody outside wants to watch it.
   final ScrollController? scrollController;
@@ -401,41 +449,55 @@ class _MawySourceFieldState extends State<MawySourceField>
               ),
             ),
           ),
-        Focus(
-          onKeyEvent: _onKey,
-          child: Semantics(
-            // What the surface is called, and the way out of it. Both are the
-            // React package's, said the way Flutter says them.
-            label: widget.strings.source,
-            hint: widget.strings.sourceEscape,
-            child: _gestures.buildGestureDetector(
-              behavior: HitTestBehavior.translucent,
-              child: EditableText(
-                key: editableTextKey,
-                controller: controller,
-                focusNode: widget.focusNode,
-                scrollController: widget.scrollController,
-                readOnly: widget.readOnly,
-                style: style,
-                cursorColor: tokens.accent,
-                backgroundCursorColor: tokens.border,
-                selectionColor: tokens.accentSoft,
-                maxLines: null,
-                expands: true,
-                textAlign: TextAlign.start,
-                scrollPadding: const EdgeInsets.all(24),
-                // A selection is a run of text and not a row of blocks. The
-                // default fits a box to each run's own glyphs, so a line of
-                // Hangul and a line of Latin are highlighted at two different
-                // heights with a gap left between the lines. This is the
-                // browser's answer, and it is a knob a text field has.
-                selectionHeightStyle: ui.BoxHeightStyle.max,
-                selectionWidthStyle: ui.BoxWidthStyle.max,
-                // The detector above reads the pointer. Two things reading
-                // one gesture is a caret that jumps to where a selection
-                // was meant to start.
-                rendererIgnoresPointer: true,
-                enableInteractiveSelection: true,
+        Shortcuts(
+          shortcuts: _shortcuts,
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              _CommandIntent: CallbackAction<_CommandIntent>(
+                onInvoke: (_CommandIntent intent) {
+                  widget.onCommand?.call(intent.command);
+
+                  return null;
+                },
+              ),
+            },
+            child: Focus(
+              onKeyEvent: _onKey,
+              child: Semantics(
+                // What the surface is called, and the way out of it. Both are the
+                // React package's, said the way Flutter says them.
+                label: widget.strings.source,
+                hint: widget.strings.sourceEscape,
+                child: _gestures.buildGestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  child: EditableText(
+                    key: editableTextKey,
+                    controller: controller,
+                    focusNode: widget.focusNode,
+                    scrollController: widget.scrollController,
+                    readOnly: widget.readOnly,
+                    style: style,
+                    cursorColor: tokens.accent,
+                    backgroundCursorColor: tokens.border,
+                    selectionColor: tokens.accentSoft,
+                    maxLines: null,
+                    expands: true,
+                    textAlign: TextAlign.start,
+                    scrollPadding: const EdgeInsets.all(24),
+                    // A selection is a run of text and not a row of blocks. The
+                    // default fits a box to each run's own glyphs, so a line of
+                    // Hangul and a line of Latin are highlighted at two different
+                    // heights with a gap left between the lines. This is the
+                    // browser's answer, and it is a knob a text field has.
+                    selectionHeightStyle: ui.BoxHeightStyle.max,
+                    selectionWidthStyle: ui.BoxWidthStyle.max,
+                    // The detector above reads the pointer. Two things reading
+                    // one gesture is a caret that jumps to where a selection
+                    // was meant to start.
+                    rendererIgnoresPointer: true,
+                    enableInteractiveSelection: true,
+                  ),
+                ),
               ),
             ),
           ),

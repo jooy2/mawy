@@ -186,6 +186,12 @@ Every button on the toolbar runs a command that also has a keyboard shortcut, an
 
 `Mod` is Command or Control, whichever the machine has — both are accepted rather than guessed at.
 
+::: fw flutter
+
+`Mod`+`S` is the one line of that table this package does not answer: there is nothing here to save to, for the reason [opening and saving](#opening-and-saving) gives. Undo is the platform's own rather than this package's — see [undo](#undo) — and everything else is the same keyboard.
+
+:::
+
 Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and the toolbar button shows which are in force. Markers replace each other rather than stacking, so turning a numbered list into a bulleted one gives a bulleted list and not `- 1. item`.
 
 `Enter` at the end of a list item carries the marker down and counts an ordered list on. Pressing it again on the item that is still empty takes the marker away instead of making another — without that, leaving a list means deleting the bullet the editor has just helpfully added.

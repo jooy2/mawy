@@ -712,6 +712,7 @@ class _MawyEditorState extends State<MawyEditor> {
       placeholder: widget.placeholder ?? strings.editorPlaceholder,
       onEnter: _enter,
       onIndent: _indent,
+      onCommand: widget.readOnly ? null : _run,
       scrollController: _sourceScroll,
       editableKey: _editable,
       lineNumbers: widget.lineNumbers,

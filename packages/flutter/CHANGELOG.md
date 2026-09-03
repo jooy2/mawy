@@ -6,6 +6,10 @@
 
 ### Fixed
 
+- **The formatting commands have the keyboard shortcuts the guide said they had.** `Mod`+`B`, `Mod`+`I`, `Mod`+`K`, `Mod`+`E`, `Mod`+`1`/`2`/`3`, `Mod`+`0` and `Mod`+`Shift`+`X` all reach the source surface now. The toolbar was the only way to any of them, which is an editor that cannot be used without a pointer — and the table in the guide has been listing them for both packages while this one answered none.
+
+  The table is `src/components/editor/MawyEditor.tsx`'s, under the same name. `Mod`+`S` is the one line still not answered here, there being nothing to save to; undo is Flutter's own and always was.
+
 - **`Escape` and then `Tab` leaves the source surface.** `Tab` indents there, which is what a source surface is for — and it was the only thing `Tab` did, so somebody who cannot use a pointer had no way out of the editor at all. That is a keyboard trap, and the guide has been describing the way out of it for both packages while this one did not have it.
 
   One `Escape` arms it and anything else typed disarms it again, which is the rule the React package has and the rule CodeMirror, Monaco and GitHub's own editor all use. The surface is named to a screen reader now as well, and says how to leave — a way out nobody is told about is a way out that does not exist for the person who needed it. `MawyStrings.sourceEscape` is the sentence, in both languages.

@@ -693,6 +693,97 @@ void main() {
       expect(written, isNull);
     });
   });
+
+  group('the keyboard', () {
+    Future<void> chord(WidgetTester tester, LogicalKeyboardKey key, {bool shift = false}) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+
+      if (shift) {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      }
+
+      await tester.sendKeyEvent(key);
+
+      if (shift) {
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      }
+
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+    }
+
+    testWidgets('reaches the same commands the toolbar reaches', (WidgetTester tester) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two three',
+            mode: MawyEditorMode.plain,
+            toolbar: const <MawyEditorToolbarItem>[],
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(find.byType(EditableText));
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+
+      // A toolbar that is the only way to reach a command is a toolbar the
+      // editor cannot be used without a pointer for. The table is the React
+      // package's, under the same name.
+      field.controller.selection = const TextSelection(baseOffset: 4, extentOffset: 7);
+      await chord(tester, LogicalKeyboardKey.keyB);
+      expect(seen.last, 'one **two** three');
+
+      field.controller.selection = const TextSelection(baseOffset: 6, extentOffset: 9);
+      await chord(tester, LogicalKeyboardKey.keyI);
+      expect(seen.last, 'one **_two_** three');
+
+      await chord(tester, LogicalKeyboardKey.digit2);
+      expect(seen.last, '## one **_two_** three');
+
+      await chord(tester, LogicalKeyboardKey.digit0);
+      expect(seen.last, 'one **_two_** three');
+
+      field.controller.selection = const TextSelection(baseOffset: 0, extentOffset: 3);
+      await chord(tester, LogicalKeyboardKey.keyX, shift: true);
+      expect(seen.last, '~~one~~ **_two_** three');
+    });
+
+    testWidgets('runs no command while the document is read only', (WidgetTester tester) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two three',
+            mode: MawyEditorMode.plain,
+            toolbar: const <MawyEditorToolbarItem>[],
+            status: const <MawyEditorStatusItem>[],
+            readOnly: true,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(find.byType(EditableText));
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+      field.controller.selection = const TextSelection(baseOffset: 4, extentOffset: 7);
+
+      await chord(tester, LogicalKeyboardKey.keyB);
+
+      // The document rather than `onChange`, which reports the text it started
+      // with the first time the controller says anything at all. See `F45`.
+      expect(field.controller.text, 'one two three');
+      expect(seen, everyElement('one two three'));
+    });
+  });
 }
 
 /// The source's own field, as opposed to the two in the find bar.
