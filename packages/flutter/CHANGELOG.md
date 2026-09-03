@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **A heading in a drawn document is a heading to a screen reader, and says which level.** It was text at a larger size, and text at a larger size is text: moving through a document by its headings — most of how one is read without sight — did not work at all. The React package writes an `<h1>` and gets this for nothing, and the viewer guide has been describing it for both packages.
+
 - **The formatting commands have the keyboard shortcuts the guide said they had.** `Mod`+`B`, `Mod`+`I`, `Mod`+`K`, `Mod`+`E`, `Mod`+`1`/`2`/`3`, `Mod`+`0` and `Mod`+`Shift`+`X` all reach the source surface now. The toolbar was the only way to any of them, which is an editor that cannot be used without a pointer — and the table in the guide has been listing them for both packages while this one answered none.
 
   The table is `src/components/editor/MawyEditor.tsx`'s, under the same name. `Mod`+`S` is the one line still not answered here, there being nothing to save to; undo is Flutter's own and always was.

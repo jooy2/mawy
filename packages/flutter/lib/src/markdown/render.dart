@@ -542,16 +542,25 @@ Widget _block(
     return Padding(
       // `2em 0 0.6em`, and no top margin on the first thing in a document.
       padding: EdgeInsets.only(top: first ? 0 : em * 2, bottom: last ? 0 : em * 0.6),
-      child: block.depth == 2
-          ? Container(
-              padding: EdgeInsets.only(bottom: em * 0.3),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: tokens.border)),
-              ),
-              width: double.infinity,
-              child: text,
-            )
-          : text,
+      // Said rather than only drawn. The React package writes an `<h2>` and a
+      // screen reader gets the level for nothing; here a heading is text at a
+      // larger size, and text at a larger size is text. Moving through a
+      // document by its headings is most of how a document is read without
+      // sight, and it did not work at all.
+      child: Semantics(
+        header: true,
+        headingLevel: block.depth,
+        child: block.depth == 2
+            ? Container(
+                padding: EdgeInsets.only(bottom: em * 0.3),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: tokens.border)),
+                ),
+                width: double.infinity,
+                child: text,
+              )
+            : text,
+      ),
     );
   }
 

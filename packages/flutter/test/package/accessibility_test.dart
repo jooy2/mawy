@@ -360,6 +360,37 @@ void main() {
     });
   });
 
+  testWidgets('says a heading is a heading, and which level', (WidgetTester tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      host(const MawyViewer(value: chapters, toolbar: <MawyViewerToolbarItem>[])),
+    );
+
+    // Moving through a document by its headings is most of how one is read
+    // without sight. The React package writes an `<h2>` and gets the level for
+    // nothing; here a heading was text at a larger size, and text at a larger
+    // size is text.
+    final SemanticsData title = tester
+        .getSemantics(find.bySemanticsLabel('Title'))
+        .getSemanticsData();
+    final SemanticsData second = tester
+        .getSemantics(find.bySemanticsLabel('Second'))
+        .getSemanticsData();
+    final SemanticsData prose = tester
+        .getSemantics(find.bySemanticsLabel('More words.'))
+        .getSemanticsData();
+
+    handle.dispose();
+
+    expect(title.flagsCollection.isHeader, isTrue);
+    expect(title.headingLevel, 1);
+    expect(second.flagsCollection.isHeader, isTrue);
+    expect(second.headingLevel, 2);
+    // And a paragraph is not one.
+    expect(prose.flagsCollection.isHeader, isFalse);
+  });
+
   testWidgets('drops the animation where the platform asks for less movement', (
     WidgetTester tester,
   ) async {
