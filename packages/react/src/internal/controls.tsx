@@ -195,6 +195,17 @@ export interface ChoiceProps<T extends string> {
  * Picking one shuts the panel it is in, where it is in one. That is what a menu
  * does, and a panel still open over the thing it has just changed is a panel
  * hiding the answer to the question it was asked.
+ *
+ * One tab stop for the group and the arrows inside it, which is what a
+ * `radiogroup` is: four options that are each their own stop is four presses of
+ * `Tab` to get past a question with one answer. The stop is the option already
+ * chosen, so `Tab` lands on the answer rather than at the top of the list.
+ *
+ * The arrows move the focus and do not pick. A native radio group picks as it
+ * moves and can afford to, what it changes being a value in a form; what a
+ * `Choice` changes may be a command run against the document — the heading menu
+ * is one — and arrowing past `Heading 2` on the way to `Heading 3` would leave
+ * an edit behind and a panel that shut on it.
  */
 export function Choice<T extends string>({
   label,
@@ -203,9 +214,47 @@ export function Choice<T extends string>({
   onChange
 }: ChoiceProps<T>): React.ReactElement {
   const dismiss = React.useContext(Dismiss);
+  const group = React.useRef<HTMLDivElement>(null);
+  /** The stop, for a value that is not one of the options on offer. */
+  const chosen = options.some((option) => option.value === value) ? value : options[0]?.value;
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const buttons = [
+      ...(group.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])
+    ];
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+
+    if (at === -1 || buttons.length === 0) {
+      return;
+    }
+
+    const to =
+      event.key === 'ArrowDown' || event.key === 'ArrowRight'
+        ? (at + 1) % buttons.length
+        : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+          ? (at - 1 + buttons.length) % buttons.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? buttons.length - 1
+              : -1;
+
+    if (to === -1) {
+      return;
+    }
+
+    event.preventDefault();
+    buttons[to].focus();
+  };
 
   return (
-    <div className="mawy-choice" role="radiogroup" aria-label={label}>
+    <div
+      className="mawy-choice"
+      role="radiogroup"
+      aria-label={label}
+      ref={group}
+      onKeyDown={onKeyDown}
+    >
       {options.map((option) => (
         <button
           key={option.value}
@@ -213,6 +262,7 @@ export function Choice<T extends string>({
           role="radio"
           className="mawy-choice-option"
           aria-checked={option.value === value}
+          tabIndex={option.value === chosen ? 0 : -1}
           style={option.style}
           onClick={() => {
             onChange(option.value);

@@ -120,6 +120,31 @@ describe('the viewer', () => {
     }
   });
 
+  it('gives a choice one tab stop and moves inside it with the arrows', async () => {
+    const screen = await render(
+      <MawyViewer value={SAMPLE} onColorSchemeChange={() => {}} toolbar={['colorScheme']} />
+    );
+
+    await screen.getByRole('button', { name: 'Theme' }).click();
+
+    const options = [...screen.container.querySelectorAll<HTMLElement>('[role="radio"]')];
+
+    // Four options that are each their own stop is four presses of `Tab` to get
+    // past a question with one answer. The stop is the answer already given.
+    expect(options.map((option) => option.getAttribute('tabindex'))).toEqual(['-1', '-1', '0']);
+
+    options[2].focus();
+    options[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(document.activeElement).toBe(options[0]);
+
+    options[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect(document.activeElement).toBe(options[2]);
+
+    // The arrows move and do not pick: a `Choice` may run a command against the
+    // document, and arrowing past one would leave an edit behind.
+    expect(options[2].getAttribute('aria-checked')).toBe('true');
+  });
+
   it('says which language its own words are in, and does not say it about the document', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} locale="ko" />);
     const root = screen.container.querySelector('.mawy-root') as HTMLElement;

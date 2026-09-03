@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **A choice in a toolbar menu is one tab stop, with the arrows inside it.** Every option was its own stop, so getting past a question with one answer took four presses of `Tab`; the stop is now the option already chosen, and `Up`/`Down`/`Left`/`Right`/`Home`/`End` move between them — which is what `radiogroup` had been claiming all along. The arrows move the focus and do not pick: what a choice changes may be a command run against the document, and arrowing past `Heading 2` on the way to `Heading 3` would leave an edit behind.
+
 - **A toolbar menu's panel says it is a group rather than a dialog.** A dialog is a promise — the focus moves in when it opens, stays while it is open, and comes back when it closes — and the panel keeps none of it, nor should it: it is a few settings hanging off a button, and the focus staying on the button until `Tab` is what that wants. The word was wrong rather than the behaviour, and a role a screen reader acts on and the component does not honour is worse than no role. `aria-haspopup` has gone with it; `aria-expanded` says what there is to say.
 
 - **A keyboard reaches the right-hand end of a wide table or a long line of code.** Both scroll sideways inside their own box, and neither could be focused — so what was past the edge was past the edge for anybody without a pointer. Each is a tab stop now.
