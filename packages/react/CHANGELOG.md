@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **`Escape` puts the tooltips away.** A tooltip that appears on hover has to be dismissable without moving the pointer, and one drawn by the stylesheet cannot hear a keystroke — so one sitting over the thing somebody was reading stayed there for as long as the hand stayed still. The next move of the pointer brings them back. Nothing is lost by putting them away: every button they name says the same words to a screen reader already.
+
 - **The bar between the panes of `split` is something a finger can hit.** It was five pixels, which is a target a hand misses — and the bar is the only way to change the split without a keyboard. Thirteen now, with the same one pixel drawn down the middle of it.
 
 - **The status line says what it is in a word a screen reader reads.** It carried an `aria-label`, and an `aria-label` on a paragraph names something that has no name to give — most screen readers read the text and drop the label, so the counts arrived with nothing saying what they counted. The word is in the line now, hidden from the page and not from a reader.

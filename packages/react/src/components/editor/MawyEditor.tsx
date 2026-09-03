@@ -54,6 +54,7 @@ import {
   saveTextFile
 } from '../../internal/files.js';
 import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
+import { useDismissableTips } from '../../internal/tips.js';
 import { MawyEditorDocument } from './MawyEditorDocument.js';
 import { MawyEditorSource } from './MawyEditorSource.js';
 
@@ -309,6 +310,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const [replacement, setReplacement] = React.useState('');
   const [matchCase, setMatchCase] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
+  const tips = useDismissableTips();
   /** What the editor is saying about an upload, under the document. */
   const [note, setNote] = React.useState<{ text: string; failed: boolean } | null>(null);
 
@@ -1236,6 +1238,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       data-mawy-color-scheme={scheme}
       data-mawy-mode={current}
       data-mawy-dragging={dragging ? 'true' : undefined}
+      data-mawy-tips={tips.off ? 'off' : undefined}
+      {...tips.props}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}

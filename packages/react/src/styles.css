@@ -338,6 +338,14 @@
   translate: 0 0;
 }
 
+/* Put away with `Escape`, and back on the next move of the pointer. A tooltip
+ * that cannot be dismissed without moving the pointer is one sitting over
+ * whatever is under it for as long as the hand stays still — WCAG 1.4.13. See
+ * `useDismissableTips`. */
+.mawy-root[data-mawy-tips='off'] [data-mawy-tip]::after {
+  content: none;
+}
+
 /* Nothing at all where a pointer is not what is being used. */
 @media (hover: none) {
   .mawy-root [data-mawy-tip]::after {

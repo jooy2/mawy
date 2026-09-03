@@ -24,6 +24,7 @@ import { renderBlocks, renderFootnotes } from '../../internal/markdown/render.js
 import { findInDocument, NOTHING_FOUND } from '../../internal/markdown/find.js';
 import { FindBar } from '../../internal/find.js';
 import { useHighlighter } from '../../internal/highlighter.js';
+import { useDismissableTips } from '../../internal/tips.js';
 import { DEFAULT_TYPOGRAPHY, typographyStyle } from '../../internal/typography.js';
 import { MAWY_ACCEPT, acceptsFile, readTextFile } from '../../internal/files.js';
 import { DEFAULT_TOOLBAR, MawyViewerToolbar } from './MawyViewerToolbar.js';
@@ -272,6 +273,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const [activeHeading, setActiveHeading] = React.useState<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
   const [copyState, copy] = useCopy();
+  const tips = useDismissableTips();
 
   const scroller = React.useRef<HTMLDivElement>(null);
   const picker = React.useRef<HTMLInputElement>(null);
@@ -631,7 +633,9 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       className={['mawy-root', 'mawy-viewer', className].filter(Boolean).join(' ')}
       data-mawy-color-scheme={scheme}
       data-mawy-dragging={dragging ? 'true' : undefined}
+      data-mawy-tips={tips.off ? 'off' : undefined}
       style={{ ...typographyStyle(type, fonts), ...style } as React.CSSProperties}
+      {...tips.props}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}

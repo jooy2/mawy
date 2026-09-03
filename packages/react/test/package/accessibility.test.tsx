@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import axe from 'axe-core';
 import { MawyEditor, MawyViewer } from 'mawy-react';
@@ -196,6 +196,21 @@ describe('the editor', () => {
       });
     }
   }
+
+  it('puts the tooltips away on Escape, and back on the next move', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['copy']} />);
+    const root = screen.container.querySelector('.mawy-root') as HTMLElement;
+
+    expect(root.hasAttribute('data-mawy-tips')).toBe(false);
+
+    // A tooltip that cannot be dismissed without moving the pointer sits over
+    // whatever is under it for as long as the hand stays still.
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await vi.waitFor(() => expect(root.getAttribute('data-mawy-tips')).toBe('off'));
+
+    root.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+    await vi.waitFor(() => expect(root.hasAttribute('data-mawy-tips')).toBe(false));
+  });
 
   it('says what the status line is, in words a screen reader reads', async () => {
     const screen = await render(<MawyEditor defaultValue={SAMPLE} mode="plain" />);
