@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **An image can be given a box to arrive into.** Markdown has nowhere to write a picture's width and height, so nothing on the page knows how much room to keep and everything under it moves when the bytes land. `--mawy-doc-image-aspect` reserves the box, and `--mawy-doc-image-fit` — `contain` by default — keeps a picture that is not the shape it was promised letter-boxed rather than cut. Unset, which is the default, nothing changes.
+
 - **`Escape` puts the tooltips away.** A tooltip that appears on hover has to be dismissable without moving the pointer, and one drawn by the stylesheet cannot hear a keystroke — so one sitting over the thing somebody was reading stayed there for as long as the hand stayed still. The next move of the pointer brings them back. Nothing is lost by putting them away: every button they name says the same words to a screen reader already.
 
 - **The bar between the panes of `split` is something a finger can hit.** It was five pixels, which is a target a hand misses — and the bar is the only way to change the split without a keyboard. Thirteen now, with the same one pixel drawn down the middle of it.

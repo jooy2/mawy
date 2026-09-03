@@ -920,10 +920,24 @@
   color: var(--mawy-mark-fg);
 }
 
+/* An image arrives with no width and no height, because Markdown has nowhere to
+ * write them — so the page has nothing to keep for it and everything under it
+ * moves when the picture lands. Nothing here can fix that on its own; what it
+ * can do is get out of the way of an application that knows.
+ *
+ * `--mawy-doc-image-aspect` reserves the box before the bytes arrive, and
+ * `contain` is what keeps that from being a crop: a picture that is not the
+ * shape it was promised is letter-boxed inside it rather than cut. Unset, which
+ * is the default, nothing changes at all.
+ *
+ *     .my-docs { --mawy-doc-image-aspect: 16 / 9; }
+ */
 .mawy-root .mawy-md-image {
   display: inline-block;
   max-width: 100%;
   height: auto;
+  aspect-ratio: var(--mawy-doc-image-aspect, auto);
+  object-fit: var(--mawy-doc-image-fit, contain);
   border-radius: var(--mawy-radius-md);
 }
 

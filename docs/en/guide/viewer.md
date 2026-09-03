@@ -531,6 +531,16 @@ Anything left out of `typography` keeps its default, so `{ fontSize: 18 }` is a 
 
 The document's line height and letter spacing are declared on the text itself, not only on the container around it. That sounds like a detail and it is the difference between the controls working and not: an inherited value loses to _any_ declaration on the element, so one `article p { line-height: 28px }` in the surrounding page is enough to make the line-height control move a number that changes nothing a reader can see.
 
+**An image can be given a box to arrive into.** Markdown has nowhere to write a picture's width and height, so nothing on the page knows how much room to keep — and everything under it moves when the bytes land. There is no answer to that inside a document; there is one outside it, wherever an application knows what shape its pictures are:
+
+```css
+.my-docs {
+  --mawy-doc-image-aspect: 16 / 9;
+}
+```
+
+The box is reserved before the image arrives, and `--mawy-doc-image-fit` is `contain`, so a picture that is not the shape it was promised is letter-boxed inside the box rather than cut. Unset, which is the default, nothing changes and nothing is reserved. Writing the dimensions in the document itself is the other way to answer this and is not a syntax this parser reads today.
+
 :::
 
 ::: fw flutter
