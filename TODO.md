@@ -22,9 +22,23 @@ A read of both packages end to end, turned into a list to work through. It is
 here because it is longer than a session, and it comes back out of this file
 once the list is empty — what survives it belongs in the sections below.
 
-Every line has been read in the code. `?` marks the seven that are a decision
-before they are a change: a render structure, an anchor's name, the size of a
-public API. Those are last, and they are not to be started without an answer.
+What has come off it so far is every bug the read found in the React package,
+the three prototype-lookup holes, and the whole accessibility run in both: the
+keyboard trap on the Flutter source surface, the formatting shortcuts it did not
+have, headings that were not headings to a screen reader, and the several
+smaller things a keyboard or a screen reader could not reach on either side.
+Each is a commit with the test that fails without it, and each has a line in the
+changelog of the package it landed in.
+
+Three lines came off it for the other reason — the read was wrong about them,
+and they are written down under "Deliberate" below rather than left looking
+undone. Two more were closed by a decision rather than by a change and are
+there as well.
+
+Every line still here has been read in the code. `?` marks the seven that are a
+decision before they are a change: a render structure, an anchor's name, the
+size of a public API. Those are last, and they are not to be started without an
+answer.
 
 ### packages/react
 
@@ -62,12 +76,11 @@ public API. Those are last, and they are not to be started without an answer.
 - Optimisation — `F25` shared toolbar widgets live in the viewer's file, `?F26`
   the AST is public API, `F27` three maps for one enum, `F28` controlled and
   uncontrolled by hand.
-- Bugs — `F30` `build` mutates state,
-  `F31` recognizers disposed while mounted, `F32` the caret jumps to the end,
-  `F33` a trackpad scrolls in steps, `F34` the placeholder ignores direction,
-  `F35` `shouldRepaint` compares too little, `F36` a clipboard failure reads as
-  success, `F45` `onChange` reports the document it started with the first time
-  the controller says anything.
+- Bugs — `F30` `build` mutates state, `F31` recognizers disposed while mounted,
+  `F32` the caret jumps to the end, `F33` a trackpad scrolls in steps, `F34` the
+  placeholder ignores direction, `F35` `shouldRepaint` compares too little,
+  `F36` a clipboard failure reads as success, `F45` `onChange` reports the
+  document it started with the first time the controller says anything.
 - Tests — `F39` a large document, `F41` a `data:` image per platform, `F42` the
   image failure path, `F43` a run of scroll events.
 
