@@ -194,7 +194,11 @@ export function domAt(
     }
   }
 
-  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+  // The root's own document rather than the global one, which is what every
+  // other place in this library that reaches for a document uses. An editor
+  // rendered through a portal into another window has a root whose document is
+  // not this one.
+  const walker = root.ownerDocument.createTreeWalker(host, NodeFilter.SHOW_TEXT);
   let fallback: { node: Node; offset: number } | null = null;
 
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
