@@ -106,6 +106,20 @@ describe('the viewer', () => {
     expect(await violations(screen.container)).toEqual([]);
   });
 
+  it('lets a keyboard reach the end of what scrolls sideways', async () => {
+    const screen = await render(
+      <MawyViewer value={'| a | b |\n| - | - |\n| 1 | 2 |\n\n```\ncode\n```'} toolbar={false} />
+    );
+
+    // A box that scrolls sideways and cannot be focused is content a keyboard
+    // cannot reach the right-hand end of.
+    for (const selector of ['.mawy-md-table-scroll', '.mawy-md-pre pre']) {
+      const box = screen.container.querySelector(selector) as HTMLElement;
+
+      expect(box.getAttribute('tabindex'), selector).toBe('0');
+    }
+  });
+
   it('says which language its own words are in, and does not say it about the document', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} locale="ko" />);
     const root = screen.container.querySelector('.mawy-root') as HTMLElement;

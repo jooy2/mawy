@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **A keyboard reaches the right-hand end of a wide table or a long line of code.** Both scroll sideways inside their own box, and neither could be focused — so what was past the edge was past the edge for anybody without a pointer. Each is a tab stop now.
+
 - **The interface says which language it is in.** With `locale="ko"` inside an English page, a screen reader read the toolbar's Korean in an English voice — there was no `lang` anywhere for it to go on. The toolbar, the find bar, the status line, the outline panel, the empty state and the footnotes heading carry one now. The document does not: its language is the author's and is not something this library knows.
 
 - **A file dropped on the editor or the viewer is checked against the same list the picker offers.** The picker had `accept` and a drop had nothing, so a `.zip` let go of over an editor with `fileDrop` on was read as text and became the document — five megabytes of mojibake, and undo the only way back. The list is read generously, because a platform is not reliable about what it says a file is: an extension on the list, a media type on the list, anything it called `text/`, and a file it said nothing at all about are all taken. What is refused is the file that positively says it is something else.

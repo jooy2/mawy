@@ -624,7 +624,13 @@ function CodeBlock({
 
   return (
     <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined} {...origin(block)}>
-      <pre>
+      {/* A box that scrolls sideways and cannot be focused is content a
+          keyboard cannot reach the right-hand end of, which is WCAG 2.1.1.
+          A tab stop on every block rather than only on the ones that overflow:
+          whether it overflows is a question about the width it is drawn at, and
+          answering it would mean measuring every code block on every resize —
+          which is a great deal of work to save a keyboard one press. */}
+      <pre tabIndex={0}>
         {/* The range on the `code` rather than only on the box around it: the
             box holds the fences and the copy button as well, and a caret in an
             empty block would otherwise have the backticks for an address. */}
@@ -906,7 +912,7 @@ export function renderBlocks(
         return (
           // A wide table scrolls inside its own box rather than making the page
           // scroll sideways, which is the one thing a reader cannot undo.
-          <div key={index} className="mawy-md-table-scroll" {...origin(block)}>
+          <div key={index} className="mawy-md-table-scroll" tabIndex={0} {...origin(block)}>
             <table className="mawy-md-table">
               {header.length ? (
                 <thead>{header.map((row, at) => renderRow(row, at, context, block.align))}</thead>
