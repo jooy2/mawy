@@ -2,6 +2,14 @@
 
 > This package's history. Each language Mawy ships for keeps its own changelog beside its own manifest, because they version independently.
 
+## vNext (2026--)
+
+### Fixed
+
+- **The bar between the panes of `split` stops when it is let go.** It went on following the pointer afterwards, and took another set of listeners with it every time it was taken hold of — so a bar dragged twice moved twice as far as the hand did, and one that had been dragged at all moved whenever the pointer crossed it.
+
+  The drag held on to the event React handed it and read the bar off that later, which React does not allow: a synthetic event's `currentTarget` is put back to null the moment the handler returns, so the code that was to take the listeners off found nothing to take them off. The keyboard half was never affected, and it is what the tests covered.
+
 ## 1.0.0 (2026-09-02)
 
 The entries below are a long list of work, and a long list is a minor version. What makes this a major is the promise that comes with the number: from here the exported API is under semantic versioning, so a name that goes away or changes shape waits for another major. Nothing exported changed shape in this release.

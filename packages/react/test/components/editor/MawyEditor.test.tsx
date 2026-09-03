@@ -311,6 +311,40 @@ describe('the bar between the panes of split', () => {
     bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     await vi.waitFor(() => expect(bar.getAttribute('aria-valuenow')).toBe('15'));
   });
+
+  /**
+   * A pointer, which is the half the keyboard tests above could not see.
+   *
+   * The second `pointermove` is the whole test. A drag that does not take its
+   * own listeners off again keeps following the pointer after it has been let
+   * go, and adds another set every time the bar is taken hold of.
+   */
+  it('follows the pointer, and stops when it is let go', async () => {
+    const screen = await render(<MawyEditor defaultValue={DOCUMENT} mode="split" />);
+    const bar = screen.container.querySelector('.mawy-editor-divider') as HTMLElement;
+    const box = (
+      screen.container.querySelector('.mawy-editor-body') as HTMLElement
+    ).getBoundingClientRect();
+
+    const at = (kind: string, x: number) =>
+      bar.dispatchEvent(
+        new PointerEvent(kind, { pointerId: 1, clientX: x, bubbles: true, cancelable: true })
+      );
+
+    at('pointerdown', box.left + box.width * 0.5);
+    at('pointermove', box.left + box.width * 0.7);
+    await vi.waitFor(() => expect(bar.getAttribute('aria-valuenow')).toBe('70'));
+
+    at('pointerup', box.left + box.width * 0.7);
+    at('pointermove', box.left + box.width * 0.3);
+
+    // Long enough for a render the move would have caused, so that "unchanged"
+    // is an answer rather than a race.
+    await new Promise((settle) => setTimeout(settle, 100));
+
+    // Still where it was let go, and not where the pointer has since gone.
+    expect(bar.getAttribute('aria-valuenow')).toBe('70');
+  });
 });
 
 /**

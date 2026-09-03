@@ -370,13 +370,19 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    // Held in a variable rather than read off the event again. React hands a
+    // synthetic event round its listeners and sets `currentTarget` back to null
+    // the moment the handler returns, so the callbacks below — which run on a
+    // later event — would find nothing there and never take themselves off.
+    const bar = event.currentTarget;
+
     // The pointer is captured so the drag survives leaving the bar, which it
     // does immediately: the bar is five pixels wide and a hand is not that
     // steady.
-    event.currentTarget.setPointerCapture(event.pointerId);
+    bar.setPointerCapture(event.pointerId);
     event.preventDefault();
 
-    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
+    const rtl = getComputedStyle(bar).direction === 'rtl';
 
     const move = (at: PointerEvent) => {
       const along = rtl ? box.right - at.clientX : at.clientX - box.left;
@@ -385,14 +391,14 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     };
 
     const up = () => {
-      event.currentTarget.removeEventListener('pointermove', move);
-      event.currentTarget.removeEventListener('pointerup', up);
-      event.currentTarget.removeEventListener('pointercancel', up);
+      bar.removeEventListener('pointermove', move);
+      bar.removeEventListener('pointerup', up);
+      bar.removeEventListener('pointercancel', up);
     };
 
-    event.currentTarget.addEventListener('pointermove', move);
-    event.currentTarget.addEventListener('pointerup', up);
-    event.currentTarget.addEventListener('pointercancel', up);
+    bar.addEventListener('pointermove', move);
+    bar.addEventListener('pointerup', up);
+    bar.addEventListener('pointercancel', up);
   }, []);
 
   /**
