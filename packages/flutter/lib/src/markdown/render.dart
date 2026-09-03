@@ -442,6 +442,12 @@ class _Image extends StatelessWidget {
       child: Image.network(
         node.url,
         semanticLabel: node.alt.isEmpty ? null : node.alt,
+        // `![](…)` is a picture the author said nothing about, which in
+        // Markdown — and in the `alt=""` it becomes — means decoration. Left in
+        // the tree it is an unnamed image, and a screen reader stops on it to
+        // say "image" and nothing else. Said or skipped, and never named
+        // nothing.
+        excludeFromSemantics: node.alt.isEmpty,
         errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
             onError?.call(node.url) ??
             Text(

@@ -360,6 +360,32 @@ void main() {
     });
   });
 
+  testWidgets('names a picture the author described and skips one they did not', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      host(
+        const MawyViewer(
+          value: '![A cat](https://example.com/a.png)\n\n![](https://example.com/b.png)',
+          toolbar: <MawyViewerToolbarItem>[],
+        ),
+      ),
+    );
+
+    final int named = find.bySemanticsLabel('A cat').evaluate().length;
+    final int images = find.byType(Image).evaluate().length;
+
+    handle.dispose();
+
+    expect(images, 2, reason: 'both are drawn');
+    expect(named, 1);
+    // `![](…)` is decoration, and an unnamed image is a stop that says "image"
+    // and nothing else.
+    expect(find.byWidgetPredicate((Widget w) => w is Image && w.excludeFromSemantics), findsOne);
+  });
+
   testWidgets('says a heading is a heading, and which level', (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
 

@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **A picture the author described is named, and one they did not is skipped.** `![](…)` has no description, which in Markdown means decoration — and it was left in the tree as an image with no name, so a screen reader stopped on it to say "image" and nothing else.
+
 - **A heading in a drawn document is a heading to a screen reader, and says which level.** It was text at a larger size, and text at a larger size is text: moving through a document by its headings — most of how one is read without sight — did not work at all. The React package writes an `<h1>` and gets this for nothing, and the viewer guide has been describing it for both packages.
 
 - **The formatting commands have the keyboard shortcuts the guide said they had.** `Mod`+`B`, `Mod`+`I`, `Mod`+`K`, `Mod`+`E`, `Mod`+`1`/`2`/`3`, `Mod`+`0` and `Mod`+`Shift`+`X` all reach the source surface now. The toolbar was the only way to any of them, which is an editor that cannot be used without a pointer — and the table in the guide has been listing them for both packages while this one answered none.
