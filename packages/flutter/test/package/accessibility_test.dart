@@ -296,6 +296,68 @@ void main() {
 
       expect(find.text('Title'), findsOneWidget);
     });
+    testWidgets('leaves the source surface on Escape and then Tab', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: 'Words.',
+            mode: MawyEditorMode.plain,
+            toolbar: <MawyEditorToolbarItem>[],
+            status: <MawyEditorStatusItem>[],
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(find.byType(EditableText));
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+      expect(field.focusNode.hasPrimaryFocus, isTrue);
+
+      // Tab on its own indents, which is what a source surface is for. With
+      // nothing selected that is two spaces where the caret is, the way typing
+      // them would be — and the caret is at the end of what was opened.
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(field.controller.text, 'Words.  ');
+      expect(field.focusNode.hasPrimaryFocus, isTrue);
+
+      // A text field that swallows Tab is a keyboard trap: somebody who cannot
+      // use a pointer would have no way out of the editor at all. Escape opens
+      // it, which is the rule every code editor uses.
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+
+      expect(field.focusNode.hasPrimaryFocus, isFalse);
+      expect(field.controller.text, 'Words.  ');
+    });
+
+    testWidgets('says how to leave, for a reader who cannot see the caret', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: 'Words.',
+            mode: MawyEditorMode.plain,
+            toolbar: <MawyEditorToolbarItem>[],
+            status: <MawyEditorStatusItem>[],
+          ),
+        ),
+      );
+
+      final Finder named = find.bySemanticsLabel('Markdown source');
+      final int found = named.evaluate().length;
+      final String hint = found == 1 ? tester.getSemantics(named).hint : '';
+
+      handle.dispose();
+
+      expect(found, 1, reason: 'the surface has a name');
+      expect(hint, 'Tab indents. Press Escape and then Tab to move on.');
+    });
   });
 
   testWidgets('drops the animation where the platform asks for less movement', (

@@ -2,10 +2,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/host.dart';
 import '../support/spans.dart';

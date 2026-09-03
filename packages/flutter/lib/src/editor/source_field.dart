@@ -302,6 +302,73 @@ class _MawySourceFieldState extends State<MawySourceField>
   @override
   bool get selectionEnabled => true;
 
+  /// Whether `Escape` was the last key pressed, and so whether the next `Tab`
+  /// leaves the surface rather than indenting. See [_onKey].
+  bool _leaving = false;
+
+  /// The keys this surface answers for, before the field sees them.
+  ///
+  /// `Tab` indents, and `Escape` is the way out. A text field that swallows
+  /// `Tab` is a keyboard trap, and that is not a style opinion — somebody who
+  /// cannot use a pointer would have no way to leave the editor at all. So the
+  /// trap is opened rather than avoided: `Escape` once and the next `Tab` moves
+  /// the focus, which is the rule CodeMirror, Monaco and GitHub's own editor
+  /// all use, and the reason it is worth matching them is that anybody who has
+  /// met one of those already knows it. The flag is cleared by anything else,
+  /// so `Escape` never leaves the surface in a state a reader cannot see.
+  ///
+  /// The focus is moved by hand rather than by letting the key travel on: only
+  /// a `WidgetsApp` binds `Tab` to traversal, and this package does not require
+  /// one — the same reason `mawyActivate` writes out `Enter` and the space bar.
+  ///
+  /// This is `onKeyDown` in `MawyEditor.tsx`, and the two are meant to stay the
+  /// same rule.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _leaving = true;
+
+      return KeyEventResult.ignored;
+    }
+
+    final bool wasLeaving = _leaving;
+
+    _leaving = false;
+
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      final bool back = HardwareKeyboard.instance.isShiftPressed;
+
+      if (wasLeaving) {
+        if (back) {
+          widget.focusNode.previousFocus();
+        } else {
+          widget.focusNode.nextFocus();
+        }
+
+        return KeyEventResult.handled;
+      }
+
+      if (widget.readOnly) {
+        return KeyEventResult.ignored;
+      }
+
+      widget.onIndent(out: back);
+
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.enter &&
+        !HardwareKeyboard.instance.isShiftPressed &&
+        widget.onEnter()) {
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
     final MawySourceController controller = widget.controller;
@@ -334,63 +401,41 @@ class _MawySourceFieldState extends State<MawySourceField>
               ),
             ),
           ),
-        Shortcuts(
-          shortcuts: const <ShortcutActivator, Intent>{
-            SingleActivator(LogicalKeyboardKey.tab): _IndentIntent(out: false),
-            SingleActivator(LogicalKeyboardKey.tab, shift: true): _IndentIntent(out: true),
-          },
-          child: Actions(
-            actions: <Type, Action<Intent>>{
-              _IndentIntent: CallbackAction<_IndentIntent>(
-                onInvoke: (_IndentIntent intent) {
-                  widget.onIndent(out: intent.out);
-
-                  return null;
-                },
-              ),
-            },
-            child: Focus(
-              onKeyEvent: (FocusNode node, KeyEvent event) {
-                final bool pressed = event is KeyDownEvent || event is KeyRepeatEvent;
-
-                if (pressed &&
-                    event.logicalKey == LogicalKeyboardKey.enter &&
-                    !HardwareKeyboard.instance.isShiftPressed &&
-                    widget.onEnter()) {
-                  return KeyEventResult.handled;
-                }
-
-                return KeyEventResult.ignored;
-              },
-              child: _gestures.buildGestureDetector(
-                behavior: HitTestBehavior.translucent,
-                child: EditableText(
-                  key: editableTextKey,
-                  controller: controller,
-                  focusNode: widget.focusNode,
-                  scrollController: widget.scrollController,
-                  readOnly: widget.readOnly,
-                  style: style,
-                  cursorColor: tokens.accent,
-                  backgroundCursorColor: tokens.border,
-                  selectionColor: tokens.accentSoft,
-                  maxLines: null,
-                  expands: true,
-                  textAlign: TextAlign.start,
-                  scrollPadding: const EdgeInsets.all(24),
-                  // A selection is a run of text and not a row of blocks. The
-                  // default fits a box to each run's own glyphs, so a line of
-                  // Hangul and a line of Latin are highlighted at two different
-                  // heights with a gap left between the lines. This is the
-                  // browser's answer, and it is a knob a text field has.
-                  selectionHeightStyle: ui.BoxHeightStyle.max,
-                  selectionWidthStyle: ui.BoxWidthStyle.max,
-                  // The detector above reads the pointer. Two things reading
-                  // one gesture is a caret that jumps to where a selection
-                  // was meant to start.
-                  rendererIgnoresPointer: true,
-                  enableInteractiveSelection: true,
-                ),
+        Focus(
+          onKeyEvent: _onKey,
+          child: Semantics(
+            // What the surface is called, and the way out of it. Both are the
+            // React package's, said the way Flutter says them.
+            label: widget.strings.source,
+            hint: widget.strings.sourceEscape,
+            child: _gestures.buildGestureDetector(
+              behavior: HitTestBehavior.translucent,
+              child: EditableText(
+                key: editableTextKey,
+                controller: controller,
+                focusNode: widget.focusNode,
+                scrollController: widget.scrollController,
+                readOnly: widget.readOnly,
+                style: style,
+                cursorColor: tokens.accent,
+                backgroundCursorColor: tokens.border,
+                selectionColor: tokens.accentSoft,
+                maxLines: null,
+                expands: true,
+                textAlign: TextAlign.start,
+                scrollPadding: const EdgeInsets.all(24),
+                // A selection is a run of text and not a row of blocks. The
+                // default fits a box to each run's own glyphs, so a line of
+                // Hangul and a line of Latin are highlighted at two different
+                // heights with a gap left between the lines. This is the
+                // browser's answer, and it is a knob a text field has.
+                selectionHeightStyle: ui.BoxHeightStyle.max,
+                selectionWidthStyle: ui.BoxWidthStyle.max,
+                // The detector above reads the pointer. Two things reading
+                // one gesture is a caret that jumps to where a selection
+                // was meant to start.
+                rendererIgnoresPointer: true,
+                enableInteractiveSelection: true,
               ),
             ),
           ),
@@ -542,11 +587,4 @@ class _Numbers extends CustomPainter {
 
   @override
   bool shouldRepaint(_Numbers old) => old.text != text || old.style != style;
-}
-
-/// `Tab`, in whichever direction.
-class _IndentIntent extends Intent {
-  const _IndentIntent({required this.out});
-
-  final bool out;
 }

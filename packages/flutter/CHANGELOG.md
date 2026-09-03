@@ -6,6 +6,10 @@
 
 ### Fixed
 
+- **`Escape` and then `Tab` leaves the source surface.** `Tab` indents there, which is what a source surface is for — and it was the only thing `Tab` did, so somebody who cannot use a pointer had no way out of the editor at all. That is a keyboard trap, and the guide has been describing the way out of it for both packages while this one did not have it.
+
+  One `Escape` arms it and anything else typed disarms it again, which is the rule the React package has and the rule CodeMirror, Monaco and GitHub's own editor all use. The surface is named to a screen reader now as well, and says how to leave — a way out nobody is told about is a way out that does not exist for the person who needed it. `MawyStrings.sourceEscape` is the sentence, in both languages.
+
 - **The copy button says it copied for the same moment however often it is pressed.** The run of time putting the label back could not be called off, so a second press was cut short by the first one finishing — the button went back to saying "Copy" part-way through the press that had just been made, and read as having done nothing.
 
 - **`Enter` stops carrying a definition marker down in an editor that does not read definition lists.** `parse.definitionLists: false` turns the syntax off in the parser, and the line `: like this` is then a paragraph — but `Enter` on it still wrote another `: ` on the next line, so the editor was helping with a construct the document it was editing does not have. `continueList` takes the option now, and defaults to reading them, which is what it did before.

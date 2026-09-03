@@ -46,6 +46,7 @@ class MawyStrings {
     required this.footnoteBack,
     required this.editor,
     required this.source,
+    required this.sourceEscape,
     required this.mode,
     required this.modePlain,
     required this.modePreview,
@@ -184,6 +185,9 @@ class MawyStrings {
 
   /// The editor: Markdown source.
   final String source;
+
+  /// How to leave the source surface, for a screen reader. `Tab` indents there.
+  final String sourceEscape;
 
   /// The editor: View.
   final String mode;
@@ -358,6 +362,7 @@ const MawyStrings _en = MawyStrings(
   footnoteBack: 'Back to where this was mentioned',
   editor: 'Document',
   source: 'Markdown source',
+  sourceEscape: 'Tab indents. Press Escape and then Tab to move on.',
   mode: 'View',
   modePlain: 'Source',
   modePreview: 'Preview',
@@ -438,6 +443,7 @@ const MawyStrings _ko = MawyStrings(
   footnoteBack: '언급된 자리로 돌아가기',
   editor: '문서',
   source: '마크다운 원문',
+  sourceEscape: 'Tab은 들여쓰기입니다. 빠져나가려면 Escape를 누른 다음 Tab을 누르세요.',
   mode: '보기',
   modePlain: '원문',
   modePreview: '미리보기',
