@@ -804,7 +804,19 @@ export function renderBlocks(
         const Tag = `h${block.depth}` as 'h1';
 
         return (
-          <Tag key={index} id={block.slug} className="mawy-md-heading" {...origin(block)}>
+          <Tag
+            key={index}
+            id={block.slug}
+            className="mawy-md-heading"
+            // Somewhere the focus can be *put* without being a stop on the way
+            // anywhere: following an outline entry has to move the focus as
+            // well as the page, or the next `Tab` carries on from the panel.
+            // A reader Tabbing through is on their way somewhere, and a stop on
+            // text they can already see is a stop that says nothing. This is
+            // the Flutter package's `skipTraversal` said the other way round.
+            tabIndex={-1}
+            {...origin(block)}
+          >
             {renderInline(block.children, context)}
           </Tag>
         );

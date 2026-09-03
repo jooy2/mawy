@@ -549,8 +549,10 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
     heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
     // Moving the page is only half of following a link. The focus has to go
-    // with it, or the next Tab carries on from wherever the outline was.
-    heading.tabIndex = -1;
+    // with it, or the next Tab carries on from wherever the outline was. Every
+    // heading is drawn able to take it — see the renderer — rather than being
+    // made able to here, which would be writing an attribute into a tree React
+    // owns and would never take back out.
     heading.focus({ preventScroll: true });
   }, []);
 

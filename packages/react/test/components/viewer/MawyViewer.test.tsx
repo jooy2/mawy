@@ -1009,6 +1009,10 @@ describe('the outline', () => {
     await link.click();
 
     expect(document.activeElement?.id).toBe('second');
+    // Somewhere the focus can be put, drawn that way rather than made that way
+    // by writing into a tree React owns — and still not a stop on the way
+    // anywhere, which is what `-1` says.
+    expect(document.activeElement?.getAttribute('tabindex')).toBe('-1');
   });
 
   it('says so when there is nothing to list', async () => {
