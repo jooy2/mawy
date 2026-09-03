@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/host.dart';
 import '../support/spans.dart';
@@ -296,6 +297,49 @@ void main() {
       expect(copied.single, isNotEmpty);
       expect('Second', startsWith(copied.single));
     });
+
+    testWidgets('says it copied for the same moment however often it is pressed', (
+      WidgetTester tester,
+    ) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall call) async => null,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await tester.pumpWidget(
+        host(
+          const MawyViewer(
+            // Not `sample`: a fenced block draws a copy button of its own, and
+            // the one this is about is the toolbar's.
+            value: '# Title\n\nWords.',
+            toolbar: <MawyViewerToolbarItem>[MawyViewerToolbarItem.copy],
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(LucideIcons.copy));
+      await tester.pump();
+      expect(find.byIcon(LucideIcons.check), findsOneWidget);
+
+      // Most of the way through the first press's moment, and then a second
+      // press. A run of time that could not be called off would put the label
+      // back here, part-way through the press that had just been made.
+      await tester.pump(const Duration(milliseconds: 1400));
+      await tester.tap(find.byIcon(LucideIcons.check));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byIcon(LucideIcons.check), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 1600));
+      expect(find.byIcon(LucideIcons.copy), findsOneWidget);
+    });
   });
 
   group('scrolling', () {
@@ -422,7 +466,9 @@ void main() {
       await tester.pumpWidget(
         host(
           const MawyViewer(
-            value: sample,
+            // Not `sample`: a fenced block draws a copy button of its own, and
+            // the one this is about is the toolbar's.
+            value: '# Title\n\nWords.',
             toolbar: <MawyViewerToolbarItem>[MawyViewerToolbarItem.copy],
           ),
         ),

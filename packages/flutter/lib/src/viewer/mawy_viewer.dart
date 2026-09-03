@@ -344,6 +344,7 @@ class _MawyViewerState extends State<MawyViewer> {
 
   @override
   void dispose() {
+    _settle?.cancel();
     _scroller.removeListener(_measureActive);
 
     for (final GestureRecognizer recognizer in _recognizers) {
@@ -396,6 +397,16 @@ class _MawyViewerState extends State<MawyViewer> {
     MawyColorScheme.system => MediaQuery.platformBrightnessOf(context),
   };
 
+  /// How long the button says it copied for.
+  static const Duration _copyHeldFor = Duration(milliseconds: 1600);
+
+  /// The timer putting the label back, so a second press can cancel it.
+  ///
+  /// A `Future.delayed` cannot be called off, so pressing copy twice left the
+  /// first one still counting: it put the label back partway through the
+  /// second press, and the button read as having done nothing.
+  Timer? _settle;
+
   Future<void> _copy() async {
     await Clipboard.setData(ClipboardData(text: widget.value));
 
@@ -404,12 +415,12 @@ class _MawyViewerState extends State<MawyViewer> {
     }
 
     setState(() => _copied = true);
-
-    await Future<void>.delayed(const Duration(milliseconds: 1600));
-
-    if (mounted) {
-      setState(() => _copied = false);
-    }
+    _settle?.cancel();
+    _settle = Timer(_copyHeldFor, () {
+      if (mounted) {
+        setState(() => _copied = false);
+      }
+    });
   }
 
   /// Throws away the anchors the document that just went had.

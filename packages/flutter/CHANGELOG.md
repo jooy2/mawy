@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **The copy button says it copied for the same moment however often it is pressed.** The run of time putting the label back could not be called off, so a second press was cut short by the first one finishing — the button went back to saying "Copy" part-way through the press that had just been made, and read as having done nothing.
+
 - **`Enter` stops carrying a definition marker down in an editor that does not read definition lists.** `parse.definitionLists: false` turns the syntax off in the parser, and the line `: like this` is then a paragraph — but `Enter` on it still wrote another `: ` on the next line, so the editor was helping with a construct the document it was editing does not have. `continueList` takes the option now, and defaults to reading them, which is what it did before.
 
 - **The status bar says the column in the same characters as the count beside it.** The column was counted in UTF-16 units and the selection in code points, so a caret moved past an emoji jumped two columns while the selection count said one character. Both are code points now.
