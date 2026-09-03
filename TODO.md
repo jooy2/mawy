@@ -35,12 +35,9 @@ public API. Those are last, and they are not to be started without an answer.
   ceiling, `R9` a lowercased copy per search, `R10` the highlighter effect re-runs
   per render, `R11` footnote slugs collide in quadratic time, `R12` definitions
   re-slice the paragraph, `R13` a span per code token.
-- SEO and accessibility — `R14` no `lang`, `R15` scrollers no keyboard reaches,
-  `?R16` heading `id`s collide between two viewers, `R17` a `dialog` that does not
-  take focus, `R18` a `radiogroup` without arrows, `R19` a tooltip that cannot be
-  dismissed, `R20` an `aria-label` on a `p`, `R21` a hard-coded `h2`, `R22` a 5px
-  target, `R23` images without dimensions, `R24` sanitised HTML hydrates
-  differently, `?R25` no server-only render path.
+- SEO and accessibility — `?R16` heading `id`s collide between two viewers,
+  `R21` a hard-coded `h2`, `R23` images without dimensions, `R24` sanitised HTML
+  hydrates differently, `?R25` no server-only render path.
 - Security — `R29` the sanitiser round-trips through a string, `R30` `id` and
   `name` survive into the host page, `R31` `raw` needs a louder warning, `R32` a
   font link with no referrer policy.
@@ -61,9 +58,6 @@ public API. Those are last, and they are not to be started without an answer.
   rebuilds the preview, `F7` matches recomputed per build, `F8` recognizers rebuilt
   per build, `F9` every heading measured per scroll, `F10` images decode at full
   size, `F11` `commandActive` per button, `F12` `_blocks` is never cleared.
-- SEO and accessibility — `F16` the status bar has no semantics, `F18` no
-  keyboard scrolling, `F19` a 5px target, `F20` an empty `alt` is not
-  decorative.
 - Security — `F21` no hook for the image request, `F22` a `data:` image the
   sanitiser allows and the renderer cannot draw, `F23` no size ceiling.
 - Optimisation — `F25` shared toolbar widgets live in the viewer's file, `?F26`
