@@ -201,6 +201,13 @@ function origin(node: { range: MdRange }): { 'data-mawy-range': string } {
  * that cannot quietly lose part of a document: an unhandled `::video{src=…}`
  * has nothing inside it to fall back *to*, and a reader seeing the line the
  * author wrote can tell what was meant.
+ *
+ * "Registered" means written into the object and not inherited by it. A
+ * directive's name is `[A-Za-z][A-Za-z0-9_-]*`, which `constructor` and
+ * `toString` both are, and an ordinary object literal answers for those with
+ * something off `Object.prototype` — which React would then call as a
+ * component. A document would be choosing what runs, which is the one thing a
+ * document does not get to do here.
  */
 function Directive({
   node,
@@ -211,7 +218,9 @@ function Directive({
   kind: MawyDirectiveKind;
   context: RenderContext;
 }): React.ReactElement | null {
-  const Component = context.directives?.[node.name];
+  const registered = context.directives;
+  const Component =
+    registered && Object.hasOwn(registered, node.name) ? registered[node.name] : undefined;
   const label = kind === 'container' ? (node as MdContainerDirective).label : node.children;
   const source = context.source?.slice(node.range.start, node.range.end) ?? '';
 

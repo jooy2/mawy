@@ -951,6 +951,31 @@ describe('directives', () => {
     expect(screen.container.querySelector('video')).toBe(null);
   });
 
+  /**
+   * A name that is a property of every object is still a name nobody claimed.
+   *
+   * `constructor` and `toString` are both spelled the way a directive is, and
+   * an ordinary object literal answers for both — with something off
+   * `Object.prototype`, which React would have called as a component. The
+   * document would have been choosing what runs.
+   */
+  it('does not find a name the registry only inherited', async () => {
+    const Callout = () => <section />;
+    const screen = await render(
+      <MawyViewer
+        value={'::constructor\n\n:::toString\nBody.\n:::\n\nA :valueOf[x] sentence.'}
+        toolbar={false}
+        directives={{ callout: Callout }}
+      />
+    );
+    const shown = [...screen.container.querySelectorAll('.mawy-md-directive-source')].map(
+      (element) => element.textContent
+    );
+
+    expect(shown).toEqual(['::constructor', ':::toString\nBody.\n:::', ':valueOf[x]']);
+    expect(screen.container.querySelector('section')).toBe(null);
+  });
+
   it('says where an unclaimed one came from, like everything else it draws', async () => {
     const value = 'Before.\n\n::video{src=/a.mp4}';
     const screen = await render(<MawyViewer value={value} toolbar={false} />);

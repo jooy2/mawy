@@ -4,6 +4,12 @@
 
 ## vNext (2026--)
 
+### Security
+
+- **A directive named after a property every object has is a directive nobody registered.** `:::constructor` is spelled exactly the way a directive is spelled, and the registry an application passes is an ordinary object — so the name was answered with something off `Object.prototype`, React called it as a component, and the render threw. A document could take the page down by naming one of a dozen words.
+
+  Names are looked up as own properties now, so `constructor`, `toString` and the rest are drawn as the characters they were written with, which is what every other unregistered name gets. Nothing changes for a name an application actually registered.
+
 ### Fixed
 
 - **The bar between the panes of `split` stops when it is let go.** It went on following the pointer afterwards, and took another set of listeners with it every time it was taken hold of — so a bar dragged twice moved twice as far as the hand did, and one that had been dragged at all moved whenever the pointer crossed it.
