@@ -1251,6 +1251,104 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('One three.');
   });
 
+  /**
+   * The range the browser says it meant, carried on the event.
+   *
+   * Which characters a word is, and where a soft line ends, are the platform's
+   * answers rather than this library's — `Alt`+`Backspace` means one thing on a
+   * Mac and `Ctrl`+`Backspace` another elsewhere, and both mean something
+   * different again inside a wrapped paragraph. So what is asserted here is the
+   * half that is ours: a range the browser hands over is read back into the
+   * document and taken out of it. A constructed `InputEvent` carries no target
+   * ranges, so one is put on it.
+   */
+  const deleteTargeting = (
+    root: HTMLElement,
+    inputType: string,
+    node: Node,
+    from: number,
+    to: number
+  ) => {
+    const event = new InputEvent('beforeinput', { inputType, bubbles: true, cancelable: true });
+    const target = new StaticRange({
+      startContainer: node,
+      startOffset: from,
+      endContainer: node,
+      endOffset: to
+    });
+
+    Object.defineProperty(event, 'getTargetRanges', { value: () => [target] });
+    root.dispatchEvent(event);
+  };
+
+  const runSaying = (root: HTMLElement, saying: string): Text => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if ((node as Text).data === saying) {
+        return node as Text;
+      }
+    }
+
+    throw new Error(`no run saying ${JSON.stringify(saying)}`);
+  };
+
+  // `deleteEntireSoftLine` is answered for in `editing.ts` and is not on this
+  // list: Chromium's `InputEvent` constructor does not know the name and hands
+  // back an event whose `inputType` is the empty string, so a test for it would
+  // be a test of the constructor.
+  for (const inputType of [
+    'deleteWordBackward',
+    'deleteWordForward',
+    'deleteSoftLineBackward',
+    'deleteHardLineForward'
+  ]) {
+    it(`takes out the run ${inputType} says it meant`, async () => {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+      );
+      const body = bodyOf(screen);
+
+      put(body, 'One two three.', 7);
+      deleteTargeting(body, inputType, runSaying(body, 'One two three.'), 4, 7);
+
+      expect(onChange).toHaveBeenLastCalledWith('One  three.');
+    });
+  }
+
+  it('takes exactly the characters the range covered, and no markup around them', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="A **bold** word." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    // The drawn run says `bold` and the document says `**bold**`. The four
+    // drawn characters are what the browser pointed at, so the four written
+    // ones are what goes — the same answer a selection over them already gets,
+    // rather than a second opinion about how much of the emphasis was meant.
+    put(body, 'bold', 4);
+    deleteTargeting(body, 'deleteWordBackward', runSaying(body, 'bold'), 0, 4);
+
+    expect(onChange).toHaveBeenLastCalledWith('A **** word.');
+  });
+
+  it('changes nothing when the browser offers no range to go on', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One two three.', 7);
+    type(body, 'deleteWordBackward');
+
+    // A deletion that does not happen rather than one that guesses at what a
+    // word is on the keyboard in front of the reader.
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('leaves the document alone on a cut with nothing selected', async () => {
     const onChange = vi.fn();
     const screen = await render(

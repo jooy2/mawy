@@ -407,6 +407,41 @@ export function documentAt(
     : sourceAt(root, node, offset, value);
 }
 
+/**
+ * The run an input event had decided to change, in the document's own offsets.
+ *
+ * `getTargetRanges` is the browser saying what it was about to do before it was
+ * told no, and it is the only honest answer for a deletion that is not one
+ * character: what a word is, and where a line ends on a screen, are the
+ * platform's questions rather than this library's. Writing those rules again
+ * here would be writing them differently from the keyboard the reader is
+ * actually using.
+ *
+ * `null` where the browser offered nothing, which is a deletion that does not
+ * happen rather than one that guesses.
+ */
+function targetOf(
+  event: InputEvent,
+  root: HTMLElement,
+  value: string,
+  aim: MawyAim | null
+): { start: number; end: number } | null {
+  const [range] = event.getTargetRanges();
+
+  if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) {
+    return null;
+  }
+
+  const head = documentAt(root, range.startContainer, range.startOffset, value, aim);
+  const tail = documentAt(root, range.endContainer, range.endOffset, value, aim);
+
+  if (head === null || tail === null) {
+    return null;
+  }
+
+  return { start: Math.min(head, tail), end: Math.max(head, tail) };
+}
+
 /** Where the caret is, in the document and on the page, or `null` for nowhere. */
 function placeOf(
   root: HTMLElement,
@@ -551,6 +586,25 @@ export function editFor(
     // a copy.
     case 'deleteByCut':
       return start === end ? null : splice(value, start, end, '');
+
+    // A word, a line, or whatever the platform means by those on the keyboard
+    // in front of the reader. The browser has already worked out which
+    // characters it meant and says so in `getTargetRanges`; all that is left is
+    // reading that back into the document. `Alt`+`Backspace` and
+    // `Ctrl`+`Backspace` were doing nothing at all before this.
+    case 'deleteWordBackward':
+    case 'deleteWordForward':
+    case 'deleteSoftLineBackward':
+    case 'deleteSoftLineForward':
+    case 'deleteHardLineBackward':
+    case 'deleteHardLineForward':
+    case 'deleteEntireSoftLine': {
+      const target = start === end ? targetOf(event, root, value, aim) : { start, end };
+
+      return target && target.start !== target.end
+        ? splice(value, target.start, target.end, '')
+        : null;
+    }
 
     case 'insertFromDrop': {
       const block = blockAt(root, range.startContainer);

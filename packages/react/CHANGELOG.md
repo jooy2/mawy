@@ -12,6 +12,10 @@
 
 ### Fixed
 
+- **Deleting a word or a line on the drawn surface does something.** `Alt`+`Backspace`, `Ctrl`+`Backspace` and the rest of the deletions that are not one character had no answer written for them, so the browser was told no and nothing took its place — the keystroke did nothing at all.
+
+  What is deleted is the run the browser says it meant, which it hands over on the event. Which characters a word is, and where a soft line ends on a screen, are the platform's questions and stay the platform's: writing those rules again here would be writing them differently from the keyboard in front of the reader. A browser that offers no range still deletes nothing, which is the honest answer rather than a guess.
+
 - **Cutting on the drawn surface takes the words out of the document.** It only ever copied them. Every `beforeinput` on `wysiwyg` is refused and turned into an edit to the Markdown instead, and a cut is one of the types that had no answer written for it — so the browser was told no and nothing took its place. The run still reaches the clipboard, because the browser puts it there before it asks.
 
 - **Pasting a page with a drawing in it no longer brings the drawing's words along.** `<svg>` and `<math>` were on the list of things that are not prose, and the list was never reached for either of them: an element outside HTML answers `tagName` in its own case rather than in upper case, so `svg` matched nothing and was treated as a container worth keeping the inside of. A chart copied out of a page arrived as its axis labels, run together as a sentence.
