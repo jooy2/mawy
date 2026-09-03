@@ -61,9 +61,9 @@ public API. Those are last, and they are not to be started without an answer.
   rebuilds the preview, `F7` matches recomputed per build, `F8` recognizers rebuilt
   per build, `F9` every heading measured per scroll, `F10` images decode at full
   size, `F11` `commandActive` per button, `F12` `_blocks` is never cleared.
-- SEO and accessibility — `F16` the status bar has no semantics, `F17` the
-  document may merge into one node, `F18` no keyboard scrolling, `F19` a 5px
-  target, `F20` an empty `alt` is not decorative.
+- SEO and accessibility — `F16` the status bar has no semantics, `F18` no
+  keyboard scrolling, `F19` a 5px target, `F20` an empty `alt` is not
+  decorative.
 - Security — `F21` no hook for the image request, `F22` a `data:` image the
   sanitiser allows and the renderer cannot draw, `F23` no size ceiling.
 - Optimisation — `F25` shared toolbar widgets live in the viewer's file, `?F26`
@@ -76,8 +76,7 @@ public API. Those are last, and they are not to be started without an answer.
   success, `F45` `onChange` reports the document it started with the first time
   the controller says anything.
 - Tests — `F39` a large document, `F41` a `data:` image per platform, `F42` the
-  image failure path, `F43` a run of scroll events, `F44` the document's
-  semantics tree.
+  image failure path, `F43` a run of scroll events.
 
 ## Confirmed
 
