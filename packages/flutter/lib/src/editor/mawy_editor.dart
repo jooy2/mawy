@@ -723,10 +723,6 @@ class _MawyEditorState extends State<MawyEditor> {
     // beside an empty editor is a rectangle that says less than a sentence
     // would. Where the application knows how to open one, this is the way in —
     // the React package's empty state, in the pane the document will appear in.
-    // A document with nothing in it draws nothing, and a pane drawing nothing
-    // beside an empty editor is a rectangle that says less than a sentence
-    // would. Where the application knows how to open one, this is the way in —
-    // the React package's empty state, in the pane the document will appear in.
     final Widget preview = _value.trim().isEmpty && widget.onOpen != null && !widget.readOnly
         ? _Empty(tokens: tokens, strings: strings, onOpen: widget.onOpen!)
         : MawyViewer(
