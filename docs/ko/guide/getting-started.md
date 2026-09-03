@@ -65,10 +65,10 @@ flutter pub add mawy
 
 | 가져오는 것             | gzip    |
 | ----------------------- | ------- |
-| `MawyViewer`            | 25.1 kB |
-| `MawyEditor`            | 41.6 kB |
+| `MawyViewer`            | 25.6 kB |
+| `MawyEditor`            | 42.3 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
-| `mawy-react/styles.css` | 5.9 kB  |
+| `mawy-react/styles.css` | 6.0 kB  |
 
 React는 세지 않았습니다. 애플리케이션에 이미 있기 때문입니다. `lucide-react`는 셌습니다. 이 패키지를 따라 들어오기 때문입니다. **문서를 읽기만 하는 페이지는 에디터를 싣지 않습니다.** 툴바도, 되돌리기 기록도, 붙여넣기 경로도, `contenteditable` 화면도 전부 번들에서 떨어져 나갑니다. 표 첫 두 줄의 차이인 16킬로바이트가 그 값입니다.
 
