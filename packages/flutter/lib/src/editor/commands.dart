@@ -141,15 +141,34 @@ String _bare(String line) {
   return out;
 }
 
-EditState _togglePrefix(EditState state, String kind, String prefix) {
+/// A marker put on the front of every line the selection touches, or taken off.
+///
+/// [blanks] says whether a line with nothing on it takes one too, and the two
+/// answers are not a preference. A quotation has to write its marker on the
+/// blank line between its paragraphs, or what was one quotation with a break in
+/// it becomes two quotations. A list must not: a bullet with nothing after it
+/// is an empty item somebody has to go back and delete, which is what quoting
+/// two paragraphs as a list used to leave behind — and what [_toggleOrdered]
+/// beside this has always got right.
+EditState _togglePrefix(EditState state, String kind, String prefix, {required bool blanks}) {
   return _mapLines(state, (List<String> lines) {
     final List<String> content = lines.where((String line) => line.trim().isNotEmpty).toList();
     final bool on =
         content.isNotEmpty && content.every((String line) => _markers[kind]!.hasMatch(line));
 
-    return lines
-        .map((String line) => on ? _bare(line) : _indentOf(line) + prefix + _bare(line).trimLeft())
-        .toList();
+    return lines.map((String line) {
+      if (on) {
+        return _bare(line);
+      }
+
+      if (line.trim().isEmpty) {
+        // The marker without the space after it, there being nothing for the
+        // space to be in front of.
+        return blanks ? _indentOf(line) + prefix.trimRight() : line;
+      }
+
+      return _indentOf(line) + prefix + _bare(line).trimLeft();
+    }).toList();
   });
 }
 
@@ -332,9 +351,9 @@ EditState runCommand(MawyCommand command, EditState state) {
     MawyCommand.heading2 => _toggleHeading(state, 2),
     MawyCommand.heading3 => _toggleHeading(state, 3),
     MawyCommand.paragraph => _toggleHeading(state, 0),
-    MawyCommand.quote => _togglePrefix(state, _quote, '> '),
-    MawyCommand.bulletList => _togglePrefix(state, _bulletList, '- '),
-    MawyCommand.taskList => _togglePrefix(state, _taskList, '- [ ] '),
+    MawyCommand.quote => _togglePrefix(state, _quote, '> ', blanks: true),
+    MawyCommand.bulletList => _togglePrefix(state, _bulletList, '- ', blanks: false),
+    MawyCommand.taskList => _togglePrefix(state, _taskList, '- [ ] ', blanks: false),
     MawyCommand.orderedList => _toggleOrdered(state),
     MawyCommand.codeBlock => _toggleCodeBlock(state),
     MawyCommand.rule => _insertRule(state),

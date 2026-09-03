@@ -89,14 +89,40 @@ function bare(line: string): string {
   return out;
 }
 
-function togglePrefix(state: EditState, kind: keyof typeof MARKERS, prefix: string): EditState {
+/**
+ * A marker put on the front of every line the selection touches, or taken off.
+ *
+ * `blanks` says whether a line with nothing on it takes one too, and the two
+ * answers are not a preference. A quotation has to write its marker on the
+ * blank line between its paragraphs, or what was one quotation with a break in
+ * it becomes two quotations. A list must not: a bullet with nothing after it is
+ * an empty item somebody has to go back and delete, which is what quoting two
+ * paragraphs as a list used to leave behind — and what `toggleOrdered` beside
+ * this has always got right.
+ */
+function togglePrefix(
+  state: EditState,
+  kind: keyof typeof MARKERS,
+  prefix: string,
+  blanks: boolean
+): EditState {
   return mapLines(state, (lines) => {
     const content = lines.filter((line) => line.trim());
     const on = content.length > 0 && content.every((line) => MARKERS[kind].test(line));
 
-    return lines.map((line) =>
-      on ? bare(line) : indentOf(line) + prefix + bare(line).trimStart()
-    );
+    return lines.map((line) => {
+      if (on) {
+        return bare(line);
+      }
+
+      if (!line.trim()) {
+        // The marker without the space after it, there being nothing for the
+        // space to be in front of.
+        return blanks ? indentOf(line) + prefix.trimEnd() : line;
+      }
+
+      return indentOf(line) + prefix + bare(line).trimStart();
+    });
   });
 }
 
@@ -262,11 +288,11 @@ export function runCommand(command: MawyCommand, state: EditState): EditState {
     case 'paragraph':
       return toggleHeading(state, 0);
     case 'quote':
-      return togglePrefix(state, 'quote', '> ');
+      return togglePrefix(state, 'quote', '> ', true);
     case 'bulletList':
-      return togglePrefix(state, 'bulletList', '- ');
+      return togglePrefix(state, 'bulletList', '- ', false);
     case 'taskList':
-      return togglePrefix(state, 'taskList', '- [ ] ');
+      return togglePrefix(state, 'taskList', '- [ ] ', false);
     case 'orderedList':
       return toggleOrdered(state);
     case 'codeBlock':

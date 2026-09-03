@@ -121,6 +121,19 @@ describe('line markers', () => {
   it('keeps the indentation a line already had', () => {
     expect(run('quote', '  a|')).toBe('«  > a»');
   });
+
+  /**
+   * A blank line is a paragraph break, and what a marker on it means depends on
+   * the marker. A quotation without one on it is two quotations; a list with one
+   * on it is an empty item somebody has to delete.
+   */
+  it('marks a blank line inside a quotation and leaves one inside a list', () => {
+    expect(run('quote', '«a\n\nb»')).toBe('«> a\n>\n> b»');
+    expect(run('bulletList', '«a\n\nb»')).toBe('«- a\n\n- b»');
+    expect(run('taskList', '«a\n\nb»')).toBe('«- [ ] a\n\n- [ ] b»');
+    // Which is the answer an ordered list has always given.
+    expect(run('orderedList', '«a\n\nb»')).toBe('«1. a\n\n2. b»');
+  });
 });
 
 describe('blocks', () => {

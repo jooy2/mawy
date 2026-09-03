@@ -12,6 +12,10 @@
 
 ### Fixed
 
+- **Making two paragraphs a list no longer leaves an empty item between them.** The blank line separating them took a bullet of its own, so `- a`, `- `, `- b` came out of what was asked for as two items. A blank line inside a list is left alone now, which is what the ordered list beside it has always done.
+
+  A quotation is the other way round and keeps its marker on the blank line, because a quotation without one there is two quotations rather than one with a paragraph break in it. Both packages, and the parity check diffs them.
+
 - **Deleting a word or a line on the drawn surface does something.** `Alt`+`Backspace`, `Ctrl`+`Backspace` and the rest of the deletions that are not one character had no answer written for them, so the browser was told no and nothing took its place — the keystroke did nothing at all.
 
   What is deleted is the run the browser says it meant, which it hands over on the event. Which characters a word is, and where a soft line ends on a screen, are the platform's questions and stay the platform's: writing those rules again here would be writing them differently from the keyboard in front of the reader. A browser that offers no range still deletes nothing, which is the honest answer rather than a guess.

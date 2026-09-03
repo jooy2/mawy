@@ -2,6 +2,14 @@
 
 > This package's history. Each language Mawy ships for keeps its own changelog beside its own manifest, because they version independently.
 
+## vNext (2026--)
+
+### Fixed
+
+- **Making two paragraphs a list no longer leaves an empty item between them.** The blank line separating them took a bullet of its own, so `- a`, `- `, `- b` came out of what was asked for as two items. A blank line inside a list is left alone now, which is what the ordered list beside it has always done.
+
+  A quotation is the other way round and keeps its marker on the blank line, because a quotation without one there is two quotations rather than one with a paragraph break in it. Both packages, and the parity check diffs them.
+
 ## 1.0.0 (2026-09-02)
 
 The entries below are a long list of work, and a long list is a minor version. What makes this a major is the promise that comes with the number: from here the exported API is under semantic versioning, so a name that goes away or changes shape waits for another major. The one break in this release is `MawyTokens`, under Changed.
