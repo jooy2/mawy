@@ -85,6 +85,20 @@ describe('the tokens are the code', () => {
 
     expect(tokens(huge, 'ts')).toEqual([{ text: huge, kind: null }]);
   });
+
+  /**
+   * A fence naming a property every object has is a fence naming no language.
+   * Said yes to, the table answers with something off `Object.prototype`, and
+   * what comes back is not a list of rules.
+   */
+  it('does not claim a language the table only inherited', () => {
+    for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty']) {
+      expect(mawyHighlighter.supports(name)).toBe(false);
+      expect(mawyHighlighter.highlight('const a = 1;', name)).toEqual([
+        { text: 'const a = 1;', kind: null }
+      ]);
+    }
+  });
 });
 
 describe('what it makes of a few things', () => {

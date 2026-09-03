@@ -468,12 +468,17 @@ export const MAWY_HIGHLIGHT_LANGUAGES: readonly string[] = Object.keys(LANGUAGES
  * ```
  */
 export const mawyHighlighter: MawyHighlighter = {
+  // An own property rather than `in`, which reads the prototype as well: a
+  // fence saying `constructor` or `toString` is a language nobody wrote a
+  // grammar for, and answering yes to it hands `highlight` something that is
+  // not a list of rules.
   supports(language) {
-    return language.toLowerCase() in LANGUAGES;
+    return Object.hasOwn(LANGUAGES, language.toLowerCase());
   },
 
   highlight(code, language) {
-    const rules = LANGUAGES[language.toLowerCase()];
+    const name = language.toLowerCase();
+    const rules = Object.hasOwn(LANGUAGES, name) ? LANGUAGES[name] : undefined;
 
     return rules && code.length <= LIMIT ? tokenize(code, rules) : [{ text: code, kind: null }];
   }
