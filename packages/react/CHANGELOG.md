@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **A file dropped on the editor or the viewer is checked against the same list the picker offers.** The picker had `accept` and a drop had nothing, so a `.zip` let go of over an editor with `fileDrop` on was read as text and became the document — five megabytes of mojibake, and undo the only way back. The list is read generously, because a platform is not reliable about what it says a file is: an extension on the list, a media type on the list, anything it called `text/`, and a file it said nothing at all about are all taken. What is refused is the file that positively says it is something else.
+
 - **`Enter` stops carrying a definition marker down in an editor that does not read definition lists.** `parse.definitionLists: false` turns the syntax off in the parser, and the line `: like this` is then a paragraph — but `Enter` on it still wrote another `: ` on the next line, so the editor was helping with a construct the document it was editing does not have. `continueList` takes the option now, and defaults to reading them, which is what it did before.
 
 - **The status bar says the column in the same characters as the count beside it.** The column was counted in UTF-16 units and the selection in code points, so a caret moved past an emoji jumped two columns while the selection count said one character. Both are code points now.

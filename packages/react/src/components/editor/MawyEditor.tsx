@@ -46,7 +46,13 @@ import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
 import { FindBar } from '../../internal/find.js';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../../internal/search.js';
-import { MAWY_ACCEPT, fileNameFor, readTextFile, saveTextFile } from '../../internal/files.js';
+import {
+  MAWY_ACCEPT,
+  acceptsFile,
+  fileNameFor,
+  readTextFile,
+  saveTextFile
+} from '../../internal/files.js';
 import { DEFAULT_STATUS, MawyEditorStatus } from './MawyEditorStatus.js';
 import { MawyEditorDocument } from './MawyEditorDocument.js';
 import { MawyEditorSource } from './MawyEditorSource.js';
@@ -841,7 +847,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
-    const document_ = takesDocument() ? event.dataTransfer.files[0] : undefined;
+    const dropped = event.dataTransfer.files[0];
+    // Checked against the same list the picker offers: a drop had none, and a
+    // file that is plainly not a document became one.
+    const document_ =
+      takesDocument() && dropped && acceptsFile(dropped, accept) ? dropped : undefined;
 
     if (document_) {
       void read(document_);

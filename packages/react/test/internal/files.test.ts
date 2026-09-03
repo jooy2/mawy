@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MAWY_MAX_FILE_SIZE, fileNameFor, readTextFile } from '../../src/internal/files.js';
+import {
+  MAWY_ACCEPT,
+  MAWY_MAX_FILE_SIZE,
+  acceptsFile,
+  fileNameFor,
+  readTextFile
+} from '../../src/internal/files.js';
 
 /**
  * Reading a document off the disk, and deciding what to call it going back.
@@ -48,5 +54,39 @@ describe('naming a saved document', () => {
 
   it('does not end in a space or a dot, which Windows refuses', () => {
     expect(fileNameFor('# Ready...')).toBe('Ready.md');
+  });
+});
+
+describe('what a drop is allowed to be', () => {
+  const file = (name: string, type = '') => new File(['x'], name, { type });
+
+  it('takes what the picker offers', () => {
+    expect(acceptsFile(file('notes.md'), MAWY_ACCEPT)).toBe(true);
+    expect(acceptsFile(file('NOTES.MARKDOWN'), MAWY_ACCEPT)).toBe(true);
+    expect(acceptsFile(file('notes.txt', 'text/plain'), MAWY_ACCEPT)).toBe(true);
+  });
+
+  it('takes anything the platform called text', () => {
+    // The list is extensions and two media types; a platform that says `text/`
+    // about something else has said enough.
+    expect(acceptsFile(file('notes.rst', 'text/x-rst'), MAWY_ACCEPT)).toBe(true);
+  });
+
+  it('takes a file the platform said nothing about', () => {
+    // A `README` with no extension and no type is a document often enough that
+    // refusing it would be the more annoying mistake.
+    expect(acceptsFile(file('README'), MAWY_ACCEPT)).toBe(true);
+  });
+
+  it('refuses what plainly says it is something else', () => {
+    expect(acceptsFile(file('shot.png', 'image/png'), MAWY_ACCEPT)).toBe(false);
+    expect(acceptsFile(file('archive.zip', 'application/zip'), MAWY_ACCEPT)).toBe(false);
+    // Even where the platform said nothing: the extension did.
+    expect(acceptsFile(file('archive.zip'), MAWY_ACCEPT)).toBe(false);
+  });
+
+  it('reads the list it is given rather than the default one', () => {
+    expect(acceptsFile(file('notes.md'), '.mdx')).toBe(false);
+    expect(acceptsFile(file('notes.mdx'), '.mdx')).toBe(true);
   });
 });

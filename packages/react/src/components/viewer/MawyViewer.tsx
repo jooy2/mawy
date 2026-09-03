@@ -25,7 +25,7 @@ import { findInDocument, NOTHING_FOUND } from '../../internal/markdown/find.js';
 import { FindBar } from '../../internal/find.js';
 import { useHighlighter } from '../../internal/highlighter.js';
 import { DEFAULT_TYPOGRAPHY, typographyStyle } from '../../internal/typography.js';
-import { MAWY_ACCEPT, readTextFile } from '../../internal/files.js';
+import { MAWY_ACCEPT, acceptsFile, readTextFile } from '../../internal/files.js';
 import { DEFAULT_TOOLBAR, MawyViewerToolbar } from './MawyViewerToolbar.js';
 import { MawyViewerEmpty } from './MawyViewerEmpty.js';
 import { MawyViewerOutline } from './MawyViewerOutline.js';
@@ -603,9 +603,19 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
     const file = event.dataTransfer.files[0];
 
-    if (file) {
-      void read(file);
+    // Checked against the same list the picker offers, so that a file which is
+    // plainly not a document is refused rather than shown as mojibake.
+    if (!file) {
+      return;
     }
+
+    if (acceptsFile(file, accept)) {
+      void read(file);
+
+      return;
+    }
+
+    setReadError(strings.readFailed);
   };
 
   /* ---------------------------------------------------------------------

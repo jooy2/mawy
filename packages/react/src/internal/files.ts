@@ -19,6 +19,40 @@ export const MAWY_ACCEPT = '.md,.markdown,.mdown,.mkd,.mdx,.txt,text/markdown,te
  */
 export const MAWY_MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+/**
+ * Whether a file is one the picker would have offered.
+ *
+ * The picker has `accept` and a drop had nothing, so a `.zip` let go of over an
+ * editor was read as text and became the document — five megabytes of mojibake,
+ * recoverable only by undo. This is that same list, applied to the other way in.
+ *
+ * Read generously, because a platform is not reliable about what it says a file
+ * is: an extension on the list is enough, a media type on the list is enough,
+ * anything the platform called text is enough, and a file it said nothing at
+ * all about — no extension and no type, which is what a `README` is — is taken
+ * rather than refused. What this stops is the file that positively says it is
+ * something else.
+ */
+export function acceptsFile(file: File, accept: string): boolean {
+  const wanted = accept
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  const type = file.type.toLowerCase();
+  const dot = file.name.lastIndexOf('.');
+  const extension = dot > 0 ? file.name.slice(dot).toLowerCase() : '';
+
+  if (extension && wanted.includes(extension)) {
+    return true;
+  }
+
+  if (type && (wanted.includes(type) || type.startsWith('text/'))) {
+    return true;
+  }
+
+  return !extension && !type;
+}
+
 /** What went wrong, or `null` when nothing did. */
 export type MawyReadFailure = 'tooLarge' | 'unreadable';
 
