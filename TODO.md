@@ -61,25 +61,23 @@ public API. Those are last, and they are not to be started without an answer.
   rebuilds the preview, `F7` matches recomputed per build, `F8` recognizers rebuilt
   per build, `F9` every heading measured per scroll, `F10` images decode at full
   size, `F11` `commandActive` per button, `F12` `_blocks` is never cleared.
-- SEO and accessibility — `F13` `Tab` is a keyboard trap, `F14` no formatting
-  shortcuts, `F15` the toolbar scrolls sideways instead of folding, `F16` the
-  status bar has no semantics, `F17` the document may merge into one node,
-  `F18` no keyboard scrolling, `F19` a 5px target, `F20` an empty `alt` is not
-  decorative.
+- SEO and accessibility — `F16` the status bar has no semantics, `F17` the
+  document may merge into one node, `F18` no keyboard scrolling, `F19` a 5px
+  target, `F20` an empty `alt` is not decorative.
 - Security — `F21` no hook for the image request, `F22` a `data:` image the
   sanitiser allows and the renderer cannot draw, `F23` no size ceiling.
 - Optimisation — `F25` shared toolbar widgets live in the viewer's file, `?F26`
   the AST is public API, `F27` three maps for one enum, `F28` controlled and
   uncontrolled by hand.
-- Bugs — `F29` the copy timer is not cancelled, `F30` `build` mutates state,
+- Bugs — `F30` `build` mutates state,
   `F31` recognizers disposed while mounted, `F32` the caret jumps to the end,
   `F33` a trackpad scrolls in steps, `F34` the placeholder ignores direction,
   `F35` `shouldRepaint` compares too little, `F36` a clipboard failure reads as
-  success.
-- Tests — `F37` leaving the source field, `F38` the shortcut table, `F39` a large
-  document, `F40` the copy button pressed twice, `F41` a `data:` image per
-  platform, `F42` the image failure path, `F43` a run of scroll events, `F44` the
-  document's semantics tree.
+  success, `F45` `onChange` reports the document it started with the first time
+  the controller says anything.
+- Tests — `F39` a large document, `F41` a `data:` image per platform, `F42` the
+  image failure path, `F43` a run of scroll events, `F44` the document's
+  semantics tree.
 
 ## Confirmed
 
@@ -105,6 +103,11 @@ public API. Those are last, and they are not to be started without an answer.
 - **`wysiwyg` in the Flutter package**, and its file open, its own undo history
   and its image paste. The reasons are in `docs/*/guide/editor.md` and in the
   changelog, in both languages.
+- **The Flutter toolbar scrolling sideways rather than folding into a menu.**
+  The read of both packages had this down as a difference to close; it is a
+  decision, and `docs/*/guide/editor.md` gives the reason under the toolbar —
+  a row that scrolls under a finger is what a toolbar does on a touch screen,
+  and a menu is what one does on a page with a pointer.
 - **What the viewer's find bar does not search**, in `find.ts` and `find.dart`.
   A match cannot straddle two drawn runs, so `hello` is not found across
   `he**llo**`; a fenced code block is not searched at all. Both are written down
