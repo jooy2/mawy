@@ -359,6 +359,8 @@ A viewer renders content that the person running it did not write, so the defaul
 
 `'sanitize'` parses with `DOMParser` rather than with a regular expression, on purpose: HTML's error recovery is the attack surface, and the only parser that agrees with a browser about what `<img src=x onerror=alert(1)>` means is a browser's. Where there is no `DOMParser` — a server render — it falls back to showing the markup rather than guessing.
 
+Which makes the browser's first paint the server's answer as well, and the elements arrive on the render after it. That is deliberate: drawing them straight away would be React finding elements where the server sent characters, which is a hydration mismatch. An application that never renders on a server never hydrates, and there its first render is already the browser's — nothing is deferred and nothing flashes.
+
 `'raw'` makes the caller responsible for the content. A report about rendering untrusted Markdown with it set is [out of scope](https://github.com/jooy2/mawy/blob/main/SECURITY.md) as a vulnerability, because it is the documented meaning of the value.
 
 :::

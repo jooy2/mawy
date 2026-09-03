@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **A document drawn on a server and picked up in a browser agrees with itself.** With `html="sanitize"` the server has no `DOMParser` and draws the markup as characters, and the browser drew elements on its very first render — which is React finding one thing where the server sent another, and a hydration mismatch. The characters come first now and the elements on the render after. An application that never renders on a server never hydrates, and there the first render is already the browser's: nothing is deferred and nothing flashes.
+
 - **An image can be given a box to arrive into.** Markdown has nowhere to write a picture's width and height, so nothing on the page knows how much room to keep and everything under it moves when the bytes land. `--mawy-doc-image-aspect` reserves the box, and `--mawy-doc-image-fit` — `contain` by default — keeps a picture that is not the shape it was promised letter-boxed rather than cut. Unset, which is the default, nothing changes.
 
 - **`Escape` puts the tooltips away.** A tooltip that appears on hover has to be dismissable without moving the pointer, and one drawn by the stylesheet cannot hear a keystroke — so one sitting over the thing somebody was reading stayed there for as long as the hand stayed still. The next move of the pointer brings them back. Nothing is lost by putting them away: every button they name says the same words to a screen reader already.

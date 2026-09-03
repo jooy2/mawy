@@ -376,6 +376,12 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
  * Raw HTML
  * ---------------------------------------------------------------------- */
 
+/* Nothing to subscribe to: what is being asked is which render this is, and
+ * that answer does not change again once it has changed once. */
+const subscribeToNothing = () => () => {};
+const onTheClient = () => true;
+const onTheServer = () => false;
+
 function RawHtml({
   value,
   context,
@@ -390,12 +396,30 @@ function RawHtml({
   /** Whether the caret is in it, so it is written out rather than drawn. */
   reveal?: boolean;
 }): React.ReactElement {
-  // `sanitize` needs a DOM to parse with. Where there is none — a server render
-  // — it comes back `null` and the markup is shown rather than guessed at.
+  /**
+   * Whether this is the browser, drawing after any hydration it had to do.
+   *
+   * `sanitize` needs a DOM to parse with, and a server has none — so the server
+   * draws the markup as text. Sanitising on the client's *first* render would
+   * then be React finding elements where the server sent characters, which is a
+   * hydration mismatch and a warning at best.
+   *
+   * So the first render agrees with the server and the markup arrives on the
+   * one after. `useSyncExternalStore` is what says which render this is: the
+   * server snapshot is used while hydrating and the client's from then on — and
+   * an application that never rendered on a server never hydrates, so its very
+   * first render is already the client's and nothing flashes.
+   */
+  const hydrated = React.useSyncExternalStore(subscribeToNothing, onTheClient, onTheServer);
+
   const html = React.useMemo(
     () =>
-      context.html === 'raw' ? value : context.html === 'sanitize' ? sanitizeHtml(value) : null,
-    [context.html, value]
+      context.html === 'raw'
+        ? value
+        : context.html === 'sanitize' && hydrated
+          ? sanitizeHtml(value)
+          : null,
+    [context.html, value, hydrated]
   );
 
   const Tag = inline ? 'span' : 'div';
