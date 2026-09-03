@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The three controls the chrome is built out of.
+ * The three controls the interface is built out of.
  *
  * Small on purpose. A viewer's toolbar needs a button, a button that opens a
  * panel, and two ways of choosing a value — and every one of those has an

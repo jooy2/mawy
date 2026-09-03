@@ -2,8 +2,9 @@
 ///
 /// Nothing here is about the document. These are the toolbar's labels, the
 /// outline's empty state and the sentences a screen reader is given — the
-/// library's own chrome, which is written in whatever language the application
-/// around it is written in, and has nothing to do with what the author wrote.
+/// library's own interface, which is written in whatever language the
+/// application around it is written in, and has nothing to do with what the
+/// author wrote.
 ///
 /// The same strings as the React package's `internal/i18n.ts`, under the same
 /// names, minus the ones only an editor needs.

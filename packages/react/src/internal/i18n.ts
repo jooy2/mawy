@@ -3,8 +3,9 @@
  *
  * Nothing here is about the document. These are the toolbar's labels, the
  * dropzone's invitation and the sentences a screen reader is given — the
- * library's own chrome, which is written in whatever language the application
- * around it is written in, and has nothing to do with what the author wrote.
+ * library's own interface, which is written in whatever language the
+ * application around it is written in, and has nothing to do with what the
+ * author wrote.
  *
  * A flat record rather than a message format: every string is a whole sentence
  * or a whole label, none of them interpolate, and a formatting library for that

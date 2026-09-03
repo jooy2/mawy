@@ -79,7 +79,8 @@ function floorFor(host: Element, node: Node, start: number): number {
  * Where in `text` the position `(node, offset)` on the page came from.
  *
  * `null` when the node is not inside anything the renderer drew — a click on
- * the padding around a document, or on chrome that is not the document at all.
+ * the padding around a document, or on a control that is not the document at
+ * all.
  */
 export function sourceAt(root: Element, node: Node, offset: number, text: string): number | null {
   const host = hostOf(root, node);

@@ -260,7 +260,7 @@ class MawyEditor extends StatefulWidget {
   /// How it is set when the editor decides for itself.
   final MawyTypography defaultTypography;
 
-  /// The language the editor's own chrome is written in.
+  /// The language the editor's own interface is written in.
   final MawyLocale locale;
 
   /// What draws the constructs this package does not know about, in the

@@ -90,7 +90,7 @@ class MawyViewer extends StatefulWidget {
   /// The colours to draw in, where the application would rather choose them.
   ///
   /// This is the React package's `--mawy-*` custom properties: everything the
-  /// document and its chrome are drawn in, and the whole of what theming is.
+  /// document and its interface are drawn in, and the whole of what theming is.
   /// It is a function of the brightness rather than one palette, because a
   /// viewer settles on its brightness after it has been handed everything else
   /// — from [colorScheme], or from the platform where that is
@@ -125,7 +125,7 @@ class MawyViewer extends StatefulWidget {
   /// The controls to draw and the order to draw them in. `const []` for none.
   final List<MawyViewerToolbarItem> toolbar;
 
-  /// The language of the viewer's own chrome.
+  /// The language of the viewer's own interface.
   final MawyLocale locale;
 
   /// What a tapped link does.

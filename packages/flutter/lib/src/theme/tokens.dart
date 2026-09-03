@@ -11,11 +11,11 @@
 /// own tree, which is what lets one document be dark inside a light screen.
 ///
 /// It is exported for the two applications that want it: the one drawing its
-/// own chrome beside a document and wanting the same colours in it, and the one
-/// wanting different colours in the document. [MawyTokensBuilder] is the second
-/// of those — the React package's `--mawy-*` custom properties said in Dart,
-/// and a function rather than a palette because a viewer settles on its
-/// brightness after it has been handed everything else.
+/// own interface beside a document and wanting the same colours in it, and
+/// the one wanting different colours in the document. [MawyTokensBuilder] is
+/// the second of those — the React package's `--mawy-*` custom properties said
+/// in Dart, and a function rather than a palette because a viewer settles on
+/// its brightness after it has been handed everything else.
 library;
 
 import 'package:flutter/widgets.dart';
@@ -38,7 +38,7 @@ import 'package:flutter/widgets.dart';
 /// ```
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 
-/// One palette: every colour a document and its chrome are drawn in.
+/// One palette: every colour a document and its interface are drawn in.
 @immutable
 class MawyTokens {
   /// Creates a palette. Both [light] and [dark] are built for you.

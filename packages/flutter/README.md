@@ -117,7 +117,7 @@ MawyViewer(
 | `colorScheme`                                             | `light`, `dark`, or `system` — and `onColorSchemeChange` to let the toolbar change it |
 | `typography` / `defaultTypography` / `onTypographyChange` | How the document is set, owned by you or by the viewer                                |
 | `toolbar`                                                 | The controls to draw, in order. `const []` for none                                   |
-| `locale`                                                  | `MawyLocale.en` or `MawyLocale.ko`, for the viewer's own chrome                       |
+| `locale`                                                  | `MawyLocale.en` or `MawyLocale.ko`, for the viewer's own interface                    |
 | `onLinkTap`                                               | What a tapped link does. Nothing at all without it                                    |
 | `directives`                                              | What draws the constructs this package does not know about, by name                   |
 

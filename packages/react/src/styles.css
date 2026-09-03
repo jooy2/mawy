@@ -510,8 +510,8 @@
  * by default: in the modes whose body wants more room than there is, the
  * toolbar was being squeezed down onto its `min-height` and springing back in
  * the modes whose body does not. Three pixels, and they moved every time the
- * surface switch was pressed. Chrome is not what a layout should take its room
- * from. */
+ * surface switch was pressed. The interface around a document is not what a
+ * layout should take its room from. */
 .mawy-root .mawy-toolbar {
   position: sticky;
   top: 0;

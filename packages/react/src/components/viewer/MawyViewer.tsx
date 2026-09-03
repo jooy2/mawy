@@ -115,7 +115,7 @@ export interface MawyViewerProps extends Omit<
    */
   linkTarget?: MawyLinkTarget;
 
-  /** The language of the viewer's own chrome. @default 'en' */
+  /** The language of the viewer's own interface. @default 'en' */
   locale?: MawyLocale;
 
   /**

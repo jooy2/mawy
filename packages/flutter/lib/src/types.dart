@@ -251,7 +251,7 @@ class MawyDirective {
 /// that sits on a line of text — a [Text.rich] of its own is usually it.
 typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
 
-/// The language the viewer's own chrome is written in.
+/// The language the viewer's own interface is written in.
 ///
 /// Nothing to do with the language a document is written in.
 enum MawyLocale {

@@ -125,7 +125,7 @@ export type MawyEditorStatusOption = boolean | readonly MawyEditorStatusItem[];
 export type MawyColorScheme = 'light' | 'dark' | 'system';
 
 /**
- * The language the editor's own chrome is written in — toolbar labels, menu
+ * The language the editor's own interface is written in — toolbar labels, menu
  * entries, the text a screen reader is given. Nothing to do with the language a
  * document is written in.
  */
