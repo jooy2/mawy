@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **A directive's `attributes` answers for a key the document did not write with nothing.** An attribute key is spelled the way `constructor` and `toString` are, so reading one out of the bag handed to a directive component returned something off `Object.prototype` rather than `undefined`. The bag has no prototype now. Reading, spreading and `Object.entries` are unchanged; only a key nobody wrote answers differently.
+
 - **`mawyHighlighter` no longer claims to know a language named after a property every object has.** ` ```constructor ` was answered with yes, and what `highlight` then reached for was not a grammar. The block came out plain either way, because the renderer refuses tokens that are not the code — but the question was being answered wrongly, and a highlighter of your own asking `supports` got the wrong answer too. The Flutter package was never affected; a Dart `Map` has nothing to inherit.
 
 - **The bar between the panes of `split` stops when it is let go.** It went on following the pointer afterwards, and took another set of listeners with it every time it was taken hold of — so a bar dragged twice moved twice as far as the hand did, and one that had been dragged at all moved whenever the pointer crossed it.

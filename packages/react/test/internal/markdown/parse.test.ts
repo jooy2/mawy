@@ -532,6 +532,21 @@ describe('directives', () => {
     ]);
   });
 
+  /**
+   * The bag is the document's words and nothing else. A key is spelled the way
+   * `constructor` and `toString` are spelled, and an ordinary object would have
+   * answered for both with something the author never wrote.
+   */
+  it('answers for a key the document did not write with nothing', () => {
+    const block = first('::a{key=bare}');
+    const attributes = block.type === 'leafDirective' ? block.attributes : {};
+
+    expect(attributes.key).toBe('bare');
+    expect(attributes.constructor).toBeUndefined();
+    expect(attributes.toString).toBeUndefined();
+    expect(Object.getPrototypeOf(attributes)).toBe(null);
+  });
+
   it('takes a backslash inside a quoted value literally', () => {
     const block = first('::a{title="one \\" two"}');
 

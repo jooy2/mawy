@@ -141,7 +141,11 @@ function readAttributes(
     return null;
   }
 
-  const attributes: Record<string, string> = {};
+  // No prototype, because every key here comes out of the document. A key is
+  // `[A-Za-z_][A-Za-z0-9_.:-]*`, which `constructor` and `toString` both are,
+  // and an ordinary object answers for those with something the author never
+  // wrote — handed on to whatever the application does with `attributes`.
+  const attributes: Record<string, string> = Object.create(null) as Record<string, string>;
   let index = at + 1;
 
   const put = (key: string, value: string) => {
