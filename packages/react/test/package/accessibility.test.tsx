@@ -190,7 +190,7 @@ describe('the editor', () => {
     const screen = await render(<MawyEditor defaultValue={SAMPLE} mode="plain" />);
 
     await screen.getByRole('button', { name: 'More controls' }).click();
-    await expect.element(screen.getByRole('dialog', { name: 'More controls' })).toBeInTheDocument();
+    await expect.element(screen.getByRole('group', { name: 'More controls' })).toBeInTheDocument();
 
     expect(await violations(screen.container)).toEqual([]);
   });

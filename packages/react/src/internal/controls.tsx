@@ -81,6 +81,14 @@ const Dismiss = React.createContext<(() => void) | null>(null);
  * instead. Which sounds like something CSS should do, and is not something CSS
  * can do — `anchor-position` is not everywhere yet, and a panel that is simply
  * clipped is a control the last two buttons on a toolbar do not have.
+ *
+ * A `group` rather than a `dialog`, which is what it used to say. A dialog is a
+ * promise: the focus moves into it when it opens, stays inside while it is
+ * open, and comes back when it closes. This does none of those and should not —
+ * it is a few settings hanging off a button, and the focus staying on the
+ * button until somebody presses `Tab` is the right behaviour for that. What was
+ * wrong was the word rather than the behaviour, and a role a screen reader acts
+ * on and the component does not honour is worse than no role at all.
  */
 export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu(
   { label, icon, children, tabIndex, onFocus },
@@ -148,7 +156,6 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
         tabIndex={tabIndex}
         onFocus={onFocus}
         aria-expanded={open}
-        aria-haspopup="dialog"
         data-mawy-toolbar-item=""
         onClick={() => setOpen((was) => !was)}
       />
@@ -156,7 +163,7 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
         <div
           ref={panel}
           className="mawy-menu-panel"
-          role="dialog"
+          role="group"
           aria-label={label}
           data-mawy-align={align}
         >

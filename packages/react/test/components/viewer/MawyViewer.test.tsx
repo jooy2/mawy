@@ -296,7 +296,7 @@ describe('the toolbar', () => {
     // Picking one is the end of what the panel was opened for, and a panel
     // still standing over the thing it has just changed is a panel hiding the
     // answer to the question it was asked.
-    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+    await expect.element(screen.getByRole('group')).not.toBeInTheDocument();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Theme' }).element());
   });
 
@@ -312,7 +312,7 @@ describe('the toolbar', () => {
 
     // A size is arrived at by moving it, and a panel that shut on the first
     // step would have to be reopened for the second.
-    await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
+    await expect.element(screen.getByRole('group')).toBeInTheDocument();
   });
 
   it('sets the document type from the typography controls', async () => {
@@ -344,11 +344,11 @@ describe('the toolbar', () => {
     const screen = await render(<MawyViewer value={SAMPLE} toolbar={['colorScheme']} />);
 
     await screen.getByRole('button', { name: 'Theme' }).click();
-    await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
+    await expect.element(screen.getByRole('group')).toBeInTheDocument();
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
-    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+    await expect.element(screen.getByRole('group')).not.toBeInTheDocument();
   });
 });
 

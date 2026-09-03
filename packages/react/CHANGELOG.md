@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **A toolbar menu's panel says it is a group rather than a dialog.** A dialog is a promise — the focus moves in when it opens, stays while it is open, and comes back when it closes — and the panel keeps none of it, nor should it: it is a few settings hanging off a button, and the focus staying on the button until `Tab` is what that wants. The word was wrong rather than the behaviour, and a role a screen reader acts on and the component does not honour is worse than no role. `aria-haspopup` has gone with it; `aria-expanded` says what there is to say.
+
 - **A keyboard reaches the right-hand end of a wide table or a long line of code.** Both scroll sideways inside their own box, and neither could be focused — so what was past the edge was past the edge for anybody without a pointer. Each is a tab stop now.
 
 - **The interface says which language it is in.** With `locale="ko"` inside an English page, a screen reader read the toolbar's Korean in an English voice — there was no `lang` anywhere for it to go on. The toolbar, the find bar, the status line, the outline panel, the empty state and the footnotes heading carry one now. The document does not: its language is the author's and is not something this library knows.
