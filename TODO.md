@@ -48,14 +48,10 @@ public API. Those are last, and they are not to be started without an answer.
   measured, `R35` line splitting is written twice and parity does not see it,
   `R36` five drag handlers in two components, `R37` two identical file inputs,
   `R38` an effect that allocates per render.
-- Bugs — `R42` list markers land on blank lines, `R43` heading toggle reads
-  blank lines, `R44` `toLowerCase` moves the offsets, `R45` the status bar mixes
-  two units, `R48` `Enter` continues a definition list that is off, `R50`
-  `fileDrop` reads anything as text, `R59` text dragged from one place in the
-  drawn document to another is copied rather than moved.
-- Tests — `R53` blank lines inside a multi-paragraph selection, `R55` a large
-  document, `R56` the history's ceiling, `R57` the sanitiser as a fixed point,
-  `R58` server render and hydration.
+- Bugs — `R59` text dragged from one place in the drawn document to another is
+  copied rather than moved.
+- Tests — `R55` a large document, `R56` the history's ceiling, `R57` the
+  sanitiser as a fixed point, `R58` server render and hydration.
 
 ### packages/flutter
 
@@ -72,9 +68,9 @@ public API. Those are last, and they are not to be started without an answer.
   decorative.
 - Security — `F21` no hook for the image request, `F22` a `data:` image the
   sanitiser allows and the renderer cannot draw, `F23` no size ceiling.
-- Optimisation — `F24` a comment written twice, `F25` shared toolbar widgets live
-  in the viewer's file, `?F26` the AST is public API, `F27` three maps for one
-  enum, `F28` controlled and uncontrolled by hand.
+- Optimisation — `F25` shared toolbar widgets live in the viewer's file, `?F26`
+  the AST is public API, `F27` three maps for one enum, `F28` controlled and
+  uncontrolled by hand.
 - Bugs — `F29` the copy timer is not cancelled, `F30` `build` mutates state,
   `F31` recognizers disposed while mounted, `F32` the caret jumps to the end,
   `F33` a trackpad scrolls in steps, `F34` the placeholder ignores direction,
