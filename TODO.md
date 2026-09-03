@@ -41,27 +41,21 @@ public API. Those are last, and they are not to be started without an answer.
   dismissed, `R20` an `aria-label` on a `p`, `R21` a hard-coded `h2`, `R22` a 5px
   target, `R23` images without dimensions, `R24` sanitised HTML hydrates
   differently, `?R25` no server-only render path.
-- Security — `R26` `:::constructor` reaches `Object.prototype` and throws mid
-  render, `R27` `supports()` answers for `toString`, `R28` attributes carry a
-  prototype, `R29` the sanitiser round-trips through a string, `R30` `id` and
+- Security — `R29` the sanitiser round-trips through a string, `R30` `id` and
   `name` survive into the host page, `R31` `raw` needs a louder warning, `R32` a
   font link with no referrer policy.
 - Optimisation — `R33` overflowed groups render twice, `R34` separators are not
   measured, `R35` line splitting is written twice and parity does not see it,
   `R36` five drag handlers in two components, `R37` two identical file inputs,
   `R38` an effect that allocates per render.
-- Bugs — `R39` the divider's pointer listeners are never removed, `R40` cut does
-  not delete, `R41` word deletion does nothing, `R42` list markers land on blank
-  lines, `R43` heading toggle reads blank lines, `R44` `toLowerCase` moves the
-  offsets, `R45` the status bar mixes two units, `R46` `domAt` uses the global
-  `document`, `R47` the outline writes `tabIndex` into the DOM, `R48` `Enter`
-  continues a definition list that is off, `R49` `svg` is compared uppercase,
-  `R50` `fileDrop` reads anything as text, `R59` text dragged from one place in
-  the drawn document to another is copied rather than moved.
-- Tests — `R51` the divider under a pointer, `R52` a table over `beforeinput`
-  types, `R53` blank lines inside a multi-paragraph selection, `R54` a document
-  full of prototype names, `R55` a large document, `R56` the history's ceiling,
-  `R57` the sanitiser as a fixed point, `R58` server render and hydration.
+- Bugs — `R42` list markers land on blank lines, `R43` heading toggle reads
+  blank lines, `R44` `toLowerCase` moves the offsets, `R45` the status bar mixes
+  two units, `R48` `Enter` continues a definition list that is off, `R50`
+  `fileDrop` reads anything as text, `R59` text dragged from one place in the
+  drawn document to another is copied rather than moved.
+- Tests — `R53` blank lines inside a multi-paragraph selection, `R55` a large
+  document, `R56` the history's ceiling, `R57` the sanitiser as a fixed point,
+  `R58` server render and hydration.
 
 ### packages/flutter
 
