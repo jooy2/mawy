@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **A heading toggles off over a selection with a paragraph break in it.** Whether the lines were already headings was read from every line including the blank ones, and a blank line is not a heading — so the toggle never turned off, and pressing it again put `#` on the blank line instead. Blank lines are read past now, and left alone, which is what every other line marker already did.
+
 - **Making two paragraphs a list no longer leaves an empty item between them.** The blank line separating them took a bullet of its own, so `- a`, `- `, `- b` came out of what was asked for as two items. A blank line inside a list is left alone now, which is what the ordered list beside it has always done.
 
   A quotation is the other way round and keeps its marker on the blank line, because a quotation without one there is two quotations rather than one with a paragraph break in it. Both packages, and the parity check diffs them.

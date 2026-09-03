@@ -149,15 +149,30 @@ function toggleOrdered(state: EditState): EditState {
   });
 }
 
+/**
+ * A heading of this depth over every line the selection touches, or off it.
+ *
+ * Whether it is already on is read from the lines with something on them, the
+ * way it is for every other marker: a blank line is not a heading that failed
+ * to be one, and counting it as a line that did not match made a selection with
+ * a paragraph break in it impossible to toggle off. A blank line is left alone
+ * on the way in, too — `# ` on its own is a heading with nothing in it.
+ */
 function toggleHeading(state: EditState, depth: number): EditState {
   const hashes = '#'.repeat(depth);
+  const already = new RegExp(`^[ \\t]*${hashes} `);
 
   return mapLines(state, (lines) => {
-    const on = lines.every((line) => new RegExp(`^[ \\t]*${hashes} `).test(line));
+    const content = lines.filter((line) => line.trim());
+    const on = content.length > 0 && content.every((line) => already.test(line));
 
-    return lines.map((line) =>
-      on || depth === 0 ? bare(line) : `${indentOf(line)}${hashes} ${bare(line).trimStart()}`
-    );
+    return lines.map((line) => {
+      if (on || depth === 0) {
+        return bare(line);
+      }
+
+      return line.trim() ? `${indentOf(line)}${hashes} ${bare(line).trimStart()}` : line;
+    });
   });
 }
 

@@ -134,6 +134,13 @@ describe('line markers', () => {
     // Which is the answer an ordered list has always given.
     expect(run('orderedList', '«a\n\nb»')).toBe('«1. a\n\n2. b»');
   });
+
+  it('reads a heading off the lines with something on them', () => {
+    // A blank line is not a heading that failed to be one, so a selection with
+    // a paragraph break in it still toggles off.
+    expect(run('heading2', '«## a\n\n## b»')).toBe('«a\n\nb»');
+    expect(run('heading2', '«a\n\nb»')).toBe('«## a\n\n## b»');
+  });
 });
 
 describe('blocks', () => {

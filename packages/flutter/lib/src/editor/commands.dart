@@ -197,20 +197,28 @@ EditState _toggleOrdered(EditState state) {
   });
 }
 
+/// A heading of this depth over every line the selection touches, or off it.
+///
+/// Whether it is already on is read from the lines with something on them, the
+/// way it is for every other marker: a blank line is not a heading that failed
+/// to be one, and counting it as a line that did not match made a selection
+/// with a paragraph break in it impossible to toggle off. A blank line is left
+/// alone on the way in, too — `# ` on its own is a heading with nothing in it.
 EditState _toggleHeading(EditState state, int depth) {
   final String hashes = '#' * depth;
   final RegExp already = RegExp('^[ \\t]*$hashes ');
 
   return _mapLines(state, (List<String> lines) {
-    final bool on = lines.every((String line) => already.hasMatch(line));
+    final List<String> content = lines.where((String line) => line.trim().isNotEmpty).toList();
+    final bool on = content.isNotEmpty && content.every((String line) => already.hasMatch(line));
 
-    return lines
-        .map(
-          (String line) => on || depth == 0
-              ? _bare(line)
-              : '${_indentOf(line)}$hashes ${_bare(line).trimLeft()}',
-        )
-        .toList();
+    return lines.map((String line) {
+      if (on || depth == 0) {
+        return _bare(line);
+      }
+
+      return line.trim().isEmpty ? line : '${_indentOf(line)}$hashes ${_bare(line).trimLeft()}';
+    }).toList();
   });
 }
 
