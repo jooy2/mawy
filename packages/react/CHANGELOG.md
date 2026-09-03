@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **The status line says what it is in a word a screen reader reads.** It carried an `aria-label`, and an `aria-label` on a paragraph names something that has no name to give — most screen readers read the text and drop the label, so the counts arrived with nothing saying what they counted. The word is in the line now, hidden from the page and not from a reader.
+
 - **A choice in a toolbar menu is one tab stop, with the arrows inside it.** Every option was its own stop, so getting past a question with one answer took four presses of `Tab`; the stop is now the option already chosen, and `Up`/`Down`/`Left`/`Right`/`Home`/`End` move between them — which is what `radiogroup` had been claiming all along. The arrows move the focus and do not pick: what a choice changes may be a command run against the document, and arrowing past `Heading 2` on the way to `Heading 3` would leave an edit behind.
 
 - **A toolbar menu's panel says it is a group rather than a dialog.** A dialog is a promise — the focus moves in when it opens, stays while it is open, and comes back when it closes — and the panel keeps none of it, nor should it: it is a few settings hanging off a button, and the focus staying on the button until `Tab` is what that wants. The word was wrong rather than the behaviour, and a role a screen reader acts on and the component does not honour is worse than no role. `aria-haspopup` has gone with it; `aria-expanded` says what there is to say.

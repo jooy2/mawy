@@ -197,6 +197,16 @@ describe('the editor', () => {
     }
   }
 
+  it('says what the status line is, in words a screen reader reads', async () => {
+    const screen = await render(<MawyEditor defaultValue={SAMPLE} mode="plain" />);
+    const status = screen.container.querySelector('.mawy-status') as HTMLElement;
+
+    // An `aria-label` on a paragraph names something with no name to give, and
+    // most screen readers read the text and drop the label.
+    expect(status.hasAttribute('aria-label')).toBe(false);
+    expect(status.textContent?.startsWith('Document statistics')).toBe(true);
+  });
+
   it('has nothing to answer for with find and replace open', async () => {
     // A short toolbar, so that `find` is a button in the row rather than one of
     // the controls the overflow menu is holding at this width. The menu has an

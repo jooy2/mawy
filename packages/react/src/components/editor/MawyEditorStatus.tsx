@@ -98,7 +98,13 @@ export function MawyEditorStatus({
   }
 
   return (
-    <p className="mawy-status" aria-label={strings.status} lang={strings.lang}>
+    <p className="mawy-status" lang={strings.lang}>
+      {/* A word rather than an `aria-label`, which is what this used to have:
+          an `aria-label` on a paragraph names something that has no name to
+          give, and most screen readers read the text and drop the label. The
+          Flutter package says the same word the same way round, before the
+          counts. */}
+      <span className="mawy-visually-hidden">{strings.status}</span>
       {cells.map((cell, index) => (
         <span key={index} className="mawy-status-cell">
           {cell}
