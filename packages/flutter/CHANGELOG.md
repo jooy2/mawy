@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **A document somebody has clicked into scrolls with the keyboard.** The arrows and `Page Up`/`Page Down` did nothing: a browser scrolls a focused box without being asked and only a `WidgetsApp` does here, which this package does not require — the same reason `Enter` and the space bar are written out for every button it draws. A reader who asked the platform for less movement gets the jump rather than the glide.
+
 - **The bar between the panes of `split` is something a finger can hit.** It was five pixels, which is a target a hand misses — and the bar is the only way to change the split without a keyboard. Thirteen now, with the same one pixel drawn down the middle of it.
 
 - **A picture the author described is named, and one they did not is skipped.** `![](…)` has no description, which in Markdown means decoration — and it was left in the tree as an image with no name, so a screen reader stopped on it to say "image" and nothing else.

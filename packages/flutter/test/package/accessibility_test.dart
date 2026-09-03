@@ -296,6 +296,37 @@ void main() {
 
       expect(find.text('Title'), findsOneWidget);
     });
+    testWidgets('scrolls a document somebody has clicked into', (WidgetTester tester) async {
+      final ScrollController scroller = ScrollController();
+
+      addTearDown(scroller.dispose);
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: List<String>.generate(60, (int at) => 'Paragraph $at.').join('\n\n'),
+            toolbar: const <MawyViewerToolbarItem>[],
+            scrollController: scroller,
+          ),
+        ),
+      );
+
+      // A browser scrolls a focused box with the arrows without being asked,
+      // and only a `WidgetsApp` does here — which this package does not require.
+      await tester.tap(find.text('Paragraph 0.'));
+      await tester.pump();
+
+      final double from = scroller.offset;
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(scroller.offset, greaterThan(from));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pumpAndSettle();
+      expect(scroller.offset, greaterThan(from + 100));
+    });
+
     testWidgets('leaves the source surface on Escape and then Tab', (WidgetTester tester) async {
       await tester.pumpWidget(
         host(

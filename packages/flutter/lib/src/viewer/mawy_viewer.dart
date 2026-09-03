@@ -551,6 +551,43 @@ class _MawyViewerState extends State<MawyViewer> {
     widget.onLinkTap?.call(url, title);
   }
 
+  /// The document moved by a key press.
+  ///
+  /// Flutter's own [ScrollAction] cannot be used here: it looks for the
+  /// scrollable above whatever has the focus, and what has the focus is the
+  /// [SelectableRegion], which sits above the scroll view rather than inside
+  /// it. The controller is already held, so the arithmetic is done against
+  /// that instead.
+  Object? _scrollBy(ScrollIntent intent) {
+    if (!_scroller.hasClients) {
+      return null;
+    }
+
+    final ScrollPosition position = _scroller.position;
+    final double step = switch (intent.type) {
+      ScrollIncrementType.page => position.viewportDimension * 0.8,
+      ScrollIncrementType.line => 60,
+    };
+    final double to = (position.pixels + (intent.direction == AxisDirection.up ? -step : step))
+        .clamp(position.minScrollExtent, position.maxScrollExtent);
+
+    if (to == position.pixels) {
+      return null;
+    }
+
+    if (!mounted || MediaQuery.disableAnimationsOf(context)) {
+      position.jumpTo(to);
+
+      return null;
+    }
+
+    unawaited(
+      position.animateTo(to, duration: const Duration(milliseconds: 140), curve: Curves.easeOut),
+    );
+
+    return null;
+  }
+
   void _goTo(String slug) {
     final BuildContext? target = _headings[slug]?.currentContext;
 
@@ -723,9 +760,29 @@ class _MawyViewerState extends State<MawyViewer> {
                                 CopySelectionTextIntent.copy,
                             SingleActivator(LogicalKeyboardKey.keyF, control: true): _FindIntent(),
                             SingleActivator(LogicalKeyboardKey.keyF, meta: true): _FindIntent(),
+                            // A document somebody has clicked into scrolls with
+                            // the keyboard. A browser does this without being
+                            // asked and here only a `WidgetsApp` does, which
+                            // this package does not require — the same reason
+                            // `mawyActivate` writes out Enter and the space bar.
+                            SingleActivator(LogicalKeyboardKey.arrowUp): ScrollIntent(
+                              direction: AxisDirection.up,
+                            ),
+                            SingleActivator(LogicalKeyboardKey.arrowDown): ScrollIntent(
+                              direction: AxisDirection.down,
+                            ),
+                            SingleActivator(LogicalKeyboardKey.pageUp): ScrollIntent(
+                              direction: AxisDirection.up,
+                              type: ScrollIncrementType.page,
+                            ),
+                            SingleActivator(LogicalKeyboardKey.pageDown): ScrollIntent(
+                              direction: AxisDirection.down,
+                              type: ScrollIncrementType.page,
+                            ),
                           },
                           child: Actions(
                             actions: <Type, Action<Intent>>{
+                              ScrollIntent: CallbackAction<ScrollIntent>(onInvoke: _scrollBy),
                               _FindIntent: CallbackAction<_FindIntent>(
                                 onInvoke: (_FindIntent _) {
                                   if (_searchable) {
