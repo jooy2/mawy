@@ -22,20 +22,22 @@ A read of both packages end to end, turned into a list to work through. It is
 here because it is longer than a session, and it comes back out of this file
 once the list is empty — what survives it belongs in the sections below.
 
-**The React half of the list is done**, down to the four lines that are a
-decision. That is every bug the read found, every performance line, the whole
-security and optimisation run, and the accessibility work in both packages.
-Each is a commit with the test that fails without it, and each has a line in
-the changelog of the package it landed in.
+**The list is done**, down to the eight lines that are a decision before they
+are a change. That is every bug the read found in either package, every
+performance line but two, the whole security and optimisation run, and the
+accessibility work in both. Each is a commit with the test that fails without
+it, and each has a line in the changelog of the package it landed in.
 
-Three things came out of working through it that the read had not seen, and all
-three were worse than what it had: a document could be given two footnotes with
+Six things came out of working through it that the read had not seen, and all
+six were worse than what it had: a document could be given two footnotes with
 the same anchor; a document nested a couple of thousand containers deep took the
-page down with it, at a different depth in each of the two packages; and the two
-packages folded `İ` differently in a case-insensitive search, which is what
-`test/editor/search_test.dart` now exists to keep from happening again.
+page down with it, at a different depth in each of the two packages; the two
+packages folded `İ` differently in a case-insensitive search; a picture a
+document carried inside itself drew on the web and nowhere else; a code block's
+copy button never got the fix the toolbar's had; and the column of line numbers
+leaked a laid-out paragraph for every number it drew, every frame.
 
-Four lines came off it for the other reason — the read was wrong about them, or
+Six lines came off it for the other reason — the read was wrong about them, or
 measuring said the change would not pay — and they are written down under
 "Deliberate" below rather than left looking undone. Two more were closed by a
 decision rather than by a change and are there as well.
@@ -47,32 +49,26 @@ answer.
 
 ### packages/react
 
-Nothing left but the four that are a decision.
-
 - Performance — `?R1` block-level memo boundaries, `?R2` a windowed source pane.
 - SEO and accessibility — `?R16` heading `id`s collide between two viewers,
   `?R25` no server-only render path.
 
 ### packages/flutter
 
-- Performance — `?F1` the source field repaints the whole document, `F2` quadratic
-  piece matching, `F3` line numbers count from the first line, `F4` `TextPainter`
-  is never disposed, `?F5` the viewer builds every block at once, `F6` a caret move
-  rebuilds the preview, `F7` matches recomputed per build, `F8` recognizers rebuilt
-  per build, `F9` every heading measured per scroll, `F10` images decode at full
-  size, `F11` `commandActive` per button, `F12` `_blocks` is never cleared.
-- Security — `F21` no hook for the image request, `F22` a `data:` image the
-  sanitiser allows and the renderer cannot draw, `F23` no size ceiling.
-- Optimisation — `F25` shared toolbar widgets live in the viewer's file, `?F26`
-  the AST is public API, `F27` three maps for one enum, `F28` controlled and
-  uncontrolled by hand.
-- Bugs — `F30` `build` mutates state, `F31` recognizers disposed while mounted,
-  `F32` the caret jumps to the end, `F33` a trackpad scrolls in steps, `F34` the
-  placeholder ignores direction, `F35` `shouldRepaint` compares too little,
-  `F36` a clipboard failure reads as success, `F45` `onChange` reports the
-  document it started with the first time the controller says anything.
-- Tests — `F39` a large document, `F41` a `data:` image per platform, `F42` the
-  image failure path, `F43` a run of scroll events.
+- Performance — `?F1` the source field repaints the whole document, `?F5` the
+  viewer builds every block at once.
+- Security — `?F21` no hook for the image request. An application cannot put
+  headers on the request a picture makes, route it through its own client, or
+  refuse one — which for a document from somewhere else is the difference
+  between drawing it and letting it call out. `Image.network` takes `headers`
+  already; what it wants is a name on `MawyViewer` and the same name on the
+  React side, where it is a loader prop or nothing at all.
+- Optimisation — `?F26` the AST is public API, `?F28` controlled and
+  uncontrolled by hand. The second is narrower than it was: what remains is
+  that `colorScheme` on the Flutter editor has an `onColorSchemeChange` and no
+  `defaultColorScheme`, so it reads as controlled and behaves as a starting
+  value the toolbar then owns. Either it gains the second prop or it loses the
+  first, and `internal/controlled.ts` is the shape the React side settled on.
 
 ## Confirmed
 
@@ -130,6 +126,8 @@ Nothing left but the four that are a decision.
   for a highlighter somebody else might write. Unkinded tokens are already drawn
   as the characters they are rather than wrapped.
 
+- **The Flutter source field's placeholder and the direction it is in.** The read of both packages had this down as a placeholder that ignores which way the text runs. Measured in both directions, its box is exactly the field's box — right of the gutter in one, left of it in the other — and both it and the field take their alignment from the same `Directionality`, so the words start where the caret does either way.
+- **What a picture is allowed to cost.** The read had a size ceiling down as missing. What fills a phone's memory is the decoded bitmap rather than the file, and that is now bounded by the width the page has for it; the bytes behind a `data:` picture are bounded by the document they are written in. What is left unbounded is a remote picture's download, which is the same in every Markdown renderer and in the browser the React package draws in — a ceiling there is a request an application would rather make itself, which is `?F21`.
 - **What the viewer's find bar does not search**, in `find.ts` and `find.dart`.
   A match cannot straddle two drawn runs, so `hello` is not found across
   `he**llo**`; a fenced code block is not searched at all. Both are written down
