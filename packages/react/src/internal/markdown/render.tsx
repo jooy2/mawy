@@ -58,6 +58,22 @@ export interface RenderContext {
   highlighter?: MawyHighlighter | null;
 
   /**
+   * Put in front of every name this drawing gives something.
+   *
+   * A heading's anchor is the author's own words — `#getting-started` is
+   * whatever GitHub would have called that heading, which is what a link
+   * written by hand into a README is aimed at — so nothing is prefixed by
+   * default and a deep link from outside lands where it always did.
+   *
+   * Two viewers on one page is the case this is for: both give their own
+   * `# Introduction` the same anchor, and two elements with one `id` is a link
+   * that lands on whichever the browser met first. Give one of them a prefix
+   * and its names stop colliding. Links the document wrote to its own headings
+   * and footnotes move with them; a link to anywhere else does not.
+   */
+  anchorPrefix?: string;
+
+  /**
    * What draws a picture the document points at. See `MawyImageProps`.
    *
    * Absent, the renderer writes an `<img>`. Given one, the application draws
@@ -191,9 +207,21 @@ function revealed(node: { range: MdRange }, context: RenderContext): boolean {
  * Prefixed, because these are `id`s on somebody else's page: a document with a
  * footnote called `1` should not be claiming `#1` for it.
  */
-const footnoteId = (slug: string) => `mawy-fn-${slug}`;
-const referenceId = (slug: string, index: number) =>
-  index === 0 ? `mawy-fnref-${slug}` : `mawy-fnref-${slug}-${index + 1}`;
+const footnoteId = (context: RenderContext, slug: string) =>
+  `${context.anchorPrefix ?? ''}mawy-fn-${slug}`;
+const referenceId = (context: RenderContext, slug: string, index: number) =>
+  `${context.anchorPrefix ?? ''}mawy-fnref-${slug}${index === 0 ? '' : `-${index + 1}`}`;
+
+/**
+ * A destination, with a link to somewhere in this document moved under the
+ * prefix its anchors are.
+ *
+ * `#getting-started` in a prefixed viewer has to become the name that viewer
+ * actually gave the heading, or a document stops being able to link to itself.
+ * Anything that is not a fragment is left exactly as written.
+ */
+const destination = (context: RenderContext, url: string) =>
+  context.anchorPrefix && url.startsWith('#') ? `#${context.anchorPrefix}${url.slice(1)}` : url;
 
 /**
  * Which characters of the source an element was drawn from.
@@ -325,7 +353,7 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
           <a
             key={index}
             className="mawy-md-link"
-            href={node.url}
+            href={destination(context, node.url)}
             title={node.title ?? undefined}
             // `noopener` is what makes the new tab safe and `noreferrer` is
             // what keeps the document's own address out of it; a browser that
@@ -350,9 +378,9 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
         return (
           <sup key={index} className="mawy-md-footnote-ref" {...origin(node)}>
             <a
-              href={`#${footnoteId(footnote.slug)}`}
-              id={referenceId(footnote.slug, node.index)}
-              aria-describedby={footnoteId(footnote.slug)}
+              href={`#${footnoteId(context, footnote.slug)}`}
+              id={referenceId(context, footnote.slug, node.index)}
+              aria-describedby={footnoteId(context, footnote.slug)}
             >
               {footnote.number}
             </a>
@@ -784,11 +812,11 @@ export function renderFootnotes(
       </h2>
       <ol>
         {footnotes.map((footnote, index) => (
-          <li key={index} id={footnoteId(footnote.slug)} {...origin(footnote)}>
+          <li key={index} id={footnoteId(context, footnote.slug)} {...origin(footnote)}>
             {renderBlocks(footnote.children, context)}
             <a
               className="mawy-md-footnote-back"
-              href={`#${referenceId(footnote.slug, 0)}`}
+              href={`#${referenceId(context, footnote.slug, 0)}`}
               aria-label={context.strings.footnoteBack}
             >
               ↩
@@ -826,7 +854,7 @@ export function renderBlocks(
         return (
           <Tag
             key={index}
-            id={block.slug}
+            id={`${context.anchorPrefix ?? ''}${block.slug}`}
             className="mawy-md-heading"
             // Somewhere the focus can be *put* without being a stop on the way
             // anywhere: following an outline entry has to move the focus as

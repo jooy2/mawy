@@ -195,6 +195,69 @@ describe('safety', () => {
  * fetching them all without asking tells whoever wrote them which documents are
  * being read.
  */
+/**
+ * Two viewers on one page both give their own `# Introduction` the anchor
+ * `introduction`, and two elements with one `id` is a link that lands on
+ * whichever the browser met first.
+ */
+describe('anchors', () => {
+  const SOURCE = '# Introduction\n\nSee [below](#introduction).[^a]\n\n[^a]: A note.';
+
+  it("gives a heading the author's own word by default", async () => {
+    const screen = await render(<MawyViewer value={SOURCE} />);
+
+    expect(screen.container.querySelector('h1')?.id).toBe('introduction');
+    expect(screen.container.querySelector('.mawy-md-link')?.getAttribute('href')).toBe(
+      '#introduction'
+    );
+    expect(screen.container.querySelector('.mawy-md-footnotes li')?.id).toBe('mawy-fn-a');
+  });
+
+  it('puts every name it gives under a prefix when it is given one', async () => {
+    const screen = await render(<MawyViewer value={SOURCE} anchorPrefix="right-" />);
+
+    expect(screen.container.querySelector('h1')?.id).toBe('right-introduction');
+    // The document's own link moves with it, or a document stops being able to
+    // link to itself.
+    expect(screen.container.querySelector('.mawy-md-link')?.getAttribute('href')).toBe(
+      '#right-introduction'
+    );
+    expect(screen.container.querySelector('.mawy-md-footnotes li')?.id).toBe('right-mawy-fn-a');
+    expect(screen.container.querySelector('.mawy-md-footnote-ref a')?.getAttribute('href')).toBe(
+      '#right-mawy-fn-a'
+    );
+  });
+
+  it('leaves a link to anywhere else exactly as it was written', async () => {
+    const screen = await render(
+      <MawyViewer value="[out](https://example.com/#introduction)" anchorPrefix="right-" />
+    );
+
+    expect(screen.container.querySelector('.mawy-md-link')?.getAttribute('href')).toBe(
+      'https://example.com/#introduction'
+    );
+  });
+
+  it('still finds the heading the outline asks for', async () => {
+    const screen = await render(
+      <MawyViewer value={SOURCE} anchorPrefix="right-" toolbar={['outline']} />
+    );
+
+    await screen.getByRole('button', { name: 'Contents' }).click();
+
+    const entry = screen.container.querySelector('.mawy-outline-link') as HTMLElement;
+
+    entry.click();
+
+    // The focus is what says it found the heading rather than gave up: moving
+    // the page is only half of following an outline entry, and the panel would
+    // mark this one anyway because it is the one at the top.
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(screen.container.querySelector('h1'))
+    );
+  });
+});
+
 describe('images', () => {
   it('writes an `img` on its own, with what the document said about it', async () => {
     const screen = await render(<MawyViewer value={'![a cat](/c.png "Mine")'} />);

@@ -83,6 +83,15 @@ export interface MawyDocumentProps {
    */
   image?: React.ComponentType<MawyImageProps>;
 
+  /**
+   * Put in front of every anchor this drawing gives a heading or a footnote.
+   *
+   * Unset, a heading's anchor is the author's own words — which is what a link
+   * written by hand into a README is aimed at. Two documents on one page is
+   * what this is for; see `MawyViewer`'s own `anchorPrefix`.
+   */
+  anchorPrefix?: string;
+
   /** The language of the few words this library writes itself. */
   locale?: MawyLocale;
 
@@ -115,6 +124,7 @@ export function MawyDocument({
   linkTarget = 'blank',
   directives,
   image,
+  anchorPrefix,
   locale = 'en',
   highlight,
   typography,
@@ -136,6 +146,7 @@ export function MawyDocument({
     footnotes: new Map(document_.footnotes.map((each) => [each.label, each])),
     directives,
     image,
+    anchorPrefix,
     linkTarget,
     source: value,
     highlighter: highlight ?? null,

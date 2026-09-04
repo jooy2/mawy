@@ -190,6 +190,26 @@ export interface MawyViewerProps extends Omit<
    */
   image?: React.ComponentType<MawyImageProps>;
 
+  /**
+   * Put in front of every anchor this viewer gives a heading or a footnote.
+   *
+   * Unset — the default — a heading's anchor is the author's own words, so a
+   * link written by hand into a README against GitHub's spelling lands where it
+   * always did.
+   *
+   * Two viewers on one page is what this is for. Both give their own
+   * `# Introduction` the anchor `introduction`, and two elements with one `id`
+   * is a link that lands on whichever the browser met first. Give one of them a
+   * prefix and its names stop colliding; links the document wrote to its own
+   * headings and footnotes move with them.
+   *
+   * ```tsx
+   * <MawyViewer value={left} />
+   * <MawyViewer value={right} anchorPrefix="right-" />
+   * ```
+   */
+  anchorPrefix?: string;
+
   /** What to draw instead of the file picker when there is no document. */
   empty?: React.ReactNode;
 }
@@ -225,6 +245,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     highlight,
     directives,
     image,
+    anchorPrefix,
     empty,
     className,
     style,
@@ -349,6 +370,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       directives,
       linkTarget,
       image,
+      anchorPrefix,
       source: text,
       found,
       currentMatch,
@@ -362,6 +384,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       directives,
       linkTarget,
       image,
+      anchorPrefix,
       text,
       found,
       currentMatch
@@ -527,19 +550,23 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       }
 
       const headings = [...element.querySelectorAll<HTMLElement>('.mawy-md-heading')];
+      // The outline is keyed by the slug the parser gave the heading, and what
+      // is on the page is that slug under whatever prefix this viewer was
+      // given. The prefix comes off here so the two agree.
+      const slugOf = (heading: HTMLElement) => heading.id.slice((anchorPrefix ?? '').length);
 
       // The viewer scrolls inside itself when it has been given a height, and
       // otherwise the page scrolls around it. Clamping the box's top at zero is
       // what makes one line of arithmetic answer both.
       const line = Math.max(element.getBoundingClientRect().top, 0) + 24;
-      let current: string | null = headings[0]?.id ?? null;
+      let current: string | null = headings[0] ? slugOf(headings[0]) : null;
 
       for (const heading of headings) {
         if (heading.getBoundingClientRect().top > line) {
           break;
         }
 
-        current = heading.id;
+        current = slugOf(heading);
       }
 
       setActiveHeading(current);
@@ -574,28 +601,31 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
-  }, [outlineOpen, document_]);
+  }, [outlineOpen, document_, anchorPrefix]);
 
-  const goTo = React.useCallback((slug: string) => {
-    const heading = [
-      ...(scroller.current?.querySelectorAll<HTMLElement>('.mawy-md-heading') ?? [])
-    ].find((element) => element.id === slug);
+  const goTo = React.useCallback(
+    (slug: string) => {
+      const heading = [
+        ...(scroller.current?.querySelectorAll<HTMLElement>('.mawy-md-heading') ?? [])
+      ].find((element) => element.id === `${anchorPrefix ?? ''}${slug}`);
 
-    if (!heading) {
-      return;
-    }
+      if (!heading) {
+        return;
+      }
 
-    chosen.current = slug;
-    setActiveHeading(slug);
+      chosen.current = slug;
+      setActiveHeading(slug);
 
-    heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    // Moving the page is only half of following a link. The focus has to go
-    // with it, or the next Tab carries on from wherever the outline was. Every
-    // heading is drawn able to take it — see the renderer — rather than being
-    // made able to here, which would be writing an attribute into a tree React
-    // owns and would never take back out.
-    heading.focus({ preventScroll: true });
-  }, []);
+      heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      // Moving the page is only half of following a link. The focus has to go
+      // with it, or the next Tab carries on from wherever the outline was.
+      // Every heading is drawn able to take it — see the renderer — rather
+      // than being made able to here, which would be writing an attribute into
+      // a tree React owns and would never take back out.
+      heading.focus({ preventScroll: true });
+    },
+    [anchorPrefix]
+  );
 
   /* ---------------------------------------------------------------------
    * Dragging a file over
