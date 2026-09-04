@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { page } from '@vitest/browser/context';
 import { render } from 'vitest-browser-react';
 import { MawyEditor } from 'mawy-react';
+import { rowHeight, rowRect } from '../../../src/internal/source.js';
 // The one test file that needs the real stylesheet. The source surface is two
 // layers that have to lay out identically, and without the CSS there is only
 // one layout to check against itself.
@@ -158,6 +159,148 @@ describe('the source surface', () => {
 
     expect(screen.container.querySelector('.mawy-tok-heading')?.textContent).toBe(' Title');
     expect(screen.container.querySelectorAll('.mawy-tok-marker')).toHaveLength(3);
+  });
+});
+
+/**
+ * A document long enough that drawing all of it is the thing being avoided.
+ *
+ * Rendered into a box narrow enough that most of these lines wrap, because a
+ * wrapped line is the case the arrangement has to survive: a chunk written as
+ * one run of text has to be exactly as tall as the same lines drawn a row each,
+ * and it only is if both wrap in the same places.
+ */
+const HUGE = [
+  '# A long document',
+  '',
+  ...Array.from({ length: 700 }, (unused, at) =>
+    at % 5 === 0
+      ? `## Section ${at}`
+      : `Paragraph ${at}, long enough to wrap, with **bold** and \`code\` in it.`
+  ),
+  '',
+  'The last line, which nothing above it repeats.'
+].join('\n');
+
+const NARROW = { height: '18rem', width: '24rem' } as const;
+
+describe('a source surface longer than the screen', () => {
+  it('draws far fewer lines than the document has', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={HUGE} modes={['plain']} style={NARROW} />
+    );
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelectorAll('.mawy-source-line').length).toBeLessThan(300)
+    );
+
+    expect(screen.container.querySelectorAll('.mawy-source-line').length).toBeGreaterThan(0);
+  });
+
+  it('is still exactly as tall as the field it lies under', async () => {
+    // The whole of the arrangement, in one number. A copy that is not the
+    // height of the textarea is a copy with every line below the difference in
+    // the wrong place, and there is nowhere else that shows.
+    const screen = await render(
+      <MawyEditor defaultValue={HUGE} modes={['plain']} style={NARROW} />
+    );
+
+    const input = sourceOf(screen);
+    const layer = screen.container.querySelector('.mawy-source-lines') as HTMLElement;
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelectorAll('.mawy-source-line').length).toBeLessThan(300)
+    );
+
+    expect(Math.abs(input.scrollHeight - layer.getBoundingClientRect().height)).toBeLessThan(1.5);
+  });
+
+  it('still holds every character, so the browser can find and print them', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={HUGE} modes={['plain']} style={NARROW} />
+    );
+
+    const layer = screen.container.querySelector('.mawy-source-lines') as HTMLElement;
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelectorAll('.mawy-source-line').length).toBeLessThan(300)
+    );
+
+    expect(layer.textContent).toContain('The last line, which nothing above it repeats.');
+    expect(layer.textContent).toContain('Paragraph 349,');
+  });
+
+  it('colours whatever the reader scrolled to', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={HUGE} modes={['plain']} style={NARROW} />
+    );
+
+    const input = sourceOf(screen);
+
+    input.scrollTop = input.scrollHeight;
+
+    await vi.waitFor(() => {
+      const drawn = [...screen.container.querySelectorAll('.mawy-source-line')].map(
+        (line) => line.textContent
+      );
+
+      expect(drawn).toContain('The last line, which nothing above it repeats.');
+    });
+  });
+
+  it('says where a line nothing has coloured is drawn', async () => {
+    // Which is what `split` stands on: a block of the preview is paired with
+    // the line of the source it came from, and that line is now usually inside
+    // a chunk written as one run of text rather than an element of its own.
+    const screen = await render(
+      <MawyEditor defaultValue={HUGE} modes={['plain']} style={NARROW} />
+    );
+
+    const layer = screen.container.querySelector('.mawy-source-lines') as HTMLElement;
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelectorAll('.mawy-source-line').length).toBeLessThan(300)
+    );
+
+    const drawn = screen.container.querySelectorAll('.mawy-source-line').length;
+    const height = rowHeight(layer);
+    // One line past the last coloured one, so the answer has to come out of a
+    // chunk that is a run of text — and it has to carry on from where the
+    // coloured lines left off rather than start again anywhere.
+    const last = rowRect(layer, drawn - 1, height);
+    const cold = rowRect(layer, drawn, height);
+    const later = rowRect(layer, drawn + 120, height);
+
+    expect(last).not.toBeNull();
+    expect(cold).not.toBeNull();
+    expect(cold!.top).toBeGreaterThan(last!.top);
+    expect(cold!.top - last!.bottom).toBeLessThan(2);
+    expect(later!.top).toBeGreaterThan(cold!.top);
+  });
+
+  it('lines the preview up with a block whose line is not coloured', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={HUGE} defaultMode="split" style={{ height: '20rem' }} />
+    );
+
+    const input = sourceOf(screen);
+    const layer = screen.container.querySelector('.mawy-source-lines') as HTMLElement;
+    const scroller = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+    const at = HUGE.indexOf('## Section 350');
+    const line = HUGE.slice(0, at).split('\n').length - 1;
+
+    await vi.waitFor(() => expect(rowRect(layer, line, rowHeight(layer))).not.toBeNull());
+
+    input.scrollTop +=
+      rowRect(layer, line, rowHeight(layer))!.top - layer.getBoundingClientRect().top;
+
+    await vi.waitFor(() => {
+      const element = scroller.querySelector(`[data-mawy-range^="${at},"]`);
+      const top = element!.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+
+      expect(Math.abs(top)).toBeLessThan(2);
+    });
   });
 });
 

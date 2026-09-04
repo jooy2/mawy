@@ -16,6 +16,8 @@
  * thing in both panes, with a straight line between each pair and the next.
  */
 
+import { rowHeight, rowRect } from './source.js';
+
 /** A place both panes agree on, in each one's own pixels. */
 export interface MawyScrollAnchor {
   /** Where it is in the source pane. */
@@ -56,19 +58,16 @@ export function lineAt(starts: number[], offset: number): number {
 }
 
 /**
- * Where an element sits inside the box that scrolls it.
+ * Where something sits inside the box that scrolls it.
  *
- * The number `scrollTop` would have to be for the element to be at the top of
- * what can be seen — which is what makes the two panes comparable, since each
- * is measured against its own scroller rather than against the window.
+ * The number `scrollTop` would have to be for it to be at the top of what can
+ * be seen — which is what makes the two panes comparable, since each is
+ * measured against its own scroller rather than against the window. A box
+ * rather than an element, because a line of the source is not always an element
+ * of its own: see `internal/source.ts`.
  */
-function offsetWithin(element: Element, scroller: Element): number {
-  return (
-    element.getBoundingClientRect().top -
-    scroller.getBoundingClientRect().top -
-    scroller.clientTop +
-    scroller.scrollTop
-  );
+function offsetWithin(box: DOMRect, scroller: Element): number {
+  return box.top - scroller.getBoundingClientRect().top - scroller.clientTop + scroller.scrollTop;
 }
 
 /**
@@ -84,15 +83,18 @@ export function measureAnchors(
   preview: HTMLElement,
   text: string
 ): MawyScrollAnchor[] {
-  const rows = input.parentElement?.querySelectorAll<HTMLElement>('.mawy-source-line');
+  const rows = input.parentElement?.querySelector<HTMLElement>('.mawy-source-lines');
   const blocks = preview.querySelectorAll<HTMLElement>('[data-mawy-range]');
 
-  if (!rows?.length || !blocks.length) {
+  if (!rows || !blocks.length) {
     return [];
   }
 
   const starts = lineStarts(text);
   const anchors: MawyScrollAnchor[] = [{ from: 0, to: 0 }];
+  // Once for the whole walk. Every line is measured against it and it cannot
+  // change while this runs.
+  const height = rowHeight(rows);
 
   for (const element of blocks) {
     // Nothing inside a code block is an anchor. The block itself is one, and a
@@ -103,14 +105,14 @@ export function measureAnchors(
     }
 
     const start = Number.parseInt(element.dataset.mawyRange ?? '', 10);
-    const row = Number.isFinite(start) ? rows[lineAt(starts, start)] : undefined;
+    const row = Number.isFinite(start) ? rowRect(rows, lineAt(starts, start), height) : null;
 
     if (!row) {
       continue;
     }
 
     const from = offsetWithin(row, input);
-    const to = offsetWithin(element, preview);
+    const to = offsetWithin(element.getBoundingClientRect(), preview);
     const last = anchors[anchors.length - 1];
 
     if (from > last.from && to > last.to) {

@@ -45,6 +45,24 @@ export interface MdHighlightedLine {
   tokens: MdToken[];
 }
 
+/**
+ * The lines worth locating the syntax in, as a half-open range of line indexes.
+ *
+ * Everything outside it still comes back, and comes back with its text — a
+ * caller windowing this is windowing what it *colours*, not what it holds. What
+ * is saved is the scan of each line and the tokens it would have produced,
+ * which for a document with five thousand lines and forty of them on the screen
+ * is nearly all of the work.
+ */
+export interface MdHighlightWindow {
+  from: number;
+  /** Exclusive. */
+  to: number;
+}
+
+/** The tokens of a line nobody asked to colour. Shared, so it costs nothing. */
+const NONE: MdToken[] = [];
+
 const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 const ATX = /^( {0,3}#{1,6})(\s.*)?$/;
 const RULE = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/;
@@ -119,13 +137,43 @@ function scanInline(text: string, offset: number, tokens: MdToken[]): void {
  *
  * The state that survives a line is one thing — whether a fenced block is open
  * — which is what makes this cheap enough to run on every keystroke.
+ *
+ * With a `within`, only the lines inside it are read for syntax; the rest come
+ * back with their text and no tokens. The one thing a skipped line still has to
+ * do is say whether it opened or closed a fence, because the line after it
+ * cannot be read without knowing — so a fence is the only thing looked for
+ * outside the window, and it is one anchored pattern rather than the dozen a
+ * line is otherwise put through.
  */
-export function highlightMarkdown(source: string, gfm = true): MdHighlightedLine[] {
+export function highlightMarkdown(
+  source: string,
+  gfm = true,
+  within?: MdHighlightWindow
+): MdHighlightedLine[] {
   const lines = source.split('\n');
   const out: MdHighlightedLine[] = [];
   let fence: string | null = null;
 
-  for (const text of lines) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const text = lines[index];
+
+    if (within && (index < within.from || index >= within.to)) {
+      const opening = FENCE.exec(text);
+
+      if (fence) {
+        const closing = opening?.[1];
+
+        if (closing && closing[0] === fence[0] && closing.length >= fence.length) {
+          fence = null;
+        }
+      } else if (opening) {
+        fence = opening[1];
+      }
+
+      out.push({ text, tokens: NONE });
+      continue;
+    }
+
     const tokens: MdToken[] = [];
     const opening = FENCE.exec(text);
 

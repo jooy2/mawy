@@ -1613,7 +1613,17 @@
   pointer-events: none;
 }
 
+.mawy-root .mawy-source-lines {
+  padding: var(--mawy-src-pad-y) var(--mawy-src-pad-x);
+  color: var(--mawy-fg);
+}
+
 /*
+ * A chunk of the document, and the grid is per chunk rather than over all of
+ * them. See `internal/source.ts`: only the chunks near the view are a row per
+ * line, and the rest are the same characters as one run of text. Every column
+ * is the same width in every chunk, so the two kinds line up down the page.
+ *
  * `minmax(0, …)` on the text column, and it is not a formality.
  *
  * A grid track sized `1fr` cannot shrink below its content's min-content
@@ -1623,16 +1633,28 @@
  * the text above it, and every line after that one is out of step. The
  * textarea has no such floor, so the grid must be told it has none either.
  */
-.mawy-root .mawy-source-lines {
+.mawy-root .mawy-source-chunk {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  padding: var(--mawy-src-pad-y) var(--mawy-src-pad-x);
-  color: var(--mawy-fg);
 }
 
-.mawy-root .mawy-source[data-mawy-line-numbers] .mawy-source-lines {
+.mawy-root .mawy-source[data-mawy-line-numbers] .mawy-source-chunk {
   grid-template-columns: var(--mawy-gutter) minmax(0, 1fr);
   column-gap: var(--mawy-src-gap);
+}
+
+/*
+ * A chunk nobody is looking at, written as the characters it holds.
+ *
+ * The last column, which is the text one whether or not there is a gutter
+ * beside it — the run has to wrap where the coloured lines wrap, and a run
+ * spanning the numbers as well would wrap later and put every line after this
+ * chunk somewhere else.
+ */
+.mawy-root .mawy-source-cold {
+  grid-column: -2 / -1;
+  min-width: 0;
+  min-height: calc(var(--mawy-src-line) * 1em);
 }
 
 /* An empty line is still a line. Without this the copy underneath loses a row

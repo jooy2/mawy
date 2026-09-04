@@ -77,6 +77,8 @@ That arrangement is the point rather than a trick. The textarea keeps everything
 
 Everything that decides where a character lands — font, size, line height, letter spacing, tab size, wrapping, and the padding that sets the left edge — is declared once in the stylesheet, for both layers. That is what keeps them in step, and it is why the editor's monospace face is `--mawy-font-mono` and not a choice the component makes.
 
+A document past about six hundred lines is not drawn a row per line. The copy underneath is cut into chunks, and only the chunks near the view are rows with the syntax coloured in; the rest hold the same characters as one run of text, which is the same height and a fraction of the elements. Nothing is left out of it, so the browser's own find still reaches the whole document, printing still puts all of it on the paper, and the copy is still exactly as tall as the field. A scroll fast enough to outrun the colouring shows plain text in the right place for a frame rather than a hole.
+
 :::
 
 ::: fw flutter
