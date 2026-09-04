@@ -29,6 +29,11 @@ export function loadFontStylesheet(href: string): void {
 
   link.rel = 'stylesheet';
   link.href = href;
+  // A font lives on somebody else's server, and a request to it carries the
+  // address of the page that made it unless it is told not to. Which page a
+  // reader has open is the reader's business and not the font host's, and no
+  // font service needs to know it to answer with a stylesheet.
+  link.referrerPolicy = 'no-referrer';
   link.dataset.mawyFont = '';
   document.head.append(link);
 }

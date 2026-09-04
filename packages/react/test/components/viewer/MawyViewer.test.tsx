@@ -565,6 +565,21 @@ describe('typefaces', () => {
     expect(links().filter((link) => link.getAttribute('href') === href)).toHaveLength(1);
   });
 
+  it('asks for a font without telling its host which page wanted it', async () => {
+    const href = 'data:text/css,/* private */';
+    const fonts = [{ id: 'private', label: 'Private', stack: "'Private'", href }];
+
+    await render(
+      <MawyViewer value={SAMPLE} fonts={fonts} typography={{ fontFamily: 'private' }} />
+    );
+
+    const link = links().find((each) => each.getAttribute('href') === href);
+
+    // Which page a reader has open is the reader's business, and a font host
+    // needs none of it to answer with a stylesheet.
+    expect(link?.getAttribute('referrerpolicy')).toBe('no-referrer');
+  });
+
   it('falls back to the first font offered when the chosen one is not on the list', async () => {
     const fonts = [{ id: 'quire', label: 'Quire', stack: "'Quire', serif" }];
     const screen = await render(

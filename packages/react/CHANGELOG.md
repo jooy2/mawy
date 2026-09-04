@@ -6,6 +6,8 @@
 
 ### Security
 
+- **Asking for a web font no longer tells its host which page wanted it.** The stylesheet for a web font is fetched from somebody else's server — Google's, jsDelivr's — and a request carries the address of the page that made it unless it is told not to. Which page a reader has open is the reader's business, and no font service needs it to answer with a stylesheet. The request says `no-referrer` now. Applications passing their own `fonts` get the same treatment, since it is the fetching rather than the list that changed.
+
 - **Sanitised HTML is read again before it is handed over.** What leaves the sanitiser is a string, and the browser parses that string once more to put it on the page — so a tree walked and found safe can be written out as markup that comes back as a different tree. That gap is the whole of mutation XSS, and nothing about walking the first tree closes it. The markup is read until reading it again changes nothing, and markup that will not settle is drawn as the characters the author wrote rather than as elements. Ordinary markup settles on the second reading and most of it on the first.
 
 - **A directive named after a property every object has is a directive nobody registered.** `:::constructor` is spelled exactly the way a directive is spelled, and the registry an application passes is an ordinary object — so the name was answered with something off `Object.prototype`, React called it as a component, and the render threw. A document could take the page down by naming one of a dozen words.
