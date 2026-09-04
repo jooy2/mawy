@@ -6,6 +6,8 @@
 
 ### Changed
 
+- **Taking the link reference definitions off a paragraph is one pass over it.** Each definition was found by handing the pattern a fresh copy of everything left, so a block of two hundred definitions at the bottom of a README copied the block two hundred times. The scan starts where the last one ended.
+
 - **Numbering the footnotes costs what the document has rather than the square of it.** Each new footnote asked every one already numbered whether it had taken the name — so a document of a thousand notes asked half a million questions to number them. Each name is written down as it is given out and the question is asked once.
 
 - **Finding without case sensitivity folds the document in one go.** The copy the search reads was built a character at a time so that a letter which changes length in lower case could be left alone, which is a string made and thrown away for every character in the document — on every keystroke in the find box. A text with nothing in it that needs that treatment is folded in the one call the platform has, and the answer is the same either way.

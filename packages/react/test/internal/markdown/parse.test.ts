@@ -232,6 +232,42 @@ describe('definition lists', () => {
  * parser lifts them out of the flow and hands them back in the order something
  * first pointed at them — which is the order they are numbered in.
  */
+/**
+ * Link reference definitions, which are taken off the front of a paragraph.
+ *
+ * The scan starts where the last one ended rather than being handed a copy of
+ * what is left, so a paragraph of two hundred definitions is one pass over it
+ * instead of two hundred. What that has to keep is where it starts from, which
+ * is the whole of what these check.
+ */
+describe('link reference definitions', () => {
+  it('takes every one at the front of a paragraph and leaves the rest of it', () => {
+    const document = parseMarkdown('[a]: /one\n[b]: /two\nSee [a] and [b].');
+    const [paragraph] = document.root.children;
+
+    expect(bare(inline(paragraph))).toEqual([
+      { type: 'text', value: 'See ' },
+      { type: 'link', url: '/one', title: null, children: [{ type: 'text', value: 'a' }] },
+      { type: 'text', value: ' and ' },
+      { type: 'link', url: '/two', title: null, children: [{ type: 'text', value: 'b' }] },
+      { type: 'text', value: '.' }
+    ]);
+  });
+
+  it('starts the next paragraph over after one it stopped part-way through', () => {
+    // A label of nothing but whitespace is not a label, so the paragraph it is
+    // in keeps the line — and the paragraph after it is read from its own
+    // beginning rather than from wherever that one gave up.
+    const document = parseMarkdown('[ ]: /nowhere\n\n[a]: /one\n[b]: /two\n\nSee [a] and [b].');
+
+    expect(document.root.children).toHaveLength(2);
+    expect(bare(inline(document.root.children[1])).filter((node) => node.type === 'link')).toEqual([
+      { type: 'link', url: '/one', title: null, children: [{ type: 'text', value: 'a' }] },
+      { type: 'link', url: '/two', title: null, children: [{ type: 'text', value: 'b' }] }
+    ]);
+  });
+});
+
 describe('footnotes', () => {
   const source = [
     'A sentence.[^one] Another.[^two] The first again.[^one]',

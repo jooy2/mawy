@@ -415,8 +415,11 @@ List<MdAlign?> _alignmentsOf(Line line) {
 // line in it, so "any character but a bracket" cannot run away, and `[ref[]` is
 // a label with an unmatched bracket in it and therefore not a definition at
 // all.
+// Matched as a prefix from where the last one ended rather than anchored, so
+// that taking the second definition off is not a copy of the rest of the
+// paragraph made to put a start in front of.
 final RegExp _definition = RegExp(
-  r'''^ {0,3}\[((?:[^\[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)''',
+  r''' {0,3}\[((?:[^\[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)''',
 );
 
 /// Definitions taken off the front of a paragraph, and whatever is left of it.
@@ -428,9 +431,9 @@ Sourced _takeDefinitions(Sourced paragraph, Map<String, MdDefinition> into) {
   int taken = 0;
 
   for (
-    RegExpMatch? match = _definition.firstMatch(paragraph.text.substring(taken));
+    Match? match = _definition.matchAsPrefix(paragraph.text, taken);
     match != null;
-    match = _definition.firstMatch(paragraph.text.substring(taken))
+    match = _definition.matchAsPrefix(paragraph.text, taken)
   ) {
     final String label = normalizeLabel(match.group(1)!);
 

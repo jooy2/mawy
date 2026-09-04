@@ -196,6 +196,40 @@ void main() {
     });
   });
 
+  /// Link reference definitions, which are taken off the front of a paragraph.
+  ///
+  /// The scan starts where the last one ended rather than being handed a copy
+  /// of what is left, so a paragraph of two hundred definitions is one pass
+  /// over it instead of two hundred. What that has to keep is where it starts
+  /// from, which is the whole of what these check.
+  group('link reference definitions', () {
+    test('takes every one at the front of a paragraph and leaves the rest of it', () {
+      final MdDocument document = parseMarkdown('[a]: /one\n[b]: /two\nSee [a] and [b].');
+      final MdParagraph paragraph = document.root.children.first as MdParagraph;
+      final List<MdLink> links = paragraph.children.whereType<MdLink>().toList();
+
+      expect(links.map((MdLink each) => each.url).toList(), <String>['/one', '/two']);
+    });
+
+    test('starts the next paragraph over after one it stopped part-way through', () {
+      // A label of nothing but whitespace is not a label, so the paragraph it
+      // is in keeps the line — and the paragraph after it is read from its own
+      // beginning rather than from wherever that one gave up.
+      final MdDocument document = parseMarkdown(
+        '[ ]: /nowhere\n\n[a]: /one\n[b]: /two\n\nSee [a] and [b].',
+      );
+
+      expect(document.root.children.length, 2);
+      expect(
+        (document.root.children[1] as MdParagraph).children
+            .whereType<MdLink>()
+            .map((MdLink each) => each.url)
+            .toList(),
+        <String>['/one', '/two'],
+      );
+    });
+  });
+
   group('footnotes', () {
     const String source =
         'One.[^a] Two.[^b] One again.[^a]\n\n[^b]: The second.\n\n[^a]: The first.';

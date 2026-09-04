@@ -384,8 +384,11 @@ function alignmentsOf(line: Line): MdAlign[] {
 // line in it, so "any character but a bracket" cannot run away, and `[ref[]` is
 // a label with an unmatched bracket in it and therefore not a definition at
 // all.
+// Sticky rather than anchored, so that taking the second definition off is a
+// match starting where the first one ended rather than a copy of the rest of
+// the paragraph made to put a start in front of.
 const DEFINITION =
-  /^ {0,3}\[((?:[^[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)/;
+  /[ ]{0,3}\[((?:[^[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)/y;
 
 /**
  * Definitions taken off the front of a paragraph, and whatever is left of it.
@@ -397,10 +400,12 @@ const DEFINITION =
 function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): Sourced {
   let taken = 0;
 
+  DEFINITION.lastIndex = 0;
+
   for (
-    let match = DEFINITION.exec(paragraph.text.slice(taken));
+    let match = DEFINITION.exec(paragraph.text);
     match;
-    match = DEFINITION.exec(paragraph.text.slice(taken))
+    match = DEFINITION.exec(paragraph.text)
   ) {
     const label = normalizeLabel(match[1]);
 
