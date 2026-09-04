@@ -200,6 +200,9 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   late final ScrollController _scroller = widget.scrollController ?? ScrollController();
   final Map<String, GlobalKey> _headings = <String, GlobalKey>{};
 
+  /// The same slugs, in the order they are drawn, so one can be found by index.
+  final List<String> _order = <String>[];
+
   /// The heading the reader is at, and the one they asked to be at.
   ///
   /// Measured from the scroll while the panel is open, and pinned to whatever
@@ -396,6 +399,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   void _read() {
     _document = parseMarkdown(widget.value, widget.parse);
     _headings.clear();
+    _order.clear();
     // Per position in the document, so a document with fewer blocks in it than
     // the last one leaves keys behind for positions that no longer exist.
     _blocks.clear();
@@ -484,10 +488,30 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     });
   }
 
+  /// Where a heading would sit at the top of the view, or `null` if it cannot
+  /// be measured this frame.
+  double? _offsetOf(String slug) {
+    final RenderObject? box = _headings[slug]?.currentContext?.findRenderObject();
+
+    if (box is! RenderBox || !box.attached || !box.hasSize) {
+      return null;
+    }
+
+    return RenderAbstractViewport.maybeOf(box)?.getOffsetToReveal(box, 0).offset;
+  }
+
   /// Which heading is at the top of what can be seen.
   ///
-  /// `_headings` is filled in document order as the blocks are drawn, and a
-  /// `Map` keeps the order things were put into it.
+  /// Found by halving rather than counted to. Headings come down the page in
+  /// the order they are written, so the offsets are in that order too — and
+  /// walking them from the first one meant asking the render tree where every
+  /// heading above the view was, on every scroll notification, which for a
+  /// reference page with a few hundred of them is the whole of it at the
+  /// bottom.
+  ///
+  /// A heading with no offset this frame is one nothing can be said about, so
+  /// the search treats it as being wherever the search is looking. That is the
+  /// same answer the walk gave by skipping it.
   void _measureActive() {
     if (!_outlineOpen || !mounted) {
       return;
@@ -502,28 +526,20 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     }
 
     final double line = (_scroller.hasClients ? _scroller.offset : 0) + 24;
-    String? current;
+    int low = 0;
+    int high = _order.length - 1;
+    String? current = _order.isEmpty ? null : _order.first;
 
-    for (final MapEntry<String, GlobalKey> heading in _headings.entries) {
-      final RenderObject? box = heading.value.currentContext?.findRenderObject();
+    while (low <= high) {
+      final int middle = (low + high) ~/ 2;
+      final double? at = _offsetOf(_order[middle]);
 
-      if (box is! RenderBox || !box.attached || !box.hasSize) {
-        continue;
+      if (at == null || at <= line) {
+        current = _order[middle];
+        low = middle + 1;
+      } else {
+        high = middle - 1;
       }
-
-      final RenderAbstractViewport? viewport = RenderAbstractViewport.maybeOf(box);
-
-      if (viewport == null) {
-        continue;
-      }
-
-      current ??= heading.key;
-
-      if (viewport.getOffsetToReveal(box, 0).offset > line) {
-        break;
-      }
-
-      current = heading.key;
     }
 
     if (current != _active) {
@@ -901,7 +917,11 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       }
 
       if (block is MdHeading) {
-        final GlobalKey key = _headings.putIfAbsent(block.slug, GlobalKey.new);
+        final GlobalKey key = _headings.putIfAbsent(block.slug, () {
+          _order.add(block.slug);
+
+          return GlobalKey();
+        });
         final FocusNode anchor = _anchors.putIfAbsent(
           block.slug,
           () => FocusNode(debugLabel: 'MawyViewer #${block.slug}', skipTraversal: true),

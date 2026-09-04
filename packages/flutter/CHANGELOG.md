@@ -12,6 +12,8 @@
 
 - **Taking the link reference definitions off a paragraph is one pass over it.** Each definition was found by handing the pattern a fresh copy of everything left, so a block of two hundred definitions at the bottom of a README copied the block two hundred times. The scan starts where the last one ended.
 
+- **The outline finds where the reader is by halving rather than counting.** Which heading is at the top of the view was worked out by walking down from the first one, asking the render tree where each was — so on a reference page with a few hundred headings, reading near the bottom asked about every heading above the view, on every scroll notification. Headings come down the page in the order they are written, so it is a binary search.
+
 - **Typing with the find bar open costs the same whatever it found.** Every line of the source surface looked through every match to work out which of them were on it, so a common word in a long document turned each keystroke into the length of the document times the number of matches — and the editor went stiff exactly when somebody was reading the results. The matches are cut against the lines once now, in one walk down both, and each line is handed only its own. The same change the React package got, in the same shape.
 
 - **Numbering the footnotes costs what the document has rather than the square of it.** Each new footnote asked every one already numbered whether it had taken the name — so a document of a thousand notes asked half a million questions to number them. Each name is written down as it is given out and the question is asked once.

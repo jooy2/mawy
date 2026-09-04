@@ -781,6 +781,55 @@ void main() {
       expect(marked('Chapter 1'), isFalse);
     });
 
+    /// The one at the top of the view, found by halving the list rather than
+    /// counted to from the first — walking it meant asking the render tree
+    /// where every heading above the view was, on every scroll notification.
+    testWidgets('follows the reader down the document', (WidgetTester tester) async {
+      final String long = <String>[
+        for (int at = 1; at <= 20; at += 1) ...<String>['## Chapter $at', '', 'Words. ' * 20, ''],
+      ].join('\n');
+
+      await tester.pumpWidget(host(MawyViewer(value: long), size: const Size(700, 400)));
+
+      await tester.tap(toolbarButton('Contents'));
+      await tester.pumpAndSettle();
+
+      final Finder panel = find.byType(MawyViewerOutline);
+      String? marked() {
+        for (final Element element
+            in find.descendant(of: panel, matching: find.byType(Text)).evaluate()) {
+          final Text text = element.widget as Text;
+
+          if (text.style?.color == MawyTokens.light.accent) {
+            return text.data;
+          }
+        }
+
+        return null;
+      }
+
+      expect(marked(), 'Chapter 1');
+
+      final ScrollController scroller = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
+          .controller!;
+
+      scroller.jumpTo(scroller.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      // Whichever heading the top of the view has reached — the last one is
+      // still below it, because the document ends a screen after it starts.
+      final int? at = int.tryParse(marked()?.split(' ').last ?? '');
+
+      expect(at, isNotNull);
+      expect(at, greaterThan(10));
+
+      scroller.jumpTo(0);
+      await tester.pumpAndSettle();
+
+      expect(marked(), 'Chapter 1');
+    });
+
     testWidgets('says so about a document with no headings', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: 'Just words.')));
 
