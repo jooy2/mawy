@@ -4,6 +4,14 @@ import * as React from 'react';
 import { highlightMarkdown, type MdHighlightedLine } from '../../internal/markdown/highlight.js';
 import type { MawyMatch } from '../../internal/search.js';
 
+/** One match, in the coordinates of the line it is drawn on. */
+interface LineHit {
+  start: number;
+  end: number;
+  /** Which match this is, so the one being stepped through can be told apart. */
+  index: number;
+}
+
 export interface MawyEditorSourceProps {
   value: string;
   onChange: (next: string) => void;
@@ -83,18 +91,39 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
 
     const lines = React.useMemo(() => highlightMarkdown(value, gfm), [value, gfm]);
 
-    /** Where each line begins, so a match can be cut down to the line it is on. */
-    const starts = React.useMemo(() => {
-      const out: number[] = [];
+    /**
+     * What the find bar found, handed to each line already cut down to it.
+     *
+     * Both lists are in order, so this is one walk down the pair of them rather
+     * than a look through every match for every line — which is the difference
+     * between a keystroke costing the length of the document and costing the
+     * length of the document times the number of matches in it.
+     */
+    const hits = React.useMemo(() => {
+      const out: LineHit[][] = lines.map(() => []);
       let at = 0;
+      let from = 0;
 
-      for (const line of lines) {
-        out.push(at);
-        at += line.text.length + 1;
+      for (let index = 0; index < lines.length; index += 1) {
+        const to = from + lines[index].text.length;
+
+        while (at < matches.length && matches[at].end <= from) {
+          at += 1;
+        }
+
+        for (let each = at; each < matches.length && matches[each].start < to; each += 1) {
+          out[index].push({
+            start: matches[each].start - from,
+            end: matches[each].end - from,
+            index: each
+          });
+        }
+
+        from = to + 1;
       }
 
       return out;
-    }, [lines]);
+    }, [lines, matches]);
 
     /**
      * The two layers scroll as one, and the textarea is the one that scrolls.
@@ -175,7 +204,7 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
               <React.Fragment key={index}>
                 {lineNumbers ? <span className="mawy-source-number">{index + 1}</span> : null}
                 <span className="mawy-source-line">
-                  {renderLine(line, starts[index], matches, currentMatch)}
+                  {renderLine(line, hits[index], currentMatch)}
                 </span>
               </React.Fragment>
             ))}
@@ -218,18 +247,9 @@ export const MawyEditorSource = React.forwardRef<HTMLTextAreaElement, MawyEditor
  */
 function renderLine(
   line: MdHighlightedLine,
-  from: number,
-  matches: readonly MawyMatch[],
+  hits: readonly LineHit[],
   currentMatch: number
 ): React.ReactNode {
-  const hits = matches
-    .map((match, index) => ({
-      start: match.start - from,
-      end: match.end - from,
-      current: index === currentMatch
-    }))
-    .filter((hit) => hit.end > 0 && hit.start < line.text.length);
-
   if (!line.tokens.length && !hits.length) {
     // An empty line still has to be a line, or the copy underneath drifts a row
     // out of step with the textarea for the whole rest of the file. The height
@@ -252,6 +272,11 @@ function renderLine(
 
   const edges = [...cuts].sort((a, b) => a - b);
   const out: React.ReactNode[] = [];
+  // The pieces come out left to right and both lists are already in that
+  // order, so each of them is walked once across the whole line rather than
+  // searched from the beginning for every piece.
+  let nextToken = 0;
+  let nextHit = 0;
 
   for (let index = 0; index < edges.length - 1; index += 1) {
     const start = edges[index];
@@ -261,9 +286,17 @@ function renderLine(
       continue;
     }
 
+    while (nextToken < line.tokens.length && line.tokens[nextToken].end <= start) {
+      nextToken += 1;
+    }
+
+    while (nextHit < hits.length && hits[nextHit].end <= start) {
+      nextHit += 1;
+    }
+
     const piece = line.text.slice(start, end);
-    const token = line.tokens.find((each) => each.start <= start && end <= each.end);
-    const hit = hits.find((each) => each.start <= start && end <= each.end);
+    const token = covering(line.tokens[nextToken], start, end);
+    const hit = covering(hits[nextHit], start, end);
 
     if (!token && !hit) {
       out.push(piece);
@@ -277,7 +310,7 @@ function renderLine(
         className={[token ? `mawy-tok mawy-tok-${token.kind}` : '', hit ? 'mawy-find-hit' : '']
           .filter(Boolean)
           .join(' ')}
-        data-mawy-current={hit?.current ? 'true' : undefined}
+        data-mawy-current={hit?.index === currentMatch ? 'true' : undefined}
       >
         {piece}
       </span>
@@ -285,4 +318,13 @@ function renderLine(
   }
 
   return out;
+}
+
+/** The span, if it is the one this piece is inside. */
+function covering<T extends { start: number; end: number }>(
+  span: T | undefined,
+  start: number,
+  end: number
+): T | undefined {
+  return span && span.start <= start && end <= span.end ? span : undefined;
 }

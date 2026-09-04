@@ -10,6 +10,10 @@
 
   Names are looked up as own properties now, so `constructor`, `toString` and the rest are drawn as the characters they were written with, which is what every other unregistered name gets. Nothing changes for a name an application actually registered.
 
+### Changed
+
+- **Typing with the find bar open costs the same whatever it found.** Every line of the source surface looked through every match to work out which of them were on it, so a common word in a long document turned each keystroke into the length of the document times the number of matches — and the editor went stiff exactly when somebody was reading the results. The matches are cut against the lines once now, in one walk down both, and each line is handed only its own.
+
 ### Fixed
 
 - **A document drawn on a server and picked up in a browser agrees with itself.** With `html="sanitize"` the server has no `DOMParser` and draws the markup as characters, and the browser drew elements on its very first render — which is React finding one thing where the server sent another, and a hydration mismatch. The characters come first now and the elements on the render after. An application that never renders on a server never hydrates, and there the first render is already the browser's: nothing is deferred and nothing flashes.

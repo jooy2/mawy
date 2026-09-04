@@ -725,6 +725,51 @@ describe('finding', () => {
     });
   });
 
+  /**
+   * Each line is handed only the matches that are on it, which means the
+   * matches are cut against the lines once rather than looked through again for
+   * every line. The arithmetic that does the cutting is what this checks: a
+   * match against the very start of a line and one against its very end are
+   * where an offset that is out by one shows up.
+   */
+  it('draws each match on the line it is actually on', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={'aa bb\ncc\nbb aa bb'} modes={['plain']} />
+    );
+
+    await open(screen);
+
+    type(findField(screen), 'bb');
+
+    /** Where a drawn piece starts in the line it is drawn on. */
+    const columnOf = (line: Element, hit: Element) => {
+      const range = document.createRange();
+
+      range.setStart(line, 0);
+      range.setEndBefore(hit);
+
+      return range.toString().length;
+    };
+
+    await vi.waitFor(() => {
+      const drawn = [...screen.container.querySelectorAll('.mawy-source-line')].map((line) =>
+        [...line.querySelectorAll('.mawy-find-hit')].map((hit) => [
+          hit.textContent,
+          columnOf(line, hit)
+        ])
+      );
+
+      expect(drawn).toEqual([
+        [['bb', 3]],
+        [],
+        [
+          ['bb', 0],
+          ['bb', 6]
+        ]
+      ]);
+    });
+  });
+
   it('steps to the next match on Enter without handing the document the focus', async () => {
     const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
 
