@@ -46,6 +46,16 @@ export function useHighlighter(
 ): MawyHighlighter | null {
   const wanted = React.useMemo(() => wantsHighlighting(document.root.children), [document]);
   const [fetched, setFetched] = React.useState<MawyHighlighter | null>(null);
+  /**
+   * The loader, where the effect can read it without depending on it.
+   *
+   * `highlight={() => import('mawy-react/highlight')}` written in the JSX is a
+   * different function on every render, and an effect that depended on it would
+   * ask again for every one of them.
+   */
+  const loader = React.useRef(highlight);
+  /** The one request, kept so that a second render is not a second one. */
+  const asked = React.useRef<Promise<MawyHighlighter> | null>(null);
 
   // A highlighter handed over as an object needs no fetching and no render to
   // arrive: it is already here, and drawing the first paint without it would be
@@ -53,13 +63,24 @@ export function useHighlighter(
   const ready = highlight && typeof highlight !== 'function' ? highlight : null;
 
   React.useEffect(() => {
-    if (!highlight || typeof highlight !== 'function' || !wanted) {
+    loader.current = highlight;
+  });
+
+  React.useEffect(() => {
+    const ask = loader.current;
+
+    if (!ask || typeof ask !== 'function' || !wanted) {
       return;
     }
 
     let live = true;
 
-    void Promise.resolve(highlight()).then(
+    // Kept rather than remade, so that this effect running twice — which is
+    // what a development double-mount does — waits on the one request instead
+    // of starting a second and cancelling the first.
+    asked.current ??= Promise.resolve(ask());
+
+    void asked.current.then(
       (loaded) => {
         if (live) {
           setFetched(loaded);
@@ -67,14 +88,16 @@ export function useHighlighter(
       },
       () => {
         // A highlighter that will not load is a document without colour, which
-        // is the state it was already in.
+        // is the state it was already in. It is not asked for again: a loader
+        // that failed once fails on every render, and a render is not a reason
+        // to try the network again.
       }
     );
 
     return () => {
       live = false;
     };
-  }, [highlight, wanted]);
+  }, [wanted]);
 
   return ready ?? (wanted ? fetched : null);
 }

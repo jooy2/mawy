@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import {
@@ -862,6 +863,42 @@ describe('highlighting', () => {
       expect(withCode.container.querySelector('.mawy-hl-keyword')?.textContent).toBe('const')
     );
     expect(fetched).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * `highlight={() => import('mawy-react/highlight')}` written in the JSX is a
+   * different function on every render, which is how an application actually
+   * writes it — and asking again for each of them is a request per render for
+   * the largest thing this package can be made to carry.
+   */
+  it('asks once even when the loader is a new function every render', async () => {
+    const asked = vi.fn(async () => wordSpotter('const'));
+
+    function Host() {
+      const [count, again] = React.useState(0);
+
+      return (
+        <>
+          <button type="button" onClick={() => again(count + 1)}>
+            again
+          </button>
+          <MawyViewer value={SAMPLE} toolbar={false} highlight={() => asked()} />
+        </>
+      );
+    }
+
+    const screen = await render(<Host />);
+    const button = screen.container.querySelector('button') as HTMLButtonElement;
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-hl-keyword')?.textContent).toBe('const')
+    );
+
+    button.click();
+    button.click();
+
+    await vi.waitFor(() => expect(screen.container.textContent).toContain('const'));
+    expect(asked).toHaveBeenCalledTimes(1);
   });
 
   it('finds a fence inside a list or a quotation too', async () => {
