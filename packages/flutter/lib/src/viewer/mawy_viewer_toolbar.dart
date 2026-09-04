@@ -20,6 +20,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:mawy/src/internal/copying.dart';
 import 'package:mawy/src/internal/focus_visible.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/roving.dart';
@@ -58,7 +59,7 @@ class MawyViewerToolbar extends StatefulWidget {
     required this.onColorSchemeChange,
     required this.outlineOpen,
     required this.onOutlineToggle,
-    required this.copied,
+    required this.copyState,
     required this.onCopy,
     required this.finding,
     this.onFind,
@@ -98,8 +99,8 @@ class MawyViewerToolbar extends StatefulWidget {
   /// Opens it. Absent where there is nothing to search; the button goes quiet.
   final VoidCallback? onFind;
 
-  /// Whether the copy button has just copied.
-  final bool copied;
+  /// What the copy button has just done, which is what its label reads.
+  final MawyCopyState copyState;
 
   /// Called when the copy button is pressed.
   final VoidCallback onCopy;
@@ -322,11 +323,19 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
 
       case MawyViewerToolbarItem.copy:
         return MawyToolbarButton(
-          icon: widget.copied ? LucideIcons.check : LucideIcons.copy,
-          label: widget.copied ? widget.strings.copied : widget.strings.copy,
+          icon: switch (widget.copyState) {
+            MawyCopyState.copied => LucideIcons.check,
+            MawyCopyState.failed => LucideIcons.x,
+            MawyCopyState.idle => LucideIcons.copy,
+          },
+          label: switch (widget.copyState) {
+            MawyCopyState.copied => widget.strings.copied,
+            MawyCopyState.failed => widget.strings.copyFailed,
+            MawyCopyState.idle => widget.strings.copy,
+          },
           tokens: widget.tokens,
           focusNode: node,
-          pressed: widget.copied,
+          pressed: widget.copyState == MawyCopyState.copied,
           onPressed: widget.onCopy,
         );
     }

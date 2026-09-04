@@ -14,6 +14,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/internal/copying.dart';
 import 'package:mawy/src/internal/find_bar.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/overlay.dart';
@@ -194,7 +195,7 @@ class MawyViewer extends StatefulWidget {
   State<MawyViewer> createState() => _MawyViewerState();
 }
 
-class _MawyViewerState extends State<MawyViewer> {
+class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   late MawyTypography _held = widget.defaultTypography;
   late final ScrollController _scroller = widget.scrollController ?? ScrollController();
   final Map<String, GlobalKey> _headings = <String, GlobalKey>{};
@@ -335,8 +336,6 @@ class _MawyViewerState extends State<MawyViewer> {
     });
   }
 
-  bool _copied = false;
-
   /// The document as it was last read. Never null after `initState`.
   late MdDocument _document;
 
@@ -358,7 +357,6 @@ class _MawyViewerState extends State<MawyViewer> {
 
   @override
   void dispose() {
-    _settle?.cancel();
     _scroller.removeListener(_measureActive);
 
     for (final GestureRecognizer recognizer in _recognizers.values) {
@@ -410,32 +408,6 @@ class _MawyViewerState extends State<MawyViewer> {
     MawyColorScheme.dark => Brightness.dark,
     MawyColorScheme.system => MediaQuery.platformBrightnessOf(context),
   };
-
-  /// How long the button says it copied for.
-  static const Duration _copyHeldFor = Duration(milliseconds: 1600);
-
-  /// The timer putting the label back, so a second press can cancel it.
-  ///
-  /// A `Future.delayed` cannot be called off, so pressing copy twice left the
-  /// first one still counting: it put the label back partway through the
-  /// second press, and the button read as having done nothing.
-  Timer? _settle;
-
-  Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: widget.value));
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() => _copied = true);
-    _settle?.cancel();
-    _settle = Timer(_copyHeldFor, () {
-      if (mounted) {
-        setState(() => _copied = false);
-      }
-    });
-  }
 
   /// The recognizer for the link starting at [key], made once and kept.
   ///
@@ -767,8 +739,8 @@ class _MawyViewerState extends State<MawyViewer> {
                 },
                 finding: _finding,
                 onFind: document.root.children.isEmpty ? null : _openFind,
-                copied: _copied,
-                onCopy: _copy,
+                copyState: copyState,
+                onCopy: () => copy(widget.value),
               ),
             if (_finding && _searchable)
               MawyFindBar(

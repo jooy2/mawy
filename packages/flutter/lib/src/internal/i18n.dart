@@ -38,6 +38,7 @@ class MawyStrings {
     required this.outlineEmpty,
     required this.copy,
     required this.copied,
+    required this.copyFailed,
     required this.copyCode,
     required this.close,
     required this.document,
@@ -161,6 +162,9 @@ class MawyStrings {
 
   /// What it says once it has.
   final String copied;
+
+  /// What the copy button says when the platform would not take it.
+  final String copyFailed;
 
   /// A code block's own copy button.
   final String copyCode;
@@ -354,6 +358,7 @@ const MawyStrings _en = MawyStrings(
   outlineEmpty: 'This document has no headings.',
   copy: 'Copy the Markdown',
   copied: 'Copied',
+  copyFailed: 'Could not copy',
   copyCode: 'Copy this code',
   close: 'Close',
   document: 'Document',
@@ -435,6 +440,7 @@ const MawyStrings _ko = MawyStrings(
   outlineEmpty: '제목이 없는 문서입니다.',
   copy: '마크다운 원문 복사',
   copied: '복사했습니다',
+  copyFailed: '복사하지 못했습니다',
   copyCode: '이 코드 복사',
   close: '닫기',
   document: '문서',

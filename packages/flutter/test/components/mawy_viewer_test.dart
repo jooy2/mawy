@@ -384,6 +384,80 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1600));
       expect(find.byIcon(LucideIcons.copy), findsOneWidget);
     });
+
+    /// The clipboard is a platform service and it can refuse — no permission on
+    /// the web, no channel on a platform without one. A button that says
+    /// nothing and throws behind itself is a button that appears to have
+    /// worked.
+    testWidgets('says it could not when the platform will not take it', (
+      WidgetTester tester,
+    ) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
+        MethodCall call,
+      ) async {
+        if (call.method == 'Clipboard.setData') {
+          throw PlatformException(code: 'refused');
+        }
+
+        return null;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await tester.pumpWidget(
+        host(
+          const MawyViewer(
+            value: '# Title\n\nWords.',
+            toolbar: <MawyViewerToolbarItem>[MawyViewerToolbarItem.copy],
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(LucideIcons.copy));
+      await tester.pump();
+
+      expect(find.byIcon(LucideIcons.x), findsOneWidget);
+      expect(find.byIcon(LucideIcons.check), findsNothing);
+
+      // And it goes back to offering, the way a copy that worked does.
+      await tester.pump(const Duration(milliseconds: 1600));
+      expect(find.byIcon(LucideIcons.copy), findsOneWidget);
+    });
+
+    testWidgets('a code block says the same thing when its own copy is refused', (
+      WidgetTester tester,
+    ) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
+        MethodCall call,
+      ) async {
+        if (call.method == 'Clipboard.setData') {
+          throw PlatformException(code: 'refused');
+        }
+
+        return null;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await tester.pumpWidget(
+        host(
+          const MawyViewer(value: '```ts\nconst a = 1;\n```', toolbar: <MawyViewerToolbarItem>[]),
+        ),
+      );
+
+      await tester.tap(find.byIcon(LucideIcons.copy));
+      await tester.pump();
+
+      expect(find.byIcon(LucideIcons.x), findsOneWidget);
+    });
   });
 
   group('scrolling', () {

@@ -18,6 +18,10 @@
 
 ### Fixed
 
+- **A copy the platform refuses says so.** The clipboard is a platform service and it can say no — no permission on the web, no channel on a platform without one — and nothing here was listening: the button said nothing, and the refusal went out as an error behind a button that appeared to have worked. It says "could not copy" for the same moment it would have said "copied", which is what the React package's copy button has always done. Both copy buttons, the toolbar's and a code block's.
+
+- **A code block's copy button holds its label for the same moment however often it is pressed.** It counted with a delayed future, which cannot be called off, so a second press was cut short by the first press's timer still running. The toolbar's button was fixed for this a release ago and the one on a code block was not.
+
 - **The editor stops reporting the document it was given as a change.** The field says something whenever the caret moves as well as whenever the text does, so an editor handed a document and then clicked in once called `onChange` with that same document — before anybody had typed a character. It says nothing until the text is actually different now, and nothing at all about a value the application set itself, which was the component telling the application what the application had just told it.
 
 - **The caret stays where it was when the application hands the document back changed.** A controlled editor whose `value` came back a little different — trimmed, normalised, arrived from somewhere else — moved the caret to the end of the document, which in a long file is the writer's place lost on every keystroke. It is kept where it was, clamped into a document that got shorter.

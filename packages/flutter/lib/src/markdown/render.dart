@@ -15,6 +15,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:mawy/src/internal/copying.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/find.dart';
@@ -746,9 +747,7 @@ class _CodeBlock extends StatefulWidget {
   State<_CodeBlock> createState() => _CodeBlockState();
 }
 
-class _CodeBlockState extends State<_CodeBlock> {
-  bool _copied = false;
-
+class _CodeBlockState extends State<_CodeBlock> with MawyCopying<_CodeBlock> {
   @override
   Widget build(BuildContext buildContext) {
     final MawyRenderContext context = widget.context;
@@ -808,25 +807,19 @@ class _CodeBlockState extends State<_CodeBlock> {
           top: 6,
           right: 6,
           child: _IconButton(
-            icon: _copied ? LucideIcons.check : LucideIcons.copy,
-            label: _copied ? context.strings.copied : context.strings.copyCode,
-            tokens: tokens,
-            active: _copied,
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: widget.block.value));
-
-              if (!mounted) {
-                return;
-              }
-
-              setState(() => _copied = true);
-
-              await Future<void>.delayed(const Duration(milliseconds: 1600));
-
-              if (mounted) {
-                setState(() => _copied = false);
-              }
+            icon: switch (copyState) {
+              MawyCopyState.copied => LucideIcons.check,
+              MawyCopyState.failed => LucideIcons.x,
+              MawyCopyState.idle => LucideIcons.copy,
             },
+            label: switch (copyState) {
+              MawyCopyState.copied => context.strings.copied,
+              MawyCopyState.failed => context.strings.copyFailed,
+              MawyCopyState.idle => context.strings.copyCode,
+            },
+            tokens: tokens,
+            active: copyState == MawyCopyState.copied,
+            onPressed: () => copy(widget.block.value),
           ),
         ),
       ],
