@@ -356,6 +356,39 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     if (widget.value != old.value || widget.parse != old.parse) {
       _read();
     }
+
+    if (!_sameTable(_directives, widget.directives)) {
+      _directives = widget.directives;
+      _drawn = null;
+    }
+  }
+
+  /// The directive table, held so that it changes when its contents do.
+  ///
+  /// `directives` is written into the widget where the widget is written, which
+  /// makes it a new map on every build — and a new map naming the same builders
+  /// is not a new answer. Compared by what is in it, and kept otherwise.
+  late Map<String, MawyDirectiveBuilder>? _directives = widget.directives;
+
+  static bool _sameTable(
+    Map<String, MawyDirectiveBuilder>? a,
+    Map<String, MawyDirectiveBuilder>? b,
+  ) {
+    if (identical(a, b)) {
+      return true;
+    }
+
+    if (a == null || b == null || a.length != b.length) {
+      return false;
+    }
+
+    for (final MapEntry<String, MawyDirectiveBuilder> each in a.entries) {
+      if (b[each.key] != each.value) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @override
@@ -400,6 +433,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     _document = parseMarkdown(widget.value, widget.parse);
     _headings.clear();
     _order.clear();
+    _drawn = null;
     // Per position in the document, so a document with fewer blocks in it than
     // the last one leaves keys behind for positions that no longer exist.
     _blocks.clear();
@@ -428,6 +462,37 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     _wanted.add(key);
 
     return held;
+  }
+
+  /// The document as widgets, kept until something it is drawn from changes.
+  ///
+  /// A viewer rebuilds for a great many reasons that are not the document: the
+  /// pointer moving over a code block, the copy button saying it copied, the
+  /// reader scrolling past a heading with the outline open. Every one of those
+  /// used to build the whole document again — every block, every span, every
+  /// recogniser looked up — and Flutter does not visit a subtree whose widget
+  /// is the one already there.
+  ///
+  /// The recognisers are the reason this holds the sweep as well as the list:
+  /// a build that reuses the drawing asks for none of them, and a sweep run
+  /// then would let go of every recogniser the document is using.
+  List<Widget>? _drawn;
+  Object? _drawnFrom;
+
+  List<Widget> _drawnFor(MdDocument document, MawyRenderContext render, Object from) {
+    if (_drawn != null && _drawnFrom == from) {
+      return _drawn!;
+    }
+
+    _wanted.clear();
+    _drawnFrom = from;
+
+    final Widget? footnotes = renderFootnotes(document.footnotes, render);
+
+    _drawn = <Widget>[..._withAnchors(document, render), ?footnotes];
+    _sweepRecognizers();
+
+    return _drawn!;
   }
 
   /// Whether a sweep is already booked for the end of this frame.
@@ -499,9 +564,15 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   bool? _foundMatchCase;
   MdDocument? _foundDocument;
 
+  /// Nothing found, as one object rather than a new one per build.
+  ///
+  /// It goes into the key that decides whether the document has to be drawn
+  /// again, and a fresh object each time is a document drawn again each time.
+  static final MawyFound _nothingFound = MawyFound.nothing();
+
   MawyFound _foundIn(MdDocument document) {
     if (!_finding) {
-      return MawyFound.nothing();
+      return _nothingFound;
     }
 
     if (_found == null ||
@@ -731,8 +802,6 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       letterSpacing: type.letterSpacing * type.fontSize,
     );
 
-    _wanted.clear();
-
     final MawyRenderContext render = MawyRenderContext(
       tokens: tokens,
       typography: type,
@@ -750,9 +819,26 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       currentMatch: current,
     );
 
-    final Widget? footnotes = renderFootnotes(document.footnotes, render);
-
-    _sweepRecognizers();
+    // Everything the drawing is made of. Anything left out is something the
+    // document would go stale about, so it is written out in full rather than
+    // narrowed to what seems likely to change.
+    final List<Widget> drawn = _drawnFor(document, render, (
+      document,
+      tokens,
+      type,
+      strings,
+      _directives,
+      widget.highlight,
+      // Whether a link does anything rather than what it does: the drawing is
+      // handed `_tapLink`, which does not change, and an application writing
+      // `onLinkTap: (url, _) => open(url)` where the widget is written hands
+      // over a new closure on every build.
+      widget.onLinkTap == null,
+      widget.anchors,
+      found,
+      current,
+      _finding,
+    ));
     final double? measure = type.measure.width;
 
     return Container(
@@ -894,10 +980,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
                                       ),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          ..._withAnchors(document, render),
-                                          ?footnotes,
-                                        ],
+                                        children: drawn,
                                       ),
                                     ),
                                   ),

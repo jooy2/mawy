@@ -162,6 +162,97 @@ void main() {
     });
   });
 
+  /// A viewer rebuilds for a great many reasons that are not the document — the
+  /// pointer over a code block, the copy button saying it copied, the reader
+  /// passing a heading with the outline open — and each of those used to build
+  /// every block and every span again.
+  ///
+  /// Counted through a directive, because that is the one place in a drawn
+  /// document where an application's own code runs and can say it ran. Nothing
+  /// about the widget tree shows it: Flutter reuses what it built either way.
+  group('drawing the document again', () {
+    testWidgets('happens when the document changed, and not when something else did', (
+      WidgetTester tester,
+    ) async {
+      int drawn = 0;
+      late StateSetter again;
+      String value = ':::counted\n:::\n\nWords.';
+
+      Widget counted(BuildContext _, MawyDirective _) {
+        drawn += 1;
+
+        return const Text('counted');
+      }
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyViewer(
+                value: value,
+                toolbar: const <MawyViewerToolbarItem>[MawyViewerToolbarItem.copy],
+                // Written where the widget is written, which is how an
+                // application writes it: a new map on every build, naming the
+                // same builder.
+                directives: <String, MawyDirectiveBuilder>{'counted': counted},
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final int before = drawn;
+
+      expect(before, greaterThan(0));
+
+      // A rebuild of everything around the viewer, with the same document.
+      again(() {});
+      await tester.pump();
+
+      expect(drawn, before);
+
+      again(() => value = ':::counted\n:::\n\nWords and more.');
+      await tester.pumpAndSettle();
+
+      expect(drawn, greaterThan(before));
+      expect(documentText(tester), contains('Words and more.'));
+    });
+
+    testWidgets('keeps the links working across a rebuild it skipped', (WidgetTester tester) async {
+      // The recognisers are let go of by a sweep over what the last build asked
+      // for, and a build that reuses the drawing asks for none of them.
+      String? opened;
+      late StateSetter again;
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyViewer(
+                value: '[go](https://example.com)',
+                onLinkTap: (String url, String? _) => opened = url,
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      again(() {});
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('go'), kind: PointerDeviceKind.mouse);
+      await tester.pump();
+
+      expect(opened, 'https://example.com');
+    });
+  });
+
   group('the palette', () {
     testWidgets('follows the platform, and the prop over it', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: sample), brightness: Brightness.dark));
