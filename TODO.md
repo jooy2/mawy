@@ -22,19 +22,18 @@ A read of both packages end to end, turned into a list to work through. It is
 here because it is longer than a session, and it comes back out of this file
 once the list is empty — what survives it belongs in the sections below.
 
-What has come off it so far is every bug the read found in the React package,
-the three prototype-lookup holes, the whole accessibility run in both — the
-keyboard trap on the Flutter source surface, the formatting shortcuts it did
-not have, headings that were not headings to a screen reader, and the several
-smaller things a keyboard or a screen reader could not reach on either side —
-and the React performance work down to the ones that are a decision: the two
-walks over the whole document on every keystroke, the listeners that came off
-the element and went back on for each of them, the reader that built a line a
-character at a time, the folding that did the same, the undo history that had a
-depth and no size, the highlighter asked for once per render, and the two places
-where reading a document cost the square of what was in it. Each is a commit
-with the test that fails without it, and each has a line in the changelog of the
-package it landed in.
+**The React half of the list is done**, down to the four lines that are a
+decision. That is every bug the read found, every performance line, the whole
+security and optimisation run, and the accessibility work in both packages.
+Each is a commit with the test that fails without it, and each has a line in
+the changelog of the package it landed in.
+
+Three things came out of working through it that the read had not seen, and all
+three were worse than what it had: a document could be given two footnotes with
+the same anchor; a document nested a couple of thousand containers deep took the
+page down with it, at a different depth in each of the two packages; and the two
+packages folded `İ` differently in a case-insensitive search, which is what
+`test/editor/search_test.dart` now exists to keep from happening again.
 
 Four lines came off it for the other reason — the read was wrong about them, or
 measuring said the change would not pay — and they are written down under
@@ -48,19 +47,11 @@ answer.
 
 ### packages/react
 
+Nothing left but the four that are a decision.
+
 - Performance — `?R1` block-level memo boundaries, `?R2` a windowed source pane.
 - SEO and accessibility — `?R16` heading `id`s collide between two viewers,
   `?R25` no server-only render path.
-- Security — `R29` the sanitiser round-trips through a string, `R30` `id` and
-  `name` survive into the host page, `R31` `raw` needs a louder warning, `R32` a
-  font link with no referrer policy.
-- Optimisation — `R33` overflowed groups render twice, `R34` separators are not
-  measured, `R35` line splitting is written twice and parity does not see it,
-  `R36` five drag handlers in two components, `R37` two identical file inputs,
-  `R38` an effect that allocates per render.
-- Bugs — `R59` text dragged from one place in the drawn document to another is
-  copied rather than moved.
-- Tests — `R55` a large document, `R57` the sanitiser as a fixed point.
 
 ### packages/flutter
 
@@ -85,16 +76,13 @@ answer.
 
 ## Confirmed
 
-- **The two packages disagree about `İ` in a case-insensitive search.** Folding
-  keeps a character that would change length, and `İ` is that character in
-  JavaScript — `'İ'.toLowerCase()` is `i` and a combining dot, two characters —
-  so React leaves it alone and a search for `istanbul` does not find
-  `İstanbul`. Dart's `toLowerCase` drops the dot instead, one character for one,
-  so Flutter folds it to `i` and does find it. Both files say in their own doc
-  comment that `İ` matches only itself, and one of them is wrong about its own
-  code. `search.dart` is not covered by the parity diff, which is the parsers
-  only, and there is no Dart test over the pure functions in it at all — a twin
-  of `test/internal/search.test.ts` is what would have caught this.
+- **Nothing outside the parsers is tested twice.** `tool/parity.dart` diffs the
+  two _parsers_, so `commands`, `status`, `scroll` and `find` are two
+  implementations with only their doc comments promising they agree. `search`
+  was the fourth of those until it turned out they did not — `İ` folded one way
+  in Dart and another in TypeScript — and `test/editor/search_test.dart` is now
+  the twin that says so. The other three want the same treatment, or the parity
+  script wants widening to run them.
 
 - **The Flutter preview does not follow the site's own light/dark switch.** The
   React demos take `colorScheme` as a prop and the site drives it; the framed
