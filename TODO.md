@@ -18,67 +18,84 @@ Two rules keep it honest:
 
 ## The audit
 
-A read of both packages end to end, turned into a list to work through. It is
-here because it is longer than a session, and it comes back out of this file
-once the list is empty — what survives it belongs in the sections below.
+A read of both packages end to end, turned into a list to work through. **It is
+done**, except for one thing that is a project rather than a line: drawing only
+the part of a long document that anybody can see, which has a section of its own
+below. Everything else the read found is a commit with the test that fails
+without it, and a line in the changelog of the package it landed in.
 
-**The list is done**, down to the eight lines that are a decision before they
-are a change. That is every bug the read found in either package, every
-performance line but two, the whole security and optimisation run, and the
-accessibility work in both. Each is a commit with the test that fails without
-it, and each has a line in the changelog of the package it landed in.
+Nine things came out of working through it that the read had not seen, and all
+nine were worse than what it had. A document could be given two footnotes with
+the same anchor. A document nested a couple of thousand containers deep took the
+page down with it, at a different depth in each of the two packages. The two
+packages folded `İ` differently in a case-insensitive search. A picture a
+document carried inside itself drew on the web and nowhere else. A code block's
+copy button never got the fix the toolbar's had. The column of line numbers
+leaked a laid-out paragraph for every number it drew, every frame. The editor
+reported the document it was handed as a change nobody made, and a controlled
+one sent the caret to the end of the file whenever the application normalised
+what was typed. And the Flutter editor's `colorScheme` read as controlled and
+behaved as a default.
 
-Six things came out of working through it that the read had not seen, and all
-six were worse than what it had: a document could be given two footnotes with
-the same anchor; a document nested a couple of thousand containers deep took the
-page down with it, at a different depth in each of the two packages; the two
-packages folded `İ` differently in a case-insensitive search; a picture a
-document carried inside itself drew on the web and nowhere else; a code block's
-copy button never got the fix the toolbar's had; and the column of line numbers
-leaked a laid-out paragraph for every number it drew, every frame.
+Three of those are why `test/editor/search_test.dart` and
+`test/editor/commands_test.dart` exist. `tool/parity.dart` compares the two
+_parsers_, and everything else this library ships twice had only its doc
+comments promising the two agreed.
 
-Six lines came off it for the other reason — the read was wrong about them, or
-measuring said the change would not pay — and they are written down under
+Six lines came off the list for the other reason — the read was wrong about
+them, or measuring said the change would not pay — and they are under
 "Deliberate" below rather than left looking undone. Two more were closed by a
 decision rather than by a change and are there as well.
 
-Every line still here has been read in the code. `?` marks the ones that are a
-decision before they are a change: a render structure, an anchor's name, the
-size of a public API. Those are last, and they are not to be started without an
-answer.
+## Drawing only what can be seen
 
-### packages/react
+The one thing left, and three shapes of the same idea.
 
-- Performance — `?R1` block-level memo boundaries, `?R2` a windowed source pane.
-- SEO and accessibility — `?R16` heading `id`s collide between two viewers,
-  `?R25` no server-only render path.
+**The source pane draws every line**, in both packages. The React surface is a
+`<textarea>` with a coloured copy of the same text laid exactly underneath it,
+and that copy is every line of the document; the Flutter one hands its
+controller a span for every line on every keystroke. A five-thousand-line file
+is five thousand rows built to show forty.
 
-### packages/flutter
+What makes it hard is what the two layers have to agree about. Every line has to
+sit exactly where the field puts it, so a window has to know the height of
+everything above it before it can leave any of it out — and a wrapped line is
+not one row. The browser's own find, the caret, the selection and the length of
+the scrollbar are all read off a layer that would no longer hold the whole
+document. This wants a design before it wants an afternoon.
 
-- Performance — `?F1` the source field repaints the whole document, `?F5` the
-  viewer builds every block at once.
-- Security — `?F21` no hook for the image request. An application cannot put
-  headers on the request a picture makes, route it through its own client, or
-  refuse one — which for a document from somewhere else is the difference
-  between drawing it and letting it call out. `Image.network` takes `headers`
-  already; what it wants is a name on `MawyViewer` and the same name on the
-  React side, where it is a loader prop or nothing at all.
-- Optimisation — `?F26` the AST is public API, `?F28` controlled and
-  uncontrolled by hand. The second is narrower than it was: what remains is
-  that `colorScheme` on the Flutter editor has an `onColorSchemeChange` and no
-  `defaultColorScheme`, so it reads as controlled and behaves as a starting
-  value the toolbar then owns. Either it gains the second prop or it loses the
-  first, and `internal/controlled.ts` is the shape the React side settled on.
+**The Flutter viewer builds every block at once.** Half of this is done: the
+viewer keeps the widgets it built and hands the same ones back until something
+they are drawn from changes, so a rebuild for anything that is not the document
+now costs nothing. What is _not_ done is a lazy list, and it is not done because
+four things the viewer offers stand on every block being built:
+
+- Selecting across the whole document and copying it. A `SelectableRegion` over
+  a lazy list can only select what has been built.
+- Scrolling to a match. `_showMatch` finds the block by its `GlobalKey`, and an
+  unbuilt block has no context to find.
+- Scrolling to a heading, and the outline's mark on whichever one is at the top.
+  Both measure a heading through its key, and the binary search in
+  `_measureActive` reads an unmeasurable heading as "wherever the search is
+  looking".
+- `MawyViewerAnchors.places()`, which is half of what lines the editor's two
+  panes up in `split`.
+
+Every one of those wants an index-to-offset answer that Flutter does not give
+you without either fixed extents or a package, and this repository has one
+dependency and guards it. Whoever picks this up should start there — decide how
+a block's offset is known before the block is built — and the other four fall
+out of it.
 
 ## Confirmed
 
-- **Nothing outside the parsers is tested twice.** `tool/parity.dart` diffs the
-  two _parsers_, so `commands`, `status`, `scroll` and `find` are two
-  implementations with only their doc comments promising they agree. `search`
-  was the fourth of those until it turned out they did not — `İ` folded one way
-  in Dart and another in TypeScript — and `test/editor/search_test.dart` is now
-  the twin that says so. The other three want the same treatment, or the parity
-  script wants widening to run them.
+- **`status`, `scroll` and `find` are still tested once.** `tool/parity.dart`
+  diffs the two _parsers_, so everything else this library ships twice has only
+  its doc comments promising the two agree. `search` and `commands` have twins
+  now — `test/editor/search_test.dart` and `test/editor/commands_test.dart` —
+  and the first was written because they did not agree: `İ` folded one way in
+  Dart and another in TypeScript. The other three want the same treatment, or
+  the parity script wants widening to run them.
 
 - **The Flutter preview does not follow the site's own light/dark switch.** The
   React demos take `colorScheme` as a prop and the site drives it; the framed
@@ -127,7 +144,7 @@ answer.
   as the characters they are rather than wrapped.
 
 - **The Flutter source field's placeholder and the direction it is in.** The read of both packages had this down as a placeholder that ignores which way the text runs. Measured in both directions, its box is exactly the field's box — right of the gutter in one, left of it in the other — and both it and the field take their alignment from the same `Directionality`, so the words start where the caret does either way.
-- **What a picture is allowed to cost.** The read had a size ceiling down as missing. What fills a phone's memory is the decoded bitmap rather than the file, and that is now bounded by the width the page has for it; the bytes behind a `data:` picture are bounded by the document they are written in. What is left unbounded is a remote picture's download, which is the same in every Markdown renderer and in the browser the React package draws in — a ceiling there is a request an application would rather make itself, which is `?F21`.
+- **What a picture is allowed to cost.** The read had a size ceiling down as missing. What fills a phone's memory is the decoded bitmap rather than the file, and that is now bounded by the width the page has for it; the bytes behind a `data:` picture are bounded by the document they are written in. What is left unbounded is a remote picture's download, which is the same in every Markdown renderer and in the browser the React package draws in — and an application that minds now has `imageBuilder` and `image`, which is where a ceiling belongs: on the request the application makes rather than on the one the viewer makes for it.
 - **What the viewer's find bar does not search**, in `find.ts` and `find.dart`.
   A match cannot straddle two drawn runs, so `hello` is not found across
   `he**llo**`; a fenced code block is not searched at all. Both are written down

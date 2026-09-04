@@ -42,7 +42,7 @@ describe('package shape', () => {
     };
     const named = Object.values(shape.exports)
       .map((each) => (typeof each === 'string' ? each : each.default))
-      .filter((each): each is string => Boolean(each) && each.endsWith('.js'))
+      .filter((each): each is string => each !== undefined && each.endsWith('.js'))
       .map((each) => each.replace('./dist/', 'src/').replace('.js', ''));
 
     // Every one is a source file, with whichever extension it was written in.
