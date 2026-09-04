@@ -46,11 +46,40 @@ const RUN = 700;
  * How many documents to keep.
  *
  * Each step is the whole document, which is the simple thing to store and the
- * expensive one: a five-hundred-step history of a hundred-kilobyte file is
- * fifty megabytes. Far enough back to be an undo history, near enough not to be
- * a memory leak with a long session in it.
+ * expensive one. Far enough back to be an undo history, near enough not to be a
+ * memory leak with a long session in it.
  */
 const DEPTH = 500;
+
+/**
+ * How much document to keep, counted in characters.
+ *
+ * A count of steps is not a size. Five hundred steps of a hundred-kilobyte file
+ * is a hundred megabytes and of a five-megabyte one is five gigabytes, so the
+ * depth on its own is a ceiling that rises with the thing it is meant to hold
+ * down. Whichever of the two is reached first ends the history.
+ *
+ * Roughly sixteen megabytes, since a character here is two bytes. Ordinary
+ * documents never reach it — a twenty-kilobyte file runs out of depth first, at
+ * five hundred steps — and it is the large ones it is here for. A document
+ * larger than the whole budget keeps exactly one step: an undo that reaches one
+ * change back is thin, and an undo that is not there at all is worse.
+ */
+const BUDGET = 8_000_000;
+
+/** The far end dropped until what is held is inside both ceilings. */
+function trim(past: MawyStep[]): void {
+  let held = 0;
+
+  for (const step of past) {
+    held += step.value.length;
+  }
+
+  while (past.length > DEPTH || (past.length > 1 && held > BUDGET)) {
+    held -= past[0].value.length;
+    past.shift();
+  }
+}
 
 export function emptyHistory(): MawyHistory {
   return { past: [], future: [], kind: 'none', edge: 0, at: 0 };
@@ -111,10 +140,7 @@ export function record(history: MawyHistory, before: MawyStep, after: string, no
 
   if (!carriesOn) {
     history.past.push(before);
-
-    if (history.past.length > DEPTH) {
-      history.past.shift();
-    }
+    trim(history.past);
   }
 
   history.future.length = 0;
@@ -148,6 +174,7 @@ export function redo(history: MawyHistory, current: MawyStep): MawyStep | null {
   }
 
   history.past.push(current);
+  trim(history.past);
   history.kind = 'none';
 
   return step;

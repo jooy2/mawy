@@ -144,3 +144,62 @@ describe('going back, and forward again', () => {
     expect(history.past).toHaveLength(0);
   });
 });
+
+/**
+ * What the history is allowed to hold on to.
+ *
+ * Each step is the whole document, so a depth is a count of steps and not a
+ * size — five hundred of them is a hundred megabytes for a hundred-kilobyte
+ * file and five gigabytes for a five-megabyte one. The second ceiling is in
+ * characters, and these are the two ends of what it has to do: hold the far end
+ * down, and never hold it down to nothing.
+ */
+describe('what it keeps', () => {
+  /** Distinct documents of the same size, none of them joining the last. */
+  const huge = (count: number, each: number) =>
+    Array.from({ length: count }, (_, index) => String(index) + 'a'.repeat(each));
+
+  /** Each one recorded a second after the last, so no two of them join. */
+  const recordAll = (history: ReturnType<typeof emptyHistory>, documents: string[]) => {
+    documents.forEach((value, index) => {
+      record(history, { value, start: 0, end: 0 }, documents[index + 1] ?? 'end', index * 1000);
+    });
+  };
+
+  it('drops the far end once the documents stop fitting', () => {
+    const history = emptyHistory();
+    const documents = huge(12, 2_000_000);
+
+    recordAll(history, documents);
+
+    const held = history.past.reduce((sum, step) => sum + step.value.length, 0);
+
+    expect(history.past.length).toBeLessThan(documents.length);
+    expect(held).toBeLessThanOrEqual(8_000_000);
+    // What went is the far end, so the change just made is still the one undo
+    // arrives at first.
+    expect(history.past[history.past.length - 1].value).toBe(documents[documents.length - 1]);
+  });
+
+  it('keeps one step of a document too large to keep two', () => {
+    const history = emptyHistory();
+    const documents = huge(3, 9_000_000);
+
+    recordAll(history, documents);
+
+    expect(history.past.length).toBe(1);
+    expect(undo(history, { value: 'end', start: 0, end: 0 })?.value).toBe(documents[2]);
+  });
+
+  it('stops at five hundred steps of a document small enough for more', () => {
+    const history = emptyHistory();
+
+    recordAll(
+      history,
+      Array.from({ length: 600 }, (_, index) => `step ${index}`)
+    );
+
+    expect(history.past.length).toBe(500);
+    expect(history.past[0].value).toBe('step 100');
+  });
+});
