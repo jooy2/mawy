@@ -347,6 +347,7 @@ class _MawyEditorState extends State<MawyEditor> {
   @override
   void initState() {
     super.initState();
+    _lastReported = _controller.text;
     _controller.addListener(_changed);
     _sourceScroll.addListener(_syncScroll);
   }
@@ -356,9 +357,23 @@ class _MawyEditorState extends State<MawyEditor> {
     super.didUpdateWidget(old);
 
     if (widget.value != null && widget.value != _controller.text) {
+      final String text = widget.value!;
+      final TextSelection was = _controller.selection;
+
+      // Where the caret was, kept. An application holding `value` and handing
+      // back something a little different — trimmed, normalised, arrived from
+      // the server — used to move the caret to the end of the document on
+      // every keystroke, which in a long file is the writer's place lost.
+      // Clamped rather than trusted, since the new text may be shorter.
+      _lastReported = text;
       _controller.value = _controller.value.copyWith(
-        text: widget.value,
-        selection: TextSelection.collapsed(offset: widget.value!.length),
+        text: text,
+        selection: was.isValid
+            ? TextSelection(
+                baseOffset: was.baseOffset.clamp(0, text.length),
+                extentOffset: was.extentOffset.clamp(0, text.length),
+              )
+            : TextSelection.collapsed(offset: text.length),
         composing: TextRange.empty,
       );
     }
@@ -383,7 +398,17 @@ class _MawyEditorState extends State<MawyEditor> {
     super.dispose();
   }
 
-  String _lastReported = '';
+  /// The document as the application last saw it.
+  ///
+  /// The document it *started* with rather than nothing, because the controller
+  /// says something whenever the caret moves as well as whenever the text does
+  /// — so an editor given a document and then clicked in once reported that
+  /// document as a change nobody had made.
+  ///
+  /// Filled in `initState` rather than here: a `late` field is filled the first
+  /// time it is read, and the first time this one is read is the first change,
+  /// which would make that change the thing it starts out equal to.
+  late String _lastReported;
 
   void _changed() {
     if (_controller.text != _lastReported) {

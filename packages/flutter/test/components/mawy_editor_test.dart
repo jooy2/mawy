@@ -778,10 +778,130 @@ void main() {
 
       await chord(tester, LogicalKeyboardKey.keyB);
 
-      // The document rather than `onChange`, which reports the text it started
-      // with the first time the controller says anything at all. See `F45`.
       expect(field.controller.text, 'one two three');
-      expect(seen, everyElement('one two three'));
+      // Nothing at all, rather than the document it started with: a command
+      // that ran nothing changed nothing, and there is nothing to report.
+      expect(seen, isEmpty);
+    });
+  });
+
+  /// What the application is told, and what the caret does when it is told
+  /// something back.
+  group('the value contract', () {
+    testWidgets('says nothing about the document it was given', (WidgetTester tester) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(defaultValue: 'one two three', mode: MawyEditorMode.plain, onChange: seen.add),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      // The controller says something whenever the caret moves as well as
+      // whenever the text does, and a caret moving is not a change.
+      field.controller.selection = const TextSelection.collapsed(offset: 4);
+      await tester.pump();
+
+      expect(seen, isEmpty);
+
+      field.controller.value = const TextEditingValue(
+        text: 'one two four',
+        selection: TextSelection.collapsed(offset: 12),
+      );
+      await tester.pump();
+
+      expect(seen, <String>['one two four']);
+    });
+
+    testWidgets('keeps the caret where it was when the value comes back changed', (
+      WidgetTester tester,
+    ) async {
+      late StateSetter again;
+      String value = 'one two three';
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyEditor(
+                value: value,
+                mode: MawyEditorMode.plain,
+                onChange: (String next) => value = next,
+              );
+            },
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 4);
+      await tester.pump();
+
+      // An application that hands back something a little different — trimmed,
+      // normalised, arrived from somewhere else — used to move the caret to the
+      // end of the document, which in a long file is the writer's place lost.
+      again(() => value = 'one two three and more');
+      await tester.pump();
+
+      expect(field.controller.text, 'one two three and more');
+      expect(field.controller.selection.baseOffset, 4);
+    });
+
+    testWidgets('clamps the caret into a document that got shorter', (WidgetTester tester) async {
+      late StateSetter again;
+      String value = 'one two three';
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyEditor(value: value, mode: MawyEditorMode.plain);
+            },
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 12);
+      await tester.pump();
+
+      again(() => value = 'one');
+      await tester.pump();
+
+      expect(field.controller.selection.baseOffset, 3);
+    });
+
+    testWidgets('does not report a value the application set itself', (WidgetTester tester) async {
+      final List<String> seen = <String>[];
+      late StateSetter again;
+      String value = 'one';
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyEditor(value: value, mode: MawyEditorMode.plain, onChange: seen.add);
+            },
+          ),
+        ),
+      );
+
+      again(() => value = 'two');
+      await tester.pump();
+
+      // It came from the application, so telling the application about it is
+      // the component talking to itself.
+      expect(seen, isEmpty);
     });
   });
 }

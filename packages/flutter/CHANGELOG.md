@@ -18,6 +18,10 @@
 
 ### Fixed
 
+- **The editor stops reporting the document it was given as a change.** The field says something whenever the caret moves as well as whenever the text does, so an editor handed a document and then clicked in once called `onChange` with that same document — before anybody had typed a character. It says nothing until the text is actually different now, and nothing at all about a value the application set itself, which was the component telling the application what the application had just told it.
+
+- **The caret stays where it was when the application hands the document back changed.** A controlled editor whose `value` came back a little different — trimmed, normalised, arrived from somewhere else — moved the caret to the end of the document, which in a long file is the writer's place lost on every keystroke. It is kept where it was, clamped into a document that got shorter.
+
 - **A link keeps the recognizer it was given.** One was made for every link on every build — so a document with two hundred links in it allocated two hundred gesture recognizers each time the pointer moved over a code block — and the last build's were disposed at the top of the build replacing them, while the spans still holding them were on the tree. Each link keeps the one it has now, and the ones nothing asks for any more are let go of after the frame, when nothing holds them.
 
 - **Reading the document happens when it changes rather than while the frame is being built.** The parse was lazy and sat inside `build`, and so did everything it threw away when the document turned out to be a new one — including telling the application's own `anchors` object to forget where every block was. A build is not the place to change something that outlives the frame. It is done when the text or the options change now. The keys the viewer keeps per block were the one thing that was never thrown away at all, so a document replaced by a shorter one left keys behind for positions that no longer existed, for as long as the viewer was on screen.
