@@ -493,6 +493,36 @@ void main() {
 
       expect(scroller.offset, moreOrLessEquals(120, epsilon: 0.5));
     });
+
+    /// A hand on a trackpad is not a wheel. On the desktop the two are
+    /// different events and only the wheel arrives here; on the web they are
+    /// the same event, and the size of the movement is what tells them apart.
+    testWidgets('a hand on a trackpad arrives as it is made', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          MawyViewer(value: List<String>.filled(12, sample).join('\n')),
+          size: const Size(600, 400),
+        ),
+      );
+
+      final ScrollController scroller = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
+          .controller!;
+      final TestPointer pointer = TestPointer(1, PointerDeviceKind.mouse);
+
+      pointer.hover(tester.getCenter(find.byType(MawyViewer)));
+
+      // Six small movements, the way two fingers send them.
+      for (int at = 0; at < 6; at += 1) {
+        await tester.sendEventToBinding(pointer.scroll(const Offset(0, 6)));
+        await tester.pump();
+      }
+
+      // All of it, on the frame it was made — the gesture is already the path
+      // the eye needs, and easing each step of it is a run of little starts
+      // that never catch up with the fingers.
+      expect(scroller.offset, moreOrLessEquals(36, epsilon: 0.5));
+    });
   });
 
   /// Finding, in a document rather than in its source.

@@ -21,7 +21,8 @@
 ///
 /// A reader who asked the platform for less movement is given the jump, which
 /// is the behaviour this replaces and the same answer the stylesheet's
-/// `scroll-behavior` gives under `prefers-reduced-motion`.
+/// `scroll-behavior` gives under `prefers-reduced-motion`. So is a trackpad,
+/// for the reason under [_kNotch].
 library;
 
 import 'package:flutter/gestures.dart';
@@ -30,6 +31,21 @@ import 'package:flutter/widgets.dart';
 /// How long a notch takes to arrive. Short enough not to lag a hand that is
 /// still turning the wheel, long enough to be a movement rather than a cut.
 const Duration _kSettle = Duration(milliseconds: 140);
+
+/// How far a scroll has to move to be a notch rather than a nudge.
+///
+/// A wheel turns in steps and a hand on a trackpad does not: a notch arrives as
+/// one delta of a line or more, and two fingers moving send a stream of small
+/// ones. On the desktop those are different events and only the wheel reaches
+/// here at all — a trackpad's pan goes straight to the scroll view. On the web
+/// they are the same event, and the size of the movement is what tells them
+/// apart.
+///
+/// It matters because the two want opposite things. A notch is a jump the eye
+/// needs a path between; a gesture already *is* the path, and animating each of
+/// its steps over a seventh of a second turns one smooth movement into a run of
+/// little eased starts that never catch up with the fingers.
+const double _kNotch = 20;
 
 /// Wraps the content of a scroll view so its wheel is animated.
 class MawyWheelScroll extends StatefulWidget {
@@ -64,7 +80,10 @@ class _MawyWheelScrollState extends State<MawyWheelScroll> {
     }
 
     final ScrollPosition position = widget.controller.position;
-    final double from = _going ?? position.pixels;
+    // A nudge carries on from where the offset actually is rather than from
+    // wherever a notch was heading, since it is about to go there itself.
+    final bool nudge = event.scrollDelta.dy.abs() < _kNotch;
+    final double from = nudge ? position.pixels : (_going ?? position.pixels);
     final double to = (from + event.scrollDelta.dy).clamp(
       position.minScrollExtent,
       position.maxScrollExtent,
@@ -76,7 +95,7 @@ class _MawyWheelScrollState extends State<MawyWheelScroll> {
       return;
     }
 
-    if (!mounted || MediaQuery.disableAnimationsOf(context)) {
+    if (nudge || !mounted || MediaQuery.disableAnimationsOf(context)) {
       _going = null;
       position.jumpTo(to);
 
