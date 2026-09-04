@@ -458,6 +458,40 @@ void main() {
       expect(gutter.size.width, lessThan(20));
     });
 
+    /// A long document, scrolled to each end.
+    ///
+    /// The numbers are painted from the field's own layout, and the first one
+    /// with any of it on screen is found by halving rather than counted to from
+    /// the top of the document — so both ends of that search are a place an
+    /// index can go out of range, and a document of five thousand lines is
+    /// where it would.
+    testWidgets('numbers a long document at either end of it', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: List<String>.generate(5000, (int at) => 'Line $at').join('\n'),
+            defaultMode: MawyEditorMode.plain,
+          ),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final RenderBox gutter = tester.renderObject(find.byType(MawySourceGutter)) as RenderBox;
+
+      // Four digits, because the last line is `5000`.
+      expect(gutter.size.width, greaterThan(0));
+
+      await tester.drag(_sourceField, const Offset(0, -40000), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      await tester.drag(_sourceField, const Offset(0, 80000), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(MawySourceGutter), findsOneWidget);
+    });
+
     testWidgets('draws no gutter when it was told not to', (WidgetTester tester) async {
       await tester.pumpWidget(
         host(

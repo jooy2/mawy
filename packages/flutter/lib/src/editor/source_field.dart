@@ -15,6 +15,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/editor/commands.dart';
+import 'package:mawy/src/editor/scroll.dart';
 import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/markdown/highlight.dart';
@@ -570,12 +571,23 @@ class MawySourceGutter extends StatelessWidget {
       text: TextSpan(text: '0' * digits, style: style),
       textDirection: Directionality.of(context),
     )..layout();
+    final double width = ruler.width;
+
+    // A `TextPainter` holds a laid-out paragraph, which is memory the engine
+    // gave it rather than memory Dart will collect. One made per build and
+    // left is one leaked per build.
+    ruler.dispose();
 
     return SizedBox(
-      width: ruler.width,
+      width: width,
       child: ClipRect(
         child: CustomPaint(
-          painter: _Numbers(editable: editable, text: text, style: style, scroller: scroller),
+          painter: MawySourceNumbers(
+            editable: editable,
+            text: text,
+            style: style,
+            scroller: scroller,
+          ),
         ),
       ),
     );
@@ -594,17 +606,25 @@ class MawySourceGutter extends StatelessWidget {
 /// A caret rect comes back where it is drawn, which is where it is in the text
 /// less however far the field has been scrolled — exactly what a number painted
 /// beside the line wants.
-class _Numbers extends CustomPainter {
-  _Numbers({
+class MawySourceNumbers extends CustomPainter {
+  /// Creates the painter.
+  MawySourceNumbers({
     required this.editable,
     required this.text,
     required this.style,
     required this.scroller,
   }) : super(repaint: scroller);
 
+  /// The field the numbers belong to.
   final GlobalKey<EditableTextState> editable;
+
+  /// The document, which says how many numbers there are.
   final String text;
+
+  /// What the numbers are drawn in.
   final TextStyle style;
+
+  /// The field's scroller, so the numbers move with the text.
   final ScrollController? scroller;
 
   @override
@@ -616,37 +636,59 @@ class _Numbers extends CustomPainter {
     }
 
     final double line = (style.fontSize ?? 14) * (style.height ?? 1);
-    int at = 0;
-    int number = 1;
+    final List<int> starts = lineStarts(text);
 
-    while (at <= text.length) {
-      final double top = field.getLocalRectForCaret(TextPosition(offset: at)).top;
+    double topOf(int index) => field.getLocalRectForCaret(TextPosition(offset: starts[index])).top;
+
+    // The first line with any of it on the screen, found rather than counted
+    // to. A line's top only ever moves down as the line number goes up, so the
+    // search is a binary one — and without it a five-thousand-line document
+    // showing forty of them asked the field where every line above the first
+    // visible one was, on every frame it painted.
+    int low = 0;
+    int high = starts.length - 1;
+
+    while (low < high) {
+      final int middle = (low + high) ~/ 2;
+
+      if (topOf(middle) > -line) {
+        high = middle;
+      } else {
+        low = middle + 1;
+      }
+    }
+
+    // One painter for the column rather than one per number: each of them
+    // holds a paragraph the engine laid out, and a painter made and left is
+    // that paragraph leaked.
+    final TextPainter drawn = TextPainter(textDirection: TextDirection.ltr);
+
+    for (int index = low; index < starts.length; index += 1) {
+      final double top = topOf(index);
 
       if (top > size.height) {
         break;
       }
 
-      if (top > -line) {
-        final TextPainter drawn = TextPainter(
-          text: TextSpan(text: '$number', style: style),
-          textDirection: TextDirection.ltr,
-        )..layout();
+      drawn
+        ..text = TextSpan(text: '${index + 1}', style: style)
+        ..layout();
 
-        // Against the trailing edge, the way `text-align: end` puts it.
-        drawn.paint(canvas, Offset(size.width - drawn.width, top));
-      }
-
-      final int next = text.indexOf('\n', at);
-
-      if (next == -1) {
-        break;
-      }
-
-      at = next + 1;
-      number += 1;
+      // Against the trailing edge, the way `text-align: end` puts it.
+      drawn.paint(canvas, Offset(size.width - drawn.width, top));
     }
+
+    drawn.dispose();
   }
 
+  /// Always, and the reason is that this cannot tell.
+  ///
+  /// What is painted comes from the field's own layout, which moves for
+  /// reasons none of the fields here record: the pane got narrower and the
+  /// lines rewrapped, the window changed shape, a scroll view resized. Any of
+  /// those leaves the same text in the same style with every line somewhere
+  /// else, and a column of numbers that stayed put beside them is worse than
+  /// one repainted for nothing. The painting is a few dozen numbers.
   @override
-  bool shouldRepaint(_Numbers old) => old.text != text || old.style != style;
+  bool shouldRepaint(MawySourceNumbers old) => true;
 }

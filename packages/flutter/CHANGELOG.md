@@ -18,6 +18,8 @@
 
 ### Fixed
 
+- **The line numbers keep up with the lines.** Three things about the column beside the source. It repainted only when the text or the type changed, and neither of those is what moves a line: narrowing the pane rewraps every line under the same text in the same style, and the numbers stayed where they were beside them. It found the first number to draw by walking down from the first line of the document, so a five-thousand-line file showing forty of them asked the field where every line above the screen was, on every frame. And it made a `TextPainter` for every number and left it — a laid-out paragraph the engine gave it, leaked once per number per frame. The first line on screen is found by halving now, one painter draws the column, and it repaints whenever the field it reads from might have moved.
+
 - **A copy the platform refuses says so.** The clipboard is a platform service and it can say no — no permission on the web, no channel on a platform without one — and nothing here was listening: the button said nothing, and the refusal went out as an error behind a button that appeared to have worked. It says "could not copy" for the same moment it would have said "copied", which is what the React package's copy button has always done. Both copy buttons, the toolbar's and a code block's.
 
 - **A code block's copy button holds its label for the same moment however often it is pressed.** It counted with a delayed future, which cannot be called off, so a second press was cut short by the first press's timer still running. The toolbar's button was fixed for this a release ago and the one on a code block was not.
