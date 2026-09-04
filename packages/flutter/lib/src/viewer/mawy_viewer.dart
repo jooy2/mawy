@@ -31,6 +31,20 @@ import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
 import 'package:mawy/src/viewer/offsets.dart';
 
+/// How many blocks a document has to have before only part of it is built.
+///
+/// Under it every block is built and laid out, which is what a document that
+/// fits in a reader's head costs anyway — and it is what keeps a selection
+/// whole, since a selection can only take text that has been built. Over it,
+/// building all of it is the thing that goes wrong: a document of a couple of
+/// thousand blocks is tens of thousands of render objects, and a change of type
+/// from the toolbar lays every one of them out again.
+///
+/// Four hundred is past a long README, a reference page or a chapter, and well
+/// short of the sizes where the cost shows. The two source surfaces draw the
+/// same line at six hundred lines, for the same reason.
+const int kMawyViewerLazyFrom = 400;
+
 /// Everything the toolbar offers, in the order it draws them.
 const List<MawyViewerToolbarItem> kMawyViewerToolbar = <MawyViewerToolbarItem>[
   MawyViewerToolbarItem.fontFamily,
@@ -1075,12 +1089,24 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
                                         slivers: <Widget>[
                                           SliverPadding(
                                             padding: lead + EdgeInsets.symmetric(horizontal: side),
-                                            sliver: SliverList(
-                                              delegate: SliverChildBuilderDelegate(
-                                                (BuildContext _, int index) => drawn[index],
-                                                childCount: drawn.length,
-                                              ),
-                                            ),
+                                            sliver: drawn.length < kMawyViewerLazyFrom
+                                                // One box holding all of it, so
+                                                // every block is built and a
+                                                // selection can take the whole
+                                                // document. See
+                                                // [kMawyViewerLazyFrom].
+                                                ? SliverToBoxAdapter(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: drawn,
+                                                    ),
+                                                  )
+                                                : SliverList(
+                                                    delegate: SliverChildBuilderDelegate(
+                                                      (BuildContext _, int index) => drawn[index],
+                                                      childCount: drawn.length,
+                                                    ),
+                                                  ),
                                           ),
                                         ],
                                       ),

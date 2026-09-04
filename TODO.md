@@ -105,16 +105,21 @@ drawing less of a long document cost.
   for a highlighter somebody else might write. Unkinded tokens are already drawn
   as the characters they are rather than wrapped.
 
-- **A selection in the Flutter viewer reaches as far as the list is holding.**
-  The document is a lazy list, so only the blocks near the view are built and a
-  drag can only take text from those. The cache is three screens either way,
-  which is past anything one movement of a hand covers, and the toolbar's copy
-  button takes the whole document from the Markdown rather than from the page —
-  so taking all of a long document never went through a selection. Closing the
-  gap properly means a `SelectionContainer` delegate that assembles the text of
-  unbuilt blocks out of the parse tree, which is a large amount of code standing
-  on Flutter's selection internals, for a case the copy button already answers.
-  Written down in `docs/*/guide/viewer.md`, in both languages.
+- **A selection in the Flutter viewer stops at four hundred blocks.** Under
+  `kMawyViewerLazyFrom` every block is built and a selection takes all of them;
+  over it the document is a lazy list and a selection reaches the three screens
+  either way that the list keeps. Measured: a select-all over a hundred and
+  fifty paragraphs takes all of it, and over four hundred takes a tenth.
+
+  Closing that last gap means telling the selection about blocks nobody built,
+  and the text to tell it is not in the parse tree — the renderer writes words
+  the document does not contain, the bullet of a list item, the `Note` on an
+  alert, a code block's language, the heading over the footnotes. Assembling it
+  a second time means a second renderer that has to agree with the first, and
+  when the two drift what a reader copies stops matching what they can see,
+  quietly. The toolbar's copy button already takes the whole document from the
+  Markdown, which is the case this would be for. Written down in
+  `docs/*/guide/viewer.md`, in both languages.
 
 - **The Flutter source field's placeholder and the direction it is in.** The read of both packages had this down as a placeholder that ignores which way the text runs. Measured in both directions, its box is exactly the field's box — right of the gutter in one, left of it in the other — and both it and the field take their alignment from the same `Directionality`, so the words start where the caret does either way.
 - **What a picture is allowed to cost.** The read had a size ceiling down as missing. What fills a phone's memory is the decoded bitmap rather than the file, and that is now bounded by the width the page has for it; the bytes behind a `data:` picture are bounded by the document they are written in. What is left unbounded is a remote picture's download, which is the same in every Markdown renderer and in the browser the React package draws in — and an application that minds now has `imageBuilder` and `image`, which is where a ceiling belongs: on the request the application makes rather than on the one the viewer makes for it.

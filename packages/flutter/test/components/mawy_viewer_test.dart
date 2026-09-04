@@ -720,9 +720,15 @@ void main() {
   /// what it holds beyond that is the cache extent. See `src/viewer/offsets.dart`
   /// for how anything still knows where the rest of it is.
   group('a document longer than the screen', () {
+    // Six hundred blocks, well past [kMawyViewerLazyFrom].
     final String document = <String>[
-      for (int at = 0; at < 200; at += 1) '## Section $at\n\nA paragraph under section $at.\n',
+      for (int at = 0; at < 300; at += 1) '## Section $at\n\nA paragraph under section $at.\n',
     ].join('\n');
+
+    /// The same shape, under the threshold rather than well past it.
+    final String shorter = <String>[
+      for (int at = 0; at < 150; at += 1) 'Paragraph $at of the document.',
+    ].join('\n\n');
 
     testWidgets('builds a fraction of it rather than all of it', (WidgetTester tester) async {
       await tester.pumpWidget(host(MawyViewer(value: document), size: const Size(600, 400)));
@@ -732,7 +738,7 @@ void main() {
       // view and its cache reach, and it does not grow with the document.
       expect(find.byType(MawyMeasured, skipOffstage: false).evaluate().length, lessThan(120));
       expect(documentText(tester), contains('Section 0'));
-      expect(documentText(tester), isNot(contains('Section 199')));
+      expect(documentText(tester), isNot(contains('Section 299')));
     });
 
     testWidgets('builds what the reader scrolls to, and lets go of what they left', (
@@ -746,28 +752,68 @@ void main() {
       scroller.jumpTo(scroller.position.maxScrollExtent);
       await tester.pumpAndSettle();
 
-      expect(documentText(tester), contains('Section 199'));
+      expect(documentText(tester), contains('Section 299'));
       expect(documentText(tester), isNot(contains('Section 0')));
     });
 
-    testWidgets('keeps the whole of a document that fits in the cache', (
+    testWidgets('builds all of a document under the threshold, however tall it is', (
       WidgetTester tester,
     ) async {
-      // What the cache extent buys, said as the thing it is for: a selection
-      // dragged past the edge of the view can only take text the list is still
-      // holding, so a document of this size is one a reader can select all of.
-      await tester.pumpWidget(
-        host(
-          MawyViewer(
-            value: <String>[for (int at = 0; at < 12; at += 1) 'Paragraph $at.'].join('\n\n'),
-          ),
-          size: const Size(600, 400),
-        ),
-      );
+      // Which is what keeps a selection whole, since a selection can only take
+      // text that has been built. See [kMawyViewerLazyFrom].
+      await tester.pumpWidget(host(MawyViewer(value: shorter), size: const Size(600, 400)));
       await tester.pumpAndSettle();
 
-      expect(documentText(tester), contains('Paragraph 0.'));
-      expect(documentText(tester), contains('Paragraph 11.'));
+      expect(documentText(tester), contains('Paragraph 0 '));
+      expect(documentText(tester), contains('Paragraph 149 '));
+    });
+
+    testWidgets('is selected and copied whole while it is under the threshold', (
+      WidgetTester tester,
+    ) async {
+      final List<String> copied = <String>[];
+
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
+        MethodCall call,
+      ) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map<Object?, Object?>)['text']! as String);
+        }
+
+        return null;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await tester.pumpWidget(host(MawyViewer(value: shorter), size: const Size(600, 400)));
+      await tester.pumpAndSettle();
+
+      final SelectableRegionState region =
+          tester.state(find.byType(SelectableRegion)) as SelectableRegionState;
+
+      // The focus goes where a drag would have put it, since the keys below are
+      // answered by the shortcuts around the document rather than by the region.
+      tester.widget<SelectableRegion>(find.byType(SelectableRegion)).focusNode?.requestFocus();
+      await tester.pump();
+
+      region.selectAll();
+      await tester.pumpAndSettle();
+
+      // The keys rather than the region's own method, because the keys are the
+      // path a reader takes and the one this package writes out itself.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      // The last paragraph is nowhere near the screen and is taken anyway,
+      // which is the whole point of the threshold.
+      expect(copied.single, contains('Paragraph 0 '));
+      expect(copied.single, contains('Paragraph 149 '));
     });
   });
 
