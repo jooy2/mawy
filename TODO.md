@@ -23,32 +23,32 @@ here because it is longer than a session, and it comes back out of this file
 once the list is empty — what survives it belongs in the sections below.
 
 What has come off it so far is every bug the read found in the React package,
-the three prototype-lookup holes, and the whole accessibility run in both: the
-keyboard trap on the Flutter source surface, the formatting shortcuts it did not
-have, headings that were not headings to a screen reader, and the several
-smaller things a keyboard or a screen reader could not reach on either side.
-Each is a commit with the test that fails without it, and each has a line in the
-changelog of the package it landed in.
+the three prototype-lookup holes, the whole accessibility run in both — the
+keyboard trap on the Flutter source surface, the formatting shortcuts it did
+not have, headings that were not headings to a screen reader, and the several
+smaller things a keyboard or a screen reader could not reach on either side —
+and the React performance work down to the ones that are a decision: the two
+walks over the whole document on every keystroke, the listeners that came off
+the element and went back on for each of them, the reader that built a line a
+character at a time, the folding that did the same, the undo history that had a
+depth and no size, the highlighter asked for once per render, and the two places
+where reading a document cost the square of what was in it. Each is a commit
+with the test that fails without it, and each has a line in the changelog of the
+package it landed in.
 
-Three lines came off it for the other reason — the read was wrong about them,
-and they are written down under "Deliberate" below rather than left looking
-undone. Two more were closed by a decision rather than by a change and are
-there as well.
+Four lines came off it for the other reason — the read was wrong about them, or
+measuring said the change would not pay — and they are written down under
+"Deliberate" below rather than left looking undone. Two more were closed by a
+decision rather than by a change and are there as well.
 
-Every line still here has been read in the code. `?` marks the seven that are a
+Every line still here has been read in the code. `?` marks the ones that are a
 decision before they are a change: a render structure, an anchor's name, the
 size of a public API. Those are last, and they are not to be started without an
 answer.
 
 ### packages/react
 
-- Performance — `?R1` block-level memo boundaries, `?R2` a windowed source pane,
-  `R3` line splitting is linear per piece, `R4` `domAt` walks the whole document,
-  `R5` `runs(root)` on every backspace, `R6` listeners re-bound per keystroke,
-  `R7` `read()` builds a line a character at a time, `R8` the history has no byte
-  ceiling, `R9` a lowercased copy per search, `R10` the highlighter effect re-runs
-  per render, `R11` footnote slugs collide in quadratic time, `R12` definitions
-  re-slice the paragraph, `R13` a span per code token.
+- Performance — `?R1` block-level memo boundaries, `?R2` a windowed source pane.
 - SEO and accessibility — `?R16` heading `id`s collide between two viewers,
   `?R25` no server-only render path.
 - Security — `R29` the sanitiser round-trips through a string, `R30` `id` and
@@ -60,8 +60,7 @@ answer.
   `R38` an effect that allocates per render.
 - Bugs — `R59` text dragged from one place in the drawn document to another is
   copied rather than moved.
-- Tests — `R55` a large document, `R56` the history's ceiling, `R57` the
-  sanitiser as a fixed point.
+- Tests — `R55` a large document, `R57` the sanitiser as a fixed point.
 
 ### packages/flutter
 
@@ -85,6 +84,17 @@ answer.
   image failure path, `F43` a run of scroll events.
 
 ## Confirmed
+
+- **The two packages disagree about `İ` in a case-insensitive search.** Folding
+  keeps a character that would change length, and `İ` is that character in
+  JavaScript — `'İ'.toLowerCase()` is `i` and a combining dot, two characters —
+  so React leaves it alone and a search for `istanbul` does not find
+  `İstanbul`. Dart's `toLowerCase` drops the dot instead, one character for one,
+  so Flutter folds it to `i` and does find it. Both files say in their own doc
+  comment that `İ` matches only itself, and one of them is wrong about its own
+  code. `search.dart` is not covered by the parity diff, which is the parsers
+  only, and there is no Dart test over the pure functions in it at all — a twin
+  of `test/internal/search.test.ts` is what would have caught this.
 
 - **The Flutter preview does not follow the site's own light/dark switch.** The
   React demos take `colorScheme` as a prop and the site drives it; the framed
@@ -124,6 +134,14 @@ answer.
   decision, and `docs/*/guide/editor.md` gives the reason under the toolbar —
   a row that scrolls under a finger is what a toolbar does on a touch screen,
   and a menu is what one does on a page with a pointer.
+- **One `<span>` per coloured token in a code block.** The read of both packages
+  had merging the adjacent ones of the same kind down as a way to draw fewer
+  elements. Measured against the highlighter this package ships, a sample of
+  TypeScript came out as forty-four tokens with no two of the same kind next to
+  each other, so there is nothing to merge and the change would be code written
+  for a highlighter somebody else might write. Unkinded tokens are already drawn
+  as the characters they are rather than wrapped.
+
 - **What the viewer's find bar does not search**, in `find.ts` and `find.dart`.
   A match cannot straddle two drawn runs, so `hello` is not found across
   `he**llo**`; a fenced code block is not searched at all. Both are written down
