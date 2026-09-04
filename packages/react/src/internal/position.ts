@@ -169,6 +169,40 @@ function linesOf(
 }
 
 /**
+ * The innermost thing drawn from a place holding `offset`, inside this element.
+ *
+ * Descended into rather than searched for: an element that says which
+ * characters it was drawn from was drawn from all of them, so nothing inside
+ * one whose range misses the offset can hold it either, and that subtree is
+ * stepped over whole. What is walked is the way down to the answer, not the
+ * document.
+ */
+function drawnAt(element: Element, offset: number): Element | null {
+  for (let child = element.firstElementChild; child; child = child.nextElementSibling) {
+    const range = rangeOf(child);
+
+    if (range && (offset < range.start || range.end < offset)) {
+      continue;
+    }
+
+    // A wrapper the renderer put in — the box a wide table scrolls inside —
+    // carries no range of its own and is not the answer, but what it holds may
+    // be. Nothing found under one goes back to looking at its siblings.
+    const deeper = drawnAt(child, offset);
+
+    if (deeper) {
+      return deeper;
+    }
+
+    if (range) {
+      return child;
+    }
+  }
+
+  return null;
+}
+
+/**
  * The place on the page a position in the document is drawn at — `sourceAt`
  * read the other way, which is how a caret survives the document being parsed
  * and drawn again underneath it.
@@ -184,15 +218,7 @@ export function domAt(
   offset: number,
   text: string
 ): { node: Node; offset: number } | null {
-  let host: Element = root;
-
-  for (const element of root.querySelectorAll('[data-mawy-range]')) {
-    const range = rangeOf(element);
-
-    if (range && range.start <= offset && offset <= range.end && host.contains(element)) {
-      host = element;
-    }
-  }
+  const host: Element = drawnAt(root, offset) ?? root;
 
   // The root's own document rather than the global one, which is what every
   // other place in this library that reaches for a document uses. An editor

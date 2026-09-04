@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { MawyViewer } from 'mawy-react';
-import { sourceAt } from '../../src/internal/position.js';
+import { domAt, sourceAt } from '../../src/internal/position.js';
 
 /**
  * A place on the page, read back as a place in the document.
@@ -111,5 +111,67 @@ describe('a place that is not text', () => {
     outside.textContent = 'elsewhere';
 
     expect(sourceAt(screen.container, outside.firstChild as Node, 0, 'text')).toBeNull();
+  });
+});
+
+/**
+ * The mapping read the other way, which is what puts the caret back after the
+ * document has been parsed and drawn again underneath it.
+ *
+ * The way down is a descent rather than a search: an element says which
+ * characters it was drawn from, so nothing inside one whose range misses the
+ * offset can hold it. What the tests below pin is that the descent still lands
+ * where the search did — inside the innermost run, and past a wrapper the
+ * renderer put in that carries no range of its own.
+ */
+describe('a place in the document, read as a place on the page', () => {
+  /** The text and the offset `domAt` came back with, in a shape to assert on. */
+  const drawn = (container: HTMLElement, source: string, offset: number) => {
+    const found = domAt(container, offset, source);
+
+    return found && [(found.node as Text).data, found.offset];
+  };
+
+  it('lands in the run the offset is inside, not in the one before it', async () => {
+    const source = 'Text with **bold** and more.';
+    const screen = await render(<MawyViewer value={source} />);
+
+    expect(drawn(screen.container, source, source.indexOf('bold'))).toEqual(['bold', 0]);
+    expect(drawn(screen.container, source, source.indexOf('bold') + 2)).toEqual(['bold', 2]);
+    expect(drawn(screen.container, source, 5)).toEqual(['Text with ', 5]);
+  });
+
+  it('descends past a wrapper that was not drawn from anywhere', async () => {
+    // The box a wide table scrolls inside has no range on it, and the cells
+    // underneath it do.
+    const source = '| head | other |\n| - | - |\n| cell | more |';
+    const screen = await render(<MawyViewer value={source} />);
+
+    expect(screen.container.querySelector('.mawy-md-table-scroll')).not.toBe(null);
+    expect(drawn(screen.container, source, source.indexOf('cell'))).toEqual(['cell', 0]);
+  });
+
+  it('goes into the block the offset is in and no further, across a long document', async () => {
+    const source = Array.from({ length: 40 }, (_, index) => `Paragraph ${index}.`).join('\n\n');
+    const screen = await render(<MawyViewer value={source} />);
+
+    expect(drawn(screen.container, source, source.indexOf('Paragraph 39.'))).toEqual([
+      'Paragraph 39.',
+      0
+    ]);
+  });
+
+  it('falls back to the nearest place before one nothing was drawn from', async () => {
+    // Past the end of the document, and inside the markers of a bold run: both
+    // are places a caret cannot go, and the answer is the last one it can.
+    const screen = await render(<MawyViewer value="**bold**" />);
+
+    expect(drawn(screen.container, '**bold**', 99)).toEqual(['bold', 4]);
+    // Between the two asterisks there is nothing drawn, so the answer is the
+    // element they were drawn as, in front of everything in it.
+    expect(domAt(screen.container, 1, '**bold**')).toEqual({
+      node: screen.container.querySelector('strong'),
+      offset: 0
+    });
   });
 });

@@ -12,6 +12,8 @@
 
 ### Changed
 
+- **Putting the caret back after an edit no longer reads the whole document.** In `wysiwyg` the document is parsed and drawn again under the caret on every keystroke, and finding where the caret goes started by looking at every element on the page — so the cost of typing grew with the length of the file rather than with the size of the edit. An element says which characters it was drawn from, which means nothing inside one that misses the caret can hold it: those are stepped over whole now, and what is walked is the way down to the block being typed in.
+
 - **Typing with the find bar open costs the same whatever it found.** Every line of the source surface looked through every match to work out which of them were on it, so a common word in a long document turned each keystroke into the length of the document times the number of matches — and the editor went stiff exactly when somebody was reading the results. The matches are cut against the lines once now, in one walk down both, and each line is handed only its own.
 
 ### Fixed
