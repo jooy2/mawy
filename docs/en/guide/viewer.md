@@ -355,13 +355,15 @@ A viewer renders content that the person running it did not write, so the defaul
 | --- | --- |
 | `'escape'` _(default)_ | the characters it was written with, shown as text |
 | `'sanitize'` | a real `<div>`, with everything outside an allowlist of elements, attributes and URL schemes removed |
-| `'raw'` | a real `<div>`, exactly as written |
+| `'raw'` | a real `<div>`, exactly as written — **including anything in it that runs** |
 
 `'sanitize'` parses with `DOMParser` rather than with a regular expression, on purpose: HTML's error recovery is the attack surface, and the only parser that agrees with a browser about what `<img src=x onerror=alert(1)>` means is a browser's. Where there is no `DOMParser` — a server render — it falls back to showing the markup rather than guessing.
 
 Which makes the browser's first paint the server's answer as well, and the elements arrive on the render after it. That is deliberate: drawing them straight away would be React finding elements where the server sent characters, which is a hydration mismatch. An application that never renders on a server never hydrates, and there its first render is already the browser's — nothing is deferred and nothing flashes.
 
-`'raw'` makes the caller responsible for the content. A report about rendering untrusted Markdown with it set is [out of scope](https://github.com/jooy2/mawy/blob/main/SECURITY.md) as a vulnerability, because it is the documented meaning of the value.
+`'raw'` removes nothing and checks nothing. A `<script>` in the document runs, an `onerror` on an image runs, an `<iframe>` loads — all of it in the page's own origin, with the page's own cookies and whatever the signed-in reader can reach. **Anybody who can put characters into the document can do anything the application can do**, which for a document somebody else wrote is the whole of it: read the session, call the API as that reader, rewrite the page.
+
+Set it where the document is the application's own, or has already been made safe by something upstream that the application trusts. A report about rendering untrusted Markdown with it set is [out of scope](https://github.com/jooy2/mawy/blob/main/SECURITY.md) as a vulnerability, because it is the documented meaning of the value. `'sanitize'` is the setting for a document that came from somewhere else.
 
 :::
 

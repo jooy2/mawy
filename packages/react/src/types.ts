@@ -337,9 +337,14 @@ export interface MawyTypography {
  *   and the only one that is safe without qualification.
  * - `sanitize` — it is drawn, with everything outside an allowlist of elements,
  *   attributes and URL schemes removed first.
- * - `raw` — it is drawn as written, and the caller owns what happens next. A
- *   report about rendering untrusted Markdown with this set is not a
- *   vulnerability in Mawy; it is the documented meaning of the value.
+ * - `raw` — it is drawn as written. Nothing is removed and nothing is checked:
+ *   a `<script>` in the document runs, an `onerror` on an image runs, an
+ *   `<iframe>` loads, and all of it in the page's own origin with the page's
+ *   own cookies. Anybody who can put characters into the document can do
+ *   anything the application can do. Set it for documents the application
+ *   wrote or has already made safe itself, and for nothing else. A report
+ *   about rendering untrusted Markdown with this set is not a vulnerability
+ *   in Mawy; it is the documented meaning of the value.
  *
  * None of the three affects links. A `[click](javascript:…)` is refused under
  * every policy, because it is Markdown rather than HTML and switching the HTML
