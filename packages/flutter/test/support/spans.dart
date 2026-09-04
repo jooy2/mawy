@@ -11,11 +11,20 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/src/internal/toolbar.dart';
 
+/// Every `Text` the tree holds, drawn or not.
+///
+/// `skipOffstage: false`, because the viewer's document is a lazy list: a block
+/// below the fold is built and kept — that is what the cache extent is for — and
+/// then not painted, which is exactly what offstage means. A finder that skips
+/// those is asking what the reader can see this instant, and what these helpers
+/// are for is asking what the viewer made of the Markdown.
+Finder _texts() => find.byType(Text, skipOffstage: false);
+
 /// Everything the tree says, in the order it says it.
 String documentText(WidgetTester tester) {
   final StringBuffer out = StringBuffer();
 
-  for (final Element element in find.byType(Text).evaluate()) {
+  for (final Element element in _texts().evaluate()) {
     final Text text = element.widget as Text;
 
     out.write(text.data ?? text.textSpan?.toPlainText() ?? '');
@@ -53,7 +62,7 @@ TextStyle? styleOf(WidgetTester tester, String saying) {
     }
   }
 
-  for (final Element element in find.byType(Text).evaluate()) {
+  for (final Element element in _texts().evaluate()) {
     final Text text = element.widget as Text;
     final InlineSpan? span = text.textSpan;
 
@@ -90,7 +99,7 @@ GestureRecognizer? recognizerOf(WidgetTester tester, String saying) {
     }
   }
 
-  for (final Element element in find.byType(Text).evaluate()) {
+  for (final Element element in _texts().evaluate()) {
     final InlineSpan? span = (element.widget as Text).textSpan;
 
     if (span != null) {

@@ -273,10 +273,7 @@ void main() {
       expect(landed, isNotNull);
       // Inside the document rather than inside the panel — the entry it was
       // pressed on says `Second` too, so the word alone proves nothing.
-      expect(
-        find.descendant(of: find.byType(SingleChildScrollView), matching: here),
-        findsOneWidget,
-      );
+      expect(find.descendant(of: find.byType(CustomScrollView), matching: here), findsOneWidget);
       expect(find.descendant(of: here, matching: find.text('Second')), findsOneWidget);
     });
 

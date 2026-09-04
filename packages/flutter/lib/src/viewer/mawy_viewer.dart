@@ -304,9 +304,6 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   bool _matchCase = false;
   int _at = 0;
 
-  /// A key on each top-level block, so a match in one can be scrolled to.
-  final Map<int, GlobalKey> _blocks = <int, GlobalKey>{};
-
   /// Whether the toolbar was given a find button, which is what decides
   /// whether `Ctrl`+`F` belongs to this viewer as well.
   bool get _searchable => widget.toolbar.contains(MawyViewerToolbarItem.find);
@@ -458,9 +455,6 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     _drawn = null;
     // One per top-level block, and one more where the footnotes go under them.
     _offsets.reset(_document.root.children.length + (_document.footnotes.isEmpty ? 0 : 1));
-    // Per position in the document, so a document with fewer blocks in it than
-    // the last one leaves keys behind for positions that no longer exist.
-    _blocks.clear();
     _dropAnchors();
     widget.anchors
       ?..reset()
@@ -920,12 +914,14 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       _finding,
     ));
     final double? measure = type.measure.width;
-    final EdgeInsetsGeometry padding = widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96);
-
-    // What sits above the first block, which is half of where every block is.
     // Resolved rather than read off, because a padding written the way a
     // right-to-left application writes it has no `top` until it is.
-    _offsets.lead = padding.resolve(Directionality.of(context)).top;
+    final EdgeInsets lead = (widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96)).resolve(
+      Directionality.of(context),
+    );
+
+    // What sits above the first block, which is half of where every block is.
+    _offsets.lead = lead.top;
 
     return Container(
       color: tokens.background,
@@ -1053,23 +1049,61 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
                               // toolbar it did not design. Dragging selects, a
                               // double tap takes the word, and the keys above copy.
                               selectionControls: emptyTextSelectionControls,
-                              child: SingleChildScrollView(
-                                controller: _scroller,
-                                padding: padding,
-                                child: MawyWheelScroll(
-                                  controller: _scroller,
-                                  child: Center(
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxWidth: measure ?? double.infinity,
+                              child: LayoutBuilder(
+                                builder: (BuildContext context, BoxConstraints box) {
+                                  // The column of prose is centred by padding
+                                  // rather than by a `Center` around it: what
+                                  // scrolls is a list of slivers now, and a
+                                  // sliver is laid out across the whole width
+                                  // it is given.
+                                  final double inside = box.maxWidth - lead.horizontal;
+                                  final double side = measure == null || inside <= measure
+                                      ? 0
+                                      : (inside - measure) / 2;
+
+                                  return Stack(
+                                    children: <Widget>[
+                                      CustomScrollView(
+                                        controller: _scroller,
+                                        // Three screens either way stay built.
+                                        // What that buys is a selection dragged
+                                        // past the edge of the view: a lazy
+                                        // list can only give up the text it is
+                                        // holding, and this is how much of the
+                                        // document it holds.
+                                        scrollCacheExtent: const ScrollCacheExtent.viewport(3),
+                                        slivers: <Widget>[
+                                          SliverPadding(
+                                            padding: lead + EdgeInsets.symmetric(horizontal: side),
+                                            sliver: SliverList(
+                                              delegate: SliverChildBuilderDelegate(
+                                                (BuildContext _, int index) => drawn[index],
+                                                childCount: drawn.length,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: drawn,
+                                      // The wheel has to be met before the
+                                      // scroll view registers for the same
+                                      // signal, since the resolver hands it to
+                                      // whoever registered first — and a signal
+                                      // is offered from the innermost target
+                                      // outwards. Inside the content is where
+                                      // that was; over the whole view is where
+                                      // it goes now that the content is a
+                                      // sliver. It is translucent and listens
+                                      // for nothing else, so everything under
+                                      // it is hit exactly as it was.
+                                      Positioned.fill(
+                                        child: MawyWheelScroll(
+                                          controller: _scroller,
+                                          child: const SizedBox.expand(),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ),
@@ -1099,17 +1133,6 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
 
       if (places != null) {
         drawn[index] = KeyedSubtree(key: places.keyFor(block.range.start), child: drawn[index]);
-      }
-
-      // Only while the bar is open, so that a viewer nobody is searching keeps
-      // the tree it had. The keys are per position and stay put as matches are
-      // stepped through, which is the difference between scrolling to a block
-      // and rebuilding it on every press of next.
-      if (_finding) {
-        drawn[index] = KeyedSubtree(
-          key: _blocks.putIfAbsent(index, GlobalKey.new),
-          child: drawn[index],
-        );
       }
 
       if (block is MdHeading) {

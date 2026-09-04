@@ -91,6 +91,10 @@ The source surface is the platform's own, and stays that way. A text field scrol
 
 **The document is text a reader can take.** Drag across it and it selects, and `Ctrl`/`Cmd`+`C` copies what was taken. That is worth saying out loud here because it is not free: a document drawn as widgets is a page nothing selects unless it is put inside a region that says so, and drawing it as widgets is what makes the safe default free in the first place. There are no handles and no context menu — both of those are Material's or Cupertino's, and this package draws its own everything else — so the keys are written out for the same reason `Enter` and the space bar are.
 
+There is one edge to that, and it comes from the document being a lazy list: only the blocks near the view are built, so a selection can only take text the list is still holding. Three screens either way are kept, which is past anything a hand drags in one movement — and the toolbar's copy button copies the whole document from the Markdown rather than from the page, so taking all of a long document never needed a selection anyway.
+
+**A long document is built where it can be seen.** Blocks come and go as the reader scrolls, so what a five-thousand-line document costs to draw, to lay out again when the type changes, and to hold in memory is what a screenful costs rather than what the document costs. Nothing about this is a setting: where every block sits is recorded as it is laid out, which is what lets the outline, the find bar and `anchors` keep answering for blocks that are not on the screen.
+
 :::
 
 ## What it reads

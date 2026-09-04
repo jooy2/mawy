@@ -247,7 +247,7 @@ void main() {
       again(() {});
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('go'), kind: PointerDeviceKind.mouse);
+      await tapWords(tester, find.textContaining('go'));
       await tester.pump();
 
       expect(opened, 'https://example.com');
@@ -565,9 +565,7 @@ void main() {
 
       // The first is the document's own; a code block scrolls sideways in one
       // of its own further down.
-      final ScrollController scroller = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
-          .controller!;
+      final ScrollController scroller = documentScroller(tester);
       final TestPointer pointer = TestPointer(1, PointerDeviceKind.mouse);
 
       pointer.hover(tester.getCenter(find.byType(MawyViewer)));
@@ -597,9 +595,7 @@ void main() {
         ),
       );
 
-      final ScrollController scroller = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
-          .controller!;
+      final ScrollController scroller = documentScroller(tester);
       final TestPointer pointer = TestPointer(1, PointerDeviceKind.mouse);
 
       pointer.hover(tester.getCenter(find.byType(MawyViewer)));
@@ -664,9 +660,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final ScrollController scroller = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
-          .controller!;
+      final ScrollController scroller = documentScroller(tester);
       // The block for `## Section 12`, by the character it starts at.
       final int start = document.indexOf('## Section 12');
       final double at = anchors.places().firstWhere(((int, double) place) => place.$1 == start).$2;
@@ -680,8 +674,8 @@ void main() {
       // is part of the block.
       final int block = anchors.places().indexWhere(((int, double) place) => place.$1 == start);
       final double top =
-          tester.getTopLeft(find.byType(MawyMeasured).at(block)).dy -
-          tester.getTopLeft(find.byType(SingleChildScrollView).first).dy;
+          tester.getTopLeft(measuredBlock(block)).dy -
+          tester.getTopLeft(find.byType(CustomScrollView)).dy;
 
       expect(top.abs(), lessThan(1));
     });
@@ -710,17 +704,70 @@ void main() {
       final int start = document.indexOf('## Section 16');
       final int block = anchors.places().indexWhere(((int, double) place) => place.$1 == start);
       final double top =
-          tester.getTopLeft(find.byType(MawyMeasured).at(block)).dy -
-          tester.getTopLeft(find.byType(SingleChildScrollView).first).dy;
+          tester.getTopLeft(measuredBlock(block)).dy -
+          tester.getTopLeft(find.byType(CustomScrollView)).dy;
 
-      final ScrollController scroller = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
-          .controller!;
+      final ScrollController scroller = documentScroller(tester);
 
       // A fiftieth of the view above it, which is the alignment the viewer asks
       // for so a heading does not sit against the top edge. The view is what
       // the toolbar left of the window rather than the window.
       expect(top, moreOrLessEquals(scroller.position.viewportDimension * 0.02, epsilon: 2));
+    });
+  });
+
+  /// The document is a lazy list: what it builds is what is near the view, and
+  /// what it holds beyond that is the cache extent. See `src/viewer/offsets.dart`
+  /// for how anything still knows where the rest of it is.
+  group('a document longer than the screen', () {
+    final String document = <String>[
+      for (int at = 0; at < 200; at += 1) '## Section $at\n\nA paragraph under section $at.\n',
+    ].join('\n');
+
+    testWidgets('builds a fraction of it rather than all of it', (WidgetTester tester) async {
+      await tester.pumpWidget(host(MawyViewer(value: document), size: const Size(600, 400)));
+      await tester.pumpAndSettle();
+
+      // Four hundred blocks in the document. What the tree holds is what the
+      // view and its cache reach, and it does not grow with the document.
+      expect(find.byType(MawyMeasured, skipOffstage: false).evaluate().length, lessThan(120));
+      expect(documentText(tester), contains('Section 0'));
+      expect(documentText(tester), isNot(contains('Section 199')));
+    });
+
+    testWidgets('builds what the reader scrolls to, and lets go of what they left', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(MawyViewer(value: document), size: const Size(600, 400)));
+      await tester.pumpAndSettle();
+
+      final ScrollController scroller = documentScroller(tester);
+
+      scroller.jumpTo(scroller.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      expect(documentText(tester), contains('Section 199'));
+      expect(documentText(tester), isNot(contains('Section 0')));
+    });
+
+    testWidgets('keeps the whole of a document that fits in the cache', (
+      WidgetTester tester,
+    ) async {
+      // What the cache extent buys, said as the thing it is for: a selection
+      // dragged past the edge of the view can only take text the list is still
+      // holding, so a document of this size is one a reader can select all of.
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: <String>[for (int at = 0; at < 12; at += 1) 'Paragraph $at.'].join('\n\n'),
+          ),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(documentText(tester), contains('Paragraph 0.'));
+      expect(documentText(tester), contains('Paragraph 11.'));
     });
   });
 
@@ -1009,9 +1056,7 @@ void main() {
 
       expect(marked(), 'Chapter 1');
 
-      final ScrollController scroller = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
-          .controller!;
+      final ScrollController scroller = documentScroller(tester);
 
       scroller.jumpTo(scroller.position.maxScrollExtent);
       await tester.pumpAndSettle();
@@ -1227,7 +1272,11 @@ void main() {
         ),
       );
 
-      final Offset at = tester.getCenter(find.textContaining('go'));
+      // The words rather than the middle of the block holding them: a block is
+      // as wide as the column it is in, so the middle of a short one is the
+      // space beside the words. See [tapWords].
+      final Rect box = tester.getRect(find.textContaining('go'));
+      final Offset at = Offset(box.left + 4, box.center.dy);
       final TestGesture gesture = await tester.startGesture(at, kind: PointerDeviceKind.mouse);
 
       addTearDown(gesture.removePointer);
@@ -1288,7 +1337,7 @@ void main() {
 
       expect(recognizerOf(tester, 'go'), same(first));
 
-      await tester.tap(find.textContaining('go'), kind: PointerDeviceKind.mouse);
+      await tapWords(tester, find.textContaining('go'));
       await tester.pump();
 
       expect(opened, 'https://example.com');
@@ -1349,12 +1398,36 @@ void main() {
       // With a mouse, because a mouse is what a reader on a desktop has and
       // because the selection this document sits in watches one: a region that
       // takes the tap for itself is a link nobody can follow.
-      await tester.tap(find.textContaining('go'), kind: PointerDeviceKind.mouse);
+      await tapWords(tester, find.textContaining('go'));
       await tester.pump();
 
       expect(opened, 'https://example.com');
     });
   });
+}
+
+/// The block at [index], which is only on the tree while it is near the view.
+Finder measuredBlock(int index) =>
+    find.byWidgetPredicate((Widget widget) => widget is MawyMeasured && widget.index == index);
+
+/// The scroller the document itself is in.
+///
+/// By its type rather than by position: a code block scrolls sideways in a box
+/// of its own, and the document's is the one that carries slivers.
+ScrollController documentScroller(WidgetTester tester) =>
+    tester.widget<CustomScrollView>(find.byType(CustomScrollView)).controller!;
+
+/// Taps the words a run of text is drawn with, rather than the middle of the
+/// box holding them.
+///
+/// A block of the document is as wide as the column it is in, the way a
+/// paragraph on a page is, so the middle of a short one is the space beside the
+/// words rather than the words. With a mouse, because a mouse is what a reader
+/// on a desktop has and because the selection the document sits in watches one.
+Future<void> tapWords(WidgetTester tester, Finder words) async {
+  final Rect box = tester.getRect(words);
+
+  await tester.tapAt(Offset(box.left + 4, box.center.dy), kind: PointerDeviceKind.mouse);
 }
 
 /// The background colour behind every run the find bar marked, in reading order.

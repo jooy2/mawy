@@ -35,6 +35,16 @@ class MawyBlockOffsets {
   /// Whether [_starts] is behind [_heights].
   bool _stale = true;
 
+  /// What to add to a running total to get a real scroll offset.
+  ///
+  /// The totals are exact only while every block above has been measured, and
+  /// under a lazy list most of them have not — so one block that *is* on the
+  /// screen says where it really is, and everything else is read off at that
+  /// distance from it. Near the view the answer is exact; far from it, it is
+  /// the sum of what the unbuilt blocks were guessed at, which is the same
+  /// thing a scrollbar over a lazy list is showing.
+  double _shift = 0;
+
   /// What is above the first block — the scroll view's own leading padding.
   double _lead = 0;
 
@@ -48,9 +58,13 @@ class MawyBlockOffsets {
       ..clear()
       ..addAll(List<double?>.filled(blocks, null));
     _stale = true;
+    _shift = 0;
   }
 
-  /// What sits above the first block. Set by the viewer from its own padding.
+  /// What sits above the first block — the scroll view's own leading padding.
+  double get lead => _lead;
+
+  /// Set by the viewer from its own padding.
   set lead(double value) {
     if (value != _lead) {
       _lead = value;
@@ -67,6 +81,17 @@ class MawyBlockOffsets {
 
     _heights[index] = height;
     _stale = true;
+  }
+
+  /// Where a block really ended up. Called from painting, which is the first
+  /// moment a lazy list has put its children anywhere.
+  void place(int index, double offset) {
+    if (index < 0 || index >= _heights.length) {
+      return;
+    }
+
+    _settle();
+    _shift = offset - _starts[index];
   }
 
   /// Whether every block has been laid out at least once.
@@ -122,14 +147,14 @@ class MawyBlockOffsets {
 
     _settle();
 
-    return _starts[index];
+    return _starts[index] + _shift;
   }
 
   /// How tall the document is, as far as anything knows.
   double get extent {
     _settle();
 
-    return _starts.isEmpty ? _lead : _starts.last;
+    return (_starts.isEmpty ? _lead : _starts.last) + _shift;
   }
 
   /// The last block that begins at or above [offset].
@@ -143,6 +168,7 @@ class MawyBlockOffsets {
 
     _settle();
 
+    final double at = offset - _shift;
     int low = 0;
     int high = _heights.length - 1;
     int found = 0;
@@ -150,7 +176,7 @@ class MawyBlockOffsets {
     while (low <= high) {
       final int middle = (low + high) ~/ 2;
 
-      if (_starts[middle] <= offset) {
+      if (_starts[middle] <= at) {
         found = middle;
         low = middle + 1;
       } else {
@@ -208,5 +234,34 @@ class _RenderMeasured extends RenderProxyBox {
   void performLayout() {
     super.performLayout();
     offsets.report(index, size.height);
+  }
+
+  /// Where a lazy list put this block, told to the ledger as it is drawn.
+  ///
+  /// A sliver writes the offset onto its child's parent data, and it is only
+  /// settled once the sliver has laid all of its children out — so it is read
+  /// here rather than in [performLayout], which runs before that. Painting is
+  /// also exactly the set of blocks worth asking about: the ones on the screen.
+  ///
+  /// Nothing to say inside a plain column, which puts its children somewhere
+  /// this cannot see and does not need to — every block there is measured, so
+  /// the running total is already the answer.
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    super.paint(context, offset);
+
+    for (RenderObject? at = this; at != null; at = at.parent) {
+      final Object? data = at.parentData;
+
+      if (data is SliverMultiBoxAdaptorParentData) {
+        final double? put = data.layoutOffset;
+
+        if (put != null) {
+          offsets.place(index, put + offsets.lead);
+        }
+
+        return;
+      }
+    }
   }
 }
