@@ -6,6 +6,8 @@
 
 ### Security
 
+- **Sanitised HTML is read again before it is handed over.** What leaves the sanitiser is a string, and the browser parses that string once more to put it on the page — so a tree walked and found safe can be written out as markup that comes back as a different tree. That gap is the whole of mutation XSS, and nothing about walking the first tree closes it. The markup is read until reading it again changes nothing, and markup that will not settle is drawn as the characters the author wrote rather than as elements. Ordinary markup settles on the second reading and most of it on the first.
+
 - **A directive named after a property every object has is a directive nobody registered.** `:::constructor` is spelled exactly the way a directive is spelled, and the registry an application passes is an ordinary object — so the name was answered with something off `Object.prototype`, React called it as a component, and the render threw. A document could take the page down by naming one of a dozen words.
 
   Names are looked up as own properties now, so `constructor`, `toString` and the rest are drawn as the characters they were written with, which is what every other unregistered name gets. Nothing changes for a name an application actually registered.

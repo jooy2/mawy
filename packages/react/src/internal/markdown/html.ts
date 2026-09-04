@@ -143,22 +143,51 @@ function walk(node: Node): void {
 }
 
 /**
+ * How many times the markup may be read before it has to have settled.
+ *
+ * Two is the ordinary answer — the first pass takes things out and closes what
+ * the author left open, and the second finds nothing to do. Anything still
+ * moving on the third is markup that reads differently every time it is read.
+ */
+const PASSES = 3;
+
+/**
  * A fragment of a document's own HTML, with everything this file does not
  * recognise taken out of it.
  *
+ * Read until reading it again changes nothing, and that is the point rather
+ * than thoroughness. What leaves here is a *string*, and the browser parses
+ * that string again to put it on the page — so a tree this file walked and
+ * found safe can serialise into markup that comes back as a different tree.
+ * That gap is the whole of mutation XSS, and the only way to know it is not
+ * open is to go round again and find the same characters.
+ *
  * Returns `null` where there is no `DOMParser` to do the parsing — a server
- * render, most likely. The caller shows the markup as text there rather than
- * guessing, because a sanitiser that falls back to "pass it through" is not
- * a sanitiser.
+ * render, most likely — and where the markup will not settle. The caller shows
+ * the markup as text in both cases, which is the honest answer to "this cannot
+ * be made safe" as much as to "this cannot be read here": a sanitiser that
+ * falls back to passing it through is not a sanitiser.
  */
 export function sanitizeHtml(html: string): string | null {
   if (typeof DOMParser === 'undefined') {
     return null;
   }
 
-  const parsed = new DOMParser().parseFromString(`<body>${html}`, 'text/html');
+  let text = html;
 
-  walk(parsed.body);
+  for (let pass = 0; pass < PASSES; pass += 1) {
+    const parsed = new DOMParser().parseFromString(`<body>${text}`, 'text/html');
 
-  return parsed.body.innerHTML;
+    walk(parsed.body);
+
+    const out = parsed.body.innerHTML;
+
+    if (out === text) {
+      return out;
+    }
+
+    text = out;
+  }
+
+  return null;
 }
