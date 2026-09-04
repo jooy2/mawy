@@ -454,6 +454,86 @@ void main() {
     });
   });
 
+  /// The pane beside the source, and what it does and does not redraw for.
+  group('the preview', () {
+    Widget? preview(WidgetTester tester) {
+      final Finder found = find.byType(MawyViewer);
+
+      return found.evaluate().isEmpty ? null : tester.widget(found);
+    }
+
+    testWidgets('is not redrawn for a caret that only moved', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: '# Title\n\nWords and more words.',
+            defaultMode: MawyEditorMode.split,
+          ),
+          size: const Size(900, 500),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Widget? first = preview(tester);
+
+      expect(first, isNotNull);
+
+      // A caret moving is still a rebuild of the editor — the status bar counts
+      // the selection and every toolbar button reads it — and the document
+      // beside it has not changed.
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 4);
+      await tester.pump();
+
+      expect(preview(tester), same(first));
+    });
+
+    testWidgets('is redrawn when the document or the setting under it changes', (
+      WidgetTester tester,
+    ) async {
+      late StateSetter again;
+      MawyTypography type = const MawyTypography();
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyEditor(
+                defaultValue: '# Title\n\nWords.',
+                defaultMode: MawyEditorMode.split,
+                typography: type,
+              );
+            },
+          ),
+          size: const Size(900, 500),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Widget? first = preview(tester);
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.value = const TextEditingValue(
+        text: '# Title\n\nWords and more.',
+        selection: TextSelection.collapsed(offset: 24),
+      );
+      await tester.pumpAndSettle();
+
+      expect(preview(tester), isNot(same(first)));
+      expect(documentText(tester), contains('Words and more.'));
+
+      final Widget? second = preview(tester);
+
+      again(() => type = const MawyTypography(fontSize: 21));
+      await tester.pumpAndSettle();
+
+      expect(preview(tester), isNot(same(second)));
+    });
+  });
+
   group('the gutter', () {
     testWidgets('numbers the lines, and gives a wrapped line one number', (
       WidgetTester tester,

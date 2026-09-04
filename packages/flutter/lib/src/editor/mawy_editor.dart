@@ -341,6 +341,71 @@ class _MawyEditorState extends State<MawyEditor> {
   String _replacement = '';
   bool _matchCase = false;
 
+  /// The preview, kept as the same widget while nothing it draws from changes.
+  ///
+  /// A caret that only moved is still a rebuild here — the status bar counts
+  /// the selection and every toolbar button reads it — and a child handed a
+  /// *new* widget rebuilds even when every field on it is the same as the last
+  /// one's. Handed the same object it does not rebuild at all, so moving the
+  /// caret through a long document stops redrawing the document beside it.
+  Widget? _preview;
+  Object? _previewFrom;
+
+  /// What the pane beside the source is, this build.
+  ///
+  /// A document with nothing in it draws nothing, and a pane drawing nothing
+  /// beside an empty editor is a rectangle that says less than a sentence
+  /// would. Where the application knows how to open one, this is the way in —
+  /// the React package's empty state, in the pane the document will appear in.
+  Widget _previewOf(MawyTokens tokens, MawyStrings strings) {
+    final bool empty = _value.trim().isEmpty && widget.onOpen != null && !widget.readOnly;
+    // Everything either branch draws from. Anything left out of this is
+    // something the preview would go stale about, so it is written out in full
+    // rather than narrowed to what seems likely to change.
+    final Object from = (
+      empty,
+      _value,
+      tokens,
+      strings,
+      widget.parse,
+      _scheme,
+      widget.tokens,
+      _type,
+      widget.locale,
+      widget.directives,
+      widget.highlight,
+      widget.onLinkTap,
+      widget.onOpen,
+      widget.readOnly,
+    );
+
+    if (_preview != null && _previewFrom == from) {
+      return _preview!;
+    }
+
+    _previewFrom = from;
+    _preview = empty
+        ? _Empty(tokens: tokens, strings: strings, onOpen: widget.onOpen!)
+        : MawyViewer(
+            value: _value,
+            parse: widget.parse,
+            colorScheme: _scheme,
+            tokens: widget.tokens,
+            typography: _type,
+            toolbar: const <MawyViewerToolbarItem>[],
+            locale: widget.locale,
+            directives: widget.directives,
+            highlight: widget.highlight,
+            onLinkTap: widget.onLinkTap,
+            scrollController: _previewScroll,
+            // Where each block of the drawn document ended up, which is half of
+            // what lines the two panes up. See `_syncScroll`.
+            anchors: _anchors,
+          );
+
+    return _preview!;
+  }
+
   String get _value => _controller.text;
   MawyEditorMode get _current => widget.mode ?? _mode;
 
@@ -745,28 +810,7 @@ class _MawyEditorState extends State<MawyEditor> {
       currentMatch: _currentMatch(matches),
     );
 
-    // A document with nothing in it draws nothing, and a pane drawing nothing
-    // beside an empty editor is a rectangle that says less than a sentence
-    // would. Where the application knows how to open one, this is the way in —
-    // the React package's empty state, in the pane the document will appear in.
-    final Widget preview = _value.trim().isEmpty && widget.onOpen != null && !widget.readOnly
-        ? _Empty(tokens: tokens, strings: strings, onOpen: widget.onOpen!)
-        : MawyViewer(
-            value: _value,
-            parse: widget.parse,
-            colorScheme: _scheme,
-            tokens: widget.tokens,
-            typography: _type,
-            toolbar: const <MawyViewerToolbarItem>[],
-            locale: widget.locale,
-            directives: widget.directives,
-            highlight: widget.highlight,
-            onLinkTap: widget.onLinkTap,
-            scrollController: _previewScroll,
-            // Where each block of the drawn document ended up, which is half of
-            // what lines the two panes up. See `_syncScroll`.
-            anchors: _anchors,
-          );
+    final Widget preview = _previewOf(tokens, strings);
 
     final Widget editor = Container(
       color: tokens.background,
