@@ -302,6 +302,33 @@ describe('footnotes', () => {
     expect(parseMarkdown(quoted).footnotes.map((each) => each.label)).toEqual(['b']);
   });
 
+  /**
+   * Two labels can slug to the same word, and an `id` given out twice is a link
+   * that lands on whichever the browser met first. The note's own number is
+   * what a second one is called after, and the one case that was not enough is
+   * a document that wrote that name out itself: `[^b-2]` took `b-2` before the
+   * second `b` came to be called it, and both went on the page as `b-2`.
+   */
+  it('gives every footnote a name of its own', () => {
+    const slugs = (source: string) => parseMarkdown(source).footnotes.map((each) => each.slug);
+
+    expect(slugs('A[^ab] B[^a!b] C[^a?b]\n\n[^ab]: 1\n\n[^a!b]: 2\n\n[^a?b]: 3')).toEqual([
+      'ab',
+      'ab-2',
+      'ab-3'
+    ]);
+
+    expect(slugs('A[^b-2] B[^b] C[^b!]\n\n[^b-2]: 1\n\n[^b]: 2\n\n[^b!]: 3')).toEqual([
+      'b-2',
+      'b',
+      'b-3'
+    ]);
+
+    // A label with nothing in it to slug is still a name, and still a distinct
+    // one for each of them.
+    expect(slugs('A[^!] B[^?]\n\n[^!]: 1\n\n[^?]: 2')).toEqual(['footnote', 'footnote-2']);
+  });
+
   it('says nothing in a heading it is written in', () => {
     // A footnote's number is not part of what the heading says, so the slug and
     // the outline are what they would have been without it.

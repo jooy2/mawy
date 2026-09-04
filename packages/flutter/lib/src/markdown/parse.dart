@@ -340,6 +340,7 @@ void _collectFootnotes(
   Map<String, MdFootnoteDefinition> defined,
   List<MdFootnoteDefinition> into,
   Map<String, int> taken,
+  Set<String> claimed,
 ) {
   for (final MdNode node in nodes) {
     if (node is MdFootnoteReference) {
@@ -357,28 +358,37 @@ void _collectFootnotes(
       if (mentions == 0) {
         final String slugged = slugify(node.label);
         final String base = slugged.isEmpty ? 'footnote' : slugged;
-        final bool clash = into.any(
-          (MdFootnoteDefinition each) => each.slug == base || each.slug.startsWith('$base-'),
-        );
 
         footnote.number = into.length + 1;
         // Two labels can slug to the same word, and two anchors with the same
-        // name is a link that lands on whichever came first.
-        footnote.slug = clash ? '$base-${footnote.number}' : base;
+        // name is a link that lands on whichever came first. The note's own
+        // number is what a second one is called after, since that is what the
+        // note is called; a document contrived enough to have taken that as
+        // well goes on counting until something is free.
+        String slug = base;
+        int attempt = footnote.number;
+
+        while (claimed.contains(slug)) {
+          slug = '$base-$attempt';
+          attempt += 1;
+        }
+
+        footnote.slug = slug;
+        claimed.add(slug);
         into.add(footnote);
         // The footnote's own text may point at another one, and that one is
         // numbered here rather than after whatever mentions it further down.
-        _collectFootnotes(footnote.children, defined, into, taken);
+        _collectFootnotes(footnote.children, defined, into, taken, claimed);
       }
 
       continue;
     }
 
     if (node is MdContainerDirective) {
-      _collectFootnotes(node.label, defined, into, taken);
+      _collectFootnotes(node.label, defined, into, taken, claimed);
     }
 
-    _collectFootnotes(_childrenOf(node), defined, into, taken);
+    _collectFootnotes(_childrenOf(node), defined, into, taken, claimed);
   }
 }
 
@@ -415,7 +425,7 @@ MdDocument parseMarkdown(String source, [MawyParseOptions options = const MawyPa
   final MdRoot root = MdRoot(MdRange(0, reading.length), children);
   final List<MdFootnoteDefinition> used = <MdFootnoteDefinition>[];
 
-  _collectFootnotes(children, footnotes, used, <String, int>{});
+  _collectFootnotes(children, footnotes, used, <String, int>{}, <String>{});
 
   if (reading.breaks.isNotEmpty) {
     _relocate(root, reading);

@@ -216,6 +216,29 @@ void main() {
       expect(parseMarkdown(source).root.children.length, 1);
     });
 
+    /// Two labels can slug to the same word, and a name given out twice is a
+    /// link that lands on whichever came first. The note's own number is what a
+    /// second one is called after, and the one case that was not enough is a
+    /// document that wrote that name out itself.
+    test('gives every footnote a name of its own', () {
+      List<String> slugs(String source) =>
+          parseMarkdown(source).footnotes.map((MdFootnoteDefinition each) => each.slug).toList();
+
+      expect(slugs('A[^ab] B[^a!b] C[^a?b]\n\n[^ab]: 1\n\n[^a!b]: 2\n\n[^a?b]: 3'), <String>[
+        'ab',
+        'ab-2',
+        'ab-3',
+      ]);
+
+      expect(slugs('A[^b-2] B[^b] C[^b!]\n\n[^b-2]: 1\n\n[^b]: 2\n\n[^b!]: 3'), <String>[
+        'b-2',
+        'b',
+        'b-3',
+      ]);
+
+      expect(slugs('A[^!] B[^?]\n\n[^!]: 1\n\n[^?]: 2'), <String>['footnote', 'footnote-2']);
+    });
+
     test('leaves a mention with nothing to point at as the text it is', () {
       final MdDocument document = parseMarkdown('See [^nope] here.');
 

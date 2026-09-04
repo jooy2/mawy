@@ -6,9 +6,13 @@
 
 ### Changed
 
+- **Numbering the footnotes costs what the document has rather than the square of it.** Each new footnote asked every one already numbered whether it had taken the name — so a document of a thousand notes asked half a million questions to number them. Each name is written down as it is given out and the question is asked once.
+
 - **Finding without case sensitivity folds the document in one go.** The copy the search reads was built a character at a time so that a letter which changes length in lower case could be left alone, which is a string made and thrown away for every character in the document — on every keystroke in the find box. A text with nothing in it that needs that treatment is folded in the one call the platform has, and the answer is the same either way.
 
 ### Fixed
+
+- **Two footnotes can no longer be given the same name.** A label is turned into an anchor by slugging it, and two labels that slug to the same word are told apart by the note's number — except where the document had already written that name out itself: `[^b-2]` took `b-2`, and the second `[^b]` was then called `b-2` as well. Two anchors with one name is a link that lands on whichever came first, which is the exact thing the numbering is there to prevent. A name that is taken is counted past now until one is free.
 
 - **A document somebody has clicked into scrolls with the keyboard.** The arrows and `Page Up`/`Page Down` did nothing: a browser scrolls a focused box without being asked and only a `WidgetsApp` does here, which this package does not require — the same reason `Enter` and the space bar are written out for every button it draws. A reader who asked the platform for less movement gets the jump rather than the glide.
 

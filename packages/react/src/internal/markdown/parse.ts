@@ -283,7 +283,9 @@ function collectFootnotes(
   defined: Map<string, MdFootnoteDefinition>,
   into: MdFootnoteDefinition[],
   /** How many times each label has been met so far. */
-  taken: Map<string, number>
+  taken: Map<string, number>,
+  /** Every slug given out, so that no two footnotes are given the same one. */
+  claimed: Set<string>
 ): void {
   for (const node of nodes) {
     if (node.type === 'footnoteReference') {
@@ -300,27 +302,38 @@ function collectFootnotes(
 
       if (mentions === 0) {
         const base = slugify(node.label) || 'footnote';
-        const clash = into.filter((each) => each.slug === base || each.slug.startsWith(`${base}-`));
 
         footnote.number = into.length + 1;
         // Two labels can slug to the same word, and two elements with the same
-        // `id` is a link that lands on whichever the browser met first.
-        footnote.slug = clash.length === 0 ? base : `${base}-${footnote.number}`;
+        // `id` is a link that lands on whichever the browser met first. The
+        // note's own number is what a second one is called after, since that is
+        // what the note is called; a document contrived enough to have taken
+        // that as well goes on counting until something is free.
+        let slug = base;
+        let attempt = footnote.number;
+
+        while (claimed.has(slug)) {
+          slug = `${base}-${attempt}`;
+          attempt += 1;
+        }
+
+        footnote.slug = slug;
+        claimed.add(slug);
         into.push(footnote);
         // The footnote's own text may point at another one, and that one is
         // numbered here rather than after whatever mentions it further down.
-        collectFootnotes(footnote.children as MdNode[], defined, into, taken);
+        collectFootnotes(footnote.children as MdNode[], defined, into, taken, claimed);
       }
 
       continue;
     }
 
     if (node.type === 'containerDirective') {
-      collectFootnotes(node.label as MdNode[], defined, into, taken);
+      collectFootnotes(node.label as MdNode[], defined, into, taken, claimed);
     }
 
     if ('children' in node) {
-      collectFootnotes(node.children as MdNode[], defined, into, taken);
+      collectFootnotes(node.children as MdNode[], defined, into, taken, claimed);
     }
   }
 }
@@ -352,7 +365,13 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
   const root: MdRoot = { type: 'root', range: { start: 0, end: reading.length }, children };
   const used: MdFootnoteDefinition[] = [];
 
-  collectFootnotes(children as MdNode[], footnotes, used, new Map<string, number>());
+  collectFootnotes(
+    children as MdNode[],
+    footnotes,
+    used,
+    new Map<string, number>(),
+    new Set<string>()
+  );
 
   if (reading.breaks.length > 0) {
     relocate(root, reading);
