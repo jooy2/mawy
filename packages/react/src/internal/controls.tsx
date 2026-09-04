@@ -356,6 +356,42 @@ export function Slider({
 }
 
 /** The caret a menu button carries, so a reader knows it opens something. */
+/**
+ * The file picker a button opens, drawn where it can be reached and not seen.
+ *
+ * A hidden `<input type="file">` rather than anything newer: it is the one way
+ * of asking for a file that every browser has, and it is the same in both
+ * components. `aria-hidden` and out of the tab order because the control a
+ * reader meets is the button that clicks it — this is only what that button
+ * clicks.
+ */
+export const FilePicker = React.forwardRef<
+  HTMLInputElement,
+  { accept: string; onFile: (file: File) => void }
+>(function FilePicker({ accept, onFile }, ref) {
+  return (
+    <input
+      ref={ref}
+      type="file"
+      className="mawy-file-input"
+      accept={accept}
+      tabIndex={-1}
+      aria-hidden="true"
+      onChange={(event) => {
+        const file = event.currentTarget.files?.[0];
+
+        if (file) {
+          onFile(file);
+        }
+
+        // Cleared, so that choosing the same file twice in a row is two events
+        // rather than one.
+        event.currentTarget.value = '';
+      }}
+    />
+  );
+});
+
 export function MenuCaret(): React.ReactElement {
   return <ChevronDownIcon className="mawy-icon mawy-caret" aria-hidden="true" />;
 }

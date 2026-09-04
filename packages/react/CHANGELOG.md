@@ -22,6 +22,8 @@
 
 - **Taking the link reference definitions off a paragraph is one pass over it.** Each definition was found by handing the pattern a fresh copy of everything left, so a block of two hundred definitions at the bottom of a README copied the block two hundred times. The scan starts where the last one ended.
 
+- **A font is asked for when the address changes rather than on every render.** The effect that fetches the chosen font's stylesheet depended on the whole `fonts` list, and `fonts` is written into the JSX the way the documentation shows it — a new array every render, and so an effect that ran on every one. It is keyed on the address now. The editor no longer rebuilds the record of the document as it was drawn on renders that changed neither the document nor the caret, either.
+
 - **The overflow menu is drawn when it is opened, not with the toolbar.** Every control the menu holds is already in the row, hidden, so that it can be measured — and it was drawn a second time into a menu nobody had opened, each of them asking again whether its command is in force. On every keystroke.
 
 - **Numbering the footnotes costs what the document has rather than the square of it.** Each new footnote asked every one already numbered whether it had taken the name — so a document of a thousand notes asked half a million questions to number them. Each name is written down as it is given out and the question is asked once.

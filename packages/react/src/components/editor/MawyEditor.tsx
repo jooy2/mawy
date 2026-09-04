@@ -40,6 +40,8 @@ import {
   undo,
   type MawyStep
 } from '../../internal/history.js';
+import { FilePicker } from '../../internal/controls.js';
+import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
@@ -293,7 +295,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   /** How many drops or pastes are still uploading, so one note covers them all. */
   const running = React.useRef(0);
   /** Enters and leaves counted, rather than trusted one at a time. */
-  const depth = React.useRef(0);
   /**
    * The find bar, which is closed until somebody asks for it.
    *
@@ -309,7 +310,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const [query, setQuery] = React.useState('');
   const [replacement, setReplacement] = React.useState('');
   const [matchCase, setMatchCase] = React.useState(false);
-  const [dragging, setDragging] = React.useState(false);
   const tips = useDismissableTips();
   /** What the editor is saying about an upload, under the document. */
   const [note, setNote] = React.useState<{ text: string; failed: boolean } | null>(null);
@@ -317,8 +317,20 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   React.useEffect(() => {
     notify.current = onChange;
     upload.current = onUploadImage;
-    drew.current = { value: text, ...selection };
   });
+
+  /**
+   * The document as it was last drawn, which is the step undo has to arrive at.
+   *
+   * Written when it changes rather than after every render. It used to sit in
+   * the effect above and build a fresh object each time, which is an object a
+   * render allocated and threw away for every render that changed neither the
+   * document nor the caret — a keystroke in the find box, a menu opening, a
+   * scroll.
+   */
+  React.useEffect(() => {
+    drew.current = { value: text, start: selection.start, end: selection.end };
+  }, [text, selection.start, selection.end]);
 
   const write = React.useCallback(
     (next: string) => {
@@ -793,78 +805,38 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * of text dragged in from another window is not a file, is not claimed, and
    * is still the surface's own business.
    */
-  const carriesFile = (event: React.DragEvent) => [...event.dataTransfer.types].includes('Files');
-
   const takesImage = () => Boolean(upload.current) && editable;
   const takesDocument = () => fileDrop && !readOnly;
 
-  const onDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!carriesFile(event)) {
-      return;
+  const { dragging, props: dragProps } = useFileDrag({
+    held: carriesFile,
+    taken: takesImage,
+    onDrop: (event) => {
+      const files = takesImage() ? imageFilesIn(event.dataTransfer) : [];
+
+      if (files.length) {
+        void addImages(files, dropPoint(event));
+
+        return;
+      }
+
+      const dropped = event.dataTransfer.files[0];
+      // Checked against the same list the picker offers: a drop had none, and
+      // a file that is plainly not a document became one.
+      const document_ =
+        takesDocument() && dropped && acceptsFile(dropped, accept) ? dropped : undefined;
+
+      if (document_) {
+        void read(document_);
+
+        return;
+      }
+
+      // Said rather than ignored: somebody who drops a document on an editor is
+      // asking for something, and there is a control that does it.
+      setNote({ text: strings.dropNotDocument, failed: true });
     }
-
-    event.preventDefault();
-    depth.current += 1;
-
-    // The veil says "drop to add", so it is only shown where that is true.
-    if (takesImage()) {
-      setDragging(true);
-    }
-  };
-
-  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!carriesFile(event)) {
-      return;
-    }
-
-    // Without this the browser opens the file itself, replacing the page.
-    event.preventDefault();
-    event.dataTransfer.dropEffect = takesImage() ? 'copy' : 'none';
-  };
-
-  const onDragLeave = () => {
-    // Dragging across a child fires leave on the parent, so the enters and the
-    // leaves are counted rather than trusted one at a time.
-    depth.current = Math.max(depth.current - 1, 0);
-
-    if (depth.current === 0) {
-      setDragging(false);
-    }
-  };
-
-  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!carriesFile(event)) {
-      return;
-    }
-
-    event.preventDefault();
-    depth.current = 0;
-    setDragging(false);
-
-    const files = takesImage() ? imageFilesIn(event.dataTransfer) : [];
-
-    if (files.length) {
-      void addImages(files, dropPoint(event));
-
-      return;
-    }
-
-    const dropped = event.dataTransfer.files[0];
-    // Checked against the same list the picker offers: a drop had none, and a
-    // file that is plainly not a document became one.
-    const document_ =
-      takesDocument() && dropped && acceptsFile(dropped, accept) ? dropped : undefined;
-
-    if (document_) {
-      void read(document_);
-
-      return;
-    }
-
-    // Said rather than ignored: somebody who drops a document on an editor is
-    // asking for something, and there is a control that does it.
-    setNote({ text: strings.dropNotDocument, failed: true });
-  };
+  });
 
   /**
    * A paste into the source, read back as Markdown where there is any to read.
@@ -1240,10 +1212,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       data-mawy-dragging={dragging ? 'true' : undefined}
       data-mawy-tips={tips.off ? 'off' : undefined}
       {...tips.props}
-      onDragEnter={onDragEnter}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      {...dragProps}
       onFocus={() => setFocused(true)}
       // `relatedTarget` is where the focus went. Inside, and it never left —
       // which is the whole of the difference between this and a blur, and what
@@ -1442,25 +1411,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         </p>
       ) : null}
 
-      <input
-        ref={picker}
-        type="file"
-        className="mawy-file-input"
-        accept={accept}
-        tabIndex={-1}
-        aria-hidden="true"
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0];
-
-          if (file) {
-            void read(file);
-          }
-
-          // Cleared, so that choosing the same file twice in a row is two
-          // events rather than one.
-          event.currentTarget.value = '';
-        }}
-      />
+      <FilePicker ref={picker} accept={accept} onFile={(file) => void read(file)} />
 
       {statusItems.length && (showSource || showDocument) ? (
         <MawyEditorStatus

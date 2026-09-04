@@ -18,6 +18,8 @@ import { MAWY_SYSTEM_FONTS } from '../../fonts.js';
 import { fontOf, loadFontStylesheet } from '../../internal/fonts.js';
 import { useCopy } from '../../internal/clipboard.js';
 import { useControlled } from '../../internal/controlled.js';
+import { FilePicker } from '../../internal/controls.js';
+import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { stringsFor } from '../../internal/i18n.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
@@ -249,13 +251,17 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
   // The chosen font, if it is one that has to arrive first. Opening the font
   // menu fetches the rest; this is for the one the document is already set in.
-  React.useEffect(() => {
-    const href = fontOf(type.fontFamily, fonts)?.href;
+  //
+  // Keyed on the address rather than on the list it was found in: `fonts` is
+  // written into the JSX in the way the documentation shows it, which makes it
+  // a new array on every render and this an effect that runs on every one.
+  const chosenFont = fontOf(type.fontFamily, fonts)?.href;
 
-    if (href) {
-      loadFontStylesheet(href);
+  React.useEffect(() => {
+    if (chosenFont) {
+      loadFontStylesheet(chosenFont);
     }
-  }, [fonts, type.fontFamily]);
+  }, [chosenFont]);
 
   const [outlineOpen, setOutlineOpen] = React.useState(false);
   /**
@@ -271,13 +277,11 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const [matchCase, setMatchCase] = React.useState(false);
   const [at, setAt] = React.useState(0);
   const [activeHeading, setActiveHeading] = React.useState<string | null>(null);
-  const [dragging, setDragging] = React.useState(false);
   const [copyState, copy] = useCopy();
   const tips = useDismissableTips();
 
   const scroller = React.useRef<HTMLDivElement>(null);
   const picker = React.useRef<HTMLInputElement>(null);
-  const depth = React.useRef(0);
 
   /**
    * The heading the reader asked for, until they scroll somewhere themselves.
@@ -562,63 +566,27 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
    * Dragging a file over
    * ------------------------------------------------------------------ */
 
-  const carriesFile = (event: React.DragEvent) => [...event.dataTransfer.types].includes('Files');
+  const { dragging, props: dragProps } = useFileDrag({
+    held: (event) => droppable && carriesFile(event),
+    taken: () => true,
+    onDrop: (event) => {
+      const file = event.dataTransfer.files[0];
 
-  const onDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!droppable || !carriesFile(event)) {
-      return;
+      // Checked against the same list the picker offers, so that a file which
+      // is plainly not a document is refused rather than shown as mojibake.
+      if (!file) {
+        return;
+      }
+
+      if (acceptsFile(file, accept)) {
+        void read(file);
+
+        return;
+      }
+
+      setReadError(strings.readFailed);
     }
-
-    event.preventDefault();
-    depth.current += 1;
-    setDragging(true);
-  };
-
-  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!droppable || !carriesFile(event)) {
-      return;
-    }
-
-    // Without this the browser opens the file itself, replacing the page.
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
-  };
-
-  const onDragLeave = () => {
-    // Dragging across a child fires leave on the parent, so the enters and the
-    // leaves are counted rather than trusted one at a time.
-    depth.current = Math.max(depth.current - 1, 0);
-
-    if (depth.current === 0) {
-      setDragging(false);
-    }
-  };
-
-  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!droppable || !carriesFile(event)) {
-      return;
-    }
-
-    event.preventDefault();
-    depth.current = 0;
-    setDragging(false);
-
-    const file = event.dataTransfer.files[0];
-
-    // Checked against the same list the picker offers, so that a file which is
-    // plainly not a document is refused rather than shown as mojibake.
-    if (!file) {
-      return;
-    }
-
-    if (acceptsFile(file, accept)) {
-      void read(file);
-
-      return;
-    }
-
-    setReadError(strings.readFailed);
-  };
+  });
 
   /* ---------------------------------------------------------------------
    * Drawing
@@ -636,10 +604,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       data-mawy-tips={tips.off ? 'off' : undefined}
       style={{ ...typographyStyle(type, fonts), ...style } as React.CSSProperties}
       {...tips.props}
-      onDragEnter={onDragEnter}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      {...dragProps}
       onKeyDown={onKeyDown}
     >
       {items.length ? (
@@ -718,25 +683,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
         </div>
       ) : null}
 
-      <input
-        ref={picker}
-        type="file"
-        className="mawy-file-input"
-        accept={accept}
-        tabIndex={-1}
-        aria-hidden="true"
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0];
-
-          if (file) {
-            void read(file);
-          }
-
-          // Cleared, so that choosing the same file twice in a row is two
-          // events rather than one.
-          event.currentTarget.value = '';
-        }}
-      />
+      <FilePicker ref={picker} accept={accept} onFile={(file) => void read(file)} />
     </div>
   );
 });
