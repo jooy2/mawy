@@ -287,6 +287,26 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     );
 
     /**
+     * The document, drawn.
+     *
+     * Kept until the blocks or the context change, which is the boundary the
+     * viewer has had all along and this surface had not. This component
+     * re-renders for everything the editor around it does — a caret moving, a
+     * toolbar button lighting up, a query being typed into the find bar — and
+     * every one of those was the whole document built again as elements. React
+     * skips a subtree whose element it has already seen.
+     */
+    const content = React.useMemo(
+      () => (
+        <>
+          {renderBlocks(blocks, context)}
+          {renderFootnotes(document_.footnotes, context)}
+        </>
+      ),
+      [blocks, document_, context]
+    );
+
+    /**
      * The caret, put back after a reveal changed what is under it.
      *
      * Drawing a link as markup and drawing it back again both replace the nodes
@@ -608,10 +628,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           onKeyDown={onKeyDown}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
-          <React.Fragment key={generation}>
-            {renderBlocks(blocks, context)}
-            {renderFootnotes(document_.footnotes, context)}
-          </React.Fragment>
+          <React.Fragment key={generation}>{content}</React.Fragment>
         </div>
       </div>
     );

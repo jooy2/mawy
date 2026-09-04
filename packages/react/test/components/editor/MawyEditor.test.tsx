@@ -1783,6 +1783,47 @@ describe('the document surface', () => {
     });
   });
 
+  /**
+   * The surface re-renders for everything the editor around it does — a caret
+   * moving, a toolbar button lighting up, a query being typed. The document it
+   * is drawing has not changed for any of those, and building it again as
+   * elements is the length of the document each time.
+   *
+   * Counted through a directive, because that is the one place in a drawn
+   * document where an application's own code runs and can say it did. Nothing
+   * about the DOM would show it: React reuses the elements it made either way.
+   */
+  it('draws the document again only when the document changed', async () => {
+    let drawn = 0;
+    const Counted = () => {
+      drawn += 1;
+
+      return <span>counted</span>;
+    };
+
+    const screen = await render(
+      <MawyEditor
+        defaultValue={':::counted\n:::\n\nWords and more words.'}
+        mode="wysiwyg"
+        directives={{ counted: Counted }}
+      />
+    );
+
+    await vi.waitFor(() => expect(screen.container.textContent).toContain('counted'));
+
+    const before = drawn;
+    const body = bodyOf(screen);
+
+    put(body, 'Words and more words.', 4);
+    await vi.waitFor(() => expect(document.activeElement).toBe(body));
+
+    expect(drawn).toBe(before);
+
+    type(body, 'insertText', '!');
+
+    await vi.waitFor(() => expect(drawn).toBeGreaterThan(before));
+  });
+
   it('runs a toolbar command on the caret it has', async () => {
     const onChange = vi.fn();
     const screen = await render(
