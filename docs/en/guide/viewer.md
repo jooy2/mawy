@@ -359,6 +359,8 @@ A viewer renders content that the person running it did not write, so the defaul
 | `'sanitize'` | a real `<div>`, with everything outside an allowlist of elements, attributes and URL schemes removed |
 | `'raw'` | a real `<div>`, exactly as written — **including anything in it that runs** |
 
+`'sanitize'` puts every name the document gives something under `user-content-`. An `id` becomes a global on the page — `<a id="config">` is `window.config` in every browser — and a `name` does the same to `document`, so `<img name="getElementById">` takes that method away from every script around it. Under the prefix those names collide with nothing the page has. Links the document wrote to its own names move with them; a link to a heading does not, because a heading's anchor is the author's own words rather than markup. It is the word GitHub uses, so a document written for GitHub keeps working.
+
 `'sanitize'` parses with `DOMParser` rather than with a regular expression, on purpose: HTML's error recovery is the attack surface, and the only parser that agrees with a browser about what `<img src=x onerror=alert(1)>` means is a browser's. Where there is no `DOMParser` — a server render — it falls back to showing the markup rather than guessing.
 
 Which makes the browser's first paint the server's answer as well, and the elements arrive on the render after it. That is deliberate: drawing them straight away would be React finding elements where the server sent characters, which is a hydration mismatch. An application that never renders on a server never hydrates, and there its first render is already the browser's — nothing is deferred and nothing flashes.

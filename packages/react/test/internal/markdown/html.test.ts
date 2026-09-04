@@ -63,6 +63,41 @@ describe('sanitising raw HTML', () => {
     }
   });
 
+  /**
+   * An `id` becomes a global on the page and a `name` does the same to
+   * `document`, so a document that writes either of them writes into the
+   * application around it: `<img name="getElementById">` takes that method away
+   * from every script on the page.
+   */
+  it('puts a name the document gave something under a prefix of its own', () => {
+    expect(sanitizeHtml('<p id="content">a</p>')).toBe('<p id="user-content-content">a</p>');
+    expect(sanitizeHtml('<a name="top">a</a>')).toBe('<a name="user-content-top">a</a>');
+
+    // Reading it again is the same answer, which it has to be — the sanitiser
+    // hands nothing over until a second reading changes nothing.
+    expect(sanitizeHtml('<p id="user-content-content">a</p>')).toBe(
+      '<p id="user-content-content">a</p>'
+    );
+  });
+
+  it('moves the links to those names with them, and leaves the rest alone', () => {
+    expect(sanitizeHtml('<a href="#here">go</a><p id="here">a</p>')).toBe(
+      '<a href="#user-content-here">go</a><p id="user-content-here">a</p>'
+    );
+
+    // A heading's anchor is the author's own words rather than markup, and it
+    // is not moved — so nothing pointing at one is moved either.
+    expect(sanitizeHtml('<a href="#installation">go</a>')).toBe('<a href="#installation">go</a>');
+  });
+
+  it('keeps a table cell pointing at the header cells it belongs to', () => {
+    // `headers` names header cells and a screen reader reads them out. A name
+    // moved without it is a table that stops explaining itself.
+    expect(
+      sanitizeHtml('<table><tr><th id="h">H</th><td headers="h other">1</td></tr></table>')
+    ).toContain('headers="user-content-h other"');
+  });
+
   it('keeps the prose out of an element whose contents are text rather than markup', () => {
     // `<xmp>` is not on the list, so it is unwrapped — and what the parser read
     // inside it was never markup, so it comes back out as the characters it is.

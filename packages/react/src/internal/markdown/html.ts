@@ -72,11 +72,34 @@ const ATTRIBUTES: Record<string, Set<string>> = {
 /** Attributes whose value is a URL and therefore has to be checked as one. */
 const URL_ATTRIBUTES = new Set(['href', 'src', 'cite']);
 
+/**
+ * What a name written in a document is put under, and why there is one.
+ *
+ * An `id` becomes a global on the page — `<a id="config">` is `window.config`
+ * in every browser — and a `name` does the same to `document`. So a document
+ * that says `<img name="getElementById">` takes that method away from every
+ * script on the page around it, and one that says `id="content"` quietly
+ * becomes whatever the application was looking for. Neither needs a mistake by
+ * the application to happen; they are what the platform does with those two
+ * attributes.
+ *
+ * A prefix is the standard answer and it is GitHub's: names a document writes
+ * live under one word, where they collide with nothing the page has and shadow
+ * nothing the platform offers. The word is the same one, so a document written
+ * for GitHub keeps working here.
+ */
+const PREFIX = 'user-content-';
+
+const prefixed = (value: string) => (value.startsWith(PREFIX) ? value : `${PREFIX}${value}`);
+
+/** Attributes holding a name the document gave something of its own. */
+const NAME_ATTRIBUTES = new Set(['id', 'name']);
+
 function allowedAttribute(tag: string, name: string): boolean {
   return GLOBAL_ATTRIBUTES.has(name) || Boolean(ATTRIBUTES[tag]?.has(name));
 }
 
-function scrub(element: Element): void {
+function scrub(element: Element, named: Set<string>): void {
   const tag = element.tagName.toLowerCase();
 
   for (const attribute of [...element.attributes]) {
@@ -84,6 +107,14 @@ function scrub(element: Element): void {
 
     if (!allowedAttribute(tag, name)) {
       element.removeAttribute(attribute.name);
+      continue;
+    }
+
+    if (NAME_ATTRIBUTES.has(name) && (tag === 'a' || name === 'id')) {
+      const under = prefixed(attribute.value);
+
+      named.add(under);
+      element.setAttribute(attribute.name, under);
       continue;
     }
 
@@ -105,7 +136,41 @@ function scrub(element: Element): void {
   }
 }
 
-function walk(node: Node): void {
+/**
+ * The links a document wrote to its own names, moved under the same prefix.
+ *
+ * Only the ones that point at a name in this same fragment. `#installation` in
+ * a document whose headings this library gave anchors to is a link to one of
+ * those, and those are the author's own words rather than markup — they are not
+ * moved and neither is anything pointing at them.
+ *
+ * `headers` on a table cell is the same question in a different shape: it names
+ * the header cells the cell belongs to, and a screen reader reads them out. A
+ * name moved without it is a table that stops explaining itself.
+ */
+function relink(root: Element, named: Set<string>): void {
+  for (const anchor of root.querySelectorAll('a[href^="#"]')) {
+    const under = prefixed(anchor.getAttribute('href')!.slice(1));
+
+    if (named.has(under)) {
+      anchor.setAttribute('href', `#${under}`);
+    }
+  }
+
+  for (const cell of root.querySelectorAll('[headers]')) {
+    cell.setAttribute(
+      'headers',
+      cell
+        .getAttribute('headers')!
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((each) => (named.has(prefixed(each)) ? prefixed(each) : each))
+        .join(' ')
+    );
+  }
+}
+
+function walk(node: Node, named: Set<string>): void {
   for (const child of [...node.childNodes]) {
     if (child.nodeType === Node.TEXT_NODE) {
       continue;
@@ -132,13 +197,13 @@ function walk(node: Node): void {
       // this loop walks a snapshot of the children taken on the way in, so
       // anything moved up into it afterwards is never visited. Unwrapping
       // first would let `<unknown><script>…</script></unknown>` through.
-      walk(element);
+      walk(element, named);
       element.replaceWith(...element.childNodes);
       continue;
     }
 
-    scrub(element);
-    walk(element);
+    scrub(element, named);
+    walk(element, named);
   }
 }
 
@@ -177,8 +242,11 @@ export function sanitizeHtml(html: string): string | null {
 
   for (let pass = 0; pass < PASSES; pass += 1) {
     const parsed = new DOMParser().parseFromString(`<body>${text}`, 'text/html');
+    const named = new Set<string>();
 
-    walk(parsed.body);
+    // Two passes, because a link may be written above the name it points at.
+    walk(parsed.body, named);
+    relink(parsed.body, named);
 
     const out = parsed.body.innerHTML;
 
