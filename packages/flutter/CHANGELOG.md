@@ -4,6 +4,10 @@
 
 ## vNext (2026--)
 
+### Added
+
+- **A picture can be drawn by the application instead of fetched by the viewer.** Nothing could put a header on the request a picture makes, send it through a client of its own, answer it out of a cache, or refuse it — and which URLs an application is willing to reach for is not a viewer's decision to make. A document from somewhere else has somebody else's URLs in it, and fetching them all without asking tells whoever wrote them which documents are being read. The picture is handed over whole, with the address the allowlist already checked, what the author said it was, and the title. Unset, nothing changes.
+
 ### Security
 
 - **A document cannot take the page down by being deeply nested.** Every container reads its own inside, so reading a document is a stack of calls as deep as the document is nested — and `> ` written a couple of thousand times is a four-kilobyte file that ran the stack out. A viewer showing a document from somewhere else could be stopped by one. Containers nest a hundred deep now and no further: past that nothing opens, the lines are the paragraphs they would be with no rules applied, and the markers on them are the characters they are. A hundred is past anything a person writes, and the two packages gave up in different places before this — the Dart one held out longer, which made it a difference between them as well as a crash.

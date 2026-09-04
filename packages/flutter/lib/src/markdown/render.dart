@@ -33,6 +33,7 @@ class MawyRenderContext {
     required this.footnotes,
     this.onLinkTap,
     this.onImageError,
+    this.imageBuilder,
     this.directives,
     this.source,
     this.recognizerFor,
@@ -75,6 +76,10 @@ class MawyRenderContext {
 
   /// What is drawn where a picture will not load.
   final Widget Function(String url)? onImageError;
+
+  /// What draws a picture, where the application would rather draw it itself.
+  /// See [MawyImageBuilder].
+  final MawyImageBuilder? imageBuilder;
 
   /// What draws the constructs this package does not know about, by name.
   ///
@@ -499,6 +504,14 @@ class _ImageState extends State<_Image> {
   Widget build(BuildContext buildContext) {
     final MdImage node = widget.node;
     final MawyRenderContext context = widget.context;
+    final MawyImageBuilder? builder = context.imageBuilder;
+
+    // Handed over whole rather than fetched here. Which pictures are worth
+    // fetching, and with what on the request, is the application's answer.
+    if (builder != null) {
+      return builder(buildContext, MawyImage(url: node.url, alt: node.alt, title: node.title));
+    }
+
     final Widget Function(String)? onError = context.onImageError;
 
     Widget refused(BuildContext _, Object _, StackTrace? _) =>
@@ -960,6 +973,7 @@ class _Quote extends StatelessWidget {
               footnotes: context.footnotes,
               onLinkTap: context.onLinkTap,
               onImageError: context.onImageError,
+              imageBuilder: context.imageBuilder,
               recognizerFor: context.recognizerFor,
             ),
           ),

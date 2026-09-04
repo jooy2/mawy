@@ -187,6 +187,55 @@ describe('safety', () => {
   });
 });
 
+/**
+ * A picture the document points at, and who fetches it.
+ *
+ * Which URLs an application is willing to reach for is not a viewer's decision
+ * to make — a document from somewhere else has somebody else's URLs in it, and
+ * fetching them all without asking tells whoever wrote them which documents are
+ * being read.
+ */
+describe('images', () => {
+  it('writes an `img` on its own, with what the document said about it', async () => {
+    const screen = await render(<MawyViewer value={'![a cat](/c.png "Mine")'} />);
+    const image = screen.container.querySelector('img') as HTMLImageElement;
+
+    expect(image.getAttribute('src')).toBe('/c.png');
+    expect(image.getAttribute('alt')).toBe('a cat');
+    expect(image.getAttribute('title')).toBe('Mine');
+  });
+
+  it('hands the picture over where the application says how to draw one', async () => {
+    const asked: { src: string; alt: string; title: string | null }[] = [];
+    const Mine = (props: { src: string; alt: string; title: string | null }) => {
+      asked.push(props);
+
+      return <span data-mine={props.src}>{props.alt}</span>;
+    };
+
+    const screen = await render(<MawyViewer value={'![a cat](/c.png "Mine")'} image={Mine} />);
+
+    expect(asked).toEqual([{ src: '/c.png', alt: 'a cat', title: 'Mine' }]);
+    expect(screen.container.querySelector('[data-mine="/c.png"]')).not.toBeNull();
+    // And nothing was fetched behind its back.
+    expect(screen.container.querySelector('img')).toBeNull();
+  });
+
+  it('never hands over a URL the scheme allowlist refused', async () => {
+    const asked: string[] = [];
+    const Mine = ({ src }: { src: string }) => {
+      asked.push(src);
+
+      return <span />;
+    };
+
+    const screen = await render(<MawyViewer value="![a cat](javascript:alert(1))" image={Mine} />);
+
+    expect(asked).toEqual([]);
+    await expect.element(screen.getByText('a cat')).toBeInTheDocument();
+  });
+});
+
 describe('with no document', () => {
   it('offers to open a file', async () => {
     const screen = await render(<MawyViewer />);

@@ -244,6 +244,41 @@ class MawyDirective {
   final String source;
 }
 
+/// A picture the document asked for.
+///
+/// What a builder is handed, so that adding something to it later is not a
+/// change to every builder anybody has written.
+class MawyImage {
+  /// Creates a request.
+  const MawyImage({required this.url, required this.alt, this.title});
+
+  /// Where the picture is. Already checked against the scheme allowlist, so a
+  /// `javascript:` never reaches here — and a `data:` image arrives whole.
+  final String url;
+
+  /// What the picture is, for a reader who is not seeing it. Empty where the
+  /// author wrote `![](…)`, which in Markdown means decoration.
+  final String alt;
+
+  /// The `title`, if one was written.
+  final String? title;
+}
+
+/// What draws a picture the document points at.
+///
+/// Unset — the default — the viewer draws it itself: over the network, or out
+/// of the bytes of a `data:` URL. Given one, the application draws it instead,
+/// which is the only way to put headers on the request, send it through a
+/// client of its own, answer it out of a cache, or refuse it.
+///
+/// Which pictures an application is willing to fetch is not a viewer's
+/// decision to make, the same way where a link opens is not — see `onLinkTap`.
+/// A private document drawn in a public page is the case this exists for: the
+/// URLs in it are somebody else's, and a viewer that fetched them all without
+/// asking would be a viewer that told somebody else which documents are being
+/// read.
+typedef MawyImageBuilder = Widget Function(BuildContext context, MawyImage image);
+
 /// What draws one directive.
 ///
 /// A [MawyDirectiveKind.text] one is placed in the sentence as a

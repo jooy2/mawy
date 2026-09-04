@@ -70,6 +70,7 @@ class MawyViewer extends StatefulWidget {
     this.locale = MawyLocale.en,
     this.onLinkTap,
     this.directives,
+    this.imageBuilder,
     this.highlight,
     this.padding,
     this.scrollController,
@@ -157,6 +158,28 @@ class MawyViewer extends StatefulWidget {
   /// A name that is not here is drawn as the characters it was written with,
   /// the same answer raw HTML gets.
   final Map<String, MawyDirectiveBuilder>? directives;
+
+  /// What draws a picture the document points at.
+  ///
+  /// Unset, the viewer draws it itself — over the network, or out of the bytes
+  /// of a `data:` URL. Given one, the application draws it instead, which is
+  /// the only way to put headers on the request, send it through a client of
+  /// its own, answer it out of a cache, or refuse it.
+  ///
+  /// ```dart
+  /// MawyViewer(
+  ///   value: document,
+  ///   imageBuilder: (BuildContext context, MawyImage image) =>
+  ///       Image.network(image.url, headers: session.headers, semanticLabel: image.alt),
+  /// );
+  /// ```
+  ///
+  /// Which pictures an application is willing to fetch is not a viewer's
+  /// decision to make, the same way where a link opens is not — see
+  /// [onLinkTap]. A document from somewhere else is the case this exists for:
+  /// the URLs in it are somebody else's, and fetching them all without asking
+  /// tells whoever wrote them which documents are being read.
+  final MawyImageBuilder? imageBuilder;
 
   /// What colours a code block.
   ///
@@ -814,6 +837,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       directives: widget.directives,
       highlighter: widget.highlight,
       source: widget.value,
+      imageBuilder: widget.imageBuilder,
       recognizerFor: widget.onLinkTap == null ? null : _recognizerFor,
       found: found,
       currentMatch: current,
@@ -829,6 +853,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       strings,
       _directives,
       widget.highlight,
+      widget.imageBuilder,
       // Whether a link does anything rather than what it does: the drawing is
       // handed `_tapLink`, which does not change, and an application writing
       // `onLinkTap: (url, _) => open(url)` where the widget is written hands

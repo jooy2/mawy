@@ -4,6 +4,7 @@ import * as React from 'react';
 import type {
   MawyColorScheme,
   MawyDirectives,
+  MawyImageProps,
   MawyEditorStatusOption,
   MawyEditorToolbarItem,
   MawyEditorToolbarOption,
@@ -194,6 +195,12 @@ export interface MawyEditorProps extends Omit<
    * makes it editable, since those characters are the source, one for one.
    */
   directives?: MawyDirectives;
+
+  /**
+   * What draws a picture the document points at, in the preview and in the
+   * drawn document. See `MawyViewer`'s own `image`.
+   */
+  image?: React.ComponentType<MawyImageProps>;
   fonts?: readonly MawyFont[];
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
@@ -235,6 +242,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     linkTarget = 'blank',
     highlight,
     directives,
+    image,
     onSave,
     accept = MAWY_ACCEPT,
     fileDrop = false,
@@ -1336,6 +1344,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               html={html}
               linkTarget={linkTarget}
               directives={directives}
+              image={image}
               strings={strings}
               room={room}
               aim={aim}
@@ -1386,6 +1395,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               linkTarget={linkTarget}
               highlight={highlight}
               directives={directives}
+              image={image}
               fonts={fonts}
               locale={locale}
               colorScheme={scheme}

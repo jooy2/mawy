@@ -21,6 +21,7 @@
 
 import * as React from 'react';
 import type {
+  MawyImageProps,
   MawyCodeToken,
   MawyCodeTokenKind,
   MawyDirectiveKind,
@@ -55,6 +56,15 @@ export interface RenderContext {
    * of which the code is drawn as the text it is.
    */
   highlighter?: MawyHighlighter | null;
+
+  /**
+   * What draws a picture the document points at. See `MawyImageProps`.
+   *
+   * Absent, the renderer writes an `<img>`. Given one, the application draws
+   * it instead — which is the only way to put a header on the request, send it
+   * through a loader of its own, answer it out of a cache, or refuse it.
+   */
+  image?: React.ComponentType<MawyImageProps>;
 
   /**
    * The two pieces of a document that can hold state, where there is a page
@@ -354,6 +364,13 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
         return revealed(node, context) ? (
           <span key={index} className="mawy-md-source" {...origin(node)}>
             {context.source?.slice(node.range.start, node.range.end)}
+          </span>
+        ) : context.image ? (
+          // Handed over whole rather than fetched here. Which pictures are
+          // worth fetching, and with what on the request, is the application's
+          // answer.
+          <span key={index} className="mawy-md-image-slot" {...origin(node)}>
+            <context.image src={node.url} alt={node.alt} title={node.title} />
           </span>
         ) : (
           <img

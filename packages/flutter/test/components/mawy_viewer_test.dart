@@ -1030,6 +1030,55 @@ void main() {
       expect(find.text('a cat'), findsNothing);
     });
 
+    testWidgets('hands the picture over where the application says how to draw one', (
+      WidgetTester tester,
+    ) async {
+      final List<MawyImage> asked = <MawyImage>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: '![a cat](https://nowhere.example/c.png "Mine")',
+            imageBuilder: (BuildContext context, MawyImage image) {
+              asked.add(image);
+
+              return Text('drew ${image.alt}');
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(asked.length, 1);
+      expect(asked.single.url, 'https://nowhere.example/c.png');
+      expect(asked.single.alt, 'a cat');
+      expect(asked.single.title, 'Mine');
+      expect(find.text('drew a cat'), findsOneWidget);
+      // And nothing was fetched behind its back.
+      expect(find.byType(Image), findsNothing);
+    });
+
+    testWidgets('never hands over a URL the scheme allowlist refused', (WidgetTester tester) async {
+      final List<MawyImage> asked = <MawyImage>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: '![a cat](javascript:alert(1))',
+            imageBuilder: (BuildContext context, MawyImage image) {
+              asked.add(image);
+
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(asked, isEmpty);
+      expect(documentText(tester), contains('a cat'));
+    });
+
     testWidgets('says what it was told to about one that will not load', (
       WidgetTester tester,
     ) async {

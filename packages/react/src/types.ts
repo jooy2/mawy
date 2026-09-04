@@ -331,6 +331,27 @@ export interface MawyTypography {
 }
 
 /**
+ * A picture the document asked for.
+ *
+ * What an image component is handed, so that adding something to it later is
+ * not a change to every component anybody has written.
+ */
+export interface MawyImageProps {
+  /**
+   * Where the picture is. Already checked against the scheme allowlist, so a
+   * `javascript:` never reaches here — and a `data:` image arrives whole.
+   */
+  src: string;
+  /**
+   * What the picture is, for a reader who is not seeing it. Empty where the
+   * author wrote `![](…)`, which in Markdown means decoration.
+   */
+  alt: string;
+  /** The `title`, if one was written. */
+  title: string | null;
+}
+
+/**
  * What becomes of raw HTML written inside a document.
  *
  * - `escape` — it is shown as the characters it was written with. The default,

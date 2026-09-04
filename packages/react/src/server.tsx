@@ -43,6 +43,7 @@ import type {
   MawyFont,
   MawyHighlighter,
   MawyHtmlPolicy,
+  MawyImageProps,
   MawyLocale,
   MawyParseOptions,
   MawyTypography
@@ -75,6 +76,13 @@ export interface MawyDocumentProps {
   /** What draws the constructs this package does not know about. */
   directives?: MawyDirectives;
 
+  /**
+   * What draws a picture the document points at. See `MawyViewer`'s own
+   * `image` — on a server it is also how a picture is turned into whatever the
+   * framework's own image component is.
+   */
+  image?: React.ComponentType<MawyImageProps>;
+
   /** The language of the few words this library writes itself. */
   locale?: MawyLocale;
 
@@ -106,6 +114,7 @@ export function MawyDocument({
   html = 'escape',
   linkTarget = 'blank',
   directives,
+  image,
   locale = 'en',
   highlight,
   typography,
@@ -126,6 +135,7 @@ export function MawyDocument({
     strings,
     footnotes: new Map(document_.footnotes.map((each) => [each.label, each])),
     directives,
+    image,
     linkTarget,
     source: value,
     highlighter: highlight ?? null,

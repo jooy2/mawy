@@ -4,6 +4,7 @@ import * as React from 'react';
 import type {
   MawyColorScheme,
   MawyDirectives,
+  MawyImageProps,
   MawyFont,
   MawyHighlight,
   MawyHtmlPolicy,
@@ -170,6 +171,25 @@ export interface MawyViewerProps extends Omit<
    */
   directives?: MawyDirectives;
 
+  /**
+   * What draws a picture the document points at.
+   *
+   * Absent, an `<img>` is written and the browser fetches it. Given one, the
+   * application draws it instead:
+   *
+   * ```tsx
+   * <MawyViewer value={document} image={({ src, alt }) => <Image src={src} alt={alt} />} />
+   * ```
+   *
+   * Which is the only way to put a header on the request, send it through a
+   * loader of the application's own, answer it out of a cache, or refuse it.
+   * Which pictures an application is willing to fetch is not a viewer's
+   * decision to make — a document from somewhere else has somebody else's URLs
+   * in it, and fetching them all without asking tells whoever wrote them which
+   * documents are being read.
+   */
+  image?: React.ComponentType<MawyImageProps>;
+
   /** What to draw instead of the file picker when there is no document. */
   empty?: React.ReactNode;
 }
@@ -204,6 +224,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     accept = MAWY_ACCEPT,
     highlight,
     directives,
+    image,
     empty,
     className,
     style,
@@ -327,12 +348,24 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       footnotes,
       directives,
       linkTarget,
+      image,
       source: text,
       found,
       currentMatch,
       live: LIVE
     }),
-    [html, strings, highlighter, footnotes, directives, linkTarget, text, found, currentMatch]
+    [
+      html,
+      strings,
+      highlighter,
+      footnotes,
+      directives,
+      linkTarget,
+      image,
+      text,
+      found,
+      currentMatch
+    ]
   );
   const content = React.useMemo(
     () => (

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type {
   MawyDirectives,
+  MawyImageProps,
   MawyHtmlPolicy,
   MawyLinkTarget,
   MawyParseOptions
@@ -61,6 +62,25 @@ export interface MawyEditorDocumentProps {
   linkTarget?: MawyLinkTarget;
   /** What draws the constructs this package does not know about. */
   directives?: MawyDirectives;
+
+  /**
+   * What draws a picture the document points at.
+   *
+   * Absent, an `<img>` is written and the browser fetches it. Given one, the
+   * application draws it instead:
+   *
+   * ```tsx
+   * <MawyViewer value={document} image={({ src, alt }) => <Image src={src} alt={alt} />} />
+   * ```
+   *
+   * Which is the only way to put a header on the request, send it through a
+   * loader of the application's own, answer it out of a cache, or refuse it.
+   * Which pictures an application is willing to fetch is not a viewer's
+   * decision to make — a document from somewhere else has somebody else's URLs
+   * in it, and fetching them all without asking tells whoever wrote them which
+   * documents are being read.
+   */
+  image?: React.ComponentType<MawyImageProps>;
   strings: MawyStrings;
   /**
    * A place the caret was left where nothing is drawn, from the last edit. See
@@ -206,6 +226,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       html,
       linkTarget,
       directives,
+      image,
       strings,
       room,
       aim,
@@ -278,12 +299,13 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         strings,
         footnotes,
         directives,
+        image,
         linkTarget,
         source: value,
         reveal,
         live: LIVE
       }),
-      [html, strings, footnotes, directives, linkTarget, value, reveal]
+      [html, strings, footnotes, directives, image, linkTarget, value, reveal]
     );
 
     /**
