@@ -4,6 +4,10 @@
 
 ## vNext (2026--)
 
+### Breaking changes
+
+- **`MawyViewerAnchors.keyFor` is gone.** It handed out a `GlobalKey` per block so that `places` could find each block's element and measure it. `places` reads the viewer's own record of how tall every block was laid out now, so nothing asked for a key and the viewer no longer put one on anything. Applications had no reason to call it — it was documented as the viewer's own — and nothing else in the class changed.
+
 ### Added
 
 - **The editor's palette can be one the application holds.** `colorScheme` had an `onColorSchemeChange` beside it and no `defaultColorScheme`, so it read as a value the application owned and behaved as a starting value the toolbar then took over — the reader's choice stuck, and handing the same value back did nothing. It is now the pair `mode`/`defaultMode` and `typography`/`defaultTypography` already make: pass `colorScheme` and the toolbar reports what the reader picked and changes nothing until the application says so; pass `defaultColorScheme`, or nothing, and the editor keeps it and still reports every change. An application that was passing `colorScheme` and letting the toolbar win wants `defaultColorScheme` now.

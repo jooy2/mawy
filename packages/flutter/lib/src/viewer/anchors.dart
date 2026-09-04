@@ -14,7 +14,6 @@
 /// block measures nothing.
 library;
 
-import 'package:flutter/widgets.dart';
 import 'package:mawy/src/viewer/offsets.dart';
 
 /// The blocks of one viewer's document, and where they are.
@@ -22,20 +21,8 @@ class MawyViewerAnchors {
   /// Creates an empty set.
   MawyViewerAnchors();
 
-  final Map<int, GlobalKey> _keys = <int, GlobalKey>{};
-
   MawyBlockOffsets? _offsets;
   List<int> _starts = const <int>[];
-
-  /// The key on the block starting at [start]. Called by the viewer as it
-  /// draws, and not something an application has a reason to call.
-  ///
-  /// [places] is answered from the viewer's own measurements rather than
-  /// through these, so what a key is still good for is reaching the block's
-  /// element — which is a thing to do with a block on the screen, and `null`
-  /// for one that is not.
-  GlobalKey keyFor(int start) =>
-      _keys.putIfAbsent(start, () => GlobalKey(debugLabel: 'MawyViewerAnchors $start'));
 
   /// Where the viewer keeps its measurements, and which character each block
   /// starts at. Called by the viewer as it reads a document, and not something
@@ -47,7 +34,6 @@ class MawyViewerAnchors {
 
   /// Forgets the document that just went. Called by the viewer when it reparses.
   void reset() {
-    _keys.clear();
     _offsets = null;
     _starts = const <int>[];
   }

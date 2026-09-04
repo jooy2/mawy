@@ -1147,19 +1147,13 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   }
 
   /// The blocks, each measuring itself, with a key on every heading so the
-  /// outline can reach it and one on every block where somebody asked where the
-  /// blocks are.
+  /// outline can reach it.
   List<Widget> _withAnchors(MdDocument document, MawyRenderContext render) {
     final List<Widget> drawn = renderBlocks(document.root.children, render);
     final List<MdBlock> blocks = document.root.children;
-    final MawyViewerAnchors? places = widget.anchors;
 
     for (int index = 0; index < blocks.length; index += 1) {
       final MdBlock block = blocks[index];
-
-      if (places != null) {
-        drawn[index] = KeyedSubtree(key: places.keyFor(block.range.start), child: drawn[index]);
-      }
 
       if (block is MdHeading) {
         final GlobalKey key = _headings.putIfAbsent(block.slug, () {
