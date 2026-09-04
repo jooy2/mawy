@@ -1367,6 +1367,134 @@ describe('the document surface', () => {
     root.dispatchEvent(event);
   };
 
+  /**
+   * A run dragged from one place in the document to another.
+   *
+   * Two events, in the order a browser fires them and both measured against
+   * the document as it stands: the taking out, carrying the run it took as its
+   * target range, and then the putting in at wherever the caret has landed.
+   * Answered one at a time the second would win, and the run would be copied.
+   */
+  const dragWithin = (
+    root: HTMLElement,
+    taken: { node: Node; from: number; to: number },
+    dropped: string
+  ) => {
+    const out = new InputEvent('beforeinput', {
+      inputType: 'deleteByDrag',
+      bubbles: true,
+      cancelable: true
+    });
+
+    Object.defineProperty(out, 'getTargetRanges', {
+      value: () => [
+        new StaticRange({
+          startContainer: taken.node,
+          startOffset: taken.from,
+          endContainer: taken.node,
+          endOffset: taken.to
+        })
+      ]
+    });
+
+    root.dispatchEvent(out);
+
+    const transfer = new DataTransfer();
+
+    transfer.setData('text/plain', dropped);
+
+    root.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'insertFromDrop',
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: transfer
+      })
+    );
+  };
+
+  it('moves a run dragged from one place in the document to another', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const run = runSaying(body, 'One two three.');
+
+    // The caret at the end, which is where the drop landed.
+    put(body, 'One two three.', 14);
+    dragWithin(body, { node: run, from: 4, to: 7 }, 'two');
+
+    expect(onChange).toHaveBeenLastCalledWith('One  three.two');
+  });
+
+  it('only puts in what came from somewhere else', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const transfer = new DataTransfer();
+
+    transfer.setData('text/plain', 'four');
+    put(body, 'One two three.', 14);
+    body.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'insertFromDrop',
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: transfer
+      })
+    );
+
+    expect(onChange).toHaveBeenLastCalledWith('One two three.four');
+  });
+
+  it('forgets a run whose drag ended without a drop in here', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const run = runSaying(body, 'One two three.');
+    const out = new InputEvent('beforeinput', {
+      inputType: 'deleteByDrag',
+      bubbles: true,
+      cancelable: true
+    });
+
+    Object.defineProperty(out, 'getTargetRanges', {
+      value: () => [
+        new StaticRange({
+          startContainer: run,
+          startOffset: 4,
+          endContainer: run,
+          endOffset: 7
+        })
+      ]
+    });
+
+    put(body, 'One two three.', 14);
+    body.dispatchEvent(out);
+    body.dispatchEvent(new DragEvent('dragend', { bubbles: true }));
+
+    // A drop from another application, later. What was written down for the
+    // drag that went elsewhere must not take a bite out of this.
+    const transfer = new DataTransfer();
+
+    transfer.setData('text/plain', 'four');
+    body.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'insertFromDrop',
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: transfer
+      })
+    );
+
+    expect(onChange).toHaveBeenLastCalledWith('One two three.four');
+  });
+
   const runSaying = (root: HTMLElement, saying: string): Text => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 

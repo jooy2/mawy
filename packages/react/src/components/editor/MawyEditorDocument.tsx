@@ -22,6 +22,7 @@ import {
   editForText,
   markdownFor,
   type MawyAim,
+  type MawyDrag,
   type MawyEdit
 } from '../../internal/editing.js';
 import { pastedImagesIn } from '../../internal/images.js';
@@ -213,6 +214,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
   ) {
     const root = React.useRef<HTMLDivElement>(null);
     const composing = React.useRef(false);
+    /** The run a drag has taken out and not yet put back. See `MawyDrag`. */
+    const drag = React.useRef<MawyDrag>({ taken: null });
     const composed = React.useRef<{ host: Node; before: string; start: number } | null>(null);
     /** Bumped to throw the drawing away and make it again from the document. */
     const [generation, setGeneration] = React.useState(0);
@@ -351,7 +354,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           element,
           now.value,
           aim.current,
-          now.definitionLists
+          now.definitionLists,
+          drag.current
         );
 
         if (edit) {
@@ -403,12 +407,22 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         }
       };
 
+      // A drag that ended without a drop in here — outside the surface, or
+      // nowhere at all — leaves a run written down and nothing to do with it.
+      // Forgotten here rather than at the next edit, so that a drop from
+      // somewhere else later cannot be answered with it.
+      const dragged = () => {
+        drag.current.taken = null;
+      };
+
       element.addEventListener('beforeinput', refuse);
       element.addEventListener('paste', paste);
+      element.addEventListener('dragend', dragged);
 
       return () => {
         element.removeEventListener('beforeinput', refuse);
         element.removeEventListener('paste', paste);
+        element.removeEventListener('dragend', dragged);
       };
     }, [aim]);
 

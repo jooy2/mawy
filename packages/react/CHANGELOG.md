@@ -38,6 +38,8 @@
 
 ### Fixed
 
+- **A run dragged from one place in the drawn document to another is moved rather than copied.** A drag is two input events, one after the other and both measured against the document as it stands: the run being taken out, then the run being put in. Each was answered on its own, so the second was answered against a document the first had not yet changed — the second won, nothing came out, and the run appeared twice. They are one edit now. A drop that came from another application, or one held down as a copy, still only puts the run in; and a drag that ended somewhere other than in the document takes nothing out of it.
+
 - **The toolbar counts the rules between its groups when it works out what fits.** It measured the groups and nothing else, and a group's own width leaves out the rule drawn before it, the five pixels of margin on either side of that rule, and the two the row puts between every pair of children — about fifteen pixels a group, sixty for a default toolbar. So the row kept a group it had no room for, and a row cannot grow: what it kept was drawn past its own end. What is measured now is where each group ends rather than how wide it is, which counts everything between them by construction.
 
 - **Two footnotes can no longer be given the same name.** A label is turned into an anchor by slugging it, and two labels that slug to the same word are told apart by the note's number — except where the document had already written that name out itself: `[^b-2]` took `b-2`, and the second `[^b]` was then called `b-2` as well. Two anchors with one name is a link that lands on whichever came first, which is the exact thing the numbering is there to prevent. A name that is taken is counted past now until one is free.

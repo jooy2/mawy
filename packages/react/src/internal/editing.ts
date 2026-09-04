@@ -44,6 +44,25 @@ export interface MawyAim {
   offset: number;
 }
 
+/**
+ * A run of text a drag has taken out of the document but not yet put back.
+ *
+ * Dragging a run from one place in the drawn document to another arrives as
+ * two input events, one after the other and both measured against the document
+ * as it stands: the taking out, and then the putting in. Answering them one at
+ * a time means answering the second against a document the first had already
+ * changed — so the second wins, nothing is taken out, and the run is copied
+ * rather than moved.
+ *
+ * So the first is written down here instead of done, and the two become one
+ * edit when the second arrives. Anything else that happens first clears it,
+ * which is what keeps a drag that ended somewhere else from taking a bite out
+ * of the document later.
+ */
+export interface MawyDrag {
+  taken: { start: number; end: number } | null;
+}
+
 /** A document after an edit, and where the caret goes once it is drawn again. */
 export interface MawyEdit {
   value: string;
@@ -519,9 +538,16 @@ export function editFor(
   root: HTMLElement,
   value: string,
   aim: MawyAim | null,
-  definitionLists = true
+  definitionLists = true,
+  drag: MawyDrag = { taken: null }
 ): MawyEdit | null {
   const place = placeOf(root, value, aim);
+  // Whatever a drag left waiting is for the drop that follows it immediately,
+  // and this is that drop or it is not. Read and cleared before anything else,
+  // so that no later event can be answered with it.
+  const dragged = drag.taken;
+
+  drag.taken = null;
 
   if (!place) {
     return null;
@@ -604,11 +630,42 @@ export function editFor(
         : null;
     }
 
+    // Written down rather than done. The drop that goes with it is the very
+    // next event and is measured against this same document, so the two are
+    // answered together below. See `MawyDrag`.
+    case 'deleteByDrag': {
+      const taken = targetOf(event, root, value, aim) ?? (start === end ? null : { start, end });
+
+      drag.taken = taken && taken.start !== taken.end ? taken : null;
+
+      return null;
+    }
+
     case 'insertFromDrop': {
       const block = blockAt(root, range.startContainer);
       const text = markdownFor(event.dataTransfer, block?.tagName === 'PRE');
 
-      return text ? splice(value, start, end, text) : null;
+      if (!text) {
+        return null;
+      }
+
+      // A drop that came from somewhere else, or one held down as a copy: the
+      // run is only put in, because nothing was taken out.
+      //
+      // A drop inside the run being dragged is the same answer. The browser
+      // does not offer one, and a document that took the run out and then put
+      // it back inside where it used to be would be a document with a hole in
+      // it either way.
+      if (!dragged || (start < dragged.end && dragged.start < end)) {
+        return splice(value, start, end, text);
+      }
+
+      const short = value.slice(0, dragged.start) + value.slice(dragged.end);
+      const gone = dragged.end - dragged.start;
+      const from = start >= dragged.end ? start - gone : start;
+      const to = end >= dragged.end ? end - gone : end;
+
+      return splice(short, from, to, text);
     }
 
     default:
