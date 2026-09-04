@@ -332,14 +332,23 @@ class _MawyViewerState extends State<MawyViewer> {
 
   bool _copied = false;
 
-  MdDocument? _document;
-  String? _parsedFrom;
-  MawyParseOptions? _parsedWith;
+  /// The document as it was last read. Never null after `initState`.
+  late MdDocument _document;
 
   @override
   void initState() {
     super.initState();
     _scroller.addListener(_measureActive);
+    _read();
+  }
+
+  @override
+  void didUpdateWidget(MawyViewer old) {
+    super.didUpdateWidget(old);
+
+    if (widget.value != old.value || widget.parse != old.parse) {
+      _read();
+    }
   }
 
   @override
@@ -374,21 +383,21 @@ class _MawyViewerState extends State<MawyViewer> {
     widget.onTypographyChange?.call(next);
   }
 
-  /// The parsed document, kept until the text or the options change.
+  /// Reads the document, and throws away everything that was about the last one.
   ///
-  /// A parse is not expensive and a rebuild is not a reason to do one: a
-  /// viewer rebuilds when the pointer moves over a code block.
-  MdDocument get _parsed {
-    if (_document == null || _parsedFrom != widget.value || _parsedWith != widget.parse) {
-      _document = parseMarkdown(widget.value, widget.parse);
-      _parsedFrom = widget.value;
-      _parsedWith = widget.parse;
-      _headings.clear();
-      _dropAnchors();
-      widget.anchors?.reset();
-    }
-
-    return _document!;
+  /// Done when the text or the options change rather than while building. A
+  /// build is not the place to change anything that outlives it — `anchors` is
+  /// the application's own object, and telling it to forget where everything
+  /// was in the middle of a build is telling something outside this widget to
+  /// change while the frame it is part of is being put together.
+  void _read() {
+    _document = parseMarkdown(widget.value, widget.parse);
+    _headings.clear();
+    // Per position in the document, so a document with fewer blocks in it than
+    // the last one leaves keys behind for positions that no longer exist.
+    _blocks.clear();
+    _dropAnchors();
+    widget.anchors?.reset();
   }
 
   Brightness _brightness(BuildContext context) => switch (widget.colorScheme) {
@@ -425,10 +434,10 @@ class _MawyViewerState extends State<MawyViewer> {
 
   /// Throws away the anchors the document that just went had.
   ///
-  /// Not here, though: this is called from `build`, and the widgets holding
-  /// these nodes are the ones being replaced by the build that is asking. A
-  /// node disposed out from under its own element is one the element detaches
-  /// from after it is gone. The frame after is when nothing holds them.
+  /// Not straight away, though: the widgets holding these nodes are still on
+  /// the tree, and the build that replaces them has not happened yet. A node
+  /// disposed out from under its own element is one the element detaches from
+  /// after it is gone. The frame after is when nothing holds them.
   void _dropAnchors() {
     if (_anchors.isEmpty) {
       return;
@@ -626,7 +635,7 @@ class _MawyViewerState extends State<MawyViewer> {
     final MawyTokens tokens = widget.tokens?.call(brightness) ?? MawyTokens.of(brightness);
     final MawyStrings strings = stringsFor(widget.locale);
     final MawyTypography type = _typography;
-    final MdDocument document = _parsed;
+    final MdDocument document = _document;
     final MawyFound found = _finding
         ? findInDocument(document.root.children, _query, _matchCase)
         : MawyFound.nothing();

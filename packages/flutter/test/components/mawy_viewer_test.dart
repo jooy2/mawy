@@ -118,6 +118,50 @@ void main() {
     });
   });
 
+  /// What the viewer holds about the document it is drawing, and gives up when
+  /// that document goes.
+  ///
+  /// Reading the Markdown used to happen inside `build`, lazily, which put the
+  /// throwing away in there too — and one of the things thrown away is the
+  /// application's own `anchors` object. A build is not the place to change
+  /// something that outlives the frame.
+  group('a document replaced by another', () {
+    testWidgets('reports the blocks of the document it is drawing, and no others', (
+      WidgetTester tester,
+    ) async {
+      final MawyViewerAnchors anchors = MawyViewerAnchors();
+
+      await tester.pumpWidget(
+        host(MawyViewer(value: 'One.\n\nTwo.\n\nThree.\n\nFour.', anchors: anchors)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(anchors.places().length, 4);
+
+      await tester.pumpWidget(host(MawyViewer(value: 'Only one.', anchors: anchors)));
+      await tester.pumpAndSettle();
+
+      final List<(int, double)> places = anchors.places();
+
+      expect(places.length, 1);
+      // The character the block starts at, in the document being drawn now.
+      expect(places.first.$1, 0);
+    });
+
+    testWidgets('draws the new document rather than the one it was reading', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: '# First')));
+      await tester.pumpWidget(host(const MawyViewer(value: '# Second')));
+      await tester.pump();
+
+      final String text = documentText(tester);
+
+      expect(text, contains('Second'));
+      expect(text, isNot(contains('First')));
+    });
+  });
+
   group('the palette', () {
     testWidgets('follows the platform, and the prop over it', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: sample), brightness: Brightness.dark));
