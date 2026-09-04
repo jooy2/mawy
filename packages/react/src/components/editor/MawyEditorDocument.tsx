@@ -220,6 +220,26 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     const breaks = parse?.breaks ?? false;
     const definitionLists = parse?.definitionLists ?? true;
 
+    /**
+     * What the listeners below read, kept somewhere they can read it later.
+     *
+     * `beforeinput` is the one place the browser is told no, so it is a
+     * listener on the element rather than a delegated one — and what it needs
+     * to answer with is the document, which changes on every keystroke. An
+     * effect that closed over the document would take both listeners off the
+     * element and put them back for every character typed. They are bound once
+     * and read the latest of these instead.
+     *
+     * Written in a layout effect rather than during the render: a render React
+     * throws away must not be able to leave anything behind here, and a
+     * keystroke cannot arrive between the tree being changed and this.
+     */
+    const latest = React.useRef({ value, readOnly, onEdit, onSelect, onImages, definitionLists });
+
+    React.useLayoutEffect(() => {
+      latest.current = { value, readOnly, onEdit, onSelect, onImages, definitionLists };
+    });
+
     React.useImperativeHandle(ref, () => root.current as HTMLElement);
 
     const document_ = React.useMemo(
@@ -320,14 +340,22 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
         event.preventDefault();
 
-        if (readOnly) {
+        const now = latest.current;
+
+        if (now.readOnly) {
           return;
         }
 
-        const edit = editFor(event as InputEvent, element, value, aim.current, definitionLists);
+        const edit = editFor(
+          event as InputEvent,
+          element,
+          now.value,
+          aim.current,
+          now.definitionLists
+        );
 
         if (edit) {
-          onEdit(edit);
+          now.onEdit(edit);
         }
       };
 
@@ -339,37 +367,39 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       const paste = (event: ClipboardEvent) => {
         event.preventDefault();
 
-        if (readOnly) {
+        const now = latest.current;
+
+        if (now.readOnly) {
           return;
         }
 
         const selection = element.ownerDocument.getSelection();
         const where = selection?.anchorNode;
         const literal = Boolean(where && blockAt(element, where)?.tagName === 'PRE');
-        const images = onImages ? pastedImagesIn(event.clipboardData) : [];
+        const images = now.onImages ? pastedImagesIn(event.clipboardData) : [];
 
         if (images.length && !literal) {
           // A file on the clipboard with no markup beside it is a screenshot.
           // Inside a code block it is not one, because everything in there is
           // the characters it is.
           const at = where
-            ? documentAt(element, where, selection?.anchorOffset ?? 0, value, aim.current)
+            ? documentAt(element, where, selection?.anchorOffset ?? 0, now.value, aim.current)
             : null;
 
-          onImages?.(images, at ?? value.length);
+          now.onImages?.(images, at ?? now.value.length);
 
           return;
         }
 
         const edit = editForText(
           element,
-          value,
+          now.value,
           markdownFor(event.clipboardData, literal),
           aim.current
         );
 
         if (edit) {
-          onEdit(edit);
+          now.onEdit(edit);
         }
       };
 
@@ -380,7 +410,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('beforeinput', refuse);
         element.removeEventListener('paste', paste);
       };
-    }, [value, readOnly, onEdit, onImages, aim, definitionLists]);
+    }, [aim]);
 
     /**
      * `selectionchange` on the document rather than anything on the element:
@@ -410,24 +440,31 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        const now = latest.current;
         const start = documentAt(
           element,
           range.startContainer,
           range.startOffset,
-          value,
+          now.value,
           aim.current
         );
-        const end = documentAt(element, range.endContainer, range.endOffset, value, aim.current);
+        const end = documentAt(
+          element,
+          range.endContainer,
+          range.endOffset,
+          now.value,
+          aim.current
+        );
 
         if (start !== null && end !== null) {
-          onSelect({ start: Math.min(start, end), end: Math.max(start, end) });
+          now.onSelect({ start: Math.min(start, end), end: Math.max(start, end) });
         }
       };
 
       owner.addEventListener('selectionchange', read);
 
       return () => owner.removeEventListener('selectionchange', read);
-    }, [value, onSelect, aim]);
+    }, [aim]);
 
     /**
      * A composition, from the outside.
