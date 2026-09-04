@@ -7,6 +7,14 @@
 /// to keep in step, which is the one place this package has an easier job than
 /// the other. What decides the colours is the same function either way:
 /// `highlightMarkdown`, diffed between the two by `tool/parity.dart`.
+///
+/// What the field is asked for is windowed, and both packages window it: a
+/// document past [kMawySourceWindowFrom] lines is coloured where it can be seen
+/// and handed over as plain characters everywhere else. The field lays out the
+/// whole document either way — that is the one thing a single layer cannot
+/// avoid, and it is also what keeps the caret, the selection and every
+/// measurement exactly what they were. What is saved is the scan of every line
+/// on every keystroke, and the span per run it produced.
 library;
 
 import 'dart:ui' as ui;
@@ -44,6 +52,13 @@ class MawySourceController extends TextEditingController {
   /// Which of [matches] is being stepped through, or `-1` for none of them.
   int currentMatch = -1;
 
+  /// The lines worth colouring, or `null` for all of them.
+  ///
+  /// Set by the field before every build, from what it can see. Everything
+  /// outside it is still handed to the field, as the characters it is written
+  /// with and in one span.
+  MdHighlightWindow? window;
+
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
@@ -51,13 +66,27 @@ class MawySourceController extends TextEditingController {
     required bool withComposing,
   }) {
     final List<InlineSpan> spans = <InlineSpan>[];
-    final List<MdHighlightedLine> lines = highlightMarkdown(text, gfm: gfm);
+    final MdHighlightWindow? only = window;
+    final List<MdHighlightedLine> lines = highlightMarkdown(text, gfm: gfm, within: only);
+    final int first = only == null ? 0 : only.from.clamp(0, lines.length);
+    final int last = only == null ? lines.length : only.to.clamp(first, lines.length);
     int from = 0;
 
     _hitFrom = 0;
 
-    for (int index = 0; index < lines.length; index += 1) {
-      if (index > 0) {
+    for (int index = 0; index < first; index += 1) {
+      from += lines[index].text.length + 1;
+    }
+
+    if (first > 0) {
+      // Everything above the window, as the characters it is written with. It
+      // carries the newline that ends the line before the window, which is why
+      // the loop below only writes one between lines.
+      spans.add(TextSpan(text: text.substring(0, from)));
+    }
+
+    for (int index = first; index < last; index += 1) {
+      if (index > first) {
         spans.add(const TextSpan(text: '\n'));
       }
 
@@ -153,6 +182,11 @@ class MawySourceController extends TextEditingController {
       }
 
       from += line.text.length + 1;
+    }
+
+    if (last < lines.length && from > 0) {
+      // Everything below it, from the newline that ended the last line drawn.
+      spans.add(TextSpan(text: text.substring(from - 1)));
     }
 
     return TextSpan(style: style, children: spans);
@@ -366,6 +400,131 @@ class _MawySourceFieldState extends State<MawySourceField>
   /// leaves the surface rather than indenting. See [_onKey].
   bool _leaving = false;
 
+  /* ---------------------------------------------------------------------
+   * Colouring only what can be seen
+   * ------------------------------------------------------------------ */
+
+  /// The lines being coloured, or `null` while the document is short enough
+  /// that all of them are.
+  MdHighlightWindow? _window;
+
+  /// Where each line of the document begins, held until the document changes.
+  ///
+  /// The search below asks about a line by the offset it starts at, and working
+  /// that out is a walk down the whole document — which is the cost the window
+  /// exists to avoid paying on a scroll.
+  List<int> _starts = const <int>[];
+  String? _startsFor;
+
+  /// Whether a look at the window is already booked for the end of this frame.
+  bool _booked = false;
+
+  List<int> get _lineStarts {
+    final String source = widget.controller.text;
+
+    if (_startsFor != source) {
+      _starts = lineStarts(source);
+      _startsFor = source;
+    }
+
+    return _starts;
+  }
+
+  /// Books a look at the window for after the frame.
+  ///
+  /// After, and not now: a scroll notification can arrive while the frame that
+  /// caused it is still being laid out, and rebuilding from there is the one
+  /// thing a widget may not do. A frame late is what the overscan is for.
+  void _bookWindow() {
+    if (_booked) {
+      return;
+    }
+
+    _booked = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      _booked = false;
+
+      if (mounted) {
+        _syncWindow();
+      }
+    });
+  }
+
+  /// What can be seen, turned into the lines worth colouring.
+  ///
+  /// The field is asked where a line is drawn rather than told: it has laid the
+  /// whole document out, its answer already has the scroll taken off it, and it
+  /// is the same question the column of numbers asks beside it. A window that
+  /// still covers what can be seen is left alone, so an ordinary scroll rebuilds
+  /// nothing until it has used up the overscan.
+  void _syncWindow() {
+    final RenderEditable? field = editableTextKey.currentState?.renderEditable;
+    final List<int> starts = _lineStarts;
+
+    if (starts.length < kMawySourceWindowFrom) {
+      if (_window != null) {
+        setState(() => _window = null);
+      }
+
+      return;
+    }
+
+    if (field == null || !field.hasSize) {
+      return;
+    }
+
+    final double line = _fontSize * _lineHeight;
+    final int top = _lineAtEdge(field, starts, -line);
+    final int bottom = _lineAtEdge(field, starts, field.size.height);
+    final MdHighlightWindow? held = _window;
+
+    if (held != null && held.from <= top && held.to > bottom) {
+      return;
+    }
+
+    final MdHighlightWindow next = MdHighlightWindow(
+      (top - _overscan).clamp(0, starts.length),
+      (bottom + _overscan).clamp(0, starts.length),
+    );
+
+    if (next != held) {
+      setState(() => _window = next);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_bookWindow);
+    widget.scrollController?.addListener(_bookWindow);
+    _bookWindow();
+  }
+
+  @override
+  void didUpdateWidget(MawySourceField old) {
+    super.didUpdateWidget(old);
+
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_bookWindow);
+      widget.controller.addListener(_bookWindow);
+    }
+
+    if (old.scrollController != widget.scrollController) {
+      old.scrollController?.removeListener(_bookWindow);
+      widget.scrollController?.addListener(_bookWindow);
+    }
+
+    _bookWindow();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_bookWindow);
+    widget.scrollController?.removeListener(_bookWindow);
+    super.dispose();
+  }
+
   /// The keys this surface answers for, before the field sees them.
   ///
   /// `Tab` indents, and `Escape` is the way out. A text field that swallows
@@ -438,13 +597,14 @@ class _MawySourceFieldState extends State<MawySourceField>
     controller.gfm = widget.gfm;
     controller.matches = widget.matches;
     controller.currentMatch = widget.currentMatch;
+    controller.window = _window;
 
     final TextStyle style = TextStyle(
       color: tokens.foreground,
       fontFamilyFallback: const <String>['Menlo', 'Consolas', 'Roboto Mono'],
       fontFamily: 'monospace',
-      fontSize: 13.5,
-      height: 1.7,
+      fontSize: _fontSize,
+      height: _lineHeight,
     );
 
     final Widget field = Stack(
@@ -547,6 +707,52 @@ class _MawySourceFieldState extends State<MawySourceField>
 
 /// The gap between the numbers and the text, which is `--mawy-src-gap`.
 const double _gutterGap = 14;
+
+/// How long a document has to be before only part of it is coloured.
+///
+/// Under it every line is read on every keystroke, the way it always was, which
+/// keeps the common document — a page of notes, a README — on exactly the path
+/// it had. The React package uses the same number for the same reason, and the
+/// two are meant to stay the same number.
+const int kMawySourceWindowFrom = 600;
+
+/// The type the source is drawn in.
+///
+/// Two numbers rather than one `TextStyle`, because the window's arithmetic
+/// wants the line height as much as the field wants the style, and a second
+/// copy of it is a window that drifts the day somebody changes the type.
+const double _fontSize = 13.5;
+const double _lineHeight = 1.7;
+
+/// How many lines either side of what can be seen are coloured as well.
+///
+/// The window is worked out after a frame rather than during one, so it is
+/// always a frame behind the scroll — and this is what that frame is spent out
+/// of. Wide enough that an ordinary scroll never reaches the edge of it, and
+/// narrow enough that the whole point of having one survives.
+const int _overscan = 150;
+
+/// The first line whose top is past [slack], found by halving.
+///
+/// A line's top only ever moves down as the line number goes up, so the search
+/// is a binary one — and without it a five-thousand-line document showing forty
+/// of them asks the field where every line above the first visible one is.
+int _lineAtEdge(RenderEditable field, List<int> starts, double slack) {
+  int low = 0;
+  int high = starts.length - 1;
+
+  while (low < high) {
+    final int middle = (low + high) ~/ 2;
+
+    if (field.getLocalRectForCaret(TextPosition(offset: starts[middle])).top > slack) {
+      high = middle;
+    } else {
+      low = middle + 1;
+    }
+  }
+
+  return low;
+}
 
 /// The column of line numbers down the leading edge of the source.
 class MawySourceGutter extends StatelessWidget {

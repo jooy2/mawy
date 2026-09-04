@@ -93,6 +93,8 @@ Two things are still the platform's rather than this package's, and both are Cup
 
 `lineNumbers` turns the gutter off here too. It is on by default, and the numbers are painted from the field's own laid-out lines rather than from a second layout of the same text — so a line that wrapped is two rows on the screen and one number down the side, and the two cannot drift because there is only one of them.
 
+A document past about six hundred lines is coloured where it can be seen and handed over as plain characters everywhere else. The field lays the whole document out either way — that is the one thing a single layer cannot avoid, and it is also what keeps the caret, the selection and every measurement exactly what they were. What is saved is reading every line on every keystroke. The window is worked out after a frame rather than during one, so a scroll fast enough to outrun it shows plain text in the right place until the next frame.
+
 :::
 
 The syntax colouring is Mawy's own parser's vocabulary, but not Mawy's own parser. A line being typed is half-written most of the time, and a highlighter that waited for `**bold` to be closed before admitting anything was happening would flicker on every keystroke — so it reads a line at a time, approximately, and deliberately says nothing about an unfinished marker.

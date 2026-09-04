@@ -94,6 +94,34 @@ class MdHighlightedLine {
   final List<MdToken> tokens;
 }
 
+/// The lines worth locating the syntax in, as a half-open range of line indexes.
+///
+/// Everything outside it still comes back, and comes back with its text — a
+/// caller windowing this is windowing what it *colours*, not what it holds.
+/// What is saved is the scan of each line and the tokens it would have
+/// produced, which for a document with five thousand lines and forty of them on
+/// the screen is nearly all of the work.
+class MdHighlightWindow {
+  /// Creates a range.
+  const MdHighlightWindow(this.from, this.to);
+
+  /// The first line to read.
+  final int from;
+
+  /// One past the last. Exclusive.
+  final int to;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MdHighlightWindow && other.from == from && other.to == to;
+
+  @override
+  int get hashCode => Object.hash(from, to);
+}
+
+/// The tokens of a line nobody asked to colour. Shared, so it costs nothing.
+const List<MdToken> _none = <MdToken>[];
+
 final RegExp _fenceLine = RegExp(r'^ {0,3}(`{3,}|~{3,})(.*)$');
 final RegExp _atx = RegExp(r'^( {0,3}#{1,6})(\s.*)?$');
 final RegExp _rule = RegExp(r'^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$');
@@ -167,11 +195,42 @@ void _scanInline(String text, int offset, List<MdToken> tokens) {
 ///
 /// The state that survives a line is one thing — whether a fenced block is
 /// open — which is what makes this cheap enough to run on every keystroke.
-List<MdHighlightedLine> highlightMarkdown(String source, {bool gfm = true}) {
+///
+/// With a [within], only the lines inside it are read for syntax; the rest come
+/// back with their text and no tokens. The one thing a skipped line still has
+/// to do is say whether it opened or closed a fence, because the line after it
+/// cannot be read without knowing — so a fence is the only thing looked for
+/// outside the window, and it is one anchored pattern rather than the dozen a
+/// line is otherwise put through.
+List<MdHighlightedLine> highlightMarkdown(
+  String source, {
+  bool gfm = true,
+  MdHighlightWindow? within,
+}) {
   final List<MdHighlightedLine> out = <MdHighlightedLine>[];
+  final List<String> lines = source.split('\n');
   String? fence;
 
-  for (final String text in source.split('\n')) {
+  for (int index = 0; index < lines.length; index += 1) {
+    final String text = lines[index];
+
+    if (within != null && (index < within.from || index >= within.to)) {
+      final RegExpMatch? edge = _fenceLine.firstMatch(text);
+
+      if (fence != null) {
+        final String? closing = edge?.group(1);
+
+        if (closing != null && closing[0] == fence[0] && closing.length >= fence.length) {
+          fence = null;
+        }
+      } else if (edge != null) {
+        fence = edge.group(1);
+      }
+
+      out.add(MdHighlightedLine(text, _none));
+      continue;
+    }
+
     final List<MdToken> tokens = <MdToken>[];
     final RegExpMatch? opening = _fenceLine.firstMatch(text);
 

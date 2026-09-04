@@ -34,6 +34,8 @@
 
 - **Finding without case sensitivity folds the document in one go.** The copy the search reads was built a character at a time so that a letter which changes length in lower case could be left alone, which is a string made and thrown away for every character in the document — on every keystroke in the find box. A text with nothing in it that needs that treatment is folded in the one call the platform has, and the answer is the same either way.
 
+- **The source field is coloured where it can be seen rather than end to end.** `MawySourceController` read every line of the document for syntax and handed the field a span for every run it found, on every keystroke: a five-thousand-line file was tens of thousands of spans built to show forty lines. Only the lines near the view are read now, and everything else is handed over as the characters it is written with, in one span. The field still lays the whole document out, so the caret, the selection, the scroll extent and the line numbers beside it are exactly what they were. A document under six hundred lines is coloured the way it always was.
+
 ### Fixed
 
 - **A picture the document carries itself is drawn.** The URL policy allows a `data:` image on purpose — a document that carries its own illustrations is most of the point of a Markdown file being one file — and the renderer handed it to `Image.network`, which cannot open one anywhere but the web, where it happens to become an `<img>` tag. So an inline picture arrived on one platform and showed its alt text on the others. The bytes are read out of the URL and drawn from memory, once per picture rather than once per build.

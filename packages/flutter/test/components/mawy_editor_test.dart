@@ -607,6 +607,85 @@ void main() {
     });
   });
 
+  group('a source longer than the screen', () {
+    /// A document past the length at which only part of it is coloured, with
+    /// something on every line for the highlighter to find.
+    final String huge = <String>[
+      '# A long document',
+      '',
+      ...List<String>.generate(
+        900,
+        (int at) => at % 5 == 0 ? '## Section $at' : 'Paragraph $at with **bold** in it.',
+      ),
+      '',
+      'The last line, which nothing above it repeats.',
+    ].join('\n');
+
+    Future<void> open(WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          MawyEditor(defaultValue: huge, defaultMode: MawyEditorMode.plain),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('hands the field every character of it', (WidgetTester tester) async {
+      // The one thing the window may never cost. The field lays the whole
+      // document out either way, so the caret, the selection, every offset and
+      // the scroll extent are all what they were — and all of that stands on
+      // the spans still saying exactly what the document says.
+      await open(tester);
+
+      expect(sourceSpan(tester).toPlainText(), huge);
+    });
+
+    testWidgets('colours far fewer runs than the document has lines', (WidgetTester tester) async {
+      await open(tester);
+
+      expect(spanCount(sourceSpan(tester)), lessThan(1000));
+      expect(spanCount(sourceSpan(tester)), greaterThan(1));
+    });
+
+    testWidgets('colours the top of it, which is what can be seen', (WidgetTester tester) async {
+      await open(tester);
+
+      expect(styleOfIn(sourceSpan(tester), ' A long document')?.fontWeight, FontWeight.w700);
+    });
+
+    testWidgets('colours whatever the reader scrolled to', (WidgetTester tester) async {
+      await open(tester);
+
+      expect(styleOfIn(sourceSpan(tester), ' Section 500'), isNull);
+
+      await tester.drag(_sourceField, const Offset(0, -14000), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      final InlineSpan span = sourceSpan(tester);
+
+      expect(span.toPlainText(), huge);
+      expect(styleOfIn(span, ' Section 500')?.fontWeight, FontWeight.w700);
+    });
+
+    testWidgets('colours every line of a document short enough to', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: List<String>.generate(200, (int at) => '## Heading $at').join('\n'),
+            defaultMode: MawyEditorMode.plain,
+          ),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The last line of a two-hundred-line document is nowhere near the
+      // screen, and is coloured anyway: under the threshold nothing is windowed.
+      expect(styleOfIn(sourceSpan(tester), ' Heading 199')?.fontWeight, FontWeight.w700);
+    });
+  });
+
   group('an empty document', () {
     testWidgets('offers to open one where the application knows how', (WidgetTester tester) async {
       bool asked = false;
@@ -1105,6 +1184,64 @@ final Finder _sourceField = find.descendant(
   of: find.byType(MawySourceField),
   matching: find.byType(EditableText),
 );
+
+/// The spans the source field is actually drawing.
+///
+/// Read off the laid-out field rather than by calling the controller, so that
+/// what is asserted is what the window the field settled on produced.
+InlineSpan sourceSpan(WidgetTester tester) =>
+    (tester.state(_sourceField) as EditableTextState).renderEditable.text!;
+
+/// How many runs a span tree is cut into.
+int spanCount(InlineSpan root) {
+  int found = 0;
+
+  void walk(InlineSpan span) {
+    found += 1;
+
+    if (span is TextSpan) {
+      for (final InlineSpan child in span.children ?? const <InlineSpan>[]) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+
+  return found;
+}
+
+/// The style of the run inside [root] saying exactly [saying].
+///
+/// `spans.dart` asks the same question of every `Text` on the page; a field is
+/// not one of those, and its spans have to be walked where they are.
+TextStyle? styleOfIn(InlineSpan root, String saying) {
+  TextStyle? found;
+
+  void walk(InlineSpan span, TextStyle? inherited) {
+    if (found != null || span is! TextSpan) {
+      return;
+    }
+
+    final TextStyle? style = inherited == null
+        ? span.style
+        : (span.style == null ? inherited : inherited.merge(span.style));
+
+    if (span.text == saying) {
+      found = style;
+
+      return;
+    }
+
+    for (final InlineSpan child in span.children ?? const <InlineSpan>[]) {
+      walk(child, style);
+    }
+  }
+
+  walk(root, null);
+
+  return found;
+}
 
 /// The background colour behind every run the find bar marked, in order.
 ///
