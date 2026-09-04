@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
+import 'package:mawy/src/viewer/offsets.dart' show MawyMeasured;
 
 import '../support/host.dart';
 import '../support/spans.dart';
@@ -613,6 +614,113 @@ void main() {
       // the eye needs, and easing each step of it is a run of little starts
       // that never catch up with the fingers.
       expect(scroller.offset, moreOrLessEquals(36, epsilon: 0.5));
+    });
+  });
+
+  /// Where every block of the document is, which is what the outline's mark,
+  /// scrolling to a heading, scrolling to a match and `MawyViewerAnchors` all
+  /// read. See `src/viewer/offsets.dart`.
+  group('where the blocks are', () {
+    /// Twenty headings with a paragraph under each, so a block's offset is
+    /// something a test can name rather than something it has to hunt for.
+    final String document = <String>[
+      for (int at = 0; at < 20; at += 1) '## Section $at\n\nA paragraph under section $at.\n',
+    ].join('\n');
+
+    testWidgets('records every block, in order, at increasing offsets', (
+      WidgetTester tester,
+    ) async {
+      final MawyViewerAnchors anchors = MawyViewerAnchors();
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(value: document, anchors: anchors),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final List<(int, double)> places = anchors.places();
+
+      // Forty blocks, and not the handful of them the screen happens to hold:
+      // a block's place is what it was laid out at rather than what a render
+      // tree can be asked about this frame.
+      expect(places, hasLength(40));
+
+      for (int at = 1; at < places.length; at += 1) {
+        expect(places[at].$1, greaterThan(places[at - 1].$1));
+        expect(places[at].$2, greaterThan(places[at - 1].$2));
+      }
+    });
+
+    testWidgets('puts a block where it said the block was', (WidgetTester tester) async {
+      final MawyViewerAnchors anchors = MawyViewerAnchors();
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(value: document, anchors: anchors),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final ScrollController scroller = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
+          .controller!;
+      // The block for `## Section 12`, by the character it starts at.
+      final int start = document.indexOf('## Section 12');
+      final double at = anchors.places().firstWhere(((int, double) place) => place.$1 == start).$2;
+
+      scroller.jumpTo(at);
+      await tester.pumpAndSettle();
+
+      // Scrolled to the number the anchor gave, the block is at the top of the
+      // view — which is the promise the number makes. The block rather than the
+      // words inside it: a heading carries space above its text, and that space
+      // is part of the block.
+      final int block = anchors.places().indexWhere(((int, double) place) => place.$1 == start);
+      final double top =
+          tester.getTopLeft(find.byType(MawyMeasured).at(block)).dy -
+          tester.getTopLeft(find.byType(SingleChildScrollView).first).dy;
+
+      expect(top.abs(), lessThan(1));
+    });
+
+    testWidgets('follows an outline entry to a heading well below the view', (
+      WidgetTester tester,
+    ) async {
+      final MawyViewerAnchors anchors = MawyViewerAnchors();
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(value: document, anchors: anchors),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(toolbarButton('Contents'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(of: find.byType(MawyViewerOutline), matching: find.text('Section 16')),
+      );
+      await tester.pumpAndSettle();
+
+      final int start = document.indexOf('## Section 16');
+      final int block = anchors.places().indexWhere(((int, double) place) => place.$1 == start);
+      final double top =
+          tester.getTopLeft(find.byType(MawyMeasured).at(block)).dy -
+          tester.getTopLeft(find.byType(SingleChildScrollView).first).dy;
+
+      final ScrollController scroller = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView).first)
+          .controller!;
+
+      // A fiftieth of the view above it, which is the alignment the viewer asks
+      // for so a heading does not sit against the top edge. The view is what
+      // the toolbar left of the window rather than the window.
+      expect(top, moreOrLessEquals(scroller.position.viewportDimension * 0.02, epsilon: 2));
     });
   });
 

@@ -12,6 +12,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/src/internal/copying.dart';
@@ -28,6 +29,7 @@ import 'package:mawy/src/types.dart';
 import 'package:mawy/src/viewer/anchors.dart';
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
+import 'package:mawy/src/viewer/offsets.dart';
 
 /// Everything the toolbar offers, in the order it draws them.
 const List<MawyViewerToolbarItem> kMawyViewerToolbar = <MawyViewerToolbarItem>[
@@ -226,6 +228,18 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   /// The same slugs, in the order they are drawn, so one can be found by index.
   final List<String> _order = <String>[];
 
+  /// Which block each of those slugs is, so a heading can be found without
+  /// asking the render tree where its element went. See [_offsets].
+  final Map<String, int> _headingBlocks = <String, int>{};
+
+  /// Where every block of the document sits, filled in as each is laid out.
+  ///
+  /// Everything that has to scroll somewhere reads this rather than measuring
+  /// an element: the outline's mark, the outline's entries, the match being
+  /// stepped through, and the places [MawyViewerAnchors] reports. See
+  /// `offsets.dart` for why.
+  final MawyBlockOffsets _offsets = MawyBlockOffsets();
+
   /// The heading the reader is at, and the one they asked to be at.
   ///
   /// Measured from the scroll while the panel is open, and pinned to whatever
@@ -342,23 +356,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
         return;
       }
 
-      final int at = _at.clamp(0, found.total - 1);
-      final BuildContext? target = _blocks[found.inBlock[at]]?.currentContext;
-
-      if (target == null) {
-        return;
-      }
-
-      unawaited(
-        Scrollable.ensureVisible(
-          target,
-          duration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 260),
-          curve: Curves.easeOutCubic,
-          alignment: 0.2,
-        ),
-      );
+      unawaited(_scrollToBlock(found.inBlock[_at.clamp(0, found.total - 1)], alignment: 0.2));
     });
   }
 
@@ -456,12 +454,19 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     _document = parseMarkdown(widget.value, widget.parse);
     _headings.clear();
     _order.clear();
+    _headingBlocks.clear();
     _drawn = null;
+    // One per top-level block, and one more where the footnotes go under them.
+    _offsets.reset(_document.root.children.length + (_document.footnotes.isEmpty ? 0 : 1));
     // Per position in the document, so a document with fewer blocks in it than
     // the last one leaves keys behind for positions that no longer exist.
     _blocks.clear();
     _dropAnchors();
-    widget.anchors?.reset();
+    widget.anchors
+      ?..reset()
+      ..follow(_offsets, <int>[
+        for (final MdBlock block in _document.root.children) block.range.start,
+      ]);
   }
 
   Brightness _brightness(BuildContext context) => switch (widget.colorScheme) {
@@ -510,9 +515,14 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     _wanted.clear();
     _drawnFrom = from;
 
+    final List<Widget> blocks = _withAnchors(document, render);
     final Widget? footnotes = renderFootnotes(document.footnotes, render);
 
-    _drawn = <Widget>[..._withAnchors(document, render), ?footnotes];
+    _drawn = <Widget>[
+      ...blocks,
+      if (footnotes != null)
+        MawyMeasured(offsets: _offsets, index: blocks.length, child: footnotes),
+    ];
     _sweepRecognizers();
 
     return _drawn!;
@@ -611,30 +621,26 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     return _found!;
   }
 
-  /// Where a heading would sit at the top of the view, or `null` if it cannot
-  /// be measured this frame.
+  /// Where a heading would sit at the top of the view, or `null` if nothing
+  /// knows yet.
   double? _offsetOf(String slug) {
-    final RenderObject? box = _headings[slug]?.currentContext?.findRenderObject();
+    final int? block = _headingBlocks[slug];
 
-    if (box is! RenderBox || !box.attached || !box.hasSize) {
-      return null;
-    }
-
-    return RenderAbstractViewport.maybeOf(box)?.getOffsetToReveal(box, 0).offset;
+    return block == null ? null : _offsets.offsetOf(block);
   }
 
   /// Which heading is at the top of what can be seen.
   ///
   /// Found by halving rather than counted to. Headings come down the page in
   /// the order they are written, so the offsets are in that order too — and
-  /// walking them from the first one meant asking the render tree where every
-  /// heading above the view was, on every scroll notification, which for a
-  /// reference page with a few hundred of them is the whole of it at the
-  /// bottom.
+  /// walking them from the first one meant asking where every heading above the
+  /// view was, on every scroll notification, which for a reference page with a
+  /// few hundred of them is the whole of it at the bottom.
   ///
-  /// A heading with no offset this frame is one nothing can be said about, so
-  /// the search treats it as being wherever the search is looking. That is the
-  /// same answer the walk gave by skipping it.
+  /// Both ends of the search read the ledger rather than the render tree, so a
+  /// heading below the view answers as readily as one above it. A heading with
+  /// no offset at all is one nothing can be said about, and is treated as being
+  /// wherever the search is looking.
   void _measureActive() {
     if (!_outlineOpen || !mounted) {
       return;
@@ -667,6 +673,63 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
 
     if (current != _active) {
       setState(() => _active = current);
+    }
+  }
+
+  /// Puts block [index] at [alignment] of the way down the view.
+  ///
+  /// The scroll offset comes out of the ledger rather than out of the render
+  /// tree, which is what lets it answer for a block that is not on the screen —
+  /// and a block nobody has laid out yet is answered from the average of the
+  /// ones who have, which is a place to scroll towards rather than a place to
+  /// land. Scrolling there lays it out, the ledger corrects itself from that,
+  /// and the second call arrives at the block.
+  Future<void> _scrollToBlock(int index, {required double alignment}) async {
+    if (!_scroller.hasClients) {
+      return;
+    }
+
+    final bool still = MediaQuery.disableAnimationsOf(context);
+
+    for (int attempt = 0; attempt < 2; attempt += 1) {
+      final double? at = _offsets.offsetOf(index);
+
+      if (at == null) {
+        return;
+      }
+
+      final ScrollPosition position = _scroller.position;
+      final double to = (at - position.viewportDimension * alignment).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+
+      if ((to - position.pixels).abs() < 0.5) {
+        return;
+      }
+
+      if (still || attempt > 0) {
+        position.jumpTo(to);
+      } else {
+        await position.animateTo(
+          to,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      // What the scroll just built is measured now, so a second look either
+      // finds the block already where it was asked to be and stops, or lands on
+      // it with the heights it did not have the first time.
+      await SchedulerBinding.instance.endOfFrame;
+
+      if (!mounted || !_scroller.hasClients) {
+        return;
+      }
     }
   }
 
@@ -767,9 +830,9 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   }
 
   void _goTo(String slug) {
-    final BuildContext? target = _headings[slug]?.currentContext;
+    final int? block = _headingBlocks[slug];
 
-    if (target == null) {
+    if (block == null) {
       return;
     }
 
@@ -778,19 +841,11 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       _active = slug;
     });
 
-    unawaited(
-      Scrollable.ensureVisible(
-        target,
-        // A reader who asked the platform for less movement asked to be at the
-        // heading rather than to be taken to it: this is the stylesheet's
-        // `scroll-behavior: auto` under the same setting.
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-        alignment: 0.02,
-      ),
-    );
+    // A reader who asked the platform for less movement asked to be at the
+    // heading rather than to be taken to it: this is the stylesheet's
+    // `scroll-behavior: auto` under the same setting, and `_scrollToBlock`
+    // reads it.
+    unawaited(_scrollToBlock(block, alignment: 0.02));
 
     // Moving the page is only half of following a link: the focus has to go
     // with it, or the next Tab carries on from the panel rather than from the
@@ -865,6 +920,12 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       _finding,
     ));
     final double? measure = type.measure.width;
+    final EdgeInsetsGeometry padding = widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96);
+
+    // What sits above the first block, which is half of where every block is.
+    // Resolved rather than read off, because a padding written the way a
+    // right-to-left application writes it has no `top` until it is.
+    _offsets.lead = padding.resolve(Directionality.of(context)).top;
 
     return Container(
       color: tokens.background,
@@ -994,8 +1055,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
                               selectionControls: emptyTextSelectionControls,
                               child: SingleChildScrollView(
                                 controller: _scroller,
-                                padding:
-                                    widget.padding ?? const EdgeInsets.fromLTRB(28, 40, 28, 96),
+                                padding: padding,
                                 child: MawyWheelScroll(
                                   controller: _scroller,
                                   child: Center(
@@ -1026,8 +1086,9 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     );
   }
 
-  /// The blocks, with a key on every heading so the outline can reach it, and
-  /// one on every block where somebody asked where the blocks are.
+  /// The blocks, each measuring itself, with a key on every heading so the
+  /// outline can reach it and one on every block where somebody asked where the
+  /// blocks are.
   List<Widget> _withAnchors(MdDocument document, MawyRenderContext render) {
     final List<Widget> drawn = renderBlocks(document.root.children, render);
     final List<MdBlock> blocks = document.root.children;
@@ -1062,11 +1123,15 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
           () => FocusNode(debugLabel: 'MawyViewer #${block.slug}', skipTraversal: true),
         );
 
+        _headingBlocks[block.slug] = index;
+
         drawn[index] = KeyedSubtree(
           key: key,
           child: Focus(focusNode: anchor, child: drawn[index]),
         );
       }
+
+      drawn[index] = MawyMeasured(offsets: _offsets, index: index, child: drawn[index]);
     }
 
     return drawn;

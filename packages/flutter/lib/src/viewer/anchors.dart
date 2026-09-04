@@ -7,14 +7,15 @@
 /// half of `src/internal/scroll.ts` that a browser answers by reading a
 /// bounding box off an element.
 ///
-/// Hand one to [MawyViewer] and it keeps a key on every top-level block; ask it
-/// for [places] and it measures them. Nothing is measured until it is asked
-/// for, because measuring is a layout read per block and a viewer redraws when
-/// a pointer moves over a code block.
+/// Hand one to [MawyViewer] and ask it for [places]. The answers come out of
+/// the viewer's own record of how tall each block was laid out — see
+/// `offsets.dart` — rather than out of a layout read per block, so asking is
+/// arithmetic and a viewer that redraws because a pointer moved over a code
+/// block measures nothing.
 library;
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/viewer/offsets.dart';
 
 /// The blocks of one viewer's document, and where they are.
 class MawyViewerAnchors {
@@ -22,53 +23,57 @@ class MawyViewerAnchors {
   MawyViewerAnchors();
 
   final Map<int, GlobalKey> _keys = <int, GlobalKey>{};
-  final List<int> _order = <int>[];
 
-  /// The key for the block starting at [start]. Called by the viewer as it
+  MawyBlockOffsets? _offsets;
+  List<int> _starts = const <int>[];
+
+  /// The key on the block starting at [start]. Called by the viewer as it
   /// draws, and not something an application has a reason to call.
-  GlobalKey keyFor(int start) {
-    final GlobalKey? held = _keys[start];
+  ///
+  /// [places] is answered from the viewer's own measurements rather than
+  /// through these, so what a key is still good for is reaching the block's
+  /// element — which is a thing to do with a block on the screen, and `null`
+  /// for one that is not.
+  GlobalKey keyFor(int start) =>
+      _keys.putIfAbsent(start, () => GlobalKey(debugLabel: 'MawyViewerAnchors $start'));
 
-    if (held != null) {
-      return held;
-    }
-
-    final GlobalKey made = GlobalKey(debugLabel: 'MawyViewerAnchors $start');
-
-    _keys[start] = made;
-    _order.add(start);
-
-    return made;
+  /// Where the viewer keeps its measurements, and which character each block
+  /// starts at. Called by the viewer as it reads a document, and not something
+  /// an application has a reason to call.
+  void follow(MawyBlockOffsets offsets, List<int> starts) {
+    _offsets = offsets;
+    _starts = starts;
   }
 
   /// Forgets the document that just went. Called by the viewer when it reparses.
   void reset() {
     _keys.clear();
-    _order.clear();
+    _offsets = null;
+    _starts = const <int>[];
   }
 
   /// Every block, as the character it starts at and the scroll offset that
   /// would put it at the top of what can be seen.
   ///
-  /// In document order, and blocks that are not on the screen this frame are
-  /// left out rather than guessed at.
+  /// In document order, and every block answers rather than only the ones on
+  /// the screen. A block the viewer has laid out is exact; one it has not is
+  /// worked out from what the others measured, which is a place to aim at and
+  /// becomes exact the moment it is drawn.
   List<(int, double)> places() {
+    final MawyBlockOffsets? offsets = _offsets;
+
+    if (offsets == null) {
+      return const <(int, double)>[];
+    }
+
     final List<(int, double)> found = <(int, double)>[];
 
-    for (final int start in _order) {
-      final RenderObject? box = _keys[start]?.currentContext?.findRenderObject();
+    for (int index = 0; index < _starts.length; index += 1) {
+      final double? at = offsets.offsetOf(index);
 
-      if (box == null || !box.attached || box is! RenderBox || !box.hasSize) {
-        continue;
+      if (at != null) {
+        found.add((_starts[index], at));
       }
-
-      final RenderAbstractViewport? viewport = RenderAbstractViewport.maybeOf(box);
-
-      if (viewport == null) {
-        continue;
-      }
-
-      found.add((start, viewport.getOffsetToReveal(box, 0).offset));
     }
 
     return found;
