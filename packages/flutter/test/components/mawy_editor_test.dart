@@ -343,6 +343,26 @@ void main() {
       expect(after[0], MawyTokens.light.find);
     });
 
+    /// Each line is given only the matches that are on it, which means the
+    /// matches are cut against the lines once rather than looked through again
+    /// for every line. The arithmetic that does the cutting is what this
+    /// checks: a match against the very start of a line and one against its
+    /// very end are where an offset out by one shows up.
+    testWidgets('marks each match on the line it is actually on', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'aa bb\ncc\nbb aa bb', mode: MawyEditorMode.plain)),
+      );
+
+      await press(tester, 'Find');
+      await tester.enterText(findField(0), 'bb');
+      await tester.pumpAndSettle();
+
+      expect(_marked(tester), <String>['bb', 'bb', 'bb']);
+      // Cut at the right places: the runs on either side of each mark are the
+      // characters that were not part of it.
+      expect(_pieces(tester), <String>['aa ', 'bb', '\n', 'cc', '\n', 'bb', ' aa ', 'bb']);
+    });
+
     testWidgets('steps on Enter without handing the document the focus', (
       WidgetTester tester,
     ) async {
@@ -950,6 +970,41 @@ final Finder _sourceField = find.descendant(
 ///
 /// Read off the render object rather than the controller, so what is asserted
 /// is what the field was actually given to paint.
+/// The text of every run the find bar marked, in order.
+List<String> _marked(WidgetTester tester) {
+  final List<String> found = <String>[];
+
+  tester.state<EditableTextState>(_sourceField).renderEditable.text?.visitChildren((
+    InlineSpan span,
+  ) {
+    if (span.style?.backgroundColor != null && span is TextSpan && span.text != null) {
+      found.add(span.text!);
+    }
+
+    return true;
+  });
+
+  return found;
+}
+
+/// Every run the field was given to draw, in order, with the empty ones left
+/// out — which is what the line is cut into.
+List<String> _pieces(WidgetTester tester) {
+  final List<String> found = <String>[];
+
+  tester.state<EditableTextState>(_sourceField).renderEditable.text?.visitChildren((
+    InlineSpan span,
+  ) {
+    if (span is TextSpan && (span.text ?? '').isNotEmpty) {
+      found.add(span.text!);
+    }
+
+    return true;
+  });
+
+  return found;
+}
+
 List<Color> _marks(WidgetTester tester) {
   final List<Color> found = <Color>[];
 

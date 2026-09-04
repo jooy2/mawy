@@ -54,6 +54,8 @@ class MawySourceController extends TextEditingController {
     final List<MdHighlightedLine> lines = highlightMarkdown(text, gfm: gfm);
     int from = 0;
 
+    _hitFrom = 0;
+
     for (int index = 0; index < lines.length; index += 1) {
       if (index > 0) {
         spans.add(const TextSpan(text: '\n'));
@@ -75,7 +77,30 @@ class MawySourceController extends TextEditingController {
         at = token.end;
       }
 
-      final List<_Hit> hits = _hitsOn(line.text.length, from);
+      // The matches on this line, taken from where the last line left off.
+      // Both lists are in order, so this is one walk down the pair of them
+      // rather than a look through every match for every line — the difference
+      // between a keystroke costing the length of the document and costing the
+      // length of the document times the number of matches in it.
+      while (_hitFrom < matches.length && matches[_hitFrom].end <= from) {
+        _hitFrom += 1;
+      }
+
+      final List<_Hit> hits = <_Hit>[];
+
+      for (int each = _hitFrom; each < matches.length; each += 1) {
+        if (matches[each].start >= from + line.text.length) {
+          break;
+        }
+
+        hits.add(
+          _Hit(
+            (matches[each].start - from).clamp(0, line.text.length),
+            (matches[each].end - from).clamp(0, line.text.length),
+            current: each == currentMatch,
+          ),
+        );
+      }
 
       // The colours and the matches are two separate answers about the same
       // characters — what the Markdown means, and what somebody is looking for
@@ -92,6 +117,11 @@ class MawySourceController extends TextEditingController {
       }
 
       final List<int> edges = cuts.toList()..sort();
+      // The pieces come out left to right and both of these are already in
+      // that order, so each is walked once across the line rather than searched
+      // from the beginning for every piece.
+      int nextRun = 0;
+      int nextHit = 0;
 
       for (int edge = 0; edge < edges.length - 1; edge += 1) {
         final int start = edges[edge];
@@ -101,8 +131,16 @@ class MawySourceController extends TextEditingController {
           continue;
         }
 
-        final MdToken? run = _runOver(runs, start, end);
-        final _Hit? hit = _hitOver(hits, start, end);
+        while (nextRun < runs.length && runs[nextRun].end <= start) {
+          nextRun += 1;
+        }
+
+        while (nextHit < hits.length && hits[nextHit].end <= start) {
+          nextHit += 1;
+        }
+
+        final MdToken? run = _runAt(runs, nextRun, start, end);
+        final _Hit? hit = _hitAt(hits, nextHit, start, end);
         TextStyle? piece = run == null ? null : _styleFor(run.kind, tokens);
 
         if (hit != null) {
@@ -120,27 +158,14 @@ class MawySourceController extends TextEditingController {
     return TextSpan(style: style, children: spans);
   }
 
-  /// [matches] cut down to one line, in that line's own offsets.
+  /// The first match that might still be on the line being built.
   ///
-  /// A match can only be on one line — the query comes from a field with no
-  /// newline in it — but it is clamped anyway, so that a stale match arriving
-  /// a frame before the document it was found in cannot index past the end.
-  List<_Hit> _hitsOn(int length, int from) {
-    final List<_Hit> hits = <_Hit>[];
-
-    for (int index = 0; index < matches.length; index += 1) {
-      final int start = matches[index].start - from;
-      final int end = matches[index].end - from;
-
-      if (end > 0 && start < length) {
-        hits.add(
-          _Hit(start.clamp(0, length), end.clamp(0, length), current: index == currentMatch),
-        );
-      }
-    }
-
-    return hits;
-  }
+  /// Reset at the top of every build and walked forward as the lines go by. A
+  /// match can only be on one line — the query comes from a field with no
+  /// newline in it — but each is clamped to the line anyway, so that a stale
+  /// match arriving a frame before the document it was found in cannot index
+  /// past the end.
+  int _hitFrom = 0;
 }
 
 /// One match, on the line it was found on.
@@ -152,27 +177,13 @@ class _Hit {
   final bool current;
 }
 
-/// The coloured run a piece of a line sits inside, where there is one.
-MdToken? _runOver(List<MdToken> runs, int start, int end) {
-  for (final MdToken run in runs) {
-    if (run.start <= start && end <= run.end) {
-      return run;
-    }
-  }
+/// The coloured run at [at], if the piece from [start] to [end] is inside it.
+MdToken? _runAt(List<MdToken> runs, int at, int start, int end) =>
+    at < runs.length && runs[at].start <= start && end <= runs[at].end ? runs[at] : null;
 
-  return null;
-}
-
-/// The match a piece of a line sits inside, where there is one.
-_Hit? _hitOver(List<_Hit> hits, int start, int end) {
-  for (final _Hit hit in hits) {
-    if (hit.start <= start && end <= hit.end) {
-      return hit;
-    }
-  }
-
-  return null;
-}
+/// The match at [at], if the piece from [start] to [end] is inside it.
+_Hit? _hitAt(List<_Hit> hits, int at, int start, int end) =>
+    at < hits.length && hits[at].start <= start && end <= hits[at].end ? hits[at] : null;
 
 /// What each kind of run is drawn in.
 ///
