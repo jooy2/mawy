@@ -17,8 +17,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/toolbar.dart';
 import 'package:mawy/src/theme/tokens.dart';
-import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
 
 /// The bar itself.
 class MawyFindBar extends StatefulWidget {

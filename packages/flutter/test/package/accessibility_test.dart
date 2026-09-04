@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
+import 'package:mawy/src/internal/toolbar.dart' show MawyToolbarButton;
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart' show MawyViewerOutline;
-import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart' show MawyToolbarButton;
 
 import '../support/host.dart';
 

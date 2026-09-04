@@ -32,12 +32,12 @@ import 'package:mawy/src/internal/focus_visible.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/overlay.dart';
 import 'package:mawy/src/internal/roving.dart';
+import 'package:mawy/src/internal/toolbar.dart';
 import 'package:mawy/src/markdown/parse.dart' show MawyParseOptions;
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
 import 'package:mawy/src/viewer/anchors.dart';
 import 'package:mawy/src/viewer/mawy_viewer.dart';
-import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
 
 /// Which surface the editor is showing.
 enum MawyEditorMode {
@@ -985,36 +985,39 @@ class _ToolbarState extends State<_Toolbar> {
     super.dispose();
   }
 
-  static const Map<MawyEditorToolbarItem, MawyCommand> _commands =
-      <MawyEditorToolbarItem, MawyCommand>{
-        MawyEditorToolbarItem.bold: MawyCommand.bold,
-        MawyEditorToolbarItem.italic: MawyCommand.italic,
-        MawyEditorToolbarItem.strikethrough: MawyCommand.strikethrough,
-        MawyEditorToolbarItem.code: MawyCommand.code,
-        MawyEditorToolbarItem.link: MawyCommand.link,
-        MawyEditorToolbarItem.image: MawyCommand.image,
-        MawyEditorToolbarItem.quote: MawyCommand.quote,
-        MawyEditorToolbarItem.bulletList: MawyCommand.bulletList,
-        MawyEditorToolbarItem.orderedList: MawyCommand.orderedList,
-        MawyEditorToolbarItem.taskList: MawyCommand.taskList,
-        MawyEditorToolbarItem.codeBlock: MawyCommand.codeBlock,
-        MawyEditorToolbarItem.rule: MawyCommand.rule,
+  /// What each item on the toolbar is: the command it runs, and the glyph it
+  /// wears.
+  ///
+  /// One table rather than two keyed by the same enum. Two lists of the same
+  /// twelve names is two places to add a control and one of them to forget,
+  /// and an item drawn with somebody else's icon is a bug nothing catches.
+  ///
+  /// The label is not in here because it is not a constant: it is whichever of
+  /// two languages the viewer was asked for, read off an object at build time.
+  static const Map<MawyEditorToolbarItem, ({MawyCommand command, IconData icon})> _controls =
+      <MawyEditorToolbarItem, ({MawyCommand command, IconData icon})>{
+        MawyEditorToolbarItem.bold: (command: MawyCommand.bold, icon: LucideIcons.bold),
+        MawyEditorToolbarItem.italic: (command: MawyCommand.italic, icon: LucideIcons.italic),
+        MawyEditorToolbarItem.strikethrough: (
+          command: MawyCommand.strikethrough,
+          icon: LucideIcons.strikethrough,
+        ),
+        MawyEditorToolbarItem.code: (command: MawyCommand.code, icon: LucideIcons.code),
+        MawyEditorToolbarItem.link: (command: MawyCommand.link, icon: LucideIcons.link),
+        MawyEditorToolbarItem.image: (command: MawyCommand.image, icon: LucideIcons.image),
+        MawyEditorToolbarItem.quote: (command: MawyCommand.quote, icon: LucideIcons.textQuote),
+        MawyEditorToolbarItem.bulletList: (command: MawyCommand.bulletList, icon: LucideIcons.list),
+        MawyEditorToolbarItem.orderedList: (
+          command: MawyCommand.orderedList,
+          icon: LucideIcons.listOrdered,
+        ),
+        MawyEditorToolbarItem.taskList: (
+          command: MawyCommand.taskList,
+          icon: LucideIcons.listChecks,
+        ),
+        MawyEditorToolbarItem.codeBlock: (command: MawyCommand.codeBlock, icon: LucideIcons.braces),
+        MawyEditorToolbarItem.rule: (command: MawyCommand.rule, icon: LucideIcons.minus),
       };
-
-  static const Map<MawyEditorToolbarItem, IconData> _icons = <MawyEditorToolbarItem, IconData>{
-    MawyEditorToolbarItem.bold: LucideIcons.bold,
-    MawyEditorToolbarItem.italic: LucideIcons.italic,
-    MawyEditorToolbarItem.strikethrough: LucideIcons.strikethrough,
-    MawyEditorToolbarItem.code: LucideIcons.code,
-    MawyEditorToolbarItem.link: LucideIcons.link,
-    MawyEditorToolbarItem.image: LucideIcons.image,
-    MawyEditorToolbarItem.quote: LucideIcons.textQuote,
-    MawyEditorToolbarItem.bulletList: LucideIcons.list,
-    MawyEditorToolbarItem.orderedList: LucideIcons.listOrdered,
-    MawyEditorToolbarItem.taskList: LucideIcons.listChecks,
-    MawyEditorToolbarItem.codeBlock: LucideIcons.braces,
-    MawyEditorToolbarItem.rule: LucideIcons.minus,
-  };
 
   String _labelFor(MawyEditorToolbarItem item) => switch (item) {
     MawyEditorToolbarItem.bold => widget.strings.bold,
@@ -1222,20 +1225,20 @@ class _ToolbarState extends State<_Toolbar> {
         continue;
       }
 
-      final MawyCommand? command = _commands[item];
+      final ({MawyCommand command, IconData icon})? control = _controls[item];
 
-      if (command == null) {
+      if (control == null) {
         continue;
       }
 
       children.add(
         MawyToolbarButton(
-          icon: _icons[item]!,
+          icon: control.icon,
           label: _labelFor(item),
           tokens: widget.tokens,
           focusNode: next(),
-          pressed: commandActive(command, widget.state),
-          onPressed: () => widget.onCommand?.call(command),
+          pressed: commandActive(control.command, widget.state),
+          onPressed: () => widget.onCommand?.call(control.command),
         ),
       );
     }
