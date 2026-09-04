@@ -107,11 +107,19 @@ function read(source: string): Reading {
       mark();
     }
 
-    while (at < source.length && source[at] !== '\n' && source[at] !== '\r') {
-      text += source[at];
-      at += 1;
-      out += 1;
-    }
+    // The rest of the line taken in one piece. Built a character at a time it
+    // was a string made and thrown away for every character in the document,
+    // which is the cost of parsing rather than the cost of anything read.
+    const feed = source.indexOf('\n', at);
+    const carriage = source.indexOf('\r', at);
+    const end = Math.min(
+      feed === -1 ? source.length : feed,
+      carriage === -1 ? source.length : carriage
+    );
+
+    text += source.slice(at, end);
+    out += end - at;
+    at = end;
 
     lines.push({ text, start });
 
@@ -119,12 +127,12 @@ function read(source: string): Reading {
       break;
     }
 
-    const carriage = source[at] === '\r' && source[at + 1] === '\n';
+    const pair = source[at] === '\r' && source[at + 1] === '\n';
 
-    at += carriage ? 2 : 1;
+    at += pair ? 2 : 1;
     out += 1;
 
-    if (carriage) {
+    if (pair) {
       mark();
     }
   }
