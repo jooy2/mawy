@@ -4,6 +4,10 @@
 
 ## vNext (2026--)
 
+### Security
+
+- **A document cannot take the page down by being deeply nested.** Every container reads its own inside, so reading a document is a stack of calls as deep as the document is nested — and `> ` written a couple of thousand times is a four-kilobyte file that ran the stack out. A viewer showing a document from somewhere else could be stopped by one. Containers nest a hundred deep now and no further: past that nothing opens, the lines are the paragraphs they would be with no rules applied, and the markers on them are the characters they are. A hundred is past anything a person writes, and the two packages gave up in different places before this — the Dart one held out longer, which made it a difference between them as well as a crash.
+
 ### Changed
 
 - **Taking the link reference definitions off a paragraph is one pass over it.** Each definition was found by handing the pattern a fresh copy of everything left, so a block of two hundred definitions at the bottom of a README copied the block two hundred times. The scan starts where the last one ended.

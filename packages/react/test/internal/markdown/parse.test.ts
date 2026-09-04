@@ -240,6 +240,100 @@ describe('definition lists', () => {
  * instead of two hundred. What that has to keep is where it starts from, which
  * is the whole of what these check.
  */
+/**
+ * A document larger, longer or deeper than one somebody wrote by hand.
+ *
+ * Two different worries. One is time: a rule that costs the square of what it
+ * reads is invisible on a README and stops the page on a generated file, so
+ * these are sized to be a second's work if anything is quadratic and no work at
+ * all otherwise. The other is depth, which is not about time — every container
+ * reads its own inside, so nesting is a stack of calls, and `> ` written a few
+ * thousand times was a four-kilobyte document that took the page down with it.
+ */
+describe('a document nobody wrote by hand', () => {
+  it('reads a long one in the time a long one should take', () => {
+    const source = Array.from(
+      { length: 5000 },
+      (_, index) => `Paragraph ${index} with **bold** and [a link](/b).`
+    ).join('\n\n');
+    const document = parseMarkdown(source);
+
+    expect(document.root.children).toHaveLength(5000);
+    // The last block still points at the characters it was read from, which is
+    // the promise every offset in this library stands on.
+    expect(source.slice(document.root.children[4999].range.start)).toBe(
+      'Paragraph 4999 with **bold** and [a link](/b).'
+    );
+  });
+
+  it('reads a wide one, and one written on a single line', () => {
+    const table = `| a | b |\n| - | - |\n${'| 1 | 2 |\n'.repeat(5000)}`;
+    const [rows] = parseMarkdown(table).root.children;
+
+    expect(rows.type).toBe('table');
+    expect('children' in rows ? rows.children.length : 0).toBe(5001);
+
+    const long = 'word '.repeat(200_000);
+
+    expect(parseMarkdown(long).root.children).toHaveLength(1);
+  });
+
+  it('numbers thousands of footnotes and reads thousands of definitions', () => {
+    const notes = Array.from({ length: 2000 }, (_, index) => `x[^${index}]`).join(' ');
+    const bodies = Array.from({ length: 2000 }, (_, index) => `[^${index}]: note ${index}`).join(
+      '\n\n'
+    );
+
+    expect(parseMarkdown(`${notes}\n\n${bodies}`).footnotes).toHaveLength(2000);
+
+    const definitions = Array.from({ length: 2000 }, (_, index) => `[r${index}]: /u${index}`).join(
+      '\n'
+    );
+
+    // Every line of it is a definition, so the paragraph they came off is empty
+    // and there is no block left at all.
+    expect(parseMarkdown(definitions).root.children).toEqual([]);
+  });
+
+  /**
+   * Nesting past the hundredth container. The markers on the lines below it are
+   * the characters they are, which is the one answer that costs nothing and
+   * loses nothing a reader could have seen anyway.
+   */
+  it('stops opening containers rather than running out of stack', () => {
+    const deep = parseMarkdown(`${'> '.repeat(5000)}deep`);
+    let at = deep.root.children[0];
+    let depth = 0;
+
+    while (at.type === 'blockquote') {
+      depth += 1;
+      at = at.children[0];
+    }
+
+    expect(depth).toBe(100);
+    expect(at.type).toBe('paragraph');
+    // What is left of the markers is in the paragraph, as text.
+    expect(parseMarkdown(`${'> '.repeat(5000)}deep`).root.children).toHaveLength(1);
+
+    // And a directive, which nests the same way and is written by machines more
+    // often than a quotation is.
+    expect(() => parseMarkdown(`${':::a\n'.repeat(5000)}x\n${':::\n'.repeat(5000)}`)).not.toThrow();
+  });
+
+  it('still nests everything a person would actually write', () => {
+    const [quote] = parseMarkdown(`${'> '.repeat(99)}deep`).root.children;
+    let at = quote;
+    let depth = 0;
+
+    while (at.type === 'blockquote') {
+      depth += 1;
+      at = at.children[0];
+    }
+
+    expect(depth).toBe(99);
+  });
+});
+
 describe('link reference definitions', () => {
   it('takes every one at the front of a paragraph and leaves the rest of it', () => {
     const document = parseMarkdown('[a]: /one\n[b]: /two\nSee [a] and [b].');

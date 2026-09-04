@@ -697,8 +697,59 @@ _Opened _opened(_Opened state, String text) {
   return const _Opened(_What.paragraph, null);
 }
 
+/// How deep the containers may nest before what is left is drawn as characters.
+///
+/// Every container parses its own inside, so reading a document is a stack of
+/// calls as deep as the document is nested — and `> ` written a couple of
+/// thousand times is a four-kilobyte file that runs the stack out and takes the
+/// page with it. Where exactly it ran out moved with whatever else happened to
+/// be on the stack, and it was not the same place in the two languages this
+/// parser is written in.
+///
+/// A hundred is past anything a person writes and far short of any stack. Past
+/// it nothing opens: the lines are the paragraphs they would be with no rules
+/// applied at all, and the markers on them are the characters they are.
+const int _nesting = 100;
+
+/// The lines as paragraphs, with no block rule applied to any of them.
+List<MdBlock> _paragraphsOf(List<Line> lines, BlockContext context) {
+  final List<MdBlock> blocks = <MdBlock>[];
+  int at = 0;
+
+  while (at < lines.length) {
+    if (_blank.hasMatch(lines[at].text)) {
+      at += 1;
+      continue;
+    }
+
+    final List<Line> paragraph = <Line>[];
+
+    while (at < lines.length && !_blank.hasMatch(lines[at].text)) {
+      paragraph.add(lines[at]);
+      at += 1;
+    }
+
+    // A blank line still ends a paragraph, which is what a paragraph is rather
+    // than a rule about one.
+    final Sourced text = trim(fromLines(paragraph));
+
+    if (text.text.isNotEmpty) {
+      final List<MdInline> children = <MdInline>[];
+
+      context.pending.add(PendingInline(text, children));
+      blocks.add(MdParagraph(rangeOf(text, 0, text.text.length), children));
+    }
+  }
+
+  return blocks;
+}
+
 /// Reads [lines] into blocks, recursing into whatever contains what.
-List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
+List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0]) {
+  if (depth >= _nesting) {
+    return _paragraphsOf(lines, context);
+  }
+
   final List<MdBlock> blocks = <MdBlock>[];
   int at = 0;
 
@@ -856,7 +907,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
           name: head.name,
           attributes: head.attributes,
           label: label == null ? <MdInline>[] : later(label),
-          children: parseBlocks(body, context),
+          children: parseBlocks(body, context, depth + 1),
         ),
       );
       continue;
@@ -902,7 +953,11 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
       }
 
       blocks.add(
-        MdBlockquote(across(from, at - 1), alert: alert, children: parseBlocks(inner, context)),
+        MdBlockquote(
+          across(from, at - 1),
+          alert: alert,
+          children: parseBlocks(inner, context, depth + 1),
+        ),
       );
       continue;
     }
@@ -1010,7 +1065,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
           body[0] = advance(body.first, task.group(0)!.length);
         }
 
-        final List<MdBlock> children = parseBlocks(body, context);
+        final List<MdBlock> children = parseBlocks(body, context, depth + 1);
 
         // A blank line loosens the list only where it separates two of *this*
         // item's own blocks. One further in belongs to whatever is nested
@@ -1158,7 +1213,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
         context.footnotes[label] = MdFootnoteDefinition(
           MdRange(line.start, lineEnd(body.isNotEmpty ? body.last : line)),
           label: label,
-          children: parseBlocks(body, context),
+          children: parseBlocks(body, context, depth + 1),
         );
       }
 
@@ -1237,7 +1292,10 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context) {
           last = body.isNotEmpty ? body.last : from;
 
           children.add(
-            MdDefinitionDescription(MdRange(from.start, lineEnd(last)), parseBlocks(body, context)),
+            MdDefinitionDescription(
+              MdRange(from.start, lineEnd(last)),
+              parseBlocks(body, context, depth + 1),
+            ),
           );
 
           if (at < lines.length && _blank.hasMatch(lines[at].text)) {

@@ -138,6 +138,8 @@ Three of those are a decision rather than a shortfall: every URL is checked agai
 
 The Dart parser is not run against the suite and does not need to be: the two parsers' trees are diffed over every awkward case and every Markdown file in the repository, so a tree that is right in one is the tree the other produces.
 
+**Containers nest a hundred deep.** Past that nothing opens: the lines are the paragraphs they would be with no rules applied, and the markers on them are the characters they are. Every container reads its own inside, so nesting is a stack of calls as deep as the document — and `> ` written a couple of thousand times is a four-kilobyte file with nothing in it, which is a thing anybody can send an application that draws documents from somewhere else. A hundred is past anything written by hand and far short of any stack.
+
 ### Footnotes
 
 A `[^label]` in a sentence is a number, and the note it points at is drawn under the document with a link back to where it was mentioned:

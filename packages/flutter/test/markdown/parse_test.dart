@@ -202,6 +202,55 @@ void main() {
   /// of what is left, so a paragraph of two hundred definitions is one pass
   /// over it instead of two hundred. What that has to keep is where it starts
   /// from, which is the whole of what these check.
+  /// A document larger, longer or deeper than one somebody wrote by hand.
+  ///
+  /// The depth is the one that matters here. Every container reads its own
+  /// inside, so nesting is a stack of calls — and `> ` written a few thousand
+  /// times was a four-kilobyte document that took the page down with it, at a
+  /// depth that was not the same one the React package gave up at.
+  group('a document nobody wrote by hand', () {
+    test('stops opening containers rather than running out of stack', () {
+      final MdDocument deep = parseMarkdown('${'> ' * 5000}deep');
+      MdBlock at = deep.root.children.first;
+      int depth = 0;
+
+      while (at is MdBlockquote) {
+        depth += 1;
+        at = at.children.first;
+      }
+
+      expect(depth, 100);
+      expect(at, isA<MdParagraph>());
+      expect(deep.root.children.length, 1);
+    });
+
+    test('still nests everything a person would actually write', () {
+      MdBlock at = parseMarkdown('${'> ' * 99}deep').root.children.first;
+      int depth = 0;
+
+      while (at is MdBlockquote) {
+        depth += 1;
+        at = at.children.first;
+      }
+
+      expect(depth, 99);
+    });
+
+    test('reads a long one, and the last block still says where it came from', () {
+      final String source = List<String>.generate(
+        5000,
+        (int index) => 'Paragraph $index with **bold** and [a link](/b).',
+      ).join('\n\n');
+      final MdDocument document = parseMarkdown(source);
+
+      expect(document.root.children.length, 5000);
+      expect(
+        source.substring(document.root.children[4999].range.start),
+        'Paragraph 4999 with **bold** and [a link](/b).',
+      );
+    });
+  });
+
   group('link reference definitions', () {
     test('takes every one at the front of a paragraph and leaves the rest of it', () {
       final MdDocument document = parseMarkdown('[a]: /one\n[b]: /two\nSee [a] and [b].');

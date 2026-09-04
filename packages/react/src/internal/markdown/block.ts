@@ -650,7 +650,64 @@ function opened(state: Opened, text: string): Opened {
   return { what: 'paragraph', fence: null };
 }
 
-export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
+/**
+ * How deep the containers may nest before what is left is drawn as characters.
+ *
+ * Every container parses its own inside, so reading a document is a stack of
+ * calls as deep as the document is nested — and `> ` written a couple of
+ * thousand times is a four-kilobyte file that runs the stack out and takes the
+ * page with it. Where exactly it ran out moved with whatever else happened to
+ * be on the stack, and it was not the same place in the two languages this
+ * parser is written in.
+ *
+ * A hundred is past anything a person writes and far short of any stack. Past
+ * it nothing opens: the lines are the paragraphs they would be with no rules
+ * applied at all, and the markers on them are the characters they are.
+ */
+const NESTING = 100;
+
+/** The lines as paragraphs, with no block rule applied to any of them. */
+function paragraphsOf(lines: Line[], context: BlockContext): MdBlock[] {
+  const blocks: MdBlock[] = [];
+  let at = 0;
+
+  while (at < lines.length) {
+    if (BLANK.test(lines[at].text)) {
+      at += 1;
+      continue;
+    }
+
+    const paragraph: Line[] = [];
+
+    while (at < lines.length && !BLANK.test(lines[at].text)) {
+      paragraph.push(lines[at]);
+      at += 1;
+    }
+
+    // A blank line still ends a paragraph, which is what a paragraph is rather
+    // than a rule about one.
+    const text = trim(fromLines(paragraph));
+
+    if (text.text) {
+      const node: MdParagraph = {
+        type: 'paragraph',
+        range: rangeOf(text, 0, text.text.length),
+        children: []
+      };
+
+      context.pending.push({ raw: text, target: node.children });
+      blocks.push(node);
+    }
+  }
+
+  return blocks;
+}
+
+export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): MdBlock[] {
+  if (depth >= NESTING) {
+    return paragraphsOf(lines, context);
+  }
+
   const blocks: MdBlock[] = [];
   let at = 0;
 
@@ -800,7 +857,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         name: head.name,
         attributes: head.attributes,
         label: [],
-        children: parseBlocks(body, context)
+        children: parseBlocks(body, context, depth + 1)
       };
 
       if (label) {
@@ -852,7 +909,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
         type: 'blockquote',
         range: across(from, at - 1),
         alert,
-        children: parseBlocks(inner, context)
+        children: parseBlocks(inner, context, depth + 1)
       });
       continue;
     }
@@ -959,7 +1016,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
           body[0] = advance(body[0], task[0].length);
         }
 
-        const children = parseBlocks(body, context);
+        const children = parseBlocks(body, context, depth + 1);
 
         if (body.some((each) => separates(each, children))) {
           loose = true;
@@ -1113,7 +1170,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
           label,
           slug: '',
           number: 0,
-          children: parseBlocks(body, context)
+          children: parseBlocks(body, context, depth + 1)
         });
       }
 
@@ -1206,7 +1263,7 @@ export function parseBlocks(lines: Line[], context: BlockContext): MdBlock[] {
           children.push({
             type: 'definitionDescription',
             range: { start: from.start, end: lineEnd(last) },
-            children: parseBlocks(body, context)
+            children: parseBlocks(body, context, depth + 1)
           });
 
           if (at < lines.length && BLANK.test(lines[at].text)) {
