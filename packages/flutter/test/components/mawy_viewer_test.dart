@@ -789,6 +789,90 @@ void main() {
       expect(opened, 'https://example.com');
     });
 
+    /// A recognizer is a resource, so a new one per link per build is one
+    /// allocated for every link on the page whenever the pointer moves over a
+    /// code block — and the old ones were disposed at the top of the build
+    /// replacing them, while the spans holding them were still on the tree.
+    ///
+    /// Rebuilt from inside rather than by pumping again, because `host` gives
+    /// every pump a fresh overlay and a fresh viewer with it. What is being
+    /// asked about here is one viewer building twice.
+    testWidgets('keeps the recognizer it gave a link, and still follows it', (
+      WidgetTester tester,
+    ) async {
+      String? opened;
+      late StateSetter again;
+      double size = 16;
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyViewer(
+                value: '[go](https://example.com)',
+                onLinkTap: (String url, String? _) => opened = url,
+                typography: MawyTypography(fontSize: size),
+              );
+            },
+          ),
+        ),
+      );
+
+      final GestureRecognizer? first = recognizerOf(tester, 'go');
+
+      expect(first, isNotNull);
+
+      again(() => size = 17);
+      await tester.pump();
+      again(() => size = 16);
+      await tester.pump();
+
+      expect(recognizerOf(tester, 'go'), same(first));
+
+      await tester.tap(find.textContaining('go'), kind: PointerDeviceKind.mouse);
+      await tester.pump();
+
+      expect(opened, 'https://example.com');
+    });
+
+    testWidgets('lets go of the one for a link the document no longer has', (
+      WidgetTester tester,
+    ) async {
+      String? opened;
+      late StateSetter again;
+      String value = '[one](https://one.example) and [two](https://two.example)';
+
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              again = setState;
+
+              return MawyViewer(value: value, onLinkTap: (String url, String? _) => opened = url);
+            },
+          ),
+        ),
+      );
+
+      final GestureRecognizer? kept = recognizerOf(tester, 'one');
+
+      expect(kept, isNotNull);
+      expect(recognizerOf(tester, 'two'), isNotNull);
+
+      again(() => value = '[one](https://one.example) only');
+      await tester.pumpAndSettle();
+
+      // The one that is left is the one it had, and it still works — which is
+      // the half that breaks if the wrong one is let go of.
+      expect(recognizerOf(tester, 'one'), same(kept));
+
+      (kept! as TapGestureRecognizer).onTap!();
+
+      expect(opened, 'https://one.example');
+    });
+
     testWidgets('does nothing with one until an application says what to do', (
       WidgetTester tester,
     ) async {

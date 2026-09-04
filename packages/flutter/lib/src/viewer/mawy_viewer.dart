@@ -241,7 +241,12 @@ class _MawyViewerState extends State<MawyViewer> {
   /// The tap recognizers the links in the document needed, last time it was
   /// drawn. Thrown away and made again on every build, because a recognizer
   /// that outlives the span it was made for is a leak.
-  List<GestureRecognizer> _recognizers = <GestureRecognizer>[];
+  /// The tap recognizers the links in the document are using, by where each
+  /// link starts. See `MawyRenderContext.recognizerFor`.
+  final Map<Object, TapGestureRecognizer> _recognizers = <Object, TapGestureRecognizer>{};
+
+  /// Which of them this build asked for, so the rest can be let go afterwards.
+  final Set<Object> _wanted = <Object>{};
   bool _outlineOpen = false;
 
   /* ---------------------------------------------------------------------
@@ -356,7 +361,7 @@ class _MawyViewerState extends State<MawyViewer> {
     _settle?.cancel();
     _scroller.removeListener(_measureActive);
 
-    for (final GestureRecognizer recognizer in _recognizers) {
+    for (final GestureRecognizer recognizer in _recognizers.values) {
       recognizer.dispose();
     }
 
@@ -428,6 +433,59 @@ class _MawyViewerState extends State<MawyViewer> {
     _settle = Timer(_copyHeldFor, () {
       if (mounted) {
         setState(() => _copied = false);
+      }
+    });
+  }
+
+  /// The recognizer for the link starting at [key], made once and kept.
+  ///
+  /// A new one per link per build was a recognizer allocated for every link on
+  /// the page every time the pointer moved over a code block, and the old ones
+  /// were disposed at the top of the build that replaced them — while the
+  /// spans holding them were still on the tree. What listens for the tap
+  /// changes between builds and the recognizer does not, so only [onTap] is
+  /// written again.
+  TapGestureRecognizer _recognizerFor(Object key, VoidCallback onTap) {
+    final TapGestureRecognizer held = _recognizers.putIfAbsent(key, TapGestureRecognizer.new);
+
+    held.onTap = onTap;
+    _wanted.add(key);
+
+    return held;
+  }
+
+  /// Whether a sweep is already booked for the end of this frame.
+  bool _sweeping = false;
+
+  /// Books the letting-go for after the frame.
+  ///
+  /// Twice not here. The document body is rendered further down this same
+  /// build, so what this build wants is not known yet — and the spans holding
+  /// what it does not want are on the tree until this build has replaced them,
+  /// which is the same reason the anchors are dropped a frame late.
+  void _sweepRecognizers() {
+    if (_sweeping) {
+      return;
+    }
+
+    _sweeping = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      _sweeping = false;
+
+      if (_recognizers.length == _wanted.length) {
+        return;
+      }
+
+      final List<TapGestureRecognizer> stale = <TapGestureRecognizer>[
+        for (final MapEntry<Object, TapGestureRecognizer> each in _recognizers.entries)
+          if (!_wanted.contains(each.key)) each.value,
+      ];
+
+      _recognizers.removeWhere((Object key, TapGestureRecognizer _) => !_wanted.contains(key));
+
+      for (final TapGestureRecognizer recognizer in stale) {
+        recognizer.dispose();
       }
     });
   }
@@ -658,11 +716,7 @@ class _MawyViewerState extends State<MawyViewer> {
       letterSpacing: type.letterSpacing * type.fontSize,
     );
 
-    for (final GestureRecognizer recognizer in _recognizers) {
-      recognizer.dispose();
-    }
-
-    _recognizers = <GestureRecognizer>[];
+    _wanted.clear();
 
     final MawyRenderContext render = MawyRenderContext(
       tokens: tokens,
@@ -676,12 +730,14 @@ class _MawyViewerState extends State<MawyViewer> {
       directives: widget.directives,
       highlighter: widget.highlight,
       source: widget.value,
-      recognizers: _recognizers,
+      recognizerFor: widget.onLinkTap == null ? null : _recognizerFor,
       found: found,
       currentMatch: current,
     );
 
     final Widget? footnotes = renderFootnotes(document.footnotes, render);
+
+    _sweepRecognizers();
     final double? measure = type.measure.width;
 
     return Container(

@@ -34,7 +34,7 @@ class MawyRenderContext {
     this.onImageError,
     this.directives,
     this.source,
-    this.recognizers,
+    this.recognizerFor,
     this.highlighter,
     this.found,
     this.currentMatch = -1,
@@ -90,13 +90,19 @@ class MawyRenderContext {
   /// Every range in the tree indexes this string.
   final String? source;
 
-  /// Where the tap recognizers a link needs are kept.
+  /// Where a link gets the recognizer that hears a tap on it.
   ///
-  /// A recognizer holds resources and has to be disposed, and a span cannot do
-  /// it — so whoever built this context owns them, and throws them away when
-  /// the document is drawn again. A viewer that made one per build and let it
-  /// go would leak one per link per frame.
-  final List<GestureRecognizer>? recognizers;
+  /// Asked for rather than made here. A recognizer holds resources and has to
+  /// be disposed, a span cannot do it, and the frame a build happens in is the
+  /// one frame in which the last build's cannot be disposed either — the
+  /// widgets holding those are still on the tree until this build replaces
+  /// them. So whoever built this context owns them, hands out the one it
+  /// already has for a link at [key], and throws away what nothing asked for
+  /// once the frame is over.
+  ///
+  /// `null` where nothing is listening for a tap, which is a document whose
+  /// links need no recognizer at all.
+  final GestureRecognizer Function(Object key, VoidCallback onTap)? recognizerFor;
 
   /// What the viewer's find bar found, if anybody is searching.
   ///
@@ -328,10 +334,17 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
       return inside;
     }
 
-    final TapGestureRecognizer recognizer = TapGestureRecognizer()
-      ..onTap = () => tap(node.url, node.title);
+    // Keyed by where the link starts in the document, which is what makes the
+    // same link across two builds the same link — and so the same recognizer,
+    // rather than a new one per frame for every link on the page.
+    final GestureRecognizer? recognizer = context.recognizerFor?.call(
+      node.range.start,
+      () => tap(node.url, node.title),
+    );
 
-    context.recognizers?.add(recognizer);
+    if (recognizer == null) {
+      return inside;
+    }
 
     return _recognized(inside, recognizer);
   }
@@ -879,7 +892,7 @@ class _Quote extends StatelessWidget {
               footnotes: context.footnotes,
               onLinkTap: context.onLinkTap,
               onImageError: context.onImageError,
-              recognizers: context.recognizers,
+              recognizerFor: context.recognizerFor,
             ),
           ),
         ),
@@ -1139,7 +1152,7 @@ Widget? renderFootnotes(List<MdFootnoteDefinition> footnotes, MawyRenderContext 
     footnotes: context.footnotes,
     onLinkTap: context.onLinkTap,
     onImageError: context.onImageError,
-    recognizers: context.recognizers,
+    recognizerFor: context.recognizerFor,
   );
 
   return Container(

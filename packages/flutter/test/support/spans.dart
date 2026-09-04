@@ -6,6 +6,7 @@
 /// style is a given run of it in.
 library;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
@@ -58,6 +59,42 @@ TextStyle? styleOf(WidgetTester tester, String saying) {
 
     if (span != null) {
       walk(span, text.style);
+    }
+  }
+
+  return found;
+}
+
+/// The recognizer on the run saying exactly [saying], if it has one.
+///
+/// A link is a span with a tap recognizer on it, and whether that is the *same*
+/// recognizer as the last build's is a question about a resource rather than
+/// about the drawing — one made per link per build is one allocated for every
+/// link on the page whenever anything rebuilds.
+GestureRecognizer? recognizerOf(WidgetTester tester, String saying) {
+  GestureRecognizer? found;
+
+  void walk(InlineSpan span) {
+    if (found != null || span is! TextSpan) {
+      return;
+    }
+
+    if (span.text == saying && span.recognizer != null) {
+      found = span.recognizer;
+
+      return;
+    }
+
+    for (final InlineSpan child in span.children ?? const <InlineSpan>[]) {
+      walk(child);
+    }
+  }
+
+  for (final Element element in find.byType(Text).evaluate()) {
+    final InlineSpan? span = (element.widget as Text).textSpan;
+
+    if (span != null) {
+      walk(span);
     }
   }
 
