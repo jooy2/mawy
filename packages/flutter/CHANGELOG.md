@@ -4,6 +4,10 @@
 
 ## vNext (2026--)
 
+### Changed
+
+- **Finding without case sensitivity folds the document in one go.** The copy the search reads was built a character at a time so that a letter which changes length in lower case could be left alone, which is a string made and thrown away for every character in the document — on every keystroke in the find box. A text with nothing in it that needs that treatment is folded in the one call the platform has, and the answer is the same either way.
+
 ### Fixed
 
 - **A document somebody has clicked into scrolls with the keyboard.** The arrows and `Page Up`/`Page Down` did nothing: a browser scrolls a focused box without being asked and only a `WidgetsApp` does here, which this package does not require — the same reason `Enter` and the space bar are written out for every button it draws. A reader who asked the platform for less movement gets the jump rather than the glide.

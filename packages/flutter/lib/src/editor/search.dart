@@ -55,30 +55,40 @@ class MawyReplacedAll {
   final int count;
 }
 
-/// Every match, in the order they appear.
+/// A copy in lower case that is exactly as long as what went in, character for
+/// character.
 ///
-/// Matches never overlap: the search carries on from the end of the one it just
-/// found, so `aa` in `aaaa` is two rather than three. Which is what makes
-/// replacing all of them one pass rather than a fixed point.
-/// A copy in lower case that is exactly as long as what went in.
+/// `toLowerCase` over a whole string is neither of those things. It is not
+/// length-preserving everywhere — `İ` becomes two characters on the other side
+/// of this library — and every offset this file reports is an offset into the
+/// original, so one character that grew puts every match after it in the wrong
+/// place and a replacement then takes out the wrong letters. It is also not
+/// decided character by character: a `Σ` at the end of a word can become `ς`
+/// where one in the middle becomes `σ`, which would mean a query matching the
+/// same word only where it sits the same way round.
 ///
-/// `toLowerCase` over a whole string is not length-preserving — `İ` becomes two
-/// characters — and every offset this file reports is an offset into the
-/// original. One character that grew puts every match after it in the wrong
-/// place, and a replacement then takes out the wrong letters.
+/// So the answer is the one a character at a time gives, with anything that
+/// would change length left as it was written.
 ///
-/// So the folding is done a character at a time and the ones that would change
-/// length are left as they were written. What that costs is that `İ` matches
-/// only itself, which is a match not found rather than a match reported in the
-/// wrong place.
+/// Two characters in the whole of Unicode make the whole-string answer differ
+/// from that one, and a text with neither of them in it — which is very nearly
+/// every text — is folded in the one call the platform has rather than a
+/// character at a time. The check for them is two more passes and both are the
+/// platform's own.
 String _fold(String text) {
+  final String lower = text.toLowerCase();
+
+  if (lower.length == text.length && !text.contains('\u03A3')) {
+    return lower;
+  }
+
   final StringBuffer out = StringBuffer();
 
   for (final int rune in text.runes) {
     final String character = String.fromCharCode(rune);
-    final String lower = character.toLowerCase();
+    final String folded = character.toLowerCase();
 
-    out.write(lower.length == character.length ? lower : character);
+    out.write(folded.length == character.length ? folded : character);
   }
 
   return out.toString();

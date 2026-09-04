@@ -20,37 +20,53 @@ export interface MawyMatch {
 }
 
 /**
+ * A copy in lower case that is exactly as long as what went in, character for
+ * character.
+ *
+ * `toLowerCase` over a whole string is neither of those things. It is not
+ * length-preserving — `İ` becomes two characters — and every offset this file
+ * reports is an offset into the original, so one character that grew puts every
+ * match after it in the wrong place and a replacement then takes out the wrong
+ * letters. It is also not decided character by character: a `Σ` at the end of a
+ * word becomes `ς` and one in the middle becomes `σ`, which would mean a query
+ * matching the same word only where it sits the same way round.
+ *
+ * So the answer is the one a character at a time gives, with anything that
+ * would change length left as it was written. What that costs is that `İ`
+ * matches only itself, which is a match not found rather than a match reported
+ * in the wrong place.
+ *
+ * Two characters in the whole of Unicode make the whole-string answer differ
+ * from that one, and a text with neither of them in it — which is very nearly
+ * every text — is folded in the one native call rather than a character at a
+ * time. The check for them is two more passes over the text and both are the
+ * platform's own.
+ */
+function fold(text: string): string {
+  const lower = text.toLowerCase();
+
+  if (lower.length === text.length && !text.includes('\u03A3')) {
+    return lower;
+  }
+
+  let out = '';
+
+  for (const character of text) {
+    const folded = character.toLowerCase();
+
+    out += folded.length === character.length ? folded : character;
+  }
+
+  return out;
+}
+
+/**
  * Every match, in the order they appear.
  *
  * Matches never overlap: the search carries on from the end of the one it just
  * found, so `aa` in `aaaa` is two rather than three. Which is what makes
  * replacing all of them one pass rather than a fixed point.
  */
-/**
- * A copy in lower case that is exactly as long as what went in.
- *
- * `toLowerCase` over a whole string is not length-preserving — `İ` becomes two
- * characters — and every offset this file reports is an offset into the
- * original. One character that grew puts every match after it in the wrong
- * place, and a replacement then takes out the wrong letters.
- *
- * So the folding is done a character at a time and the ones that would change
- * length are left as they were written. What that costs is that `İ` matches
- * only itself, which is a match not found rather than a match reported in the
- * wrong place.
- */
-function fold(text: string): string {
-  let out = '';
-
-  for (const character of text) {
-    const lower = character.toLowerCase();
-
-    out += lower.length === character.length ? lower : character;
-  }
-
-  return out;
-}
-
 export function findMatches(value: string, query: string, matchCase: boolean): MawyMatch[] {
   if (!query) {
     return [];

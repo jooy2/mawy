@@ -92,6 +92,18 @@ describe('replacing', () => {
   });
 
   /**
+   * A `Σ` at the end of a word lower-cases to `ς` and one anywhere else to `σ`,
+   * but only when the whole string is folded at once. Reading it that way would
+   * make a query find the same word in the middle of a sentence and not at the
+   * end of one.
+   */
+  it('folds a letter the same way wherever in the word it sits', () => {
+    expect(findMatches('ΟΔΟΣ ΤΙΣ', 'οδοσ', false)).toEqual([{ start: 0, end: 4 }]);
+    expect(findMatches('οδος τις', 'ΟΔΟΣ', false)).toEqual([]);
+    expect(replaceAll('ΟΔΟΣ ΤΙΣ', 'τισ', 'x', false)).toEqual({ value: 'ΟΔΟΣ x', count: 1 });
+  });
+
+  /**
    * `İ` lower-cases to two characters, so folding the whole document moved
    * every offset after it — a match reported one place to the left, and a
    * replacement that took out the wrong letters.
