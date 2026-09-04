@@ -111,18 +111,30 @@ function splice(value: string, start: number, end: number, text: string): MawyEd
   return { value: value.slice(0, start) + text + value.slice(end), caret: start + text.length };
 }
 
-/** Every run of text in the document, in the order they are drawn. */
-function runs(root: HTMLElement): Text[] {
+/**
+ * The run of text drawn on the other side of this node, either way.
+ *
+ * Stepped to rather than collected: a walker put down on the node and moved one
+ * place answers in the distance between the two, which for backspace at the
+ * start of a paragraph is the end of the one above it. Building the list first
+ * would make every one of those cost the length of the document.
+ *
+ * Runs with nothing in them are stepped over. React leaves empty text nodes
+ * behind, and a caret cannot be put inside one.
+ */
+function neighbour(root: HTMLElement, node: Node, back: boolean): Text | null {
   const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const out: Text[] = [];
+  const step = () => (back ? walker.previousNode() : walker.nextNode());
 
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if ((node as Text).data.length) {
-      out.push(node as Text);
+  walker.currentNode = node;
+
+  for (let at = step(); at; at = step()) {
+    if ((at as Text).data.length) {
+      return at as Text;
     }
   }
 
-  return out;
+  return null;
 }
 
 /** The place one drawn character before this one, or `null` at the very start. */
@@ -135,19 +147,7 @@ function before(
     return { node: node as Text, offset: offset - 1 };
   }
 
-  let previous: Text | null = null;
-
-  for (const run of runs(root)) {
-    if (run === node) {
-      break;
-    }
-
-    if (node.compareDocumentPosition(run) & Node.DOCUMENT_POSITION_PRECEDING) {
-      previous = run;
-    } else {
-      break;
-    }
-  }
+  const previous = neighbour(root, node, true);
 
   return previous ? { node: previous, offset: previous.data.length - 1 } : null;
 }
@@ -162,13 +162,9 @@ function after(
     return { node: node as Text, offset };
   }
 
-  for (const run of runs(root)) {
-    if (run !== node && node.compareDocumentPosition(run) & Node.DOCUMENT_POSITION_FOLLOWING) {
-      return { node: run, offset: 0 };
-    }
-  }
+  const next = neighbour(root, node, false);
 
-  return null;
+  return next ? { node: next, offset: 0 } : null;
 }
 
 /**
