@@ -18,11 +18,11 @@
 
 - **The undo history has a ceiling in bytes as well as in steps.** It keeps five hundred documents, and each step is the whole document — so the ceiling rose with the thing it was meant to hold down: five hundred steps of a five-megabyte file is five gigabytes, and the tab is gone long before the five hundredth edit. There is a budget of about sixteen megabytes now, and whichever ceiling is reached first ends the history. Ordinary documents are nowhere near it and keep all five hundred steps; a document larger than the whole budget keeps one, which is thin and is not nothing.
 
-- **Two footnotes can no longer be given the same name.** A label is turned into an anchor by slugging it, and two labels that slug to the same word are told apart by the note's number — except where the document had already written that name out itself: `[^b-2]` took `b-2`, and the second `[^b]` was then called `b-2` as well. Two anchors with one name is a link that lands on whichever came first, which is the exact thing the numbering is there to prevent. A name that is taken is counted past now until one is free.
-
 - **A highlighter written into the JSX is fetched once rather than per render.** `highlight={() => import('mawy-react/highlight')}` is a different function every time the component renders, and the effect that asks for one depended on it — so an application that wrote the loader the way applications write it asked again for every render, each one a promise and an effect for the largest thing this package can be made to carry. The request is made once and kept. A loader that fails is still not asked twice, and one handed over as an object still needs no request at all.
 
 - **Taking the link reference definitions off a paragraph is one pass over it.** Each definition was found by handing the pattern a fresh copy of everything left, so a block of two hundred definitions at the bottom of a README copied the block two hundred times. The scan starts where the last one ended.
+
+- **The overflow menu is drawn when it is opened, not with the toolbar.** Every control the menu holds is already in the row, hidden, so that it can be measured — and it was drawn a second time into a menu nobody had opened, each of them asking again whether its command is in force. On every keystroke.
 
 - **Numbering the footnotes costs what the document has rather than the square of it.** Each new footnote asked every one already numbered whether it had taken the name — so a document of a thousand notes asked half a million questions to number them. Each name is written down as it is given out and the question is asked once.
 
@@ -35,6 +35,10 @@
 - **Typing with the find bar open costs the same whatever it found.** Every line of the source surface looked through every match to work out which of them were on it, so a common word in a long document turned each keystroke into the length of the document times the number of matches — and the editor went stiff exactly when somebody was reading the results. The matches are cut against the lines once now, in one walk down both, and each line is handed only its own.
 
 ### Fixed
+
+- **The toolbar counts the rules between its groups when it works out what fits.** It measured the groups and nothing else, and a group's own width leaves out the rule drawn before it, the five pixels of margin on either side of that rule, and the two the row puts between every pair of children — about fifteen pixels a group, sixty for a default toolbar. So the row kept a group it had no room for, and a row cannot grow: what it kept was drawn past its own end. What is measured now is where each group ends rather than how wide it is, which counts everything between them by construction.
+
+- **Two footnotes can no longer be given the same name.** A label is turned into an anchor by slugging it, and two labels that slug to the same word are told apart by the note's number — except where the document had already written that name out itself: `[^b-2]` took `b-2`, and the second `[^b]` was then called `b-2` as well. Two anchors with one name is a link that lands on whichever came first, which is the exact thing the numbering is there to prevent. A name that is taken is counted past now until one is free.
 
 - **A document drawn on a server and picked up in a browser agrees with itself.** With `html="sanitize"` the server has no `DOMParser` and draws the markup as characters, and the browser drew elements on its very first render — which is React finding one thing where the server sent another, and a hydration mismatch. The characters come first now and the elements on the render after. An application that never renders on a server never hydrates, and there the first render is already the browser's: nothing is deferred and nothing flashes.
 

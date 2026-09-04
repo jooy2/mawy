@@ -125,6 +125,11 @@ const COMMANDS: Partial<
  * one layout effect — the browser paints once, at the end, with the answer
  * already applied. Hiding a child does not change the width of the row that
  * holds it, so the observer cannot set itself off.
+ *
+ * What is measured is where each group *ends*, not how wide it is. A group's
+ * own width leaves out the rule drawn before it, the margins on either side of
+ * that rule and the gaps the row puts between all of them — sixty pixels of a
+ * default toolbar, which is a button and a half the row thought it had.
  */
 function useOverflow(groups: number): {
   row: React.RefObject<HTMLDivElement | null>;
@@ -143,46 +148,49 @@ function useOverflow(groups: number): {
     const measure = () => {
       const all = [...element.querySelectorAll<HTMLElement>('[data-mawy-toolbar-group]')];
       const more = element.querySelector<HTMLElement>('[data-mawy-toolbar-more]');
-      const was = all.map((group) => group.style.display);
-      const wasMore = more?.style.display ?? '';
+      // The rules between the groups are hidden with the groups they belong to
+      // and have to come back for the same reason: a hidden one is a width of
+      // nothing, and the row has to be measured as it would actually look.
+      const shownAgain = [
+        ...all,
+        ...element.querySelectorAll<HTMLElement>('[data-mawy-toolbar-rule]'),
+        ...(more ? [more] : [])
+      ];
+      const was = shownAgain.map((child) => child.style.display);
 
-      for (const group of all) {
-        group.style.display = '';
+      for (const child of shownAgain) {
+        child.style.display = '';
       }
 
-      if (more) {
-        more.style.display = '';
-      }
+      const box = element.getBoundingClientRect();
+      const rightToLeft = element.ownerDocument.defaultView
+        ? getComputedStyle(element).direction === 'rtl'
+        : false;
+      const start = rightToLeft ? box.right : box.left;
+      /** How far past the row's own start this child's far edge sits. */
+      const reach = (child: HTMLElement) => {
+        const own = child.getBoundingClientRect();
 
-      const room = element.clientWidth;
-      const menu = more?.offsetWidth ?? 0;
-      const widths = all.map((group) => group.offsetWidth);
-      const total = widths.reduce((sum, width) => sum + width, 0);
+        return rightToLeft ? start - own.left : own.right - start;
+      };
+
+      const room = box.width;
+      const menu = more ? more.getBoundingClientRect().width : 0;
+      const edges = all.map(reach);
 
       let fits = all.length;
 
-      if (total > room) {
-        let used = menu;
-
+      if (edges.length > 0 && edges[edges.length - 1] > room) {
         fits = 0;
 
-        for (const width of widths) {
-          if (used + width > room) {
-            break;
-          }
-
-          used += width;
+        while (fits < edges.length && edges[fits] + menu <= room) {
           fits += 1;
         }
       }
 
-      all.forEach((group, index) => {
-        group.style.display = was[index];
+      shownAgain.forEach((child, index) => {
+        child.style.display = was[index];
       });
-
-      if (more) {
-        more.style.display = wasMore;
-      }
 
       // At least the first: a row too narrow for it is a row too narrow for
       // anything, and an empty toolbar beside a menu is worse than one that
@@ -454,6 +462,7 @@ export function MawyEditorToolbar({
               <span
                 className="mawy-toolbar-separator"
                 aria-hidden="true"
+                data-mawy-toolbar-rule=""
                 style={index < shown ? undefined : { display: 'none' }}
               />
             ) : null}
@@ -476,13 +485,20 @@ export function MawyEditorToolbar({
             icon={<MoreIcon className="mawy-icon" aria-hidden="true" />}
             {...itemProps(lastStop)}
           >
-            <div className="mawy-toolbar-overflow">
-              {hidden.map((group, index) => (
-                <div className="mawy-toolbar-group" key={index}>
-                  {group.map(({ item, key }) => control(item, key))}
-                </div>
-              ))}
-            </div>
+            {/* Drawn when the menu is opened rather than with the toolbar. Every
+                control here is already in the row, hidden, so that it can be
+                measured — and asking each of them again whether its command is
+                in force, on every keystroke, for a menu nobody has opened, is
+                the same work done twice for no one. */}
+            {() => (
+              <div className="mawy-toolbar-overflow">
+                {hidden.map((group, index) => (
+                  <div className="mawy-toolbar-group" key={index}>
+                    {group.map(({ item, key }) => control(item, key))}
+                  </div>
+                ))}
+              </div>
+            )}
           </Menu>
         </span>
       </div>

@@ -53,7 +53,16 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
 export interface MenuProps {
   label: string;
   icon: React.ReactNode;
-  children: React.ReactNode;
+  /**
+   * What is inside the panel.
+   *
+   * A function is called when the panel opens rather than when the menu is
+   * drawn, which is what a panel wants whose contents cost something to make —
+   * the overflow menu asks each control it holds whether its command is in
+   * force, and doing that on every keystroke for a menu nobody has opened is
+   * work done for no one.
+   */
+  children: React.ReactNode | (() => React.ReactNode);
   tabIndex?: number;
   onFocus?: React.FocusEventHandler<HTMLButtonElement>;
 }
@@ -167,7 +176,9 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
           aria-label={label}
           data-mawy-align={align}
         >
-          <Dismiss.Provider value={close}>{children}</Dismiss.Provider>
+          <Dismiss.Provider value={close}>
+            {typeof children === 'function' ? children() : children}
+          </Dismiss.Provider>
         </div>
       ) : null}
     </div>

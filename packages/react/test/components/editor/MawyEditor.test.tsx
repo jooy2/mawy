@@ -25,6 +25,15 @@ const bodyOf = (screen: { container: HTMLElement }) =>
   screen.container.querySelector('.mawy-document-body') as HTMLElement;
 
 /**
+ * Room for the whole toolbar, for a test that means to press a button on it.
+ *
+ * The frame these run in is 414 pixels wide, which is narrower than eighteen
+ * buttons — so a test that reaches for one by name has to say it is testing a
+ * bar wide enough to have it, or it is testing the overflow menu by accident.
+ */
+const WIDE = { width: 900 } as const;
+
+/**
  * Put the caret inside the run of text saying exactly this.
  *
  * The surface is focused first, because a caret somebody put somewhere is a
@@ -608,6 +617,36 @@ describe('the toolbar and the keyboard', () => {
     expect(inRow()).not.toContain('More controls');
   });
 
+  /**
+   * A group's own width is not what it takes up. The rule drawn before it is a
+   * pixel wide with five of margin on each side, and the row puts two more
+   * between every pair of children — about fifteen pixels a group, and none of
+   * it in the number the group reports. Counted that way the row kept a group
+   * it had no room for, and the row cannot grow: what it kept was drawn past
+   * its own end.
+   */
+  it('keeps every control it shows inside the row it shows them in', async () => {
+    const screen = await render(
+      <div style={{ width: 620 }}>
+        <MawyEditor defaultValue={DOCUMENT} modes={['plain']} />
+      </div>
+    );
+    const row = screen.container.querySelector('.mawy-toolbar-controls') as HTMLElement;
+
+    // The measuring is a layout effect, so it has already run by the time the
+    // render resolves — what is on the page here is the row's answer.
+    const edge = row.getBoundingClientRect().right;
+    const drawn = [...row.querySelectorAll<HTMLElement>('.mawy-button')].filter(
+      (button) => button.offsetParent !== null
+    );
+    const past = drawn
+      .filter((button) => button.getBoundingClientRect().right > edge + 1)
+      .map((button) => button.getAttribute('aria-label'));
+
+    expect(drawn.length).toBeGreaterThan(1);
+    expect(past).toEqual([]);
+  });
+
   it('stays one row where even a single group cannot fit', async () => {
     // One group, and nothing for the menu to take that would help: what is left
     // when a bar is narrower than the smallest thing it can show. It clips
@@ -1170,7 +1209,9 @@ describe('the document surface', () => {
   it('leaves the toolbar link placeholder where it can be typed over', async () => {
     const onChange = vi.fn();
     const screen = await render(
-      <MawyEditor defaultValue="Words." mode="wysiwyg" onChange={onChange} />
+      <div style={WIDE}>
+        <MawyEditor defaultValue="Words." mode="wysiwyg" onChange={onChange} />
+      </div>
     );
 
     put(bodyOf(screen), 'Words.', 6);
@@ -1617,7 +1658,9 @@ describe('the document surface', () => {
   it('runs a toolbar command on the caret it has', async () => {
     const onChange = vi.fn();
     const screen = await render(
-      <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+      <div style={WIDE}>
+        <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
+      </div>
     );
 
     put(bodyOf(screen), 'One two three.', 4, 7);
