@@ -327,25 +327,47 @@ export function runCommand(command: MawyCommand, state: EditState): EditState {
  * press to find out what it does.
  */
 export function commandActive(command: MawyCommand, state: EditState): boolean {
+  // Read at the edges of the selection rather than by copying what is between
+  // them. A selection can be the whole document, and this runs once for every
+  // button on the toolbar every time the caret moves.
   const wrapped = (marker: string): boolean => {
-    const selected = state.value.slice(state.start, state.end);
+    const { value, start, end } = state;
     const width = marker.length;
 
     return (
-      (selected.length >= width * 2 && selected.startsWith(marker) && selected.endsWith(marker)) ||
-      (state.value.slice(state.start - width, state.start) === marker &&
-        state.value.slice(state.end, state.end + width) === marker)
+      (end - start >= width * 2 &&
+        value.startsWith(marker, start) &&
+        value.startsWith(marker, end - width)) ||
+      (value.slice(start - width, start) === marker && value.slice(end, end + width) === marker)
     );
   };
 
+  // A line at a time, stopping at the first one that is not — rather than
+  // cutting the whole selection into lines and then asking about them. The
+  // answer is usually no on the first line, and cutting it up first is the
+  // work of the whole selection either way.
   const everyLine = (pattern: RegExp): boolean => {
     const [from, to] = lineRange(state.value, state.start, state.end);
-    const lines = state.value
-      .slice(from, to)
-      .split('\n')
-      .filter((line) => line.trim());
+    let at = from;
+    let any = false;
 
-    return lines.length > 0 && lines.every((line) => pattern.test(line));
+    while (at < to) {
+      const newline = state.value.indexOf('\n', at);
+      const end = newline === -1 || newline > to ? to : newline;
+      const line = state.value.slice(at, end);
+
+      if (line.trim()) {
+        if (!pattern.test(line)) {
+          return false;
+        }
+
+        any = true;
+      }
+
+      at = end + 1;
+    }
+
+    return any;
   };
 
   switch (command) {

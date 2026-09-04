@@ -374,26 +374,45 @@ EditState runCommand(MawyCommand command, EditState state) {
 /// than it looks: a toggle that never shows its state is a button you have to
 /// press to find out what it does.
 bool commandActive(MawyCommand command, EditState state) {
+  // Read at the edges of the selection rather than by copying what is between
+  // them. A selection can be the whole document, and this runs once for every
+  // button on the toolbar every time the caret moves.
   bool wrapped(String marker) {
-    final String selected = state.value.substring(state.start, state.end);
     final int width = marker.length;
 
-    return (selected.length >= width * 2 &&
-            selected.startsWith(marker) &&
-            selected.endsWith(marker)) ||
+    return (state.end - state.start >= width * 2 &&
+            state.value.startsWith(marker, state.start) &&
+            state.value.startsWith(marker, state.end - width)) ||
         (_slice(state.value, state.start - width, state.start) == marker &&
             _slice(state.value, state.end, state.end + width) == marker);
   }
 
+  // A line at a time, stopping at the first one that is not — rather than
+  // cutting the whole selection into lines and then asking about them. The
+  // answer is usually no on the first line, and cutting it up first is the
+  // work of the whole selection either way.
   bool everyLine(RegExp pattern) {
     final List<int> span = _lineRange(state.value, state.start, state.end);
-    final List<String> lines = state.value
-        .substring(span[0], span[1])
-        .split('\n')
-        .where((String line) => line.trim().isNotEmpty)
-        .toList();
+    int at = span[0];
+    bool any = false;
 
-    return lines.isNotEmpty && lines.every((String line) => pattern.hasMatch(line));
+    while (at < span[1]) {
+      final int newline = state.value.indexOf('\n', at);
+      final int end = newline == -1 || newline > span[1] ? span[1] : newline;
+      final String line = state.value.substring(at, end);
+
+      if (line.trim().isNotEmpty) {
+        if (!pattern.hasMatch(line)) {
+          return false;
+        }
+
+        any = true;
+      }
+
+      at = end + 1;
+    }
+
+    return any;
   }
 
   return switch (command) {

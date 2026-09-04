@@ -488,6 +488,35 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     });
   }
 
+  /// What the find bar found, kept until the question changes.
+  ///
+  /// Searching is a walk over every run of text in the document, and a viewer
+  /// rebuilds for reasons that have nothing to do with the search — a pointer
+  /// moving over a code block, a menu opening, the reader scrolling past a
+  /// heading. Each of those was another walk over the whole document.
+  MawyFound? _found;
+  String? _foundQuery;
+  bool? _foundMatchCase;
+  MdDocument? _foundDocument;
+
+  MawyFound _foundIn(MdDocument document) {
+    if (!_finding) {
+      return MawyFound.nothing();
+    }
+
+    if (_found == null ||
+        _foundQuery != _query ||
+        _foundMatchCase != _matchCase ||
+        !identical(_foundDocument, document)) {
+      _found = findInDocument(document.root.children, _query, _matchCase);
+      _foundQuery = _query;
+      _foundMatchCase = _matchCase;
+      _foundDocument = document;
+    }
+
+    return _found!;
+  }
+
   /// Where a heading would sit at the top of the view, or `null` if it cannot
   /// be measured this frame.
   double? _offsetOf(String slug) {
@@ -682,9 +711,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     final MawyStrings strings = stringsFor(widget.locale);
     final MawyTypography type = _typography;
     final MdDocument document = _document;
-    final MawyFound found = _finding
-        ? findInDocument(document.root.children, _query, _matchCase)
-        : MawyFound.nothing();
+    final MawyFound found = _foundIn(document);
 
     /// The one being stepped through, kept inside a count that may have shrunk.
     final int current = found.total == 0 ? -1 : _at.clamp(0, found.total - 1);
