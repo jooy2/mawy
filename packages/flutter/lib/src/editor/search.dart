@@ -68,17 +68,35 @@ class MawyReplacedAll {
 /// same word only where it sits the same way round.
 ///
 /// So the answer is the one a character at a time gives, with anything that
-/// would change length left as it was written.
+/// would change length left as it was written. What that costs is that `İ`
+/// matches only itself, which is a match not found rather than a match reported
+/// in the wrong place.
 ///
-/// Two characters in the whole of Unicode make the whole-string answer differ
-/// from that one, and a text with neither of them in it — which is very nearly
-/// every text — is folded in the one call the platform has rather than a
-/// character at a time. The check for them is two more passes and both are the
-/// platform's own.
+/// Two characters in the whole of Unicode need that treatment, and a text with
+/// neither of them in it — which is very nearly every text — is folded in the
+/// one call the platform has rather than a character at a time.
+/// The characters that have to be looked at one at a time.
+///
+/// `Σ` reads its own position in the word. `İ` is the one character the two
+/// platforms lower-case differently: in JavaScript it becomes `i` and a
+/// combining dot, two characters where there was one, and Dart drops the dot
+/// instead. Anything else is folded in the one call the platform has.
+final RegExp _awkward = RegExp('[\u0130\u03a3]');
+
+/// `İ`, which is left as it was written.
+///
+/// Dart would fold it to `i`, and doing so would mean a search for `istanbul`
+/// finding `İstanbul` here and not in the React package, where the answer is
+/// two characters long and cannot be used without moving every offset after
+/// it. Naming it is what keeps the two packages one library. Folding it
+/// properly is a Unicode case folding table, which would also fold `ς` to `σ`
+/// and is written down in `TODO.md` as something not shipped.
+const int _dottedI = 0x0130;
+
 String _fold(String text) {
   final String lower = text.toLowerCase();
 
-  if (lower.length == text.length && !text.contains('\u03A3')) {
+  if (lower.length == text.length && !_awkward.hasMatch(text)) {
     return lower;
   }
 
@@ -88,7 +106,7 @@ String _fold(String text) {
     final String character = String.fromCharCode(rune);
     final String folded = character.toLowerCase();
 
-    out.write(folded.length == character.length ? folded : character);
+    out.write(folded.length == character.length && rune != _dottedI ? folded : character);
   }
 
   return out.toString();

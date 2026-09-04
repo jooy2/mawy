@@ -14,6 +14,8 @@
 
 ### Fixed
 
+- **A case-insensitive search answers the way it does in the React package.** Both packages leave a letter alone when its lower case is not one character standing in the same place, because every offset a search reports is an offset into the document — and `İ` is that letter, in a language where `'İ'.toLowerCase()` is `i` and a combining dot. Dart drops the dot instead, one character for one, so this package folded it and the other did not: a search for `istanbul` found `İstanbul` here and nothing there. It is left as written on both sides now, which is what the doc comment in each of them had been claiming all along. Folding it properly means a Unicode case folding table, which would also fold `ς` to `σ` and is not something either package ships.
+
 - **Two footnotes can no longer be given the same name.** A label is turned into an anchor by slugging it, and two labels that slug to the same word are told apart by the note's number — except where the document had already written that name out itself: `[^b-2]` took `b-2`, and the second `[^b]` was then called `b-2` as well. Two anchors with one name is a link that lands on whichever came first, which is the exact thing the numbering is there to prevent. A name that is taken is counted past now until one is free.
 
 - **A document somebody has clicked into scrolls with the keyboard.** The arrows and `Page Up`/`Page Down` did nothing: a browser scrolls a focused box without being asked and only a `WidgetsApp` does here, which this package does not require — the same reason `Enter` and the space bar are written out for every button it draws. A reader who asked the platform for less movement gets the jump rather than the glide.

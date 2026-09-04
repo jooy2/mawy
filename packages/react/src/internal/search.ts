@@ -36,16 +36,24 @@ export interface MawyMatch {
  * matches only itself, which is a match not found rather than a match reported
  * in the wrong place.
  *
- * Two characters in the whole of Unicode make the whole-string answer differ
- * from that one, and a text with neither of them in it — which is very nearly
- * every text — is folded in the one native call rather than a character at a
- * time. The check for them is two more passes over the text and both are the
- * platform's own.
+ * Two characters in the whole of Unicode need that treatment, and a text with
+ * neither of them in it — which is very nearly every text — is folded in the
+ * one native call rather than a character at a time.
  */
+/**
+ * The characters that have to be looked at one at a time.
+ *
+ * `Σ` reads its own position in the word, and `İ` is the one that grows. The
+ * second of them is already caught by the length below; it is named here so
+ * that this file and `search.dart` say the same thing, since on that side the
+ * length does not change and the character still has to be left alone.
+ */
+const AWKWARD = /[\u0130\u03A3]/;
+
 function fold(text: string): string {
   const lower = text.toLowerCase();
 
-  if (lower.length === text.length && !text.includes('\u03A3')) {
+  if (lower.length === text.length && !AWKWARD.test(text)) {
     return lower;
   }
 
