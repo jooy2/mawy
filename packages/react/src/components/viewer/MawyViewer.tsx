@@ -22,6 +22,7 @@ import { FilePicker } from '../../internal/controls.js';
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { stringsFor } from '../../internal/i18n.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
+import { LIVE } from '../../internal/markdown/live.js';
 import { renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
 import { findInDocument, NOTHING_FOUND } from '../../internal/markdown/find.js';
 import { FindBar } from '../../internal/find.js';
@@ -328,7 +329,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       linkTarget,
       source: text,
       found,
-      currentMatch
+      currentMatch,
+      live: LIVE
     }),
     [html, strings, highlighter, footnotes, directives, linkTarget, text, found, currentMatch]
   );

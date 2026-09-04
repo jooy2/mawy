@@ -9,6 +9,7 @@ import type {
 } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
+import { LIVE } from '../../internal/markdown/live.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import {
   renderBlocks,
@@ -272,7 +273,16 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       [document_, focused, selection.start, selection.end]
     );
     const context: RenderContext = React.useMemo(
-      () => ({ html, strings, footnotes, directives, linkTarget, source: value, reveal }),
+      () => ({
+        html,
+        strings,
+        footnotes,
+        directives,
+        linkTarget,
+        source: value,
+        reveal,
+        live: LIVE
+      }),
       [html, strings, footnotes, directives, linkTarget, value, reveal]
     );
 

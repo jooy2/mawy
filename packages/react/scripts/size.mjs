@@ -53,6 +53,8 @@ const SCENARIOS = [
   { name: 'MawyEditor', entry: 'mawy-react', imports: ['MawyEditor'] },
   { name: 'Both', entry: 'mawy-react', imports: ['MawyEditor', 'MawyViewer'] },
   { name: 'The highlighter', entry: 'mawy-react/highlight', imports: ['mawyHighlighter'] },
+  { name: 'The parser alone', entry: 'mawy-react/markdown', imports: ['parseMarkdown'] },
+  { name: 'A server document', entry: 'mawy-react/server', imports: ['MawyDocument'] },
   { name: 'styles.css', stylesheet: 'dist/styles.css' }
 ];
 
@@ -70,7 +72,13 @@ const kb = (bytes) => `${(bytes / 1024).toFixed(1)} kB`;
  * likely to be rendered on a server.
  */
 function checkNodeResolution() {
-  const specifiers = ['mawy-react', 'mawy-react/types', 'mawy-react/highlight'];
+  const specifiers = [
+    'mawy-react',
+    'mawy-react/types',
+    'mawy-react/highlight',
+    'mawy-react/markdown',
+    'mawy-react/server'
+  ];
   const dir = mkdtempSync(resolve(tmpdir(), 'mawy-resolve-'));
 
   try {
@@ -110,7 +118,9 @@ function checkNodeResolution() {
  */
 const ENTRY_POINTS = {
   'mawy-react': 'dist/index.js',
-  'mawy-react/highlight': 'dist/highlight.js'
+  'mawy-react/highlight': 'dist/highlight.js',
+  'mawy-react/markdown': 'dist/markdown.js',
+  'mawy-react/server': 'dist/server.js'
 };
 
 async function bundle({ entry, imports }) {

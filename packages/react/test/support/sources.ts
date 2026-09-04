@@ -24,6 +24,11 @@ export const sources: Record<string, string> = Object.fromEntries(
   Object.entries(modules).map(([path, source]) => [normalize(path), source])
 );
 
+/** The manifest, as text, for the tests that are about the package's shape. */
+export const manifest: string = (await import('../../package.json?raw').then(
+  (module) => module.default
+)) as string;
+
 /**
  * The same source with its comments blanked out.
  *

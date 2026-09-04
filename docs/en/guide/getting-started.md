@@ -65,12 +65,15 @@ The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_i
 
 | What you import         | gzipped |
 | ----------------------- | ------- |
-| `MawyViewer`            | 26.5 kB |
-| `MawyEditor`            | 43.4 kB |
+| `MawyViewer`            | 26.7 kB |
+| `MawyEditor`            | 43.7 kB |
+| `mawy-react/markdown`   | 10.5 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
 | `mawy-react/styles.css` | 6.0 kB  |
 
-React is not counted, because your application already has it; `lucide-react` is, because it arrives with the package. **A page that only reads documents does not ship the editor** — the toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, and the sixteen kilobytes between the first two rows are what that is worth.
+React is not counted, because your application already has it; `lucide-react` is, because it arrives with the package. **A page that only reads documents does not ship the editor** — the toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, and the seventeen kilobytes between the first two rows are what that is worth.
+
+`mawy-react/markdown` is the parser on its own, for an application that wants a document's outline or its footnotes without drawing anything. And `mawy-react/server` ships **nothing at all** to a browser: it draws the document on a server and sends HTML, which is the row that is not in the table because there is no number to put in it.
 
 The numbers come from a real bundle of the published files rather than from an estimate. They are recorded in `packages/react/size-budget.json`, and CI fails a change that goes over one — so they are what you get rather than what we hope for.
 

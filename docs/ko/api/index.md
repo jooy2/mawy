@@ -1035,9 +1035,51 @@ abstract final class MawyMotion {
 
 :::
 
-::: fw flutter
-
 ## 파서
+
+::: fw react
+
+`mawy-react/markdown`은 별도의 진입점입니다. 문서를 _읽기만_ 하려는 애플리케이션 — 목차로 쓸 개요, 각주, 제목에 붙은 앵커 — 이 그것을 얻자고 컴포넌트를 끌고 들어올 이유는 없고, 여기에는 컴포넌트가 없습니다. React도 DOM도 필요 없어서 빌드 스크립트와 서버에도 페이지만큼 쉽게 닿습니다.
+
+```ts
+import { parseMarkdown, slugify } from 'mawy-react/markdown';
+
+const { outline, footnotes } = parseMarkdown(document);
+```
+
+### `parseMarkdown`
+
+```ts
+function parseMarkdown(source: string, options?: MarkdownOptions): MdDocument;
+```
+
+`source`를 마크다운으로 읽습니다. 뷰어가 하는 것과 같은 호출이고 옵션도 같으므로, 여기서 파싱한 문서와 저기서 그린 문서는 같은 트리입니다.
+
+### `MdDocument`
+
+```ts
+interface MdDocument {
+  root: MdRoot; // 블록들
+  outline: MdOutlineEntry[]; // 모든 제목이 순서대로, 각각 고유한 슬러그와 함께
+  footnotes: MdFootnoteDefinition[]; // 누군가 가리킨 것만, 가리킨 순서대로
+}
+```
+
+파싱된 문서입니다. 트리와 개요, 그리고 그 아래의 각주. 각주는 `root`에 없습니다. 각주는 작성자가 편한 곳에 쓰고 맨 아래에서 읽는 것이므로, 문서를 그리는 쪽이 본문 다음에 그립니다.
+
+노드 타입도 함께 나갑니다. `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage`을 비롯해 전부, 각자 쓰인 자리인 `MdRange`를 달고 있습니다. Flutter 패키지의 노드 클래스와 같은 이름이고, 그래서 두 파서를 비교할 수 있습니다. `tool/parity.dart`가 diff하는 것이 이 트리입니다.
+
+### `slugify`
+
+```ts
+function slugify(text: string): string;
+```
+
+제목의 앵커를 GitHub이 쓰는 철자로 만듭니다. 어떤 방식을 고르는지보다 GitHub과 같은 철자를 쓰는 것이 중요합니다. README 안의 앵커는 그것에 맞춰 손으로 쓰이므로, `#getting-started`로 링크하는 문서는 GitHub이 그 제목을 뭐라고 불렀을지에 링크하고 있는 것입니다.
+
+:::
+
+::: fw flutter
 
 안에서 쓰기만 하는 것이 아니라 밖으로도 내보냅니다. 문서의 개요나 각주나 제목의 앵커가 필요한 Dart 애플리케이션에는 그것을 얻을 다른 길이 없기 때문입니다.
 
@@ -1070,5 +1112,50 @@ String slugify(String text);
 ```
 
 제목의 앵커를 GitHub이 쓰는 철자로 만듭니다. 어떤 방식을 고르는지보다 GitHub과 같은 철자를 쓰는 것이 중요합니다. README 안의 앵커는 그것에 맞춰 손으로 쓰이므로, `#getting-started`로 링크하는 문서는 GitHub이 그 제목을 뭐라고 불렀을지에 링크하고 있는 것입니다.
+
+:::
+
+::: fw react
+
+## 서버에서 그린 문서
+
+`mawy-react/server`는 문서를 서버에서 한 번 그리고, 그것 때문에 자바스크립트를 하나도 보내지 않습니다.
+
+`MawyViewer`도 서버에서 잘 그려지고 그다음 하이드레이션합니다. 독자에게 내주는 것 — 툴바, 찾기 막대, 목차, 복사 버튼 — 이 전부 동작이고, 동작하려면 컴포넌트가 페이지에 있어야 하기 때문입니다. 문서 사이트나 블로그나 변경 기록은 그중 아무것도 원하지 않습니다. 문단이 문단이기 위해 40킬로바이트를 보내는 거래를 이 진입점이 거절합니다.
+
+```tsx
+import { MawyDocument } from 'mawy-react/server';
+import 'mawy-react/styles.css';
+
+export default async function Page() {
+  return <MawyDocument value={await readFile('README.md', 'utf8')} />;
+}
+```
+
+서버 컴포넌트가 있는 프레임워크에서는 React 서버 컴포넌트이고, 없는 곳에서는 `renderToStaticMarkup`에 넣는 평범한 컴포넌트입니다. 마크업도 스타일시트도 같으므로, 이렇게 만든 페이지와 뷰어가 올라간 페이지는 같아 보입니다.
+
+### `MawyDocument`
+
+| 프롭 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `value` | `string` | — | 마크다운. |
+| `parse` | [`MawyParseOptions`](#mawyparseoptions) | `{ gfm: true, breaks: false, definitionLists: true }` | 어떻게 읽을지. |
+| `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | 문서 안의 원본 HTML을 어떻게 할지. |
+| `linkTarget` | `'blank' \| 'self'` | `'blank'` | 문서가 쓴 링크가 어디서 열릴지. |
+| `directives` | [`MawyDirectives`](#mawydirectives) | — | 이 패키지가 모르는 구성 요소를 무엇이 그릴지. |
+| `locale` | [`MawyLocale`](#mawylocale) | `'en'` | 이 라이브러리가 직접 쓰는 몇 낱말의 언어. |
+| `highlight` | [`MawyHighlighter`](#mawyhighlighter) | — | 코드 블록을 무엇이 칠할지. |
+| `typography` | [`MawyTypography`](#mawytypography) | — | 문서를 어떻게 조판할지. 같은 커스텀 프로퍼티로 나갑니다. |
+| `fonts` | `MawyFont[]` | `MAWY_SYSTEM_FONTS` | 그 프로퍼티가 부를 수 있는 서체. |
+| `colorScheme` | `'light' \| 'dark' \| null` | `null` | 어느 팔레트로 그릴지. `null`이면 페이지에 맡깁니다. |
+| `className` | `string` | — | 이 라이브러리 자신의 이름 뒤에 붙습니다. |
+| `style` | `CSSProperties` | — | 조판이 쓴 커스텀 프로퍼티 위에 덮입니다. |
+
+없는 것과 그 이유:
+
+- **툴바도 찾기 막대도 목차도 없습니다.** 셋 다 컨트롤이고, 뒤에 아무것도 없는 페이지의 컨트롤은 거짓말입니다. 그것들이 필요한 애플리케이션에 필요한 것은 `MawyViewer`입니다.
+- **코드 블록에 복사 버튼이 없습니다.** 같은 이유입니다.
+- **`html="sanitize"`는 마크업을 글자로 그립니다.** 살균하려면 파싱할 DOM이 있어야 하는데 서버에는 없습니다. `MawyViewer`도 서버에서는 그렇게 하지만, 저쪽에는 요소가 도착할 다음 렌더가 있습니다. 여기에는 다음 렌더가 없습니다. `html="raw"`는 작성자가 쓴 그대로 내보내고, 그것이 [무엇을 뜻하는지](../guide/viewer#안전)는 가이드에 있습니다.
+- **하이라이터는 즉시 답할 때만 씁니다.** 프로미스가 도착할 두 번째 렌더가 없습니다. `mawyHighlighter`나 다른 동기 하이라이터를 넘기면 색이 HTML 안에 들어갑니다.
 
 :::

@@ -18,6 +18,12 @@
 
   Names are looked up as own properties now, so `constructor`, `toString` and the rest are drawn as the characters they were written with, which is what every other unregistered name gets. Nothing changes for a name an application actually registered.
 
+### Added
+
+- **`mawy-react/server` draws a document on a server and ships no JavaScript for it.** `MawyViewer` renders on a server perfectly well and then hydrates, because everything it offers a reader — the toolbar, the find bar, the outline, the copy buttons — is behaviour, and behaviour needs the component on the page. A documentation site, a blog, a changelog wants none of it, and sending forty kilobytes so that a paragraph can be a paragraph is the trade this refuses. `MawyDocument` is a React Server Component in a framework that has them and an ordinary component to `renderToStaticMarkup` in one that does not; the markup and the stylesheet are the same, so a page built this way and a page with a viewer on it look alike. What it leaves out is what would have had nothing behind it: the controls, the copy button on a code block, and the second render `sanitize` needs to become elements.
+
+- **`mawy-react/markdown` is the parser on its own.** `parseMarkdown`, `slugify` and every node type in the tree, with no React and no DOM — for an application that wants a document's outline for a table of contents, or its footnotes, without drawing anything. The Flutter package has exported the same three things since it had a parser; this is the half of "one library shipped twice" that was only ever true of the drawing.
+
 ### Changed
 
 - **The undo history has a ceiling in bytes as well as in steps.** It keeps five hundred documents, and each step is the whole document — so the ceiling rose with the thing it was meant to hold down: five hundred steps of a five-megabyte file is five gigabytes, and the tab is gone long before the five hundredth edit. There is a budget of about sixteen megabytes now, and whichever ceiling is reached first ends the history. Ordinary documents are nowhere near it and keep all five hundred steps; a document larger than the whole budget keeps one, which is thin and is not nothing.

@@ -51,6 +51,16 @@
       "module": "./dist/highlight.js",
       "default": "./dist/highlight.js"
     },
+    "./markdown": {
+      "types": "./dist/markdown.d.ts",
+      "module": "./dist/markdown.js",
+      "default": "./dist/markdown.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "module": "./dist/server.js",
+      "default": "./dist/server.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"
   },
@@ -61,6 +71,12 @@
       ],
       "highlight": [
         "dist/highlight.d.ts"
+      ],
+      "markdown": [
+        "dist/markdown.d.ts"
+      ],
+      "server": [
+        "dist/server.d.ts"
       ]
     }
   },

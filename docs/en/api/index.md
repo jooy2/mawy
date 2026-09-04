@@ -1035,9 +1035,51 @@ The corner radii, which are three sizes rather than a scale, and the one duratio
 
 :::
 
-::: fw flutter
-
 ## Parser
+
+::: fw react
+
+`mawy-react/markdown` is its own entry point. An application that only wants to _read_ a document — its outline for a table of contents, its footnotes, the anchor a heading was given — should not have to pull in a component to get at them, and nothing here is one: no React, no DOM, so it reaches a build script and a server as readily as a page.
+
+```ts
+import { parseMarkdown, slugify } from 'mawy-react/markdown';
+
+const { outline, footnotes } = parseMarkdown(document);
+```
+
+### `parseMarkdown`
+
+```ts
+function parseMarkdown(source: string, options?: MarkdownOptions): MdDocument;
+```
+
+Reads `source` as Markdown. This is the same call the viewer makes, with the same options, so a document parsed here and a document drawn there are the same tree.
+
+### `MdDocument`
+
+```ts
+interface MdDocument {
+  root: MdRoot; // the blocks
+  outline: MdOutlineEntry[]; // every heading, in order, each with a unique slug
+  footnotes: MdFootnoteDefinition[]; // the ones something pointed at, in that order
+}
+```
+
+A parsed document: the tree, its outline, and the footnotes under it. The footnotes are not in `root` — a footnote is written wherever it suits the author and read at the bottom — so whatever draws a document draws these after it.
+
+Every node type is exported with it: `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage` and the rest, each carrying the `MdRange` it was written at. They are the Flutter package's node classes under the same names, which is what makes the two parsers comparable at all — `tool/parity.dart` diffs these trees.
+
+### `slugify`
+
+```ts
+function slugify(text: string): string;
+```
+
+A heading's anchor, in the spelling GitHub uses. Matching GitHub matters more than any particular scheme would: the anchors in a README are written by hand against it, so a document linking to `#getting-started` is linking to whatever GitHub would have called that heading.
+
+:::
+
+::: fw flutter
 
 Exported as well as used, because a Dart application that wants the outline of a document, or its footnotes, or its headings' anchors, has no other way to get at them.
 
@@ -1070,5 +1112,50 @@ String slugify(String text);
 ```
 
 A heading's anchor, in the spelling GitHub uses. Matching GitHub matters more than any particular scheme would: the anchors in a README are written by hand against it, so a document linking to `#getting-started` is linking to whatever GitHub would have called that heading.
+
+:::
+
+::: fw react
+
+## A document on a server
+
+`mawy-react/server` draws a document once, on a server, and ships no JavaScript for it.
+
+`MawyViewer` renders on a server perfectly well and then hydrates, because everything it offers a reader — the toolbar, the find bar, the outline, the copy buttons — is behaviour, and behaviour needs the component on the page. A documentation site, a blog, a changelog wants none of it, and sending forty kilobytes so that a paragraph can be a paragraph is the trade this refuses.
+
+```tsx
+import { MawyDocument } from 'mawy-react/server';
+import 'mawy-react/styles.css';
+
+export default async function Page() {
+  return <MawyDocument value={await readFile('README.md', 'utf8')} />;
+}
+```
+
+A React Server Component in a framework that has them, and an ordinary component to `renderToStaticMarkup` in one that does not. The markup is the same markup and the stylesheet is the same stylesheet, so a page built this way and a page with a viewer on it look alike.
+
+### `MawyDocument`
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `value` | `string` | — | The Markdown. |
+| `parse` | [`MawyParseOptions`](#mawyparseoptions) | `{ gfm: true, breaks: false, definitionLists: true }` | How it is read. |
+| `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | What becomes of raw HTML written inside it. |
+| `linkTarget` | `'blank' \| 'self'` | `'blank'` | Where a link the document wrote opens. |
+| `directives` | [`MawyDirectives`](#mawydirectives) | — | What draws the constructs this package does not know about. |
+| `locale` | [`MawyLocale`](#mawylocale) | `'en'` | The language of the few words this library writes itself. |
+| `highlight` | [`MawyHighlighter`](#mawyhighlighter) | — | What colours a code block. |
+| `typography` | [`MawyTypography`](#mawytypography) | — | How the document is set, as the same custom properties. |
+| `fonts` | `MawyFont[]` | `MAWY_SYSTEM_FONTS` | The typefaces those properties may name. |
+| `colorScheme` | `'light' \| 'dark' \| null` | `null` | Which palette to draw in. `null` leaves it to the page. |
+| `className` | `string` | — | Put on the outermost element, after this library's own names. |
+| `style` | `CSSProperties` | — | Merged over the custom properties the typography writes. |
+
+What is not there, and why:
+
+- **No toolbar, find bar or outline.** Each is a control, and a control on a page with nothing behind it is a lie. An application that wants them wants `MawyViewer`.
+- **No copy button on a code block**, for the same reason.
+- **`html="sanitize"` draws the markup as characters.** Sanitising needs a DOM to parse with and a server has none — which is what `MawyViewer` does on a server too, except that there the elements arrive on the render after. Here there is no render after. `html="raw"` writes the markup out as the author wrote it, with everything [that means](../guide/viewer#safety).
+- **A highlighter is used only if it answers at once.** A promise has no second render to arrive on. Pass `mawyHighlighter`, or any other synchronous one, and the colour is in the HTML.
 
 :::

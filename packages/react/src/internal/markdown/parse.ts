@@ -213,7 +213,7 @@ function relocate(node: MdNode, reading: Reading): void {
  * heading. Letters and numbers in any script survive, everything else goes, and
  * spaces become hyphens.
  */
-function slugify(text: string): string {
+export function slugify(text: string): string {
   return (
     text
       .trim()

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * The document tree, drawn.
  *
@@ -13,6 +11,12 @@
  * The class names are the theming surface. Every element gets `.mawy-md-*`, so
  * an application can restyle any part of a document without the library
  * exposing a render prop for it.
+ *
+ * No `'use client'` here, and that is the point rather than an omission: this
+ * file is reached by `mawy-react/server`, and a module that declares itself a
+ * client is one a bundler ships to a browser. The two pieces of a document
+ * that hold state are in `live.tsx`, which does declare it, and they arrive
+ * through `RenderContext.live` from whoever is drawing on a page.
  */
 
 import * as React from 'react';
@@ -39,18 +43,8 @@ import type {
 } from './ast.js';
 import { toPlainText } from './inline.js';
 import type { MawyFound } from './find.js';
-import { sanitizeHtml } from './html.js';
 import type { MawyStrings } from '../i18n.js';
-import {
-  CautionIcon,
-  CheckIcon,
-  CopyIcon,
-  ImportantIcon,
-  NoteIcon,
-  TipIcon,
-  WarningIcon
-} from '../icons.js';
-import { useCopy } from '../clipboard.js';
+import { CautionIcon, ImportantIcon, NoteIcon, TipIcon, WarningIcon } from '../icons.js';
 
 export interface RenderContext {
   html: MawyHtmlPolicy;
@@ -61,6 +55,32 @@ export interface RenderContext {
    * of which the code is drawn as the text it is.
    */
   highlighter?: MawyHighlighter | null;
+
+  /**
+   * The two pieces of a document that can hold state, where there is a page
+   * for them to hold it on.
+   *
+   * A code block has a copy button and waits for a highlighter that answers
+   * with a promise; raw HTML under `sanitize` becomes elements on the render
+   * after the first, because sanitising wants a DOM the server has not got.
+   * Both are hooks, and hooks are a client.
+   *
+   * So they are handed in rather than reached for. `MawyViewer` and
+   * `MawyEditor` pass `LIVE` from `markdown/live.tsx`; `mawy-react/server`
+   * passes nothing and gets the same document drawn still — no copy button, no
+   * second render to wait for. The point of that is what is *not* imported: a
+   * server module that reached a `'use client'` one would ship it.
+   */
+  live?: {
+    code: React.ComponentType<{ block: MdCode; context: RenderContext }>;
+    html: React.ComponentType<{
+      value: string;
+      context: RenderContext;
+      inline?: boolean;
+      marks?: { 'data-mawy-range': string };
+      reveal?: boolean;
+    }>;
+  };
   /**
    * The document's footnotes, by label, so a `[^a]` in the middle of a sentence
    * knows which number it is and where its note ended up.
@@ -179,7 +199,7 @@ const referenceId = (slug: string, index: number) =>
  * with. It does not need to: a run of text is bounded by the elements on either
  * side of it, which is enough to find it in the source between them.
  */
-function origin(node: { range: MdRange }): { 'data-mawy-range': string } {
+export function origin(node: { range: MdRange }): { 'data-mawy-range': string } {
   return { 'data-mawy-range': `${node.range.start},${node.range.end}` };
 }
 
@@ -354,9 +374,11 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
       case 'textDirective':
         return <Directive key={index} node={node} kind="text" context={context} />;
 
-      case 'inlineHtml':
+      case 'inlineHtml': {
+        const Html = context.live?.html ?? StillHtml;
+
         return (
-          <RawHtml
+          <Html
             key={index}
             value={node.value}
             context={context}
@@ -365,6 +387,7 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
             reveal={revealed(node, context)}
           />
         );
+      }
 
       default:
         return null;
@@ -376,52 +399,40 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
  * Raw HTML
  * ---------------------------------------------------------------------- */
 
-/* Nothing to subscribe to: what is being asked is which render this is, and
- * that answer does not change again once it has changed once. */
-const subscribeToNothing = () => () => {};
-const onTheClient = () => true;
-const onTheServer = () => false;
-
-function RawHtml({
-  value,
-  context,
-  inline,
-  marks,
-  reveal
-}: {
+/**
+ * The same markup on a page that will never hydrate.
+ *
+ * No hooks, because there is nothing for them to be. `sanitize` needs a DOM to
+ * parse with and a server has none, so it draws what a server already draws —
+ * the markup as the characters it was written with. The difference is that
+ * there is no render after this one for the elements to arrive on, which is
+ * what `raw` is for and what the guide says about it.
+ */
+function StillHtml(props: {
   value: string;
   context: RenderContext;
   inline?: boolean;
   marks?: { 'data-mawy-range': string };
-  /** Whether the caret is in it, so it is written out rather than drawn. */
   reveal?: boolean;
 }): React.ReactElement {
-  /**
-   * Whether this is the browser, drawing after any hydration it had to do.
-   *
-   * `sanitize` needs a DOM to parse with, and a server has none — so the server
-   * draws the markup as text. Sanitising on the client's *first* render would
-   * then be React finding elements where the server sent characters, which is a
-   * hydration mismatch and a warning at best.
-   *
-   * So the first render agrees with the server and the markup arrives on the
-   * one after. `useSyncExternalStore` is what says which render this is: the
-   * server snapshot is used while hydrating and the client's from then on — and
-   * an application that never rendered on a server never hydrates, so its very
-   * first render is already the client's and nothing flashes.
-   */
-  const hydrated = React.useSyncExternalStore(subscribeToNothing, onTheClient, onTheServer);
+  return drawnHtml(props, props.context.html === 'raw' ? props.value : null);
+}
 
-  const html = React.useMemo(
-    () =>
-      context.html === 'raw'
-        ? value
-        : context.html === 'sanitize' && hydrated
-          ? sanitizeHtml(value)
-          : null,
-    [context.html, value, hydrated]
-  );
-
+export function drawnHtml(
+  {
+    value,
+    inline,
+    marks,
+    reveal
+  }: {
+    value: string;
+    context: RenderContext;
+    inline?: boolean;
+    marks?: { 'data-mawy-range': string };
+    reveal?: boolean;
+  },
+  html: string | null
+): React.ReactElement {
   const Tag = inline ? 'span' : 'div';
 
   if (html === null) {
@@ -485,7 +496,10 @@ const CODE_TOKEN_KINDS = new Set<string>([
  * so tokens that do not join back into the code exactly are thrown away and the
  * block is drawn plain.
  */
-function checkedTokens(tokens: MawyCodeToken[] | null, code: string): MawyCodeToken[] | null {
+export function checkedTokens(
+  tokens: MawyCodeToken[] | null,
+  code: string
+): MawyCodeToken[] | null {
   return tokens && tokens.map((token) => token.text).join('') === code ? tokens : null;
 }
 
@@ -528,7 +542,7 @@ function tokenRanges(tokens: MawyCodeToken[], lines: number[]): (MdRange | null)
   return out;
 }
 
-function CodeText({
+export function CodeText({
   tokens,
   code,
   lines
@@ -563,88 +577,19 @@ function CodeText({
 }
 
 /**
- * What a highlighter makes of a code block, if there is one and it knows the
- * language.
+ * A code block, drawn — with whatever colour it has and whatever button it has.
  *
- * The first attempt is made while rendering rather than in an effect, so a
- * highlighter that answers straight away colours the block on the first paint
- * and on a server — no flash of plain code, and nothing extra to hydrate. One
- * that answers with a promise gets the block drawn plain and coloured when it
- * arrives.
+ * The two callers are the same block on a page that will be interacted with
+ * and on one that will not, and the difference between them is two things this
+ * takes as arguments rather than two copies of the markup.
  */
-function useHighlighted(
+export function drawnCode(
   block: MdCode,
-  highlighter: MawyHighlighter | null
-): MawyCodeToken[] | null {
+  context: RenderContext,
+  tokens: MawyCodeToken[] | null,
+  copy: React.ReactNode
+): React.ReactElement {
   const { value, lang } = block;
-
-  const attempt = React.useMemo(() => {
-    if (!highlighter || !lang || !value) {
-      return null;
-    }
-
-    try {
-      return highlighter.supports(lang) ? highlighter.highlight(value, lang) : null;
-    } catch {
-      // A highlighter is somebody else's code running inside a render. It is
-      // allowed to be wrong; it is not allowed to take the document down.
-      return null;
-    }
-  }, [highlighter, lang, value]);
-
-  // What arrived, and which attempt it arrived for. Kept together so that an
-  // answer to a question nobody is asking any more is ignored rather than
-  // cleared: clearing it would be a second render for a value already thrown
-  // away, and the check below would have refused it anyway.
-  const [answer, setAnswer] = React.useState<{
-    to: Promise<MawyCodeToken[]>;
-    tokens: MawyCodeToken[];
-  } | null>(null);
-
-  React.useEffect(() => {
-    if (!attempt || Array.isArray(attempt)) {
-      return;
-    }
-
-    let live = true;
-
-    void attempt.then(
-      (tokens) => {
-        if (live) {
-          setAnswer({ to: attempt, tokens });
-        }
-      },
-      () => {
-        // A highlighter that will not answer is a code block without colour,
-        // which is the state it is already in.
-      }
-    );
-
-    return () => {
-      live = false;
-    };
-  }, [attempt]);
-
-  const tokens = Array.isArray(attempt)
-    ? attempt
-    : answer && answer.to === attempt
-      ? answer.tokens
-      : null;
-
-  return checkedTokens(tokens, value);
-}
-
-function CodeBlock({
-  block,
-  context
-}: {
-  block: MdCode;
-  context: RenderContext;
-}): React.ReactElement {
-  const { value, lang } = block;
-  const [state, copy] = useCopy();
-  const Icon = state === 'copied' ? CheckIcon : CopyIcon;
-  const tokens = useHighlighted(block, context.highlighter ?? null);
 
   return (
     <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined} {...origin(block)}>
@@ -665,21 +610,47 @@ function CodeBlock({
           <CodeText tokens={tokens} code={value} lines={block.lines} />
         </code>
       </pre>
-      <button
-        type="button"
-        className="mawy-code-copy"
-        // A copy button on every code block would be a row of buttons down the
-        // page. It appears with the pointer or with focus, and a keyboard
-        // reaches it in the order it is written.
-        data-mawy-state={state}
-        onClick={() => copy(value)}
-        aria-label={state === 'copied' ? context.strings.copied : context.strings.copyCode}
-        data-mawy-tip={state === 'copied' ? context.strings.copied : context.strings.copyCode}
-      >
-        <Icon className="mawy-icon" aria-hidden="true" />
-      </button>
+      {copy}
     </div>
   );
+}
+
+/**
+ * The same block on a page that will never hydrate.
+ *
+ * No hooks, because there is nothing for them to be: this is a server
+ * component and a server component has no state to hold. No copy button
+ * either, for the same reason — a button nothing is listening to is a control
+ * that lies about being one. And only a highlighter that answers straight
+ * away, since there is no second render for a promise to arrive on.
+ */
+function StillCode({
+  block,
+  context
+}: {
+  block: MdCode;
+  context: RenderContext;
+}): React.ReactElement {
+  return drawnCode(block, context, stillTokens(block, context.highlighter ?? null), null);
+}
+
+/** What a highlighter says about a block, if it says it at once. */
+function stillTokens(block: MdCode, highlighter: MawyHighlighter | null): MawyCodeToken[] | null {
+  const { value, lang } = block;
+
+  if (!highlighter || !lang || !value) {
+    return null;
+  }
+
+  try {
+    const answer = highlighter.supports(lang) ? highlighter.highlight(value, lang) : null;
+
+    return checkedTokens(Array.isArray(answer) ? answer : null, value);
+  } catch {
+    // A highlighter is somebody else's code running inside a render. It is
+    // allowed to be wrong; it is not allowed to take the document down.
+    return null;
+  }
 }
 
 /* -------------------------------------------------------------------------
@@ -863,8 +834,11 @@ export function renderBlocks(
           </p>
         );
 
-      case 'code':
-        return <CodeBlock key={index} block={block} context={context} />;
+      case 'code': {
+        const Code = context.live?.code ?? StillCode;
+
+        return <Code key={index} block={block} context={context} />;
+      }
 
       case 'blockquote': {
         if (!block.alert) {
@@ -956,9 +930,11 @@ export function renderBlocks(
       case 'leafDirective':
         return <Directive key={index} node={block} kind="leaf" context={context} />;
 
-      case 'html':
+      case 'html': {
+        const Html = context.live?.html ?? StillHtml;
+
         return (
-          <RawHtml
+          <Html
             key={index}
             value={block.value}
             context={context}
@@ -966,6 +942,7 @@ export function renderBlocks(
             reveal={revealed(block, context)}
           />
         );
+      }
 
       default:
         return null;
