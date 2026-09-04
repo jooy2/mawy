@@ -19,10 +19,11 @@ Two rules keep it honest:
 ## The audit
 
 A read of both packages end to end, turned into a list to work through. **It is
-done**, except for one thing that is a project rather than a line: drawing only
-the part of a long document that anybody can see, which has a section of its own
-below. Everything else the read found is a commit with the test that fails
-without it, and a line in the changelog of the package it landed in.
+done**, and so is the one thing that outlived it — drawing only the part of a
+long document that anybody can see, which had a section of its own here and is
+now three commits and the note under "Deliberate" about what it cost. Everything
+the read found is a commit with the test that fails without it, and a line in
+the changelog of the package it landed in.
 
 Nine things came out of working through it that the read had not seen, and all
 nine were worse than what it had. A document could be given two footnotes with
@@ -45,47 +46,8 @@ comments promising the two agreed.
 Six lines came off the list for the other reason — the read was wrong about
 them, or measuring said the change would not pay — and they are under
 "Deliberate" below rather than left looking undone. Two more were closed by a
-decision rather than by a change and are there as well.
-
-## Drawing only what can be seen
-
-The one thing left, and three shapes of the same idea.
-
-**The source pane draws every line**, in both packages. The React surface is a
-`<textarea>` with a coloured copy of the same text laid exactly underneath it,
-and that copy is every line of the document; the Flutter one hands its
-controller a span for every line on every keystroke. A five-thousand-line file
-is five thousand rows built to show forty.
-
-What makes it hard is what the two layers have to agree about. Every line has to
-sit exactly where the field puts it, so a window has to know the height of
-everything above it before it can leave any of it out — and a wrapped line is
-not one row. The browser's own find, the caret, the selection and the length of
-the scrollbar are all read off a layer that would no longer hold the whole
-document. This wants a design before it wants an afternoon.
-
-**The Flutter viewer builds every block at once.** Half of this is done: the
-viewer keeps the widgets it built and hands the same ones back until something
-they are drawn from changes, so a rebuild for anything that is not the document
-now costs nothing. What is _not_ done is a lazy list, and it is not done because
-four things the viewer offers stand on every block being built:
-
-- Selecting across the whole document and copying it. A `SelectableRegion` over
-  a lazy list can only select what has been built.
-- Scrolling to a match. `_showMatch` finds the block by its `GlobalKey`, and an
-  unbuilt block has no context to find.
-- Scrolling to a heading, and the outline's mark on whichever one is at the top.
-  Both measure a heading through its key, and the binary search in
-  `_measureActive` reads an unmeasurable heading as "wherever the search is
-  looking".
-- `MawyViewerAnchors.places()`, which is half of what lines the editor's two
-  panes up in `split`.
-
-Every one of those wants an index-to-offset answer that Flutter does not give
-you without either fixed extents or a package, and this repository has one
-dependency and guards it. Whoever picks this up should start there — decide how
-a block's offset is known before the block is built — and the other four fall
-out of it.
+decision rather than by a change and are there as well, and so is the one thing
+drawing less of a long document cost.
 
 ## Confirmed
 
@@ -142,6 +104,17 @@ out of it.
   each other, so there is nothing to merge and the change would be code written
   for a highlighter somebody else might write. Unkinded tokens are already drawn
   as the characters they are rather than wrapped.
+
+- **A selection in the Flutter viewer reaches as far as the list is holding.**
+  The document is a lazy list, so only the blocks near the view are built and a
+  drag can only take text from those. The cache is three screens either way,
+  which is past anything one movement of a hand covers, and the toolbar's copy
+  button takes the whole document from the Markdown rather than from the page —
+  so taking all of a long document never went through a selection. Closing the
+  gap properly means a `SelectionContainer` delegate that assembles the text of
+  unbuilt blocks out of the parse tree, which is a large amount of code standing
+  on Flutter's selection internals, for a case the copy button already answers.
+  Written down in `docs/*/guide/viewer.md`, in both languages.
 
 - **The Flutter source field's placeholder and the direction it is in.** The read of both packages had this down as a placeholder that ignores which way the text runs. Measured in both directions, its box is exactly the field's box — right of the gutter in one, left of it in the other — and both it and the field take their alignment from the same `Directionality`, so the words start where the caret does either way.
 - **What a picture is allowed to cost.** The read had a size ceiling down as missing. What fills a phone's memory is the decoded bitmap rather than the file, and that is now bounded by the width the page has for it; the bytes behind a `data:` picture are bounded by the document they are written in. What is left unbounded is a remote picture's download, which is the same in every Markdown renderer and in the browser the React package draws in — and an application that minds now has `imageBuilder` and `image`, which is where a ceiling belongs: on the request the application makes rather than on the one the viewer makes for it.
