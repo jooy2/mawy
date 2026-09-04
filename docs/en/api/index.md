@@ -292,7 +292,8 @@ Anything left out of `typography` or `defaultTypography` keeps its default, so `
 
 | Argument | Type | Default | What it does |
 | --- | --- | --- | --- |
-| `colorScheme` | [`MawyColorScheme`](#mawycolorscheme) | `MawyColorScheme.system` | Which palette to draw in. |
+| `colorScheme` | [`MawyColorScheme`](#mawycolorscheme)`?` | — | The palette, when the application owns it. |
+| `defaultColorScheme` | [`MawyColorScheme`](#mawycolorscheme) | `MawyColorScheme.system` | The palette to start with, when the editor keeps it itself. |
 | `onColorSchemeChange` | `ValueChanged<MawyColorScheme>?` | — | Called when the reader changes it from the toolbar. |
 | `tokens` | [`MawyTokensBuilder`](#mawytokens)`?` | the stylesheet's own | The colours to draw in, given the brightness the viewer settled on. |
 | `typography` | [`MawyTypography`](#mawytypography)`?` | — | How the document is set, when the application owns it. |

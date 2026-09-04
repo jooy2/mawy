@@ -1013,6 +1013,66 @@ void main() {
       expect(field.controller.selection.baseOffset, 3);
     });
 
+    /// The pair `mode`/`defaultMode` and `typography`/`defaultTypography` make.
+    /// `colorScheme` used to have an `onColorSchemeChange` and no
+    /// `defaultColorScheme`, so it read as a value the application owned and
+    /// behaved as a starting value the toolbar then took over.
+    testWidgets('leaves a palette the application is holding to the application', (
+      WidgetTester tester,
+    ) async {
+      final List<MawyColorScheme> picked = <MawyColorScheme>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'One.',
+            mode: MawyEditorMode.split,
+            colorScheme: MawyColorScheme.light,
+            onColorSchemeChange: picked.add,
+            toolbar: const <MawyEditorToolbarItem>[MawyEditorToolbarItem.colorScheme],
+            status: const <MawyEditorStatusItem>[],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await press(tester, 'Theme');
+      await tester.tap(find.text('Dark').last);
+      await tester.pumpAndSettle();
+
+      // Said, and not done: the application is holding this one and nothing
+      // changes until it hands back a new value.
+      expect(picked, <MawyColorScheme>[MawyColorScheme.dark]);
+      expect(tester.widget<MawyViewer>(find.byType(MawyViewer)).colorScheme, MawyColorScheme.light);
+    });
+
+    testWidgets('keeps a palette nobody is holding, and still reports it', (
+      WidgetTester tester,
+    ) async {
+      final List<MawyColorScheme> picked = <MawyColorScheme>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'One.',
+            mode: MawyEditorMode.split,
+            defaultColorScheme: MawyColorScheme.light,
+            onColorSchemeChange: picked.add,
+            toolbar: const <MawyEditorToolbarItem>[MawyEditorToolbarItem.colorScheme],
+            status: const <MawyEditorStatusItem>[],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await press(tester, 'Theme');
+      await tester.tap(find.text('Dark').last);
+      await tester.pumpAndSettle();
+
+      expect(picked, <MawyColorScheme>[MawyColorScheme.dark]);
+      expect(tester.widget<MawyViewer>(find.byType(MawyViewer)).colorScheme, MawyColorScheme.dark);
+    });
+
     testWidgets('does not report a value the application set itself', (WidgetTester tester) async {
       final List<String> seen = <String>[];
       late StateSetter again;

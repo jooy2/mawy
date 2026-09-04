@@ -197,7 +197,8 @@ class MawyEditor extends StatefulWidget {
     this.toolbar = kMawyEditorToolbar,
     this.status = kMawyEditorStatus,
     this.parse = const MawyParseOptions(),
-    this.colorScheme = MawyColorScheme.system,
+    this.colorScheme,
+    this.defaultColorScheme = MawyColorScheme.system,
     this.onColorSchemeChange,
     this.tokens,
     this.typography,
@@ -245,10 +246,20 @@ class MawyEditor extends StatefulWidget {
   /// How the Markdown is read.
   final MawyParseOptions parse;
 
-  /// Which palette to draw in.
-  final MawyColorScheme colorScheme;
+  /// Which palette to draw in, where the application decides.
+  ///
+  /// The pair `mode`/`defaultMode` and `typography`/`defaultTypography` make,
+  /// and for the same reason: pass this and the application owns the answer —
+  /// the toolbar reports what the reader picked through [onColorSchemeChange]
+  /// and changes nothing until the application hands back a new value. Pass
+  /// nothing and the editor keeps it, and still reports every change.
+  final MawyColorScheme? colorScheme;
 
-  /// Called when the reader picks a different one.
+  /// Which palette to draw in when the editor decides for itself.
+  final MawyColorScheme defaultColorScheme;
+
+  /// Called when the reader picks a different one. Called either way, so an
+  /// application can watch a value it is not driving.
   final ValueChanged<MawyColorScheme>? onColorSchemeChange;
 
   /// The colours to draw in. See [MawyViewer.tokens], which this is passed to.
@@ -316,7 +327,7 @@ class _MawyEditorState extends State<MawyEditor> {
   bool _syncing = false;
 
   late MawyEditorMode _mode = widget.mode ?? widget.defaultMode;
-  late MawyColorScheme _scheme = widget.colorScheme;
+  late MawyColorScheme _held = widget.colorScheme ?? widget.defaultColorScheme;
   late MawyTypography _type = widget.typography ?? widget.defaultTypography;
 
   /// How much of the width the source pane has, in `split`.
@@ -441,10 +452,6 @@ class _MawyEditorState extends State<MawyEditor> {
             : TextSelection.collapsed(offset: text.length),
         composing: TextRange.empty,
       );
-    }
-
-    if (widget.colorScheme != old.colorScheme) {
-      _scheme = widget.colorScheme;
     }
 
     if (widget.typography != null && widget.typography != old.typography) {
@@ -644,9 +651,19 @@ class _MawyEditorState extends State<MawyEditor> {
     _afterLayout(_syncScroll);
   }
 
+  /// The palette in force: the application's answer where there is one, and
+  /// the editor's own otherwise.
+  MawyColorScheme get _scheme => widget.colorScheme ?? _held;
+
   void _setScheme(MawyColorScheme scheme) {
     widget.onColorSchemeChange?.call(scheme);
-    setState(() => _scheme = scheme);
+
+    // Only where the application is not holding one. A value it is driving
+    // changes when it says so and not before, which is what makes it worth
+    // driving.
+    if (widget.colorScheme == null) {
+      setState(() => _held = scheme);
+    }
   }
 
   /* ---------------------------------------------------------------------

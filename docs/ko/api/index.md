@@ -292,7 +292,8 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 
 | 인자 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
-| `colorScheme` | [`MawyColorScheme`](#mawycolorscheme) | `MawyColorScheme.system` | 어느 팔레트로 그릴지. |
+| `colorScheme` | [`MawyColorScheme`](#mawycolorscheme)`?` | — | 팔레트. 애플리케이션이 주인일 때. |
+| `defaultColorScheme` | [`MawyColorScheme`](#mawycolorscheme) | `MawyColorScheme.system` | 에디터가 직접 가질 때, 시작할 팔레트. |
 | `onColorSchemeChange` | `ValueChanged<MawyColorScheme>?` | — | 독자가 툴바에서 바꿨을 때 호출됩니다. |
 | `tokens` | [`MawyTokensBuilder`](#mawytokens)`?` | 스타일시트의 값 | 그릴 색. 뷰어가 정한 밝기를 받아 돌려줍니다. |
 | `typography` | [`MawyTypography`](#mawytypography)`?` | — | 문서 조판. 애플리케이션이 주인일 때. |
