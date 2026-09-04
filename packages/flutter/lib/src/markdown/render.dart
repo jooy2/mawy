@@ -441,33 +441,108 @@ InlineSpan _recognized(InlineSpan span, GestureRecognizer recognizer) {
   );
 }
 
-class _Image extends StatelessWidget {
+/// The bytes a `data:` URL carries, or `null` when it is not one.
+///
+/// The URL policy allows a `data:` image on purpose — a document that carries
+/// its own illustrations is most of the point of a Markdown file being one
+/// file — and `Image.network` cannot open one anywhere but the web, where it
+/// happens to become an `<img>` tag. So the bytes are read here and drawn from
+/// memory, and the picture arrives on every platform rather than on one of
+/// them.
+Uint8List? _dataBytes(String url) {
+  final String trimmed = url.trim();
+
+  if (!trimmed.toLowerCase().startsWith('data:')) {
+    return null;
+  }
+
+  try {
+    return UriData.parse(trimmed).contentAsBytes();
+  } on Object {
+    // Not a data URL this can read. The error builder says so, which is what
+    // it says about a picture that will not load for any other reason.
+    return null;
+  }
+}
+
+class _Image extends StatefulWidget {
   const _Image({required this.node, required this.context});
 
   final MdImage node;
   final MawyRenderContext context;
 
   @override
+  State<_Image> createState() => _ImageState();
+}
+
+class _ImageState extends State<_Image> {
+  /// Decoded once rather than on every build: this widget is made again every
+  /// time the document is drawn, and a base64 illustration is megabytes.
+  Uint8List? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _bytes = _dataBytes(widget.node.url);
+  }
+
+  @override
+  void didUpdateWidget(_Image old) {
+    super.didUpdateWidget(old);
+
+    if (widget.node.url != old.node.url) {
+      _bytes = _dataBytes(widget.node.url);
+    }
+  }
+
+  @override
   Widget build(BuildContext buildContext) {
+    final MdImage node = widget.node;
+    final MawyRenderContext context = widget.context;
     final Widget Function(String)? onError = context.onImageError;
+
+    Widget refused(BuildContext _, Object _, StackTrace? _) =>
+        onError?.call(node.url) ??
+        Text(
+          node.alt.isEmpty ? node.url : node.alt,
+          style: context.body.copyWith(color: context.tokens.foregroundSubtle),
+        );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(MawyRadius.medium),
-      child: Image.network(
-        node.url,
-        semanticLabel: node.alt.isEmpty ? null : node.alt,
-        // `![](…)` is a picture the author said nothing about, which in
-        // Markdown — and in the `alt=""` it becomes — means decoration. Left in
-        // the tree it is an unnamed image, and a screen reader stops on it to
-        // say "image" and nothing else. Said or skipped, and never named
-        // nothing.
-        excludeFromSemantics: node.alt.isEmpty,
-        errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
-            onError?.call(node.url) ??
-            Text(
-              node.alt.isEmpty ? node.url : node.alt,
-              style: context.body.copyWith(color: context.tokens.foregroundSubtle),
-            ),
+      child: LayoutBuilder(
+        builder: (BuildContext layout, BoxConstraints room) {
+          // How many device pixels wide the picture can be drawn at, so that a
+          // photograph four thousand across is not decoded at four thousand to
+          // be shown at six hundred. A decoded bitmap is four bytes a pixel and
+          // it is that rather than the file that fills a phone's memory.
+          final int? cache = room.maxWidth.isFinite && room.maxWidth > 0
+              ? (room.maxWidth * MediaQuery.devicePixelRatioOf(layout)).round()
+              : null;
+          // `![](…)` is a picture the author said nothing about, which in
+          // Markdown — and in the `alt=""` it becomes — means decoration. Left
+          // in the tree it is an unnamed image, and a screen reader stops on it
+          // to say "image" and nothing else. Said or skipped, and never named
+          // nothing.
+          final String? label = node.alt.isEmpty ? null : node.alt;
+          final bool unnamed = node.alt.isEmpty;
+
+          return _bytes == null
+              ? Image.network(
+                  node.url,
+                  cacheWidth: cache,
+                  semanticLabel: label,
+                  excludeFromSemantics: unnamed,
+                  errorBuilder: refused,
+                )
+              : Image.memory(
+                  _bytes!,
+                  cacheWidth: cache,
+                  semanticLabel: label,
+                  excludeFromSemantics: unnamed,
+                  errorBuilder: refused,
+                );
+        },
       ),
     );
   }

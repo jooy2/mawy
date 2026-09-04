@@ -908,6 +908,62 @@ void main() {
     });
   });
 
+  /// A `data:` image, which the URL policy allows on purpose — a document that
+  /// carries its own illustrations is most of the point of a Markdown file
+  /// being one file.
+  group('images', () {
+    /// One transparent pixel, as a document would carry it.
+    const String pixel =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAA'
+        'DUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+    testWidgets('draws one the document carries itself', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: '![a cat]($pixel)')));
+      await tester.pumpAndSettle();
+
+      final Image drawn = tester.widget(find.byType(Image));
+
+      // From memory rather than over the network: `Image.network` cannot open a
+      // `data:` URL anywhere but the web, where it happens to become an `<img>`
+      // tag — so the picture arrived on one platform and not the others.
+      //
+      // And through a resize, which is the decoded bitmap being bounded by how
+      // wide the picture can actually be drawn rather than by how many pixels
+      // the file happens to hold.
+      expect(drawn.image, isA<ResizeImage>());
+      expect((drawn.image as ResizeImage).imageProvider, isA<MemoryImage>());
+      expect((drawn.image as ResizeImage).width, greaterThan(0));
+      expect(drawn.semanticLabel, 'a cat');
+      // The alt text is what is drawn *instead* of a picture that would not
+      // load, so seeing it here would mean this one did not.
+      expect(find.text('a cat'), findsNothing);
+    });
+
+    testWidgets('says what it was told to about one that will not load', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyViewer(value: '![a cat](https://nowhere.example/c.png)')),
+      );
+      await tester.pumpAndSettle();
+
+      // A network image in a test is a request that fails, which is the same
+      // path a broken URL takes in a real application.
+      expect(find.text('a cat'), findsOneWidget);
+    });
+
+    testWidgets('reads a data URL that is not a picture as one that will not load', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyViewer(value: '![a cat](data:image/png;base64,!!!!)')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('a cat'), findsOneWidget);
+    });
+  });
+
   group('links', () {
     testWidgets('is followed by a mouse press the selection took for a drag', (
       WidgetTester tester,
