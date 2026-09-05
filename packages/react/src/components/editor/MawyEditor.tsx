@@ -407,7 +407,18 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     // The pointer is captured so the drag survives leaving the bar, which it
     // does immediately: the bar is five pixels wide and a hand is not that
     // steady.
-    bar.setPointerCapture(event.pointerId);
+    //
+    // A refused capture is not the end of the drag. `setPointerCapture` throws
+    // for a pointer that is no longer down — a press let go inside the same
+    // frame is enough — and losing the whole drag because the capture was a
+    // moment late is worse than a drag that only follows the pointer while it
+    // is over the bar.
+    try {
+      bar.setPointerCapture(event.pointerId);
+    } catch {
+      // Nothing to do about it, and nothing that has to be done.
+    }
+
     event.preventDefault();
 
     const rtl = getComputedStyle(bar).direction === 'rtl';

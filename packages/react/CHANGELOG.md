@@ -68,6 +68,8 @@
 
 ### Fixed
 
+- **A pointer capture the browser refuses no longer ends the drag on the bar between the panes.** `setPointerCapture` throws for a pointer that is no longer down, and a press let go inside the same frame is enough — the whole drag went with it, because the throw came before the listeners were on. The capture is what keeps the drag alive once the pointer leaves the five pixels of bar; without it the bar still follows the pointer while it is over it, which is a great deal better than a bar that does not move at all.
+
 - **An alert is drawn as an alert rather than as a quotation.** It is a `blockquote`, and the rule for a quotation matches it at (0,2,1) while the class on its own is (0,2,0) — so every alert had the quotation's padding, the quotation's grey text and a grey rule down its side whatever kind it said it was, and the word at the top of it sat a whole line above the sentence under it. The alert's rules are written against the element now, which is what makes them win.
 
 - **A quotation's last paragraph stops leaving a strip of empty box under it.** The paragraph carries the margin every paragraph carries, and at the bottom of a box that margin is nothing but box: the rule down the side ran a line lower than the words beside it, and the quotation read as text sitting too high in it. The viewer already did this for an alert.
