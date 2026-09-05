@@ -32,12 +32,13 @@ interface Pane {
   flutter: string;
 }
 
+// Both panes, in both packages, are one document — `demos/playground/document.ts`
+// and the two strings the gallery copies from it. So the four names here are
+// the same two demos twice, and a reader flipping any of the switches on this
+// page changes one thing at a time.
 const PANES: readonly Pane[] = [
   { id: 'editor', name: 'playground/editor', flutter: 'playground/editor' },
-  // The viewer's Flutter half is the gallery's own specimen, which is the same
-  // document `demos/sample.ts` holds. There is nothing for a second entry in
-  // the gallery to be.
-  { id: 'viewer', name: 'playground/viewer', flutter: 'viewer/basic' }
+  { id: 'viewer', name: 'playground/viewer', flutter: 'playground/viewer' }
 ];
 
 const WORDS = {

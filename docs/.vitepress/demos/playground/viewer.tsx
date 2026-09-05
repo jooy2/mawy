@@ -1,20 +1,21 @@
 import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 import { DEMO_DIRECTIVES } from '../directives.js';
-import { SAMPLE } from '../sample.js';
 import type { DemoProps } from '../types.js';
+import { PLAYGROUND } from './document.js';
 
 /**
- * The viewer with nothing switched off, on the document the rest of the site
- * uses as its specimen.
+ * The viewer with nothing switched off, on the document the editor beside it
+ * opens with.
  *
  * The toolbar is the default one, which is every control there is — including
  * `open`, so the document on screen can be somebody's own file rather than
  * ours. Dropping a `.md` file anywhere on it does the same thing.
  *
- * The document is not translated the way the editor's is, and the difference is
- * the point: this one is a specimen rather than a set of instructions, and what
- * a table with three alignments or a footnote mentioned twice looks like does
- * not depend on who is reading it.
+ * One document across the whole page rather than a specimen of its own: a
+ * reader who has just typed into the editor comes here to see the same file
+ * read rather than written, and that comparison is only worth anything if it is
+ * the same file. `demos/sample.ts` is still what the pages *about* the viewer
+ * show, where a second document is a second thing to look at.
  */
 export default function PlaygroundViewer({
   colorScheme,
@@ -24,7 +25,7 @@ export default function PlaygroundViewer({
 }: DemoProps) {
   return (
     <MawyViewer
-      defaultValue={SAMPLE}
+      defaultValue={PLAYGROUND[locale]}
       colorScheme={colorScheme}
       onColorSchemeChange={onColorSchemeChange}
       locale={locale}
