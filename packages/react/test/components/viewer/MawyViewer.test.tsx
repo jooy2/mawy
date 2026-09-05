@@ -788,6 +788,59 @@ describe('footnotes', () => {
     );
   });
 
+  it('names the section rather than writing the word across it', async () => {
+    const screen = await render(<MawyViewer value={NOTED} toolbar={false} />);
+    const section = screen.container.querySelector('.mawy-md-footnotes') as HTMLElement;
+
+    // The rule above the notes and the numbers down the side are what the
+    // section looks like. The word is what it is called, and only a reader who
+    // cannot see the shape needs to be told.
+    expect(section.getAttribute('aria-label')).toBeTruthy();
+    expect(section.querySelector('h1, h2, h3, h4, h5, h6')).toBeNull();
+  });
+
+  it('follows a mention into its note, and the note back, inside its own pane', async () => {
+    const long = [NOTED, ...Array.from({ length: 30 }, (_, at) => `Line ${at}.`)].join('\n\n');
+    const screen = await render(<MawyViewer value={long} toolbar={false} />);
+    const pane = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+    const mention = screen.container.querySelector('.mawy-md-footnote-ref a') as HTMLElement;
+    const note = screen.container.querySelector('#mawy-fn-one') as HTMLElement;
+
+    // The suite runs without the package's stylesheet, so the pane is the shape
+    // the stylesheet would have given it. What is being asked here is what the
+    // component does with a pane that scrolls, not whether the CSS makes one.
+    pane.style.height = '220px';
+    pane.style.overflow = 'auto';
+
+    // A host page with a router of its own, which is what a documentation site
+    // is: it takes the click, and the fragment moves nothing. The two links a
+    // footnote is made of are the only way to the note and back, so this pane
+    // has to move itself.
+    screen.container.addEventListener('click', (event) => event.preventDefault());
+
+    // How far down the pane something is, in the pane's own coordinates. In
+    // view is between zero and the pane's height; the note starts a long way
+    // past that, and the mention ends there once the note has been jumped to.
+    const from = (element: HTMLElement) =>
+      element.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+
+    expect(from(note)).toBeGreaterThan(pane.clientHeight);
+
+    mention.click();
+    await vi.waitFor(() => {
+      expect(from(note)).toBeGreaterThanOrEqual(0);
+      expect(from(note)).toBeLessThan(pane.clientHeight);
+    });
+
+    expect(from(mention)).toBeLessThan(0);
+
+    (screen.container.querySelector('.mawy-md-footnote-back') as HTMLElement).click();
+    await vi.waitFor(() => {
+      expect(from(mention)).toBeGreaterThanOrEqual(0);
+      expect(from(mention)).toBeLessThan(pane.clientHeight);
+    });
+  });
+
   it('gives the second mention of one note an id of its own', async () => {
     // Two elements with the same `id` is a link that lands on whichever the
     // browser met first.

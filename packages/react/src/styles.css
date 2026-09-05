@@ -991,7 +991,20 @@
   color: var(--mawy-fg-muted);
 }
 
-.mawy-root .mawy-md-alert {
+/* The paragraph inside carries the margin every paragraph carries, and at the
+ * bottom of a box that margin is a strip of empty box: the rule down the side
+ * runs a line lower than the words it is beside, and the quotation reads as
+ * text sitting too high in it. */
+.mawy-root .mawy-md blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* An alert is a `blockquote`, so the rule above matches it as well — and at
+ * (0,2,1) it beat the class on its own. An alert was drawn with the
+ * quotation's padding, the quotation's grey and a grey rule down its side
+ * whatever kind it said it was. Written against the element for that reason,
+ * not for the specificity's sake. */
+.mawy-root .mawy-md blockquote.mawy-md-alert {
   padding: 0.85em 1.1em;
   border-inline-start-width: 3px;
   border-inline-start-color: var(--mawy-alert, var(--mawy-border-strong));
@@ -1020,7 +1033,7 @@
   --mawy-alert: var(--mawy-caution);
 }
 
-.mawy-root .mawy-md-alert-label {
+.mawy-root .mawy-md p.mawy-md-alert-label {
   display: flex;
   align-items: center;
   gap: 0.45em;
@@ -1029,17 +1042,17 @@
   font-weight: 650;
 }
 
-.mawy-root .mawy-md-alert > :last-child {
-  margin-bottom: 0;
-}
-
 /* Code -------------------------------------------------------------------- */
 
 .mawy-root .mawy-md-code {
   padding: 0.15em 0.4em;
   border-radius: var(--mawy-radius-sm);
   background: var(--mawy-code-bg);
-  color: var(--mawy-code-fg);
+  /* The accent rather than the body's near-black: a name in the middle of a
+   * sentence is a different kind of thing from the sentence, and the box alone
+   * says so quietly enough to miss. 6.1:1 on the box in the light theme and
+   * 5.5:1 in the dark one, so it is still text rather than decoration. */
+  color: var(--mawy-accent);
   font-family: var(--mawy-font-mono);
   font-size: 0.875em;
   font-weight: inherit;
@@ -1191,15 +1204,6 @@
   padding-top: 1.2em;
   border-top: 1px solid var(--mawy-border);
   font-size: 0.92em;
-}
-
-.mawy-root .mawy-md-footnotes-title {
-  margin: 0 0 0.6em;
-  color: var(--mawy-fg-muted);
-  font-size: 0.95em;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .mawy-root .mawy-md-footnotes ol {

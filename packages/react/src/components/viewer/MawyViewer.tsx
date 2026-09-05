@@ -472,6 +472,52 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     }
   }, [finding, currentMatch, found]);
 
+  /**
+   * A link into this document, followed inside this pane.
+   *
+   * The two footnotes make are the whole of it: the number in the sentence
+   * points at the note, and the arrow at the end of the note points back at the
+   * sentence. Both are real `href="#…"` links and stay that way — a middle
+   * click opens them, `:target` marks where a reader landed, and a document
+   * printed or read without JavaScript keeps working.
+   *
+   * What is added is the scrolling, because there is nobody to do it: this pane
+   * is what scrolls, and the browser's own answer to a fragment is to move
+   * whatever it finds outside it as well — and a host page with a router of its
+   * own may take the click and move nothing at all, which is what a
+   * documentation site does. Measured and moved the way `find` moves to a
+   * match, and for the reason written there.
+   */
+  const followAnchor = React.useCallback((event: React.MouseEvent<HTMLElement>) => {
+    const pane = scroller.current;
+    const link = (event.target as HTMLElement | null)?.closest?.('a[href^="#"]');
+    const href = link?.getAttribute('href');
+
+    if (!pane || !href || href === '#') {
+      return;
+    }
+
+    const id = decodeURIComponent(href.slice(1));
+    // By walking rather than by a selector, because the id is the document's:
+    // a footnote called `[^a.b]` is an id `querySelector` would read as a
+    // class. The outline finds a heading the same way.
+    const target = [...pane.querySelectorAll<HTMLElement>('[id]')].find(
+      (element) => element.id === id
+    );
+
+    if (!target) {
+      // Somewhere else on the host's page. Theirs to follow, not ours.
+      return;
+    }
+
+    const view = pane.getBoundingClientRect();
+
+    pane.scrollTop += target.getBoundingClientRect().top - view.top - 12;
+    // Moving the pane is half of following a link; the focus has to go with it,
+    // or the next Tab carries on from the sentence the reader has just left.
+    target.focus({ preventScroll: true });
+  }, []);
+
   const openFind = React.useCallback(() => {
     const selected = window.getSelection()?.toString() ?? '';
 
@@ -724,7 +770,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
             `-1` rather than `0` because a reader Tabbing through a page is on
             their way somewhere, and a stop on the text they can already see is
             a stop that says nothing. */}
-        <div className="mawy-viewer-scroll" ref={scroller} tabIndex={-1}>
+        <div className="mawy-viewer-scroll" ref={scroller} tabIndex={-1} onClick={followAnchor}>
           {hasDocument ? (
             <article className="mawy-md" aria-label={fileName ?? strings.document}>
               {content}

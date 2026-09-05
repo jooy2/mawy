@@ -30,6 +30,10 @@
 
 ### Changed
 
+- **Inline code is drawn in the accent colour.** A name in the middle of a sentence is a different kind of thing from the sentence around it, and the box behind it says so quietly enough to miss. The pair clears 6.1:1 on that box in the light theme and 5.5:1 in the dark one, so it is still text rather than decoration. The Flutter package draws it the same way.
+
+- **The footnotes name themselves to a screen reader rather than writing the word across the page.** The rule above the notes and the numbers down the side are what a footnote section looks like; `Footnotes` written over them is the one part of it a reader does not need. The section keeps the label, so a screen reader still finds it by name, and `strings.footnotes` is still what that name is.
+
 - **The status line, the split-pane arithmetic and the viewer's find are diffed against the Dart ones**, as part of the parity check. They are three more things this library ships twice, and until now each had only its doc comments promising the two halves agreed — the check reached the parsers, the two highlighters, the editing commands and the find bar, and stopped there.
 
   Widening it found one: `countWords` adds a spaced half to an unspaced one, every Han and kana character being a word where an English one is a run between two spaces, and **nothing in the corpus had ever been unspaced**. Half that function had never been compared at all — dropping it entirely changed nothing either half printed. `tool/corpus.json` ends with a document of Han and kana now, and dropping it fails the diff.
@@ -63,6 +67,12 @@
 - **The source pane draws the part of a long document that can be seen.** The pane is a `<textarea>` with a coloured copy of the same text laid exactly under it, and that copy was a row per line, rebuilt on every keystroke: a five-thousand-line file was five thousand rows built to show forty. The copy is cut into chunks now, and only the chunks near the view are a row per line with the syntax coloured in; the rest hold the same characters as one run of text, which is the same height and a fraction of the elements. Nothing is left out, so the browser's own find still finds the whole document, printing still puts all of it on the paper, and the copy is still exactly as tall as the field it lies under. A document under six hundred lines is drawn the way it always was.
 
 ### Fixed
+
+- **An alert is drawn as an alert rather than as a quotation.** It is a `blockquote`, and the rule for a quotation matches it at (0,2,1) while the class on its own is (0,2,0) — so every alert had the quotation's padding, the quotation's grey text and a grey rule down its side whatever kind it said it was, and the word at the top of it sat a whole line above the sentence under it. The alert's rules are written against the element now, which is what makes them win.
+
+- **A quotation's last paragraph stops leaving a strip of empty box under it.** The paragraph carries the margin every paragraph carries, and at the bottom of a box that margin is nothing but box: the rule down the side ran a line lower than the words beside it, and the quotation read as text sitting too high in it. The viewer already did this for an alert.
+
+- **A footnote's two links move the pane they are in.** The number in the sentence points at the note and the arrow at the end of the note points back, and both are `href="#…"` links — which the page around the viewer is free to take: a router that handles its own in-page links takes the click, and the fragment moves nothing. The document scrolls itself now, the way it does for the outline and for a match in the find bar, and the links stay real links.
 
 - **A run dragged from one place in the drawn document to another is moved rather than copied.** A drag is two input events, one after the other and both measured against the document as it stands: the run being taken out, then the run being put in. Each was answered on its own, so the second was answered against a document the first had not yet changed — the second won, nothing came out, and the run appeared twice. They are one edit now. A drop that came from another application, or one held down as a copy, still only puts the run in; and a drag that ended somewhere other than in the document takes nothing out of it.
 

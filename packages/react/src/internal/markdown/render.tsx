@@ -803,16 +803,23 @@ export function renderFootnotes(
   }
 
   return (
-    // Named with a label rather than by pointing at the heading: two viewers on
-    // one page would be two elements claiming the same `id`, and a link that
-    // lands on whichever the browser met first.
+    // Named to a screen reader and not on the page: the rule above it and the
+    // numbers under it are what a footnote section looks like, and a word
+    // written across the top of them is the one part of it a reader does not
+    // need. A label rather than a heading pointed at, because two viewers on
+    // one page would be two elements claiming one `id`.
     <section className="mawy-md-footnotes" aria-label={context.strings.footnotes}>
-      <h2 className="mawy-md-footnotes-title" lang={context.strings.lang}>
-        {context.strings.footnotes}
-      </h2>
       <ol>
         {footnotes.map((footnote, index) => (
-          <li key={index} id={footnoteId(context, footnote.slug)} {...origin(footnote)}>
+          <li
+            key={index}
+            id={footnoteId(context, footnote.slug)}
+            // Able to take the focus, the way a heading the outline jumps to
+            // is: following a link is moving the reader, and a reader whose
+            // next Tab carries on from the sentence they left has not moved.
+            tabIndex={-1}
+            {...origin(footnote)}
+          >
             {renderBlocks(footnote.children, context)}
             <a
               className="mawy-md-footnote-back"
