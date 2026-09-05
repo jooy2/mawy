@@ -72,6 +72,25 @@
   padding-bottom: 0;
 }
 
+/* From 1440px up the layout stops growing and centres itself, which is what a
+   column of prose wants and the opposite of what this page wants: the stage is
+   the page, and the cap buys a strip of empty background down each side of it.
+   So above that width this page keeps the full-bleed layout every narrower
+   window already has.
+ *
+ * The width is one variable rather than a set of overrides because the navbar
+ * and the sidebar are measured from the same one, and a stage that reached the
+ * window's edge past a navbar that stopped short would be a page whose two
+ * halves disagreed about how wide it is. `100%` is the containing block in
+ * every calculation that reads it — the layout for the content, the viewport
+ * for the two fixed elements — which is the width each of them was being cut
+ * down from. */
+@media (min-width: 1440px) {
+  .mawy-playground-page {
+    --vp-layout-max-width: 100%;
+  }
+}
+
 .mawy-play {
   display: flex;
   flex-direction: column;
