@@ -62,10 +62,6 @@ class MawyRenderContext {
   /// The style body text is drawn in. Everything else is relative to it.
   final TextStyle body;
 
-  /// Every line of body text the same height, whatever is on it. See
-  /// [mawyStrutFor].
-  StrutStyle get strut => mawyStrutFor(body);
-
   /// The document's footnotes, by label, so a `[^a]` in the middle of a
   /// sentence knows which number it is.
   final Map<String, MdFootnoteDefinition> footnotes;
@@ -599,12 +595,22 @@ List<Widget> renderBlocks(List<MdBlock> blocks, MawyRenderContext context, {bool
 /// — `line-height` is the line there and a fallback font does not get a vote —
 /// and it is what made a selection across a paragraph a ragged stack of blocks
 /// rather than a run of text.
-StrutStyle mawyStrutFor(TextStyle style) => StrutStyle(
+///
+/// [forceHeight] is what makes it a height rather than a minimum, and it is off
+/// for a line with a widget on it. A picture and an inline directive arrive as
+/// placeholders in the middle of the text, and a line held to the height of a
+/// line of text cannot hold one: the widget is centred on the line and paints
+/// out of both ends of it, over the paragraph above and the paragraph below.
+/// A browser grows the line instead, and so does this — for that paragraph
+/// only, which is the one place the ragged-line argument above does not reach,
+/// because a paragraph with a photograph in it is not a run of even lines
+/// whatever the strut says.
+StrutStyle mawyStrutFor(TextStyle style, {bool forceHeight = true}) => StrutStyle(
   fontFamily: style.fontFamily,
   fontFamilyFallback: style.fontFamilyFallback,
   fontSize: style.fontSize,
   height: style.height,
-  forceStrutHeight: true,
+  forceStrutHeight: forceHeight,
   // Half the leading above and half below, which is what CSS does with
   // `line-height` and so what the React package's paragraphs do. Flutter's
   // default splits it in proportion to the font's own ascent and descent, so
@@ -612,6 +618,25 @@ StrutStyle mawyStrutFor(TextStyle style) => StrutStyle(
   // and a paragraph of Hangul beside a paragraph of Latin is two fonts.
   leadingDistribution: TextLeadingDistribution.even,
 );
+
+/// Whether [span] puts a widget on a line, at any depth.
+///
+/// A picture is one, and so is an inline directive the application drew — both
+/// arrive as a `WidgetSpan`, and both can be taller than the text they sit in.
+/// Asked of the built span rather than of the nodes it came from, so a widget
+/// that arrives some other way later is not a case somebody has to remember to
+/// add here.
+bool _carriesWidget(InlineSpan span) {
+  bool found = false;
+
+  span.visitChildren((InlineSpan child) {
+    found = found || child is WidgetSpan;
+
+    return !found;
+  });
+
+  return found;
+}
 
 /// A margin below a block, unless it is the last thing in whatever holds it.
 Widget _spaced(Widget child, double bottom, {required bool last}) {
@@ -642,9 +667,10 @@ Widget _block(
       letterSpacing: -0.014 * em * scale,
       color: block.depth >= 5 ? tokens.foregroundMuted : tokens.foreground,
     );
+    final InlineSpan span = renderInline(block.children, context, style);
     final Widget text = Text.rich(
-      renderInline(block.children, context, style),
-      strutStyle: mawyStrutFor(style),
+      span,
+      strutStyle: mawyStrutFor(style, forceHeight: !_carriesWidget(span)),
     );
 
     return Padding(
@@ -673,9 +699,10 @@ Widget _block(
   }
 
   if (block is MdParagraph) {
+    final InlineSpan span = renderInline(block.children, context, context.body);
     final Widget text = Text.rich(
-      renderInline(block.children, context, context.body),
-      strutStyle: context.strut,
+      span,
+      strutStyle: mawyStrutFor(context.body, forceHeight: !_carriesWidget(span)),
     );
 
     return tight ? text : _spaced(text, em, last: last);

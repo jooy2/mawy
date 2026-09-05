@@ -1229,6 +1229,54 @@ void main() {
       expect(find.text('a cat'), findsNothing);
     });
 
+    /// A picture the line has to make room for, rather than the one transparent
+    /// pixel the tests around this one carry: 96 logical pixels square, which
+    /// is more than three lines of body text, so a line that did not grow
+    /// around it is visible as one.
+    const String square =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAA'
+        'jklEQVR42u3QMQ0AAAgDsOlEE8KQhQNOriZV0FQPhygQJEiQIEGCBAlCkCBBggQJEiQIQYI'
+        'ECRIkSJAgBAkSJEiQIEGCBCFIkCBBggQJEoQgQYIECRIkSBCCBAkSJEiQIEGCECRIkCBBgg'
+        'QJQpAgQYIECRIkCEGCBAkSJEiQIEEIEiRIkCBBggQhSJCgPwt8eXuFOQevBgAAAABJRU5Er'
+        'kJggg==';
+
+    /// The box the paragraph saying exactly [saying] was given.
+    Rect rectOf(WidgetTester tester, String saying) => tester.getRect(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is Text && (widget.data ?? widget.textSpan?.toPlainText()) == saying,
+      ),
+    );
+
+    testWidgets('is given a line tall enough to hold it', (WidgetTester tester) async {
+      // Inside `runAsync`, because decoding the bytes is real asynchronous work
+      // and a test's clock is not. Without it the picture never arrives and
+      // every box measured below is the empty one a widget with nothing to draw
+      // is given.
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          host(const MawyViewer(value: 'Above the picture.\n\n![a cat]($square)\n\nBelow it.')),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+
+      final Rect drawn = tester.getRect(find.byType(Image));
+      final Rect line = tester.getRect(
+        find.ancestor(of: find.byType(Image), matching: find.byType(Text)).first,
+      );
+
+      expect(drawn.height, 96);
+      // A picture is an inline node, so it arrives on a line of a paragraph,
+      // and the paragraph is what has to make room for it. A line held to the
+      // height of a line of text leaves the picture to overflow — half of it
+      // over the paragraph above and half over the one below, which is what a
+      // reader sees as a photograph with the next heading written across it.
+      expect(line.height, greaterThanOrEqualTo(drawn.height));
+      expect(drawn.top, greaterThanOrEqualTo(rectOf(tester, 'Above the picture.').bottom));
+      expect(drawn.bottom, lessThanOrEqualTo(rectOf(tester, 'Below it.').top));
+    });
+
     testWidgets('hands the picture over where the application says how to draw one', (
       WidgetTester tester,
     ) async {

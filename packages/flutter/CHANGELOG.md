@@ -54,6 +54,8 @@
 
 ### Fixed
 
+- **A picture no longer paints over the paragraphs around it.** A picture is an inline node, so it arrives on a line of a paragraph — and every line here is held to exactly the height of a line of text, which is what keeps a paragraph of Hangul and a paragraph of Latin from being two different heights. A line held to that height cannot hold a photograph: the picture was centred on the line and painted out of both ends of it, half over the paragraph above and half over the one below, which a reader saw as the next heading written across the picture. A line with a widget on it — a picture, or an inline directive the application drew — grows to fit it now, and every line without one is as even as it was.
+
 - **A picture the document carries itself is drawn.** The URL policy allows a `data:` image on purpose — a document that carries its own illustrations is most of the point of a Markdown file being one file — and the renderer handed it to `Image.network`, which cannot open one anywhere but the web, where it happens to become an `<img>` tag. So an inline picture arrived on one platform and showed its alt text on the others. The bytes are read out of the URL and drawn from memory, once per picture rather than once per build.
 
 - **A picture is decoded at the size it is drawn at.** Nothing said how wide it would be, so a photograph four thousand pixels across was decoded at four thousand to be shown at six hundred — and a decoded bitmap is four bytes a pixel, which is forty-eight megabytes for that one picture. It is decoded at the width the page actually has for it.
