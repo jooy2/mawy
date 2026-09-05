@@ -1,0 +1,9 @@
+[
+ ["Mawy", false],
+ ["mawy", true],
+ ["code", false],
+ ["문서", false],
+ ["the editor", false],
+ ["", false],
+ ["no document in this repository contains this", false]
+]

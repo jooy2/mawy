@@ -20,6 +20,12 @@
 
 ### Changed
 
+- **The status line, the split-pane arithmetic and the viewer's find are diffed against the TypeScript ones**, as part of the parity check. They are three more things this library ships twice, and until now each had only its doc comments promising the two halves agreed — the check reached the parsers, the two highlighters, the editing commands and the find bar, and stopped there.
+
+  Widening it found one: `countWords` adds a spaced half to an unspaced one, every Han and kana character being a word where an English one is a run between two spaces, and **nothing in the corpus had ever been unspaced**. Half that function had never been compared at all — dropping it entirely changed nothing either half printed. `tool/corpus.json` ends with a document of Han and kana now, and dropping it fails the diff.
+
+  Nothing in this package changed, and now none of the three can change in it alone. `tool/scrolls.json` and `tool/finds.json` are the two new fixtures: anchors somebody measured, and the queries the corpus is searched for.
+
 - **Taking the link reference definitions off a paragraph is one pass over it.** Each definition was found by handing the pattern a fresh copy of everything left, so a block of two hundred definitions at the bottom of a README copied the block two hundred times. The scan starts where the last one ended.
 
 - **Whether a toolbar button is pressed costs the size of the answer rather than the size of the selection.** Every button on the toolbar asks whether its command is already in force, each time the caret moves — and each of those questions copied the whole selection out of the document, or cut it into lines and then asked about them. A selection can be the whole file. The wrap is read at the edges of the selection now, and the line markers a line at a time, stopping at the first one that is not.

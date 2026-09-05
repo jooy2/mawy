@@ -39,9 +39,12 @@ what was typed. And the Flutter editor's `colorScheme` read as controlled and
 behaved as a default.
 
 Three of those are why `test/editor/search_test.dart` and
-`test/editor/commands_test.dart` exist. `tool/parity.dart` compares the two
-_parsers_, and everything else this library ships twice had only its doc
-comments promising the two agreed.
+`test/editor/commands_test.dart` exist. A tenth came out of widening
+`tool/parity.dart` to reach the status line, the scroll arithmetic and the
+viewer's find: the word count adds a spaced half and an unspaced one, and
+nothing in the corpus had ever been unspaced, so half of that function had never
+been compared at all. The corpus ends with a document of Han and kana now, and
+the check catches the mutation that proves it.
 
 Six lines came off the list for the other reason — the read was wrong about
 them, or measuring said the change would not pay — and they are under
@@ -50,14 +53,6 @@ decision rather than by a change and are there as well, and so is the one thing
 drawing less of a long document cost.
 
 ## Confirmed
-
-- **`status`, `scroll` and `find` are still tested once.** `tool/parity.dart`
-  diffs the two _parsers_, so everything else this library ships twice has only
-  its doc comments promising the two agree. `search` and `commands` have twins
-  now — `test/editor/search_test.dart` and `test/editor/commands_test.dart` —
-  and the first was written because they did not agree: `İ` folded one way in
-  Dart and another in TypeScript. The other three want the same treatment, or
-  the parity script wants widening to run them.
 
 - **The Flutter preview does not follow the site's own light/dark switch.** The
   React demos take `colorScheme` as a prop and the site drives it; the framed

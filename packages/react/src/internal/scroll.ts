@@ -14,6 +14,10 @@
  * came from, and every line of the source is a row in the layer under the
  * textarea — pair those up and there is a list of positions that mean the same
  * thing in both panes, with a straight line between each pair and the next.
+ *
+ * The arithmetic below is `lib/src/editor/scroll.dart` in TypeScript, and
+ * `scripts/parity.mjs` diffs the two. `measureAnchors` is not: reading a
+ * bounding box is this package's own, the way reading a viewport is that one's.
  */
 
 import { rowHeight, rowRect } from './source.js';

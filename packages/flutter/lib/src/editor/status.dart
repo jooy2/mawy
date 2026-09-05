@@ -2,8 +2,13 @@
 ///
 /// Pure functions of a string and two offsets, like `commands.dart` beside it
 /// and for the same reason: they are the React package's
-/// `MawyEditorStatus.tsx`, and `tool/parity.dart` diffs the two rather than
+/// `src/internal/status.ts`, and `tool/parity.dart` diffs the two rather than
 /// trusting that a count written twice counts the same thing.
+///
+/// They are diffed over whole documents rather than over the short strings the
+/// commands are exercised on, because the one count that is hard needs a
+/// document to be hard on: see [countWords] below, and the Han and kana at the
+/// end of `tool/corpus.json`, which is there for it.
 library;
 
 /// Han, hiragana and katakana, which are written without spaces between words.

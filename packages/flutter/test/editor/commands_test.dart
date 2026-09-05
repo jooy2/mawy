@@ -4,9 +4,9 @@ import 'package:mawy/mawy.dart';
 /// The commands, as arithmetic on a string.
 ///
 /// The twin of the React package's `test/internal/commands.test.ts`, and it
-/// exists for the reason that file's twin of the search does: `tool/parity.dart`
-/// diffs the two *parsers*, so everything else this library ships in two
-/// languages has only its doc comments promising the two agree.
+/// exists for the reason `search_test.dart` beside it does: `tool/parity.dart`
+/// diffs the two implementations against each other, which says they agree and
+/// says nothing about whether they are right, and this says which.
 ///
 /// They are pure functions of `(value, start, end)` precisely so that this file
 /// does not have to mount an editor to find out what `Mod`+`B` does to a list

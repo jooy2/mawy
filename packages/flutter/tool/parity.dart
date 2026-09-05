@@ -23,10 +23,12 @@ import 'dart:io';
 
 import 'package:mawy/src/code.dart';
 import 'package:mawy/src/editor/commands.dart';
+import 'package:mawy/src/editor/scroll.dart';
 import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/editor/status.dart';
 import 'package:mawy/src/highlight.dart';
 import 'package:mawy/src/markdown/ast.dart';
+import 'package:mawy/src/markdown/find.dart';
 import 'package:mawy/src/markdown/highlight.dart';
 import 'package:mawy/src/markdown/parse.dart';
 
@@ -274,6 +276,9 @@ void main() {
       'source': _source(),
       'edits': _edits(),
       'searches': _searches(),
+      'counts': _counts(),
+      'scrolls': _scrolls(),
+      'found': _found(),
     }),
   );
 }
@@ -421,5 +426,136 @@ List<Object?> _searches() {
       'replaceFirst': replaced == null ? null : <Object?>[replaced.value, replaced.caret],
       'replaceAll': <Object?>[all.value, all.count],
     };
+  }).toList();
+}
+
+/// And the status line, which is a sixth thing written twice.
+///
+/// Over documents rather than over edit states: `_edits` counts the short
+/// strings the commands are exercised on, which is the wrong shape of text for
+/// the one count that is hard. A word is not a run between two spaces in every
+/// language, so [countWords] adds a spaced half to an unspaced one — and both
+/// halves have to be in the corpus or only one of them is being compared. The
+/// documentation is half of it Korean, which *is* spaced; `tool/corpus.json`
+/// ends with a document of Han and kana, which is not, and it is there for
+/// this. Before it was written, dropping the unspaced half changed nothing
+/// either side printed.
+List<Object?> _counts() {
+  return corpus().map((String document) {
+    final List<int> starts = lineStarts(document);
+    // A line start rather than an offset picked out of the air: an offset that
+    // lands between the two halves of an emoji is a different question, and it
+    // is the parsers' to answer rather than the status line's.
+    final MawyCaretAt caret = caretAt(document, starts[starts.length >> 1], starts.last);
+
+    return <int>[
+      countLines(document),
+      countWords(document),
+      countCharacters(document),
+      countBytes(document),
+      caret.line,
+      caret.column,
+      caret.selected,
+    ];
+  }).toList();
+}
+
+/// And lining the two panes of `split` up, which is a seventh.
+///
+/// The measuring is not shared and cannot be — a browser reads a bounding box
+/// and this reads a viewport, and neither is a thing the other has — but the
+/// arithmetic on what was measured is, and it is arithmetic nobody sees being
+/// wrong: a preview half a screen away from what is being typed reads as a
+/// pane that scrolls badly rather than as two packages disagreeing.
+///
+/// The lines are taken from the corpus, because which offset is on which line
+/// is a question about real documents. The anchors are not: they are pixels
+/// somebody measured, so `tool/scrolls.json` is measurements invented to be
+/// awkward — two anchors on the same line of source, one anchor and nothing to
+/// interpolate towards, a position above the first and below the last.
+Map<String, Object?> _scrolls() {
+  final Directory tool = File(Platform.script.toFilePath()).parent;
+  final List<Object?> cases =
+      jsonDecode(File('${tool.path}/scrolls.json').readAsStringSync()) as List<Object?>;
+
+  return <String, Object?>{
+    'lines': corpus().map((String document) {
+      final List<int> starts = lineStarts(document);
+      final int length = document.length;
+
+      return <Object?>[
+        starts,
+        <int>[
+          0,
+          1,
+          length >> 2,
+          length >> 1,
+          length - 1,
+          length,
+          length + 99,
+        ].map((int at) => lineAt(starts, at)).toList(),
+      ];
+    }).toList(),
+    'preview': cases.map((Object? entry) {
+      final List<Object?> pair = entry! as List<Object?>;
+      final List<MawyScrollAnchor> anchors = (pair[0]! as List<Object?>).map((Object? point) {
+        final List<Object?> both = point! as List<Object?>;
+
+        return MawyScrollAnchor(
+          from: (both[0]! as num).toDouble(),
+          to: (both[1]! as num).toDouble(),
+        );
+      }).toList();
+
+      // Written out to six places rather than as numbers. A pixel is a double
+      // here and a `number` there, and `240` and `240.0` are the same position
+      // and two different lines of JSON.
+      return (pair[1]! as List<Object?>)
+          .map(
+            (Object? at) => previewScrollFor(anchors, (at! as num).toDouble()).toStringAsFixed(6),
+          )
+          .toList();
+    }).toList(),
+  };
+}
+
+/// And finding text in a *drawn* document, which is an eighth.
+///
+/// The trees are compared above and the find bar's arithmetic is compared in
+/// `_searches`; what is left between the two is which of a document's nodes
+/// draw prose a reader can search — an alert's children yes, a code block no,
+/// an image's alt text no. Two traversals that disagree about that report
+/// different numbers of matches for the same page, and that number is the one
+/// part of a find bar a reader can check.
+///
+/// The matches are printed in the order the traversal found them, which is the
+/// order both halves put them into the map. `inBlock` is not printed: it is
+/// which block to scroll to, the React package has no equivalent because a
+/// mark there is an element with a position of its own, and `total` is counted
+/// from it on this side and from a counter on that one — so the totals lining
+/// up is already the statement it would make.
+List<Object?> _found() {
+  final Directory tool = File(Platform.script.toFilePath()).parent;
+  final List<Object?> queries =
+      jsonDecode(File('${tool.path}/finds.json').readAsStringSync()) as List<Object?>;
+
+  return corpus().map((String document) {
+    final List<MdBlock> blocks = parseMarkdown(document).root.children;
+
+    return queries.map((Object? entry) {
+      final List<Object?> pair = entry! as List<Object?>;
+      final MawyFound found = findInDocument(blocks, pair[0]! as String, pair[1]! as bool);
+
+      return <Object?>[
+        found.total,
+        found.at.values
+            .map(
+              (List<MawyDocumentMatch> matches) => matches
+                  .map((MawyDocumentMatch match) => <int>[match.start, match.end, match.index])
+                  .toList(),
+            )
+            .toList(),
+      ];
+    }).toList();
   }).toList();
 }

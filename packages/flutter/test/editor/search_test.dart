@@ -3,12 +3,15 @@ import 'package:mawy/mawy.dart';
 
 /// Finding and replacing, as arithmetic on a string.
 ///
-/// The twin of the React package's `test/internal/search.test.ts`, and it
-/// exists because `tool/parity.dart` does not reach here: that compares the two
-/// *parsers*, so everything else this library ships twice — the commands, the
-/// status line, this — is two implementations with only their doc comments
-/// promising they agree. They did not, once: `İ` folded to `i` on this side and
-/// stayed as it was on the other.
+/// The twin of the React package's `test/internal/search.test.ts`.
+///
+/// `tool/parity.dart` diffs this against that one, which is a stronger claim
+/// than a test can make and a narrower one: it says the two packages answer the
+/// same, and says nothing at all about whether the answer is right. Both being
+/// wrong the same way is a diff of no lines. So this file is here for the other
+/// half — what the answer should *be* — and parity is here for the half a test
+/// in one language cannot reach. They did not agree once: `İ` folded to `i` on
+/// this side and stayed as it was on the other.
 ///
 /// The awkward halves are the ones nobody writes a test for once it has to be
 /// done through a mounted editor: what "replace all" does when the replacement

@@ -20,7 +20,11 @@
 /// point at would be worse than one that says there is none.
 ///
 /// The React package says all of this in `internal/markdown/find.ts`, in the
-/// same shape.
+/// same shape, and `tool/parity.dart` diffs the two over every document in the
+/// corpus. Which nodes draw prose a reader can search is the whole of this
+/// file, and two traversals that disagree about it report different numbers of
+/// matches for the same page — which is the one part of a find bar a reader can
+/// check.
 library;
 
 import 'package:mawy/src/editor/search.dart';

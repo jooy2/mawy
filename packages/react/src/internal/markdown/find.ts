@@ -18,6 +18,12 @@
  * two runs, and `hello` is not found across them. Splitting a phrase across a
  * bold is rare enough, and a search that quietly reported a match it could not
  * point at would be worse than one that says there is none.
+ *
+ * `lib/src/markdown/find.dart` is this file in Dart, and `scripts/parity.mjs`
+ * diffs the two over every document in the corpus. Which nodes draw prose a
+ * reader can search is the whole of this file, and two traversals that disagree
+ * about it report different numbers of matches for the same page — which is the
+ * one part of a find bar a reader can check.
  */
 
 import type { MdBlock, MdInline } from './ast.js';

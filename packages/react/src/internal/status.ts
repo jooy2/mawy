@@ -6,6 +6,11 @@
  * `scripts/parity.mjs` diff them against `lib/src/editor/status.dart`. A count
  * written twice is a count that reports two different numbers for the same
  * document the first time nobody is comparing them.
+ *
+ * They are diffed over whole documents rather than over the short strings the
+ * commands are exercised on, because the one count that is hard needs a
+ * document to be hard on: see `countWords` below, and the Han and kana at the
+ * end of `packages/flutter/tool/corpus.json`, which is there for it.
  */
 
 /**

@@ -5,17 +5,35 @@ on:
     branches: [main]
     paths:
       - packages/flutter/**
-      # The parity check reads the React parser, so a change to it can break
-      # this job and nothing else.
-      - packages/react/src/internal/markdown/**
+      # The parity check reads the React half of everything this library ships
+      # twice, so a change to any of it can break this job and nothing else.
+      # This list is `scripts/parity.mjs`'s imports; it grows when they do.
       - packages/react/scripts/parity.mjs
+      - packages/react/src/highlight.ts
+      - packages/react/src/internal/markdown/**
+      - packages/react/src/internal/commands.ts
+      - packages/react/src/internal/scroll.ts
+      - packages/react/src/internal/search.ts
+      - packages/react/src/internal/status.ts
+      # And the corpus is every Markdown file in the repository, so a document
+      # somebody adds is a document both parsers have to agree about. That is
+      # most pull requests running a Flutter toolchain for a docs change, and it
+      # is the price of the corpus being real documents rather than invented
+      # ones — a disagreement found here is found by whoever caused it.
+      - '**/*.md'
       - .github/workflows/run-test-flutter.yml
   push:
     branches: [main]
     paths:
       - packages/flutter/**
-      - packages/react/src/internal/markdown/**
       - packages/react/scripts/parity.mjs
+      - packages/react/src/highlight.ts
+      - packages/react/src/internal/markdown/**
+      - packages/react/src/internal/commands.ts
+      - packages/react/src/internal/scroll.ts
+      - packages/react/src/internal/search.ts
+      - packages/react/src/internal/status.ts
+      - '**/*.md'
       - .github/workflows/run-test-flutter.yml
   workflow_dispatch:
 

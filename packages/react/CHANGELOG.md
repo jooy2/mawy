@@ -30,6 +30,12 @@
 
 ### Changed
 
+- **The status line, the split-pane arithmetic and the viewer's find are diffed against the Dart ones**, as part of the parity check. They are three more things this library ships twice, and until now each had only its doc comments promising the two halves agreed — the check reached the parsers, the two highlighters, the editing commands and the find bar, and stopped there.
+
+  Widening it found one: `countWords` adds a spaced half to an unspaced one, every Han and kana character being a word where an English one is a run between two spaces, and **nothing in the corpus had ever been unspaced**. Half that function had never been compared at all — dropping it entirely changed nothing either half printed. `tool/corpus.json` ends with a document of Han and kana now, and dropping it fails the diff.
+
+  Nothing in this package changed, and now none of the three can change in it alone. The corpus for the two new fixtures — `tool/scrolls.json` for anchors somebody measured, `tool/finds.json` for the queries — lives beside the Dart half with the rest of them, because one list read by both is the whole point.
+
 - **The undo history has a ceiling in bytes as well as in steps.** It keeps five hundred documents, and each step is the whole document — so the ceiling rose with the thing it was meant to hold down: five hundred steps of a five-megabyte file is five gigabytes, and the tab is gone long before the five hundredth edit. There is a budget of about sixteen megabytes now, and whichever ceiling is reached first ends the history. Ordinary documents are nowhere near it and keep all five hundred steps; a document larger than the whole budget keeps one, which is thin and is not nothing.
 
 - **A highlighter written into the JSX is fetched once rather than per render.** `highlight={() => import('mawy-react/highlight')}` is a different function every time the component renders, and the effect that asks for one depended on it — so an application that wrote the loader the way applications write it asked again for every render, each one a promise and an effect for the largest thing this package can be made to carry. The request is made once and kept. A loader that fails is still not asked twice, and one handed over as an object still needs no request at all.

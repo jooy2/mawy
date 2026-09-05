@@ -29,7 +29,15 @@ import { mawyHighlighter } from '../src/highlight.ts';
 import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
 import { commandActive, continueList, indent, runCommand } from '../src/internal/commands.ts';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../src/internal/search.ts';
-import { caretAt, countBytes, countLines, countWords } from '../src/internal/status.ts';
+import {
+  caretAt,
+  countBytes,
+  countCharacters,
+  countLines,
+  countWords
+} from '../src/internal/status.ts';
+import { lineAt, lineStarts, previewScrollFor } from '../src/internal/scroll.ts';
+import { findInDocument } from '../src/internal/markdown/find.ts';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptsDir, '../../..');
@@ -184,7 +192,7 @@ const edits = JSON.parse(
   out.counts = [
     countLines(value),
     countWords(value),
-    [...value].length,
+    countCharacters(value),
     countBytes(value),
     ...(({ line, column, selected }) => [line, column, selected])(caretAt(value, start, end))
   ];
@@ -226,4 +234,112 @@ const searches = JSON.parse(
   };
 });
 
-process.stdout.write(JSON.stringify({ trees, highlights, source, edits, searches }, null, 1));
+/**
+ * And the status line, which is a sixth thing written twice.
+ *
+ * Over documents rather than over edit states: `edits` counts the short strings
+ * the commands are exercised on, which is the wrong shape of text for the one
+ * count that is hard. A word is not a run between two spaces in every language,
+ * so `countWords` adds a spaced half to an unspaced one — and both halves have
+ * to be in the corpus or only one of them is being compared. The documentation
+ * is half of it Korean, which *is* spaced; `packages/flutter/tool/corpus.json`
+ * ends with a document of Han and kana, which is not, and it is there for this.
+ * Before it was written, dropping the unspaced half changed nothing either side
+ * printed.
+ */
+const counts = corpus().map((document) => {
+  const starts = lineStarts(document);
+  // A line start rather than an offset picked out of the air: an offset that
+  // lands between the two halves of an emoji is a different question, and it is
+  // the parsers' to answer rather than the status line's.
+  const caret = caretAt(document, starts[starts.length >> 1], starts[starts.length - 1]);
+
+  return [
+    countLines(document),
+    countWords(document),
+    countCharacters(document),
+    countBytes(document),
+    caret.line,
+    caret.column,
+    caret.selected
+  ];
+});
+
+/**
+ * And lining the two panes of `split` up, which is a seventh.
+ *
+ * The measuring is not shared and cannot be — a browser reads a bounding box
+ * and Flutter reads a viewport, and neither is a thing the other has — but the
+ * arithmetic on what was measured is, and it is arithmetic nobody sees being
+ * wrong: a preview half a screen away from what is being typed reads as a pane
+ * that scrolls badly rather than as two packages disagreeing.
+ *
+ * The lines are taken from the corpus, because which offset is on which line is
+ * a question about real documents. The anchors are not: they are pixels
+ * somebody measured, so `packages/flutter/tool/scrolls.json` is measurements
+ * invented to be awkward — two anchors on the same line of source, one anchor
+ * and nothing to interpolate towards, a position above the first and below the
+ * last.
+ */
+const scrolls = {
+  lines: corpus().map((document) => {
+    const starts = lineStarts(document);
+    const length = document.length;
+
+    return [
+      starts,
+      [0, 1, length >> 2, length >> 1, length - 1, length, length + 99].map((at) =>
+        lineAt(starts, at)
+      )
+    ];
+  }),
+  // Written out to six places rather than as numbers. A pixel is a `number`
+  // here and a double there, and `240` and `240.0` are the same position and
+  // two different lines of JSON.
+  preview: JSON.parse(
+    readFileSync(resolve(rootDir, 'packages/flutter/tool/scrolls.json'), 'utf8')
+  ).map(([anchors, positions]) =>
+    positions.map((at) =>
+      previewScrollFor(
+        anchors.map(([from, to]) => ({ from, to })),
+        at
+      ).toFixed(6)
+    )
+  )
+};
+
+/**
+ * And finding text in a *drawn* document, which is an eighth.
+ *
+ * The trees are compared above and the find bar's arithmetic is compared in
+ * `searches`; what is left between the two is which of a document's nodes draw
+ * prose a reader can search — an alert's children yes, a code block no, an
+ * image's alt text no. Two traversals that disagree about that report different
+ * numbers of matches for the same page, and that number is the one part of a
+ * find bar a reader can check.
+ *
+ * The matches are printed in the order the traversal found them, which is the
+ * order both halves put them into the map.
+ */
+const finds = JSON.parse(
+  readFileSync(resolve(rootDir, 'packages/flutter/tool/finds.json'), 'utf8')
+);
+
+const found = corpus().map((document) => {
+  const blocks = parseMarkdown(document).root.children;
+
+  return finds.map(([query, matchCase]) => {
+    const answer = findInDocument(blocks, query, matchCase);
+
+    return [
+      answer.total,
+      [...answer.at.values()].map((matches) =>
+        matches.map((match) => [match.start, match.end, match.index])
+      )
+    ];
+  });
+});
+
+process.stdout.write(
+  JSON.stringify({ trees, highlights, source, edits, searches, counts, scrolls, found }, null, 1)
+);

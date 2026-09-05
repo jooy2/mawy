@@ -16,9 +16,10 @@
 /// straight line between each pair and the next.
 ///
 /// Everything here is arithmetic on numbers somebody else measured, which is
-/// what makes it the same code in both packages. The measuring is not: a
+/// what makes it the same code in both packages, and what lets
+/// `tool/parity.dart` diff it against the other one. The measuring is not: a
 /// browser reads a bounding box and this reads a viewport, and neither of those
-/// is a thing the other has.
+/// is a thing the other has, so that half stays in the widget that does it.
 library;
 
 /// A place both panes agree on, in each one's own pixels.
