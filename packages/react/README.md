@@ -12,7 +12,8 @@ Guides and the full API, in English and Korean. This README is just the quick st
 
 > **Mawy is a Markdown editor that also does the reading.** Write with the document in front of you as it will look, or drop into the Markdown source and work on that — the two are one click apart. When it is finished, the same document goes out through a read-only viewer, looking exactly as it looked while you were writing it.
 
-> [!IMPORTANT] **`1.0.0`.** The parser, `MawyViewer` and `MawyEditor` are written and tested, `wysiwyg` among the editor's surfaces. The exported API is under semantic versioning from here: a name that goes away or changes shape waits for a major version.
+> [!IMPORTANT]
+> **`1.0.0`.** The parser, `MawyViewer` and `MawyEditor` are written and tested, `wysiwyg` among the editor's surfaces. The exported API is under semantic versioning from here: a name that goes away or changes shape waits for a major version.
 
 - **Editor and viewer are the same library.** They share the parser and the renderer, so what was typed is what a reader sees — rather than what a second, separately maintained renderer makes of it.
 - **WYSIWYG and source are two views, not two editors.** Toggling does not round-trip through another implementation and does not lose what the other view could not express.

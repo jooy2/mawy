@@ -9,11 +9,12 @@
 
 </div>
 
-> [!IMPORTANT] **`1.0.0`.** The parser, the viewer and the editor are written
-> and tested. `wysiwyg` is the one surface this package does not have, and [the
-> guide says why](https://mawy.cdget.com/guide/editor). The exported API is
-> under semantic versioning from here: a name that goes away or changes shape
-> waits for a major version.
+> [!IMPORTANT]
+> **`1.0.0`.** The parser, the viewer and the editor are written and tested.
+> `wysiwyg` is the one surface this package does not have, and [the guide says
+> why](https://mawy.cdget.com/guide/editor). The exported API is under semantic
+> versioning from here: a name that goes away or changes shape waits for a major
+> version.
 
 ```bash
 flutter pub add mawy
