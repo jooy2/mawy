@@ -43,7 +43,7 @@ const PANES: readonly Pane[] = [
 
 const WORDS = {
   en: { group: 'What to try', editor: 'Editor', viewer: 'Viewer' },
-  ko: { group: '써 볼 컴포넌트', editor: '에디터', viewer: '뷰어' }
+  ko: { group: '컴포넌트 선택', editor: '에디터', viewer: '뷰어' }
 };
 
 const { lang, page } = useData();

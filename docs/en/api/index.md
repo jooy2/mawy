@@ -97,7 +97,7 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | `onModeChange` | `ValueChanged<MawyEditorMode>?` | — | Called when the reader picks a different one. |
 | `modes` | `List<MawyEditorMode>` | [`kMawyEditorModes`](#kmawyeditormodes) | Which surfaces the switch offers. Give it one and the switch disappears. |
 
-**Three surfaces rather than the React package's four**, and the missing one is `wysiwyg`. Editing a document where it is drawn rests entirely on `contenteditable` — a browser telling a component what somebody tried to do to a tree, so the component can refuse it and change the Markdown instead — and Flutter has nothing of the kind: an `EditableText` owns a string. Drawing a document that is also a text field would mean a second model of what the document is, and the two disagree the first time anybody writes something unusual.
+**This package has three surfaces**, and the React package's `wysiwyg` is the one it does not have. Editing a document where it is drawn rests entirely on `contenteditable`: the browser tells the component what somebody tried to do to the tree, and the component refuses it and changes the Markdown instead. Flutter has no equivalent, because an `EditableText` owns its string. Drawing a document that is also a text field would need a second model of the document, and two models read anything unusual differently.
 
 :::
 
@@ -137,7 +137,7 @@ A list rather than a `true`, for the same reason the viewer's [`toolbar`](#mawyv
 | `accept` | `string` | every Markdown and text extension | What the file picker offers. |
 | `fileDrop` | `boolean` | `false` | Whether a Markdown file dropped on the editor opens as the document. |
 
-The name is the file's own when one was opened, and the document's first heading otherwise. A file dropped on the editor is an image rather than a document unless `fileDrop` says otherwise — see [opening and saving](../guide/editor#opening-and-saving) for why, and for what turning it on changes.
+The name is the file's own when one was opened, and the document's first heading otherwise. A file dropped on the editor is treated as an image rather than a document unless `fileDrop` says otherwise. See [opening and saving](../guide/editor#opening-and-saving) for why, and for what turning it on changes.
 
 :::
 
@@ -149,7 +149,7 @@ The name is the file's own when one was opened, and the document's first heading
 
 **No `onSave`, no `accept`, and no `save`.** A file picker is a plugin rather than a widget, and which one an application has already chosen is not a decision a Markdown editor should make on its behalf. `value` and `onChange` are the whole of the seam: read the file, hand over the string, take the string back.
 
-`onOpen` is the button and not the picker. The editor draws the control and says when it is worth offering — on the toolbar, and in the pane of an editor holding nothing — and what a press of it opens is entirely yours.
+`onOpen` is the button, not the picker. The editor draws the control on the toolbar and in the pane of an empty editor, and the application decides what a press of it opens.
 
 :::
 
@@ -159,7 +159,7 @@ The name is the file's own when one was opened, and the document's first heading
 
 `Mod`+`F` opens a find bar over the source, and [`MawyEditorToolbarItem.find`](#mawyeditortoolbaritem) is the button that does the same thing. `Enter` is the next match, `Shift`+`Enter` the one before, `Escape` closes it and gives the focus back to the document.
 
-It is there because a platform's own find reaches a page of text and not the inside of a text field, and the source surface is one. The arithmetic is exported as well — `findMatches`, `matchFrom`, `replaceMatch`, `replaceAll` and `MawyMatch` — for an application that would rather drive it from its own interface.
+It is there because a platform's own find reaches a page of text and not the inside of a text field, and the source surface is a text field. The arithmetic is exported as well, as `findMatches`, `matchFrom`, `replaceMatch`, `replaceAll` and `MawyMatch`, for an application that wants to drive it from its own interface.
 
 :::
 
@@ -209,7 +209,7 @@ import 'package:mawy/mawy.dart';
 MawyViewer(value: document);
 ```
 
-Built on `package:flutter/widgets.dart` alone — no Material and no Cupertino — so it sits inside a `MaterialApp`, a `CupertinoApp` or a bare `WidgetsApp` without dragging a second design system in behind it.
+Built on `package:flutter/widgets.dart` alone, with no Material and no Cupertino, so it sits inside a `MaterialApp`, a `CupertinoApp` or a bare `WidgetsApp` without pulling in a second design system.
 
 :::
 
@@ -224,7 +224,7 @@ Built on `package:flutter/widgets.dart` alone — no Material and no Cupertino �
 | `onValueChange` | `(value: string, file: File \| null) => void` | — | A new document, and the file it came from. Called whether or not `value` is being passed. |
 | `empty` | `ReactNode` | the file picker | What to draw instead when there is no document. |
 
-With neither `value` nor `defaultValue`, the viewer is the file picker — that is the whole design of the component rather than a fallback.
+With neither `value` nor `defaultValue`, the viewer becomes the file picker. That is part of the component's design, not a fallback.
 
 :::
 
@@ -234,7 +234,7 @@ With neither `value` nor `defaultValue`, the viewer is the file picker — that 
 | -------- | -------- | -------- | -------------------------- |
 | `value`  | `String` | required | The document, as Markdown. |
 
-`value` is required here where the React package makes it optional, and that is the one place a file picker would have gone. Picking a file means a plugin — a dependency this package does not have and an application usually already does — so opening the file is yours and drawing it is Mawy's.
+`value` is required here where the React package makes it optional, because that is where a file picker would have gone. Picking a file needs a plugin, which this package does not include and an application usually already has, so the application opens the file and Mawy draws it.
 
 :::
 
@@ -265,7 +265,7 @@ There is no `linkTarget` either. What opening a link means is `onLinkTap`'s whol
 
 There is no `html` argument, and there will not be one: raw HTML written inside a document is shown as the characters it was written with, because there is no HTML here to draw it as.
 
-`onLinkTap` is unset by default and a link does nothing until it is given. Opening a URL means handing it to the platform, and which URLs an application is willing to hand over is not a viewer's decision to make. The scheme allowlist has already run by the time it is called — a `javascript:` never reaches it — but the rest is yours.
+`onLinkTap` is unset by default, and a link does nothing until it is given. Opening a URL means handing it to the platform, and which URLs an application is willing to hand over is not a viewer's decision. The scheme allowlist has already run by the time it is called, so a `javascript:` URL never reaches it. The rest is the application's to decide.
 
 :::
 
@@ -340,7 +340,7 @@ Nothing here: this package does not open files, and `value` above says why.
 
 ::: fw react
 
-Padding and scrolling are the page's rather than the component's — the viewer is an element in a document that already has both. The numbers it draws with are `--mawy-*` custom properties, which the stylesheet below lists.
+Padding and scrolling belong to the page rather than the component, because the viewer is an element in a document that already has both. The numbers it draws with are `--mawy-*` custom properties, which the stylesheet below lists.
 
 :::
 
@@ -354,7 +354,7 @@ Exported from `mawy-react` and from `mawy-react/types`. The second entry point e
 
 ::: fw flutter
 
-Exported from `package:mawy/mawy.dart`, which is the whole of this package's public surface — one import, and nothing else to reach for.
+Exported from `package:mawy/mawy.dart`, which is this package's entire public surface. One import covers all of it.
 
 :::
 
@@ -366,7 +366,7 @@ Exported from `package:mawy/mawy.dart`, which is the whole of this package's pub
 type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 ```
 
-Which surface a document is shown on. These are views of one document rather than four editors — see [the editor](../guide/editor).
+Which surface a document is shown on. All four show the same document. See [the editor](../guide/editor).
 
 - `'wysiwyg'` — the rendered document, edited in place.
 - `'plain'` — the Markdown source, edited as text.
@@ -385,7 +385,7 @@ Which surface a document is shown on. These are views of one document rather tha
 enum MawyEditorMode { plain, split, preview }
 ```
 
-Which surface a document is shown on. Views of one document rather than three editors — see [the editor](../guide/editor).
+Which surface a document is shown on. All three show the same document. See [the editor](../guide/editor).
 
 - `plain` — the Markdown source, coloured, edited as text.
 - `split` — the source on one side and the drawn document on the other, at once. The default.
@@ -462,7 +462,7 @@ enum MawyEditorToolbarItem {
 
 :::
 
-One control on the editor's toolbar. Everything except `mode`, `find`, `colorScheme` and `separator` is a formatting command, and every one of those has a keyboard shortcut — the buttons are a way of finding the commands rather than the way of running them. `find` has one too, `Mod`+`F`, and it works whether or not the button is drawn.
+One control on the editor's toolbar. Everything except `mode`, `find`, `colorScheme` and `separator` is a formatting command, and every one of those also has a keyboard shortcut. `find` has one too, `Mod`+`F`, and it works whether or not the button is drawn.
 
 ::: fw react
 
@@ -472,7 +472,7 @@ One control on the editor's toolbar. Everything except `mode`, `find`, `colorSch
 
 ::: fw flutter
 
-There is no `open` and no `save`: both are the application's here — see [opening and saving](../guide/editor#opening-and-saving).
+There is no `open` and no `save`. The application handles both here; see [opening and saving](../guide/editor#opening-and-saving).
 
 :::
 
@@ -562,7 +562,7 @@ enum MawyColorScheme { light, dark, system }
 
 :::
 
-Which palette to draw in. `system` is the default and follows whatever the platform already says — `prefers-color-scheme` in a browser, `MediaQuery.platformBrightnessOf` in an app — because a viewer embedded in something that has answered that question should not be the one white rectangle on a dark screen. `light` and `dark` do not follow it, so an application with a switch of its own drives the viewer from it.
+Which palette to draw in. `system` is the default and follows the platform setting: `prefers-color-scheme` in a browser, `MediaQuery.platformBrightnessOf` in an app. That keeps a viewer embedded in a dark page from being the one light rectangle on it. `light` and `dark` do not follow the platform, so an application with a switch of its own can drive the viewer from that.
 
 ### `MawyLocale`
 
@@ -582,7 +582,7 @@ enum MawyLocale { en, ko }
 
 :::
 
-**English and Korean**, and `en` is the default. It is the language of the viewer's and the editor's own interface — toolbar labels, menu entries, the text a screen reader is given — and has nothing to do with the language a document is written in. Both packages ship the same words under the same names; a locale that exists in one and not the other is not a locale this library has.
+**English and Korean**, and `en` is the default. It sets the language of the viewer's and the editor's own interface, meaning toolbar labels, menu entries and the text a screen reader is given. It has nothing to do with the language a document is written in. Both packages ship the same words under the same names, and a locale that exists in only one of them is not one this library offers.
 
 ### `MawyParseOptions`
 
@@ -616,7 +616,7 @@ class MawyParseOptions {
 - **`breaks`** — whether a single newline inside a paragraph is a line break. Off by default, because that is what Markdown says. On, it matches the way chat clients and issue trackers behave, which is what a reader who has never written Markdown expects.
 - **`definitionLists`** — whether a line opening with `: ` under a line of text is a term and what it means. On, and it is the one thing Mawy reads that GitHub does not: the syntax is PHP Markdown Extra's, and it is the one everybody who writes these uses. Turn it off for a document that has to mean exactly what it would mean there.
 
-The three options are the same three in both packages, with the same defaults and the same effect — the parser is one parser, and [a check in CI](https://github.com/jooy2/mawy/blob/main/packages/flutter/tool/parity.dart) diffs the two trees over every Markdown file in the repository.
+The three options are the same in both packages, with the same defaults and the same effect. There is one parser, and [a check in CI](https://github.com/jooy2/mawy/blob/main/packages/flutter/tool/parity.dart) diffs the two trees over every Markdown file in the repository.
 
 ::: fw react
 
@@ -741,7 +741,7 @@ The three roles, drawn with whatever the reader's machine already has. None of t
 const MAWY_WEB_FONTS: readonly MawyFont[];
 ```
 
-Thirteen open-licensed families, ready to be offered — every one under the SIL Open Font License, which permits commercial use, embedding and redistribution. Inter, IBM Plex Sans, Atkinson Hyperlegible, Source Serif 4, Literata, Lora, EB Garamond, JetBrains Mono, and five for Korean: Pretendard, Noto Sans KR, Noto Serif KR, Nanum Myeongjo and Gowun Dodum.
+Thirteen open-licensed families, ready to be offered. Every one is under the SIL Open Font License, which permits commercial use, embedding and redistribution. They are Inter, IBM Plex Sans, Atkinson Hyperlegible, Source Serif 4, Literata, Lora, EB Garamond, JetBrains Mono, and five for Korean: Pretendard, Noto Sans KR, Noto Serif KR, Nanum Myeongjo and Gowun Dodum.
 
 **It is never used unless an application passes it in.** A component embedded in somebody else's page has no business opening a connection to a font CDN they did not choose, so this is an export rather than a default:
 
@@ -779,7 +779,7 @@ Which of the three shapes a directive was written in. The number of colons is th
 type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveProps>>>;
 ```
 
-The directives an application knows, by name. A name that is not on the list is drawn as the characters it was written with — the same answer raw HTML gets under the default `html` policy.
+The directives an application knows, by name. A name that is not on the list is drawn as the characters it was written with, the same as raw HTML under the default `html` policy.
 
 :::
 
@@ -838,7 +838,7 @@ What a directive's builder is given. The pieces arrive **already drawn**, so a b
 typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
 ```
 
-What draws one directive. A `MawyDirectiveKind.text` one is placed in the sentence as a `WidgetSpan`, so a builder for an inline directive should return something that sits on a line of text — a `Text.rich` of its own is usually it.
+What draws one directive. A `MawyDirectiveKind.text` directive is placed in the sentence as a `WidgetSpan`, so a builder for an inline directive should return something that fits on a line of text. A `Text.rich` of its own is the usual choice.
 
 :::
 
@@ -853,7 +853,7 @@ interface MawyRange {
 }
 ```
 
-Where a piece of a document was written, in the offsets of the Markdown the component was given — the same two numbers every element carries as `data-mawy-range`, handed over as numbers where a component gets them directly. Today that is [`MawyDirectiveProps`](#mawydirectiveprops) and nothing else.
+Where a piece of a document was written, in the offsets of the Markdown the component was given. They are the same two numbers every element carries as `data-mawy-range`, handed to a component as numbers. Today only [`MawyDirectiveProps`](#mawydirectiveprops) receives them.
 
 :::
 
@@ -879,7 +879,7 @@ extension MawyMeasureWidth on MawyMeasure {
 
 :::
 
-How wide the text is allowed to run: 34rem, 44rem, 56rem, or no limit — 560, 704 and 880 logical pixels in Flutter, which is the same three widths at the same 16-pixel body size. A line that is too long is the failure that arrives with a larger text size, which is why this sits next to it on the toolbar. `full` is for a viewer that has been given a column of its own and does not need a second one inside it.
+How wide the text is allowed to run: 34rem, 44rem, 56rem, or no limit. In Flutter those are 560, 704 and 880 logical pixels, the same three widths at the same 16-pixel body size. Turning the text size up is what makes a line too long, which is why this control sits next to it on the toolbar. `full` is for a viewer that has been given a column of its own and does not need a second one inside it.
 
 ### `MawyViewerToolbarItem`
 
@@ -923,7 +923,7 @@ enum MawyViewerToolbarItem {
 
 One control on the viewer's toolbar. `separator` draws a hairline rather than a control.
 
-`find` opens a bar over the document, and takes `Ctrl`+`F` (`Cmd`+`F`) while the viewer has the focus. Leave it out and the shortcut belongs to the browser again, which is the right answer for a viewer that fills the page — this is for one inside a pane of its own, which a browser's find scrolls past rather than into. What it searches is the text the document _draws_: `bold` finds the word inside `**bold**`, and `**` finds nothing at all. A match cannot straddle two runs, so `hello` is not found across `he**llo**`, and a fenced code block is not searched.
+`find` opens a bar over the document, and takes `Ctrl`+`F` (`Cmd`+`F`) while the viewer has the focus. Leave it out and the shortcut belongs to the browser again, which is right for a viewer that fills the page. This bar is for a viewer inside a pane of its own, which a browser's find scrolls past rather than into. It searches the text the document _draws_: `bold` finds the word inside `**bold**`, and `**` finds nothing. A match cannot straddle two runs, so `hello` is not found across `he**llo**`, and a fenced code block is not searched.
 
 ::: fw flutter
 
@@ -1001,11 +1001,11 @@ class MawyTokens {
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
-Every colour a document and its interface are drawn in, as one object. The fields are the React package's `--mawy-*` custom properties under the names Dart would give them — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind — and the values are the stylesheet's values, copied rather than re-chosen, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
+Every colour a document and its interface are drawn in, as one object. The fields are the React package's `--mawy-*` custom properties under the names Dart would give them: `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, and one per alert kind. The values are copied from the stylesheet rather than chosen again, so a colour that is `#5b34ea` in a browser is `#5b34ea` in an app.
 
 The viewer picks `light` or `dark` from its own `colorScheme` and does not read a global, which is what lets one document be dark inside a light screen.
 
-An application wanting its own colours passes `tokens`, which is a `MawyTokensBuilder` rather than one palette: the viewer settles on its brightness after it has been handed everything else, so a document following the platform has to be able to follow it in both. `copyWith` is how one is written — start from `MawyTokens.of(brightness)` and name what differs, rather than writing thirty-one colours to change one.
+An application wanting its own colours passes `tokens`, which is a `MawyTokensBuilder` rather than a single palette. The viewer settles on its brightness after it has been handed everything else, so a document following the platform needs values ready in both palettes. Build one with `copyWith`: start from `MawyTokens.of(brightness)` and name only what differs, instead of writing thirty-one colours to change one.
 
 ```dart
 MawyViewer(
@@ -1040,7 +1040,7 @@ The corner radii, which are three sizes rather than a scale, and the one duratio
 
 ::: fw react
 
-`mawy-react/markdown` is its own entry point. An application that only wants to _read_ a document — its outline for a table of contents, its footnotes, the anchor a heading was given — should not have to pull in a component to get at them, and nothing here is one: no React, no DOM, so it reaches a build script and a server as readily as a page.
+`mawy-react/markdown` is its own entry point. An application that only wants to _read_ a document, for its outline, its footnotes or the anchor a heading was given, should not have to install a component to get at them, and there is no component here. With no React and no DOM, it runs in a build script or on a server as readily as on a page.
 
 ```ts
 import { parseMarkdown, slugify } from 'mawy-react/markdown';
@@ -1066,9 +1066,9 @@ interface MdDocument {
 }
 ```
 
-A parsed document: the tree, its outline, and the footnotes under it. The footnotes are not in `root` — a footnote is written wherever it suits the author and read at the bottom — so whatever draws a document draws these after it.
+A parsed document: the tree, its outline, and the footnotes under it. The footnotes are not in `root`, because a footnote is written wherever it suits the author and read at the bottom, so whatever draws a document draws these after it.
 
-Every node type is exported with it: `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage` and the rest, each carrying the `MdRange` it was written at. They are the Flutter package's node classes under the same names, which is what makes the two parsers comparable at all — `tool/parity.dart` diffs these trees.
+Every node type is exported with it: `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage` and the rest, each carrying the `MdRange` it was written at. They match the Flutter package's node classes under the same names, which is what makes the two parsers comparable. `tool/parity.dart` diffs these trees.
 
 ### `slugify`
 
@@ -1102,7 +1102,7 @@ class MdDocument {
 }
 ```
 
-A parsed document: the tree, its outline, and the footnotes under it. The footnotes are not in `root` — a footnote is written wherever it suits the author and read at the bottom — so whatever draws a document draws these after it.
+A parsed document: the tree, its outline, and the footnotes under it. The footnotes are not in `root`, because a footnote is written wherever it suits the author and read at the bottom, so whatever draws a document draws these after it.
 
 Every node class is exported with it: `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage` and the rest, each carrying the `MdRange` it was written at. They are the React package's node types under the same names.
 
@@ -1122,7 +1122,7 @@ A heading's anchor, in the spelling GitHub uses. Matching GitHub matters more th
 
 `mawy-react/server` draws a document once, on a server, and ships no JavaScript for it.
 
-`MawyViewer` renders on a server perfectly well and then hydrates, because everything it offers a reader — the toolbar, the find bar, the outline, the copy buttons — is behaviour, and behaviour needs the component on the page. A documentation site, a blog, a changelog wants none of it, and sending forty kilobytes so that a paragraph can be a paragraph is the trade this refuses.
+`MawyViewer` renders on a server perfectly well and then hydrates, because everything it offers a reader is behaviour: the toolbar, the find bar, the outline and the copy buttons all need the component on the page. A documentation site, a blog or a changelog needs none of that, and this entry point exists so a page of documents does not ship forty kilobytes of JavaScript.
 
 ```tsx
 import { MawyDocument } from 'mawy-react/server';
@@ -1154,9 +1154,9 @@ A React Server Component in a framework that has them, and an ordinary component
 
 What is not there, and why:
 
-- **No toolbar, find bar or outline.** Each is a control, and a control on a page with nothing behind it is a lie. An application that wants them wants `MawyViewer`.
+- **No toolbar, find bar or outline.** Each needs JavaScript to work, and there is none here. Use `MawyViewer` if you need them.
 - **No copy button on a code block**, for the same reason.
-- **`html="sanitize"` draws the markup as characters.** Sanitising needs a DOM to parse with and a server has none — which is what `MawyViewer` does on a server too, except that there the elements arrive on the render after. Here there is no render after. `html="raw"` writes the markup out as the author wrote it, with everything [that means](../guide/viewer#safety).
-- **A highlighter is used only if it answers at once.** A promise has no second render to arrive on. Pass `mawyHighlighter`, or any other synchronous one, and the colour is in the HTML.
+- **`html="sanitize"` draws the markup as characters.** Sanitising needs a DOM to parse with, and a server has none. `MawyViewer` does the same on a server, except that there the elements arrive on the next render. Here there is no next render. `html="raw"` writes the markup out as the author wrote it, with everything [that means](../guide/viewer#safety).
+- **A highlighter is used only if it answers synchronously.** A promise has no second render to arrive on. Pass `mawyHighlighter`, or any other synchronous highlighter, and the colour is in the HTML.
 
 :::
