@@ -27,17 +27,26 @@ const KINDS: Readonly<Record<string, string>> = {
  * The house callout, which is the directive every site turns out to want.
  *
  * `children` arrives drawn, so there is no second parse and no markup — an
- * `<aside>` is composed around React elements the viewer already made.
+ * `<aside>` is composed around React elements the viewer already made. Which
+ * is also why it carries a class as well as its styles: those children are the
+ * library's paragraphs, with the library's margins on them, and the last one's
+ * bottom margin is a strip of empty box under the words. A style on this
+ * element cannot reach a child, so `custom.css` does it.
  */
 function Callout({ attributes, label, children }: MawyDirectiveProps) {
   const colour = KINDS[attributes.kind ?? 'note'] ?? KINDS.note;
 
   return (
     <aside
+      className="mawy-demo-callout"
       style={{
         borderLeft: `3px solid ${colour}`,
         background: 'var(--mawy-bg-sunken)',
-        borderRadius: 'var(--mawy-radius-md)',
+        // Square where the rule is and rounded away from it, the way the
+        // viewer's own alerts are: a rounded corner turns the top and bottom
+        // few pixels of the line into an arc, and the eye reads that as a line
+        // that does not quite reach either end.
+        borderRadius: '0 var(--mawy-radius-md) var(--mawy-radius-md) 0',
         padding: '0.75rem 1rem',
         margin: '1rem 0'
       }}

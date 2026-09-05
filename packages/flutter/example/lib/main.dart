@@ -380,7 +380,11 @@ class _Callout extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: tokens.backgroundSunken,
-            borderRadius: BorderRadius.circular(MawyRadius.medium),
+            // Square at the rule and rounded away from it, which is what the
+            // viewer's own alerts do: a rounded corner turns three pixels of
+            // the line into an arc, and the eye reads that as a line that does
+            // not quite reach either end.
+            borderRadius: const BorderRadius.horizontal(right: Radius.circular(MawyRadius.medium)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -445,10 +449,16 @@ class _Progress extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Container(
+            // As wide as the line it is on, not as wide as the part that is
+            // done: a `FractionallySizedBox` in a column that aligns its
+            // children to the start is given loose constraints and takes the
+            // width of its child, which left the track ending where the bar did
+            // and the part still to do drawn nowhere at all.
+            width: double.infinity,
             height: 9,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: tokens.background,
+              color: tokens.backgroundSunken,
               border: Border.all(color: tokens.border),
               borderRadius: BorderRadius.circular(MawyRadius.small),
             ),

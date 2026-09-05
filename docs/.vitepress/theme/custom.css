@@ -190,3 +190,20 @@
 .mawy-play-stage .mawy-demo {
   margin: 0;
 }
+
+/* ---------------------------------------------------------------------------
+ * The demos' own directives
+ * ------------------------------------------------------------------------- */
+
+/* The callout's children are the library's paragraphs and carry the library's
+   margins, so the last one leaves a line of empty box under the words and the
+   rule down the side runs lower than the text it is beside. The viewer does
+   this for its own alerts; a directive is the embedding page's, so the page
+   does it here.
+
+   Under `.mawy-root` for the specificity and not for the scope: the margin
+   being undone is `.mawy-root .mawy-md p`, and a class and a pseudo-class do
+   not outrank two classes and an element. */
+.mawy-root .mawy-demo-callout > :last-child {
+  margin-bottom: 0;
+}
