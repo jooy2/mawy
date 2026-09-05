@@ -1518,6 +1518,34 @@ describe('the document surface', () => {
    * target range, and then the putting in at wherever the caret has landed.
    * Answered one at a time the second would win, and the run would be copied.
    */
+  /**
+   * A `beforeinput` carrying what was dropped.
+   *
+   * WebKit's `InputEvent` constructor takes the `dataTransfer` it is handed and
+   * throws it away — the event arrives with the right `inputType` and a null
+   * `dataTransfer` — so it is put back afterwards, the way `getTargetRanges` is
+   * below. A real drop in that browser carries one; what is being worked around
+   * is the constructor, not the editor.
+   */
+  const dropOf = (text: string): InputEvent => {
+    const transfer = new DataTransfer();
+
+    transfer.setData('text/plain', text);
+
+    const event = new InputEvent('beforeinput', {
+      inputType: 'insertFromDrop',
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: transfer
+    });
+
+    if (!event.dataTransfer) {
+      Object.defineProperty(event, 'dataTransfer', { value: transfer });
+    }
+
+    return event;
+  };
+
   const dragWithin = (
     root: HTMLElement,
     taken: { node: Node; from: number; to: number },
@@ -1541,19 +1569,7 @@ describe('the document surface', () => {
     });
 
     root.dispatchEvent(out);
-
-    const transfer = new DataTransfer();
-
-    transfer.setData('text/plain', dropped);
-
-    root.dispatchEvent(
-      new InputEvent('beforeinput', {
-        inputType: 'insertFromDrop',
-        bubbles: true,
-        cancelable: true,
-        dataTransfer: transfer
-      })
-    );
+    root.dispatchEvent(dropOf(dropped));
   };
 
   it('moves a run dragged from one place in the document to another', async () => {
@@ -1577,18 +1593,9 @@ describe('the document surface', () => {
       <MawyEditor defaultValue="One two three." mode="wysiwyg" onChange={onChange} />
     );
     const body = bodyOf(screen);
-    const transfer = new DataTransfer();
 
-    transfer.setData('text/plain', 'four');
     put(body, 'One two three.', 14);
-    body.dispatchEvent(
-      new InputEvent('beforeinput', {
-        inputType: 'insertFromDrop',
-        bubbles: true,
-        cancelable: true,
-        dataTransfer: transfer
-      })
-    );
+    body.dispatchEvent(dropOf('four'));
 
     expect(onChange).toHaveBeenLastCalledWith('One two three.four');
   });
@@ -1623,17 +1630,7 @@ describe('the document surface', () => {
 
     // A drop from another application, later. What was written down for the
     // drag that went elsewhere must not take a bite out of this.
-    const transfer = new DataTransfer();
-
-    transfer.setData('text/plain', 'four');
-    body.dispatchEvent(
-      new InputEvent('beforeinput', {
-        inputType: 'insertFromDrop',
-        bubbles: true,
-        cancelable: true,
-        dataTransfer: transfer
-      })
-    );
+    body.dispatchEvent(dropOf('four'));
 
     expect(onChange).toHaveBeenLastCalledWith('One two three.four');
   });
