@@ -40,6 +40,9 @@ class MawyRenderContext {
     this.highlighter,
     this.found,
     this.currentMatch = -1,
+    this.onFootnoteTap,
+    this.onFootnoteBack,
+    this.footnoteKey,
   });
 
   /// The palette.
@@ -115,6 +118,27 @@ class MawyRenderContext {
 
   /// Which of [found] is being stepped through, or `-1` for none of them.
   final int currentMatch;
+
+  /// What follows the number in a sentence down to the note it points at.
+  ///
+  /// The two halves of a footnote point at each other, and in a browser they
+  /// are two links and the page does the rest. Here there is nowhere for a
+  /// link to point: a span has no place of its own and the notes are drawn by
+  /// this file rather than by the document. So the viewer is asked, and the
+  /// viewer scrolls — the same answer the outline and the find bar arrive at,
+  /// for the same reason.
+  ///
+  /// `null` in an editor's preview or anywhere else that is not scrolling
+  /// anything, and then the number is drawn and does nothing.
+  final void Function(String label)? onFootnoteTap;
+
+  /// What goes back from a note to the first place it was mentioned.
+  final void Function(String label)? onFootnoteBack;
+
+  /// The key the note for a label is drawn under, so that whoever scrolls can
+  /// find it once the section has been built. Owned by the caller, because a
+  /// key made here would be a new key on every build.
+  final GlobalKey Function(String label)? footnoteKey;
 
   /// The monospace family, which is a role rather than a font name.
   String? get monoFamily => null;
@@ -384,7 +408,7 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
       return const TextSpan(text: '');
     }
 
-    return TextSpan(
+    final TextSpan number = TextSpan(
       text: '${footnote.number}',
       style: style.copyWith(
         color: context.tokens.accent,
@@ -392,6 +416,20 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
         fontFeatures: const <FontFeature>[FontFeature.superscripts()],
       ),
     );
+    final void Function(String)? go = context.onFootnoteTap;
+
+    if (go == null) {
+      return number;
+    }
+
+    // Keyed by where the mention starts, the way a link is: one recognizer per
+    // mention, and the same one across builds.
+    final GestureRecognizer? recognizer = context.recognizerFor?.call(
+      node.range.start,
+      () => go(node.label),
+    );
+
+    return recognizer == null ? number : _recognized(number, recognizer);
   }
 
   if (node is MdBreak) {
@@ -1256,6 +1294,56 @@ class _Definitions extends StatelessWidget {
  * Footnotes
  * ---------------------------------------------------------------------- */
 
+/// What a note says, with the way back at the end of it.
+///
+/// The arrow goes inside the last paragraph rather than under it, which is
+/// where the React package puts it and what a footnote nearly always ends with:
+/// on a line of its own it reads as another sentence rather than as the end of
+/// this one. A note ending in a list or a code block gets its own line, because
+/// there is no line to put it on.
+List<Widget> _note(MdFootnoteDefinition footnote, MawyRenderContext context) {
+  final void Function(String)? back = context.onFootnoteBack;
+
+  if (back == null) {
+    return renderBlocks(footnote.children, context, tight: true);
+  }
+
+  // The arrow the React package writes as a character, drawn from the icon font
+  // this package already ships. `\u21a9` is not in a web build's fonts and has
+  // an emoji form besides, so what arrived on the page was a coloured box; an
+  // icon is the same shape everywhere. As a span rather than as an `Icon`,
+  // because a span sits on the line the sentence ends on and can be tapped
+  // through the same path a link is.
+  const IconData mark = LucideIcons.cornerUpLeft;
+  final double size = (context.body.fontSize ?? _em(context)) * 0.9;
+  final TextSpan arrow = TextSpan(
+    text: ' ${String.fromCharCode(mark.codePoint)}',
+    style: context.body.copyWith(
+      fontFamily: mark.fontFamily,
+      package: mark.fontPackage,
+      fontSize: size,
+      color: context.tokens.accent,
+    ),
+    semanticsLabel: context.strings.footnoteBack,
+    recognizer: context.recognizerFor?.call(footnote.range.start, () => back(footnote.label)),
+  );
+  final List<MdBlock> blocks = footnote.children;
+  final MdBlock? last = blocks.isEmpty ? null : blocks.last;
+
+  if (last is! MdParagraph) {
+    return <Widget>[...renderBlocks(blocks, context, tight: true), Text.rich(arrow)];
+  }
+
+  final InlineSpan span = TextSpan(
+    children: <InlineSpan>[renderInline(last.children, context, context.body), arrow],
+  );
+
+  return <Widget>[
+    ...renderBlocks(blocks.sublist(0, blocks.length - 1), context, tight: true),
+    Text.rich(span, strutStyle: mawyStrutFor(context.body, forceHeight: !_carriesWidget(span))),
+  ];
+}
+
 /// The footnotes, drawn under the document.
 ///
 /// Not part of [renderBlocks], because they are not part of the block flow: a
@@ -1279,6 +1367,11 @@ Widget? renderFootnotes(List<MdFootnoteDefinition> footnotes, MawyRenderContext 
     onLinkTap: context.onLinkTap,
     onImageError: context.onImageError,
     recognizerFor: context.recognizerFor,
+    // A note is a place a footnote can be mentioned like any other, and the
+    // arrow at the end of one is drawn from here.
+    onFootnoteTap: context.onFootnoteTap,
+    onFootnoteBack: context.onFootnoteBack,
+    footnoteKey: context.footnoteKey,
   );
 
   // Said rather than written: the rule above them and the numbers down the side
@@ -1304,6 +1397,11 @@ Widget? renderFootnotes(List<MdFootnoteDefinition> footnotes, MawyRenderContext 
         children: <Widget>[
           for (final MdFootnoteDefinition footnote in footnotes)
             Padding(
+              // Keyed so that whoever followed a mention here can find the note
+              // itself once this section has been built. The whole section is
+              // one measured block, so the ledger can say where the notes begin
+              // and nothing else.
+              key: context.footnoteKey?.call(footnote.label),
               padding: EdgeInsets.symmetric(vertical: em * 0.35),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1318,7 +1416,7 @@ Widget? renderFootnotes(List<MdFootnoteDefinition> footnotes, MawyRenderContext 
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: renderBlocks(footnote.children, inner, tight: true),
+                      children: _note(footnote, inner),
                     ),
                   ),
                 ],

@@ -1206,6 +1206,115 @@ void main() {
     });
   });
 
+  /// The two halves of a footnote, and the two taps between them.
+  ///
+  /// A browser has a link for each and the page does the rest. Here there is
+  /// nowhere for a link to point, so the viewer scrolls — to the note for a
+  /// mention, and to the block the first mention is in for the way back.
+  group('footnotes', () {
+    /// Each mention opens the paragraph it is in, which is what makes it
+    /// something a test can put a pointer on: the number is the first glyph on
+    /// the line rather than somewhere in the middle of a sentence.
+    final String noted = <String>[
+      '[^one] opens the first paragraph.',
+      '',
+      '[^two] opens the second.',
+      '',
+      ...List<String>.filled(30, 'Filler.\n'),
+      '[^one]: The first note.',
+      '',
+      '[^two]: The second note.',
+    ].join('\n');
+
+    /// Where the number is, given the box of the paragraph it opens. A line
+    /// down from the top, because a superscript sits above the baseline and the
+    /// top of the line box is above that again.
+    Offset numberIn(Rect box) => Offset(box.left + 3, box.top + 12);
+
+    /// A tap where a mouse would leave one, and time for what it started.
+    Future<void> click(WidgetTester tester, Offset at) async {
+      await tester.tapAt(at, kind: PointerDeviceKind.mouse);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('follows a mention down to the note it points at', (WidgetTester tester) async {
+      await tester.pumpWidget(host(MawyViewer(value: noted), size: const Size(600, 400)));
+
+      final ScrollController scroller = documentScroller(tester);
+
+      expect(scroller.offset, 0);
+
+      await click(tester, numberIn(tester.getRect(find.textContaining('opens the second'))));
+
+      expect(scroller.offset, greaterThan(0));
+
+      // On the screen rather than merely built: a lazy list keeps what it has
+      // laid out, so "there is a widget" is not the same question. Measured
+      // against what scrolls rather than against the whole viewer, which has a
+      // toolbar across the top of it.
+      final Rect note = tester.getRect(find.textContaining('The second note.'));
+      final Rect view = tester.getRect(find.byType(CustomScrollView));
+
+      expect(note.top, greaterThanOrEqualTo(view.top));
+      expect(note.bottom, lessThanOrEqualTo(view.bottom));
+    });
+
+    testWidgets('goes back from a note to the sentence that mentioned it', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(MawyViewer(value: noted), size: const Size(600, 400)));
+
+      final ScrollController scroller = documentScroller(tester);
+
+      await click(tester, numberIn(tester.getRect(find.textContaining('opens the first'))));
+
+      expect(scroller.offset, greaterThan(0));
+
+      // The arrow is the last thing on the note's last line, and the note is
+      // laid out to the width of its own words rather than to the column's.
+      final Rect note = tester.getRect(find.textContaining('The first note.'));
+
+      await click(tester, Offset(note.right - 6, note.center.dy));
+
+      // The first mention is in the first block, so the way back is the top of
+      // the document — the block at the top of the view rather than the offset
+      // at zero, which is the padding above it as well.
+      final Rect view = tester.getRect(find.byType(CustomScrollView));
+      final Rect first = tester.getRect(find.textContaining('opens the first'));
+
+      expect(first.top, greaterThanOrEqualTo(view.top));
+      expect(first.top - view.top, lessThan(40));
+    });
+
+    testWidgets('says what the way back is for, and puts it at the end of the note', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: 'Words.[^a]\n\n[^a]: The note.')));
+
+      // An arrow is a picture of a direction. What it does is said in words —
+      // the words the React package puts on it — and `documentText` reads a
+      // span's semantics label where it has one, which is what a screen reader
+      // is given in its place.
+      expect(documentText(tester), contains('Back to where this was mentioned'));
+
+      // Inside the note's last paragraph rather than under it, where an arrow
+      // on a line of its own reads as another sentence. Drawn from the icon
+      // font this package already ships, because `\u21a9` is in none of a web
+      // build's fonts and has an emoji form besides.
+      final String arrow = String.fromCharCode(LucideIcons.cornerUpLeft.codePoint);
+
+      expect(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is Text &&
+              (widget.textSpan?.toPlainText(includeSemanticsLabels: false) ?? '') ==
+                  'The note. $arrow',
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
   /// A `data:` image, which the URL policy allows on purpose — a document that
   /// carries its own illustrations is most of the point of a Markdown file
   /// being one file.

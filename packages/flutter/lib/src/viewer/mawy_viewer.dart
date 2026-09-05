@@ -29,6 +29,7 @@ import 'package:mawy/src/types.dart';
 import 'package:mawy/src/viewer/anchors.dart';
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
 import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart';
+import 'package:mawy/src/viewer/mentions.dart';
 import 'package:mawy/src/viewer/offsets.dart';
 
 /// How many blocks a document has to have before only part of it is built.
@@ -293,6 +294,12 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   /// following an outline entry does.
   final Map<String, FocusNode> _anchors = <String, FocusNode>{};
 
+  /// A key per footnote, for following a mention down to the note it points at.
+  ///
+  /// The notes are one measured block between them, so the ledger gets a reader
+  /// as far as the section and this gets them to the right note inside it.
+  final Map<String, GlobalKey> _footnoteKeys = <String, GlobalKey>{};
+
   /// The tap recognizers the links in the document needed, last time it was
   /// drawn. Thrown away and made again on every build, because a recognizer
   /// that outlives the span it was made for is a leak.
@@ -464,6 +471,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   void _read() {
     _document = parseMarkdown(widget.value, widget.parse);
     _headings.clear();
+    _footnoteKeys.clear();
     _order.clear();
     _headingBlocks.clear();
     _drawn = null;
@@ -741,6 +749,47 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     }
   }
 
+  /// A mention followed down to the note it points at.
+  ///
+  /// Two steps, because the notes are one block as far as the ledger is
+  /// concerned: the first scroll puts the section on the screen, which is what
+  /// builds it, and the note's own key can be asked where it is only once it
+  /// has been. A document with one footnote lands in the right place on the
+  /// first step and the second finds nothing left to do.
+  Future<void> _toFootnote(String label) async {
+    // Read before the scroll rather than after it, which is the same reason
+    // `_scrollToBlock` reads it where it does: this context is gone if the
+    // viewer went while the first step was running.
+    final bool still = MediaQuery.disableAnimationsOf(context);
+
+    await _scrollToBlock(_document.root.children.length, alignment: 0.02);
+
+    final BuildContext? note = _footnoteKeys[label]?.currentContext;
+
+    if (!mounted || note == null || !note.mounted) {
+      return;
+    }
+
+    await Scrollable.ensureVisible(
+      note,
+      alignment: 0.02,
+      duration: still ? Duration.zero : const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// The way back from a note to the sentence that first mentioned it.
+  ///
+  /// The block the mention is in rather than the mention itself, for the reason
+  /// `mentions.dart` gives: a span has nowhere of its own to be scrolled to.
+  void _fromFootnote(String label) {
+    final int? block = blockMentioning(_document.root.children, label);
+
+    if (block != null) {
+      unawaited(_scrollToBlock(block, alignment: 0.02));
+    }
+  }
+
   /// The link a place on the screen belongs to, if it belongs to one.
   ///
   /// A paragraph puts the span under the pointer into the hit-test path itself
@@ -901,9 +950,15 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       highlighter: widget.highlight,
       source: widget.value,
       imageBuilder: widget.imageBuilder,
-      recognizerFor: widget.onLinkTap == null ? null : _recognizerFor,
+      // Unconditional, where the link half of it once turned on whether the
+      // application wanted links followed: the two halves of a footnote are
+      // this viewer's own and are followed whatever the application asked for.
+      recognizerFor: _recognizerFor,
       found: found,
       currentMatch: current,
+      onFootnoteTap: (String label) => unawaited(_toFootnote(label)),
+      onFootnoteBack: _fromFootnote,
+      footnoteKey: (String label) => _footnoteKeys.putIfAbsent(label, GlobalKey.new),
     );
 
     // Everything the drawing is made of. Anything left out is something the
