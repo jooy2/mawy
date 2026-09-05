@@ -50,6 +50,25 @@ The two lines that outlived the audit are done as well — the parity check
 reaches everything this library ships twice, and the framed Flutter preview
 follows the site's own light/dark switch rather than the reader's OS.
 
+Writing one document for the playground to open in both packages, and then
+reading what the two of them drew of it, turned up four more the audit had not
+seen. A picture painted over the paragraphs around it in the Flutter viewer,
+because every line is held to the height of a line of text and a photograph is
+not that. An alert in the React one was drawn with a quotation's padding, a
+quotation's grey and a grey rule down its side whatever kind it said it was: it
+is a `blockquote`, and the rule for a quotation outranks the class on its own.
+A quotation's last paragraph left a strip of empty box under the words. And a
+pointer capture the browser refused ended the drag on the bar between the panes
+rather than costing it the capture. The Flutter footnotes had no way down to a
+note or back either, which is a feature rather than a fix and is one now.
+
+The suite had been failing in Firefox and WebKit for five pushes before that,
+and neither failure was the library: Firefox refuses `setPointerCapture` for a
+pointer id it does not know, where the other two take anything, and WebKit's
+`InputEvent` constructor throws away the `dataTransfer` it is handed. The first
+is the drag above; the second is three tests that were watching the editor be
+handed nothing and correctly do nothing with it.
+
 Six lines came off the list for the other reason — the read was wrong about
 them, or measuring said the change would not pay — and they are under
 "Deliberate" below rather than left looking undone. Two more were closed by a
@@ -58,8 +77,11 @@ drawing less of a long document cost.
 
 ## Confirmed
 
-Nothing. Both lines that were here are commits, and what is below is a list of
-decisions rather than a list of work.
+- **Two footnote definitions on adjacent lines are read as one.** `[^a]: …` with `[^b]: …` on the line under it comes back as a single note whose text ends with the characters of the second, and the reference that pointed at it is left as the characters `[^b]` in the sentence. The definition's paragraph takes the next line as a lazy continuation; GitHub starts a new definition there, which is what `POST /markdown` with `mode: gfm` answers — it numbers them one and two. Both parsers do it and both would change, so the case belongs in `tool/corpus.json` first. A blank line between definitions is the way round it, and `demos/playground/document.ts` has one for that reason.
+
+- **A note is drawn with less of the context than the document is**, in the Flutter package. `renderFootnotes` builds a second context for what is inside a note, because the body text is smaller there, and four of the fields it does not carry over are ones a note can want: a code block in a note is not coloured (`highlighter`), a directive is not handed to the builder that draws it (`directives`), one nobody claimed is drawn as nothing at all rather than as the characters it was written with (`source`), and a picture is fetched by the viewer even where the application said it would draw that itself (`imageBuilder`) — which is the one that matters, because it is a promise the viewer makes everywhere else. What the find bar found is left out on purpose: it does not search a note. The React package hands the document's own context down and has none of this. `lib/src/markdown/render.dart`, in `renderFootnotes`.
+
+- **A host page's rules reach whatever the stylesheet leaves unset**, in the React package. Every rule is written under `.mawy-root`, which settles who wins a property both of them set and says nothing about a property only the host sets. The footnotes' heading was one: it set neither a border nor a padding, so a documentation page's `.vp-doc h2` drew a rule through the section and left a gap above it. That heading is gone, and nothing has read the rest of `styles.css` looking for the same shape.
 
 ## Deliberate, and not to be quietly fixed
 
@@ -121,6 +143,10 @@ decisions rather than a list of work.
   in the doc comment at the top of each file and on the API page. The first is a
   refusal to report a match nothing can point at, and the second is a refusal to
   cut a mark into every span the highlighter produced.
+
+- **The way back from a footnote being an icon rather than `↩`**, in the Flutter package. The character is in none of a web build's fonts and has an emoji form besides, so what arrived on the page was a coloured box; the arrow is drawn from the icon font this package already ships instead. It costs a copy: selecting a note takes the glyph with it, where the React package's takes an arrow, and Flutter has no way to leave one span out of a selection. The reason is in `_note`, in `lib/src/markdown/render.dart`.
+
+- **The playground's two pictures living only in `docs/public/sample`.** They are asked for from the site's root, so they arrive in the framed preview and not in the gallery run on its own — where the viewer draws their alt text, which is what it draws for any picture it cannot fetch. Copying them into `example/web` would put the same bytes in the published package for the sake of a preview. The reason is in `example/lib/samples.dart`.
 
 ## Release
 
