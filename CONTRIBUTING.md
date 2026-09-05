@@ -160,7 +160,7 @@ A pull request that adds a runtime dependency should say, in the description:
 - **Its licence.** MIT, ISC, BSD and Apache-2.0 are fine. Copyleft licences (GPL, LGPL, AGPL) are not, because they would reach into the applications that embed this one.
 - **Its own dependency tree and its size.** A small package that brings twelve more is not a small package.
 
-Development dependencies are held to a much looser standard — they never reach a consumer.
+Development dependencies are held to a much looser standard, because they never reach a consumer.
 
 ## How to contribute (Pull Requests)
 

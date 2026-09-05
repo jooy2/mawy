@@ -1,7 +1,7 @@
 ---
 title: Playground
 order: 4
-description: Both components with nothing switched off — the editor and the viewer, live, in whichever package you picked.
+description: The editor and the viewer running with nothing switched off, in whichever package you picked.
 aside: false
 outline: false
 prev: false
