@@ -20,6 +20,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mawy/mawy.dart';
+import 'package:mawy_example/host.dart';
 import 'package:mawy_example/samples.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -57,7 +58,19 @@ class _GalleryAppState extends State<GalleryApp> {
   };
 
   int _at = 0;
+
+  /// Which palette everything is drawn in.
+  ///
+  /// [MawyColorScheme.system] until something says otherwise, which is the
+  /// platform's brightness and the right answer for a gallery that is the whole
+  /// application. Framed on the documentation site it is the wrong one the
+  /// moment a reader's site switch disagrees with their OS, so the page around
+  /// the frame says which — see `host.dart` for why it says it rather than
+  /// putting it in the query string with `demo` and `locale`.
   MawyColorScheme _scheme = MawyColorScheme.system;
+
+  /// What stops listening to the page around the frame, where there is one.
+  void Function()? _stopListening;
 
   /// The document, once one has been opened over the sample.
   ///
@@ -66,6 +79,23 @@ class _GalleryAppState extends State<GalleryApp> {
   /// document is what makes that a new editor rather than an argument the old
   /// one ignores.
   String? _opened;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _stopListening = listenToHostColorScheme((MawyColorScheme next) {
+      if (mounted) {
+        setState(() => _scheme = next);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _stopListening?.call();
+    super.dispose();
+  }
 
   Sample get _sample {
     final String? wanted = _wanted;

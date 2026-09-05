@@ -48,6 +48,7 @@ const demos = import.meta.glob<{ default: (props: DemoProps) => unknown }>('../.
 });
 
 const host = useTemplateRef<HTMLDivElement>('host');
+const frame = useTemplateRef<HTMLIFrameElement>('frame');
 const { isDark, lang } = useData();
 let root: Root | undefined;
 
@@ -90,6 +91,54 @@ const frameSrc = computed(
 );
 
 /**
+ * Telling the framed gallery which palette this page is in.
+ *
+ * The React island takes `colorScheme` as a prop and the switch above the menu
+ * drives it. The frame cannot be handed a prop, and it cannot be handed the
+ * answer in its query string either: `src` changing is the engine loading again
+ * from nothing, which is a second or so of blank rectangle to change one
+ * colour. So the two fixed things — which demo, which language — ride in the
+ * URL, and the one that moves is posted through the frame instead.
+ *
+ * Same origin both ways. The gallery is served out of this site's own `public/`
+ * so there is no other origin in it, and a message from one is somebody else's
+ * page with this one framed inside it.
+ */
+function tellFrame() {
+  frame.value?.contentWindow?.postMessage(
+    { mawy: 'colorScheme', value: isDark.value ? 'dark' : 'light' },
+    window.location.origin
+  );
+}
+
+/**
+ * The gallery saying it is listening, which is when it can first be told.
+ *
+ * A Flutter engine arrives over the network and the frame loads lazily, so
+ * there is no moment this page can work out on its own — `load` on the frame is
+ * the document, not the engine, and the app's own listener is registered some
+ * way after that. The frame speaks first for exactly that reason, and this
+ * answers with wherever the switch is by then.
+ *
+ * `source` rather than the origin alone, because a page with three demos on it
+ * has three of these listening to one window and every one of them would
+ * otherwise answer every frame's hello.
+ */
+function onFrameMessage(event: MessageEvent) {
+  const message: unknown = event.data;
+
+  if (
+    event.origin === window.location.origin &&
+    event.source === frame.value?.contentWindow &&
+    typeof message === 'object' &&
+    message !== null &&
+    (message as { mawy?: unknown }).mawy === 'ready'
+  ) {
+    tellFrame();
+  }
+}
+
+/**
  * The theme the reader chose *inside* a demo, if they have chosen one.
  *
  * The demos take `colorScheme` as a controlled prop so the site's own dark
@@ -123,6 +172,7 @@ function paint() {
 
 onMounted(() => {
   paint();
+  window.addEventListener('message', onFrameMessage);
   void galleryBuilt(`${galleryUrl}version.json`).then((ok) => {
     built.value = ok;
   });
@@ -132,6 +182,11 @@ watch([isDark, lang, () => props.name], () => {
   override = null;
   paint();
 });
+
+// The frame's half of the same switch. Not folded into the watch above because
+// that one is about the React island's override, and this is about a window
+// that may not be there — `tellFrame` is a no-op until one is.
+watch(isDark, tellFrame);
 
 // The height is a prop like any other and has to reach the island, and it moves
 // on its own: the playground measures it from the window. Kept out of the watch
@@ -143,6 +198,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  window.removeEventListener('message', onFrameMessage);
   root?.unmount();
   root = undefined;
 });
@@ -162,6 +218,7 @@ onBeforeUnmount(() => {
     -->
     <iframe
       v-if="embedded"
+      ref="frame"
       class="mawy-demo-frame"
       :src="frameSrc"
       :style="{ height: `${height}px` }"

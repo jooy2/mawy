@@ -46,6 +46,10 @@ nothing in the corpus had ever been unspaced, so half of that function had never
 been compared at all. The corpus ends with a document of Han and kana now, and
 the check catches the mutation that proves it.
 
+The two lines that outlived the audit are done as well — the parity check
+reaches everything this library ships twice, and the framed Flutter preview
+follows the site's own light/dark switch rather than the reader's OS.
+
 Six lines came off the list for the other reason — the read was wrong about
 them, or measuring said the change would not pay — and they are under
 "Deliberate" below rather than left looking undone. Two more were closed by a
@@ -54,15 +58,8 @@ drawing less of a long document cost.
 
 ## Confirmed
 
-- **The Flutter preview does not follow the site's own light/dark switch.** The
-  React demos take `colorScheme` as a prop and the site drives it; the framed
-  gallery is handed `demo` and `locale` in its query string and nothing else, so
-  it draws in `MawyColorScheme.system` — the platform's brightness, which is not
-  the same answer as the switch above the menu the moment a reader disagrees
-  with their OS. Reading it out of the query string would reload a Flutter
-  engine on every toggle, which is why it was not done that way; `postMessage`
-  into the frame is the shape that would work, and it wants `dart:js_interop` in
-  `packages/flutter/example`.
+Nothing. Both lines that were here are commits, and what is below is a list of
+decisions rather than a list of work.
 
 ## Deliberate, and not to be quietly fixed
 

@@ -24,6 +24,10 @@ dependencies:
   # application, so it chooses.
   file_selector: ^1.0.3
   desktop_drop: ^0.7.0
+  # How the documentation site tells a framed gallery which palette the page
+  # around it is in. Web-only, and imported behind a conditional so a gallery
+  # built for anything else never sees it — see `lib/host.dart`.
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0
