@@ -75,7 +75,7 @@ void main() {
       expect(styleOf(tester, 'emphasis')?.fontStyle, FontStyle.italic);
     });
 
-    testWidgets('draws a link in the accent colour, and a code span in the code one', (
+    testWidgets('draws a link and a code span in the accent, on their own grounds', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -84,7 +84,11 @@ void main() {
 
       expect(styleOf(tester, 'link')?.color, MawyTokens.light.accent);
       expect(styleOf(tester, 'link')?.decoration, TextDecoration.underline);
-      expect(styleOf(tester, 'code')?.color, MawyTokens.light.codeForeground);
+      // The same colour as a link and told apart by what is behind it, which is
+      // the box a name in the middle of a sentence is drawn in.
+      expect(styleOf(tester, 'code')?.color, MawyTokens.light.accent);
+      expect(styleOf(tester, 'code')?.backgroundColor, MawyTokens.light.codeBackground);
+      expect(styleOf(tester, 'code')?.decoration, isNot(TextDecoration.underline));
     });
 
     testWidgets('shows a footnote as a number, and the note under the document', (
@@ -98,7 +102,11 @@ void main() {
       // document, which is why the table above says `x` and `y`.
       expect(styleOf(tester, '1')?.color, MawyTokens.light.accent);
       expect(text, contains('The note.'));
-      expect(text, contains('FOOTNOTES'));
+      // The section names itself to a screen reader and not on the page. The
+      // rule above it and the numbers down the side are what it looks like, and
+      // a word written across the top of them is the part nobody needs.
+      expect(text, isNot(contains('FOOTNOTES')));
+      expect(text, isNot(contains('Footnotes')));
     });
 
     testWidgets('shows raw HTML as the characters it was written with', (

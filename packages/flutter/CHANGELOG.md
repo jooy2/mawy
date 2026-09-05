@@ -20,6 +20,10 @@
 
 ### Changed
 
+- **Inline code is drawn in the accent colour, in a box the height of the words.** A name in the middle of a sentence is a different kind of thing from the sentence around it, and the box behind it says so quietly enough to miss; the pair clears 5.5:1 on that box in either theme. The box was the height of the whole line, because `TextStyle.background` fills the run's own box and a run inheriting the paragraph's line height fills the paragraph's line — a slab from the line above to the line below with the words in the middle of it. The React package draws both the same way.
+
+- **The footnotes name themselves to a screen reader rather than writing the word across the page.** The rule above the notes and the numbers down the side are what a footnote section looks like; `FOOTNOTES` written over them is the one part of it a reader does not need. The section carries the name instead, and each note keeps a node of its own rather than the whole of them being read out as one string.
+
 - **The status line, the split-pane arithmetic and the viewer's find are diffed against the TypeScript ones**, as part of the parity check. They are three more things this library ships twice, and until now each had only its doc comments promising the two halves agreed — the check reached the parsers, the two highlighters, the editing commands and the find bar, and stopped there.
 
   Widening it found one: `countWords` adds a spaced half to an unspaced one, every Han and kana character being a word where an English one is a run between two spaces, and **nothing in the corpus had ever been unspaced**. Half that function had never been compared at all — dropping it entirely changed nothing either half printed. `tool/corpus.json` ends with a document of Han and kana now, and dropping it fails the diff.

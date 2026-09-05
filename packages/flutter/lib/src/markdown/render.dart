@@ -254,6 +254,23 @@ TextStyle _codeStyle(MawyRenderContext context, TextStyle style) {
   );
 }
 
+/// A name in the middle of a sentence, drawn as one.
+///
+/// Two things the block style does not want. The accent, because a name is a
+/// different kind of thing from the sentence around it and the box alone says
+/// so quietly enough to miss — the React package colours it the same way, and
+/// the pair clears 5.5:1 on the box in either theme.
+///
+/// And a line height of its own, which is what keeps the box from being the
+/// full height of the line. `TextStyle.background` fills the run's own box, and
+/// a run inheriting a paragraph's line height fills the paragraph's line: a
+/// slab from the line above to the line below, with the words in the middle of
+/// it. The strut holds the line itself where it was, so this changes the
+/// drawing and not the spacing.
+TextStyle _inlineCodeStyle(MawyRenderContext context, TextStyle style) {
+  return _codeStyle(context, style).copyWith(color: context.tokens.accent, height: 1.25);
+}
+
 /// A run of text, with whatever the find bar found in it marked.
 ///
 /// One span where nothing was found, and that matters: a paragraph in a
@@ -320,7 +337,7 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
   }
 
   if (node is MdInlineCode) {
-    return _marked(node, node.value, context, _codeStyle(context, style));
+    return _marked(node, node.value, context, _inlineCodeStyle(context, style));
   }
 
   if (node is MdLink) {
@@ -1264,51 +1281,51 @@ Widget? renderFootnotes(List<MdFootnoteDefinition> footnotes, MawyRenderContext 
     recognizerFor: context.recognizerFor,
   );
 
-  return Container(
-    width: double.infinity,
-    margin: EdgeInsets.only(top: em * 2.6),
-    padding: EdgeInsets.only(top: em * 1.2),
-    decoration: BoxDecoration(
-      border: Border(top: BorderSide(color: tokens.border)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Padding(
-          padding: EdgeInsets.only(bottom: em * 0.6),
-          child: Text(
-            context.strings.footnotes.toUpperCase(),
-            style: small.copyWith(
-              color: tokens.foregroundMuted,
-              fontWeight: FontWeight.w600,
-              letterSpacing: em * 0.02,
-              fontSize: em * 0.87,
-            ),
-          ),
-        ),
-        for (final MdFootnoteDefinition footnote in footnotes)
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: em * 0.35),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                SizedBox(
-                  width: em * 1.5,
-                  child: Text(
-                    '${footnote.number}.',
-                    style: small.copyWith(color: tokens.foregroundSubtle),
+  // Said rather than written: the rule above them and the numbers down the side
+  // are what a footnote section looks like, and the word across the top is the
+  // one part of it a reader does not need.
+  return Semantics(
+    container: true,
+    // The notes keep their own nodes rather than being merged into the name of
+    // the section, which is what an `aria-label` on a `<section>` does and what
+    // a reader moving through them one at a time needs. Merged, the whole of
+    // the footnotes is one string a screen reader reads in one breath.
+    explicitChildNodes: true,
+    label: context.strings.footnotes,
+    child: Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(top: em * 2.6),
+      padding: EdgeInsets.only(top: em * 1.2),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: tokens.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          for (final MdFootnoteDefinition footnote in footnotes)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: em * 0.35),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(
+                    width: em * 1.5,
+                    child: Text(
+                      '${footnote.number}.',
+                      style: small.copyWith(color: tokens.foregroundSubtle),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: renderBlocks(footnote.children, inner, tight: true),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: renderBlocks(footnote.children, inner, tight: true),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }

@@ -79,6 +79,40 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('names the footnotes without writing the word on the page', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+
+    await tester.pumpWidget(host(const MawyViewer(value: 'Words.[^a]\n\n[^a]: The note.')));
+
+    final SemanticsNode root = tester.binding.rootElement!.findRenderObject()!.debugSemantics!;
+    final List<String> labels = <String>[];
+
+    void walk(SemanticsNode node) {
+      if (node.label.isNotEmpty) {
+        labels.add(node.label);
+      }
+
+      node.visitChildren((SemanticsNode child) {
+        walk(child);
+
+        return true;
+      });
+    }
+
+    walk(root);
+
+    // The rule above them and the numbers down the side are what the section
+    // looks like; the word is what it is called, and only a reader who cannot
+    // see the shape needs to be told.
+    expect(labels, contains('Footnotes'));
+    expect(find.text('Footnotes'), findsNothing);
+    expect(find.text('FOOTNOTES'), findsNothing);
+
+    handle.dispose();
+  });
+
   testWidgets('says a button is a button, and a pressed one is pressed', (
     WidgetTester tester,
   ) async {
