@@ -1,11 +1,10 @@
 # What is not done yet
 
-The repository has no issue tracker in use, and a session that ends takes its
-notes with it. This file is where the work that outlived a session lives, so
-that "what is left" is a file somebody can read rather than a thing somebody
-remembers.
+The repository has no issue tracker in use, and notes from a finished session
+are otherwise lost. This file holds the work that outlived a session, so that
+what is left is written down rather than remembered.
 
-Two rules keep it honest:
+Two rules keep it accurate:
 
 - **Nothing goes here that a check already enforces.** The twelve CommonMark
   examples the parser does not answer are in `DEVIATIONS` in
@@ -13,22 +12,22 @@ Two rules keep it honest:
   for each, and the suite fails if that list goes stale. This file points at it
   rather than copying it.
 - **Confirmed and unconfirmed are marked apart.** A line that says where the
-  code is has been read; a line that says "reported" has not been reproduced
-  yet, and saying so is the difference between a list and a rumour.
+  code is has been read. A line that says "reported" has not been reproduced
+  yet, and it is marked as such.
 
 ## The audit
 
 A read of both packages end to end, turned into a list to work through. **It is
-done**, and so is the one thing that outlived it — drawing only the part of a
-long document that anybody can see, which had a section of its own here and is
-now three commits and the note under "Deliberate" about what it cost. Everything
-the read found is a commit with the test that fails without it, and a line in
-the changelog of the package it landed in.
+done**, and so is the one item that outlived it: drawing only the part of a long
+document that is on screen. That had a section of its own here and is now three
+commits plus the note under "Deliberate" about what it cost. Everything the read
+found is a commit with the test that fails without it, and a line in the
+changelog of the package it landed in.
 
-Nine things came out of working through it that the read had not seen, and all
-nine were worse than what it had. A document could be given two footnotes with
-the same anchor. A document nested a couple of thousand containers deep took the
-page down with it, at a different depth in each of the two packages. The two
+Nine problems came out of working through it that the read had not seen, and all
+nine were worse than what it had found. A document could be given two footnotes
+with the same anchor. A document nested a couple of thousand containers deep
+crashed the page, at a different depth in each of the two packages. The two
 packages folded `İ` differently in a case-insensitive search. A picture a
 document carried inside itself drew on the web and nowhere else. A code block's
 copy button never got the fix the toolbar's had. The column of line numbers
@@ -69,11 +68,11 @@ pointer id it does not know, where the other two take anything, and WebKit's
 is the drag above; the second is three tests that were watching the editor be
 handed nothing and correctly do nothing with it.
 
-Six lines came off the list for the other reason — the read was wrong about
-them, or measuring said the change would not pay — and they are under
-"Deliberate" below rather than left looking undone. Two more were closed by a
-decision rather than by a change and are there as well, and so is the one thing
-drawing less of a long document cost.
+Six lines came off the list for another reason: the read was wrong about them, or
+measuring showed the change would not pay. They are under "Deliberate" below
+rather than left looking undone. Two more were closed by a decision rather than
+by a change and are there as well, along with the one cost of drawing less of a
+long document.
 
 ## Confirmed
 
