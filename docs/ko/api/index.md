@@ -5,13 +5,13 @@ order: 2
 
 # API
 
-패키지가 내보내는 모든 것을 모아 둔 페이지입니다. 각 항목은 그것이 무엇이고, 무엇을 받고, 무엇을 돌려주는지를 말합니다.
+패키지가 내보내는 모든 이름을 모아 둔 페이지입니다. 각 항목이 무엇이고 무엇을 받아 무엇을 돌려주는지 적었습니다.
 
 :::: tip `1.0.0`
 
 두 패키지 모두 `1.0.0`으로 게시되어 있습니다. 여기서부터 이 페이지의 이름은 유의적 버전을 따르므로, 이름이 사라지거나 모양이 바뀌는 변경은 메이저 버전에서만 일어납니다.
 
-이 페이지에 있는 것은 메뉴 위 스위치가 가리키는 패키지에 전부 존재하고 실제로 동작합니다. 다른 쪽 패키지에만 있는 이름은 그 패키지를 고르기 전까지 이 페이지에 나오지 않습니다.
+이 페이지의 내용은 메뉴 위 스위치가 가리키는 패키지에 모두 존재하고 실제로 동작합니다. 다른 쪽 패키지에만 있는 이름은 그 패키지를 고르기 전까지 나오지 않습니다.
 
 ::::
 
@@ -41,7 +41,7 @@ import 'package:mawy/mawy.dart';
 MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 ```
 
-뷰어와 마찬가지로 `package:flutter/widgets.dart`만으로 지어졌고, 문서를 건네받지 않으면 자기 것을 직접 갖습니다.
+뷰어와 마찬가지로 `package:flutter/widgets.dart`만으로 만들었고, 문서를 건네받지 않으면 직접 문서를 소유합니다.
 
 :::
 
@@ -97,7 +97,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | `onModeChange` | `ValueChanged<MawyEditorMode>?` | — | 읽는 사람이 다른 화면을 고르면 호출됩니다. |
 | `modes` | `List<MawyEditorMode>` | [`kMawyEditorModes`](#kmawyeditormodes) | 전환 컨트롤이 제시할 화면. 하나만 주면 컨트롤이 사라집니다. |
 
-**화면은 React 패키지의 넷이 아니라 셋이고**, 빠진 하나는 `wysiwyg`입니다. 그려진 자리에서 문서를 편집하는 일은 전적으로 `contenteditable` 위에 서 있습니다. 브라우저가 컴포넌트에게 "누가 트리에 이런 짓을 하려 했다"고 알려 주고, 컴포넌트는 그것을 거절한 뒤 대신 마크다운을 고치는 구조입니다. Flutter에는 그런 구조가 없습니다. `EditableText`가 문자열을 소유하기 때문입니다. 텍스트 필드이기도 한 문서를 그리려면 문서가 무엇인지를 말하는 두 번째 모델이 필요하고, 그 둘은 누군가 조금 특이한 것을 쓰는 순간 갈라집니다.
+**이 패키지의 화면은 셋이고**, React 패키지에 있는 `wysiwyg`가 빠져 있습니다. 그려진 자리에서 문서를 편집하는 기능은 `contenteditable`에 전적으로 의존합니다. 브라우저가 트리 변경 시도를 컴포넌트에 알리면, 컴포넌트가 그것을 거절하고 대신 마크다운을 고치는 구조입니다. `EditableText`가 문자열을 소유하는 Flutter에는 이런 구조가 없습니다. 텍스트 필드이면서 동시에 문서인 화면을 그리려면 문서 구조를 따로 들고 있는 두 번째 모델이 필요한데, 모델이 둘이면 조금이라도 특이한 문서에서 서로 다른 해석을 내놓습니다.
 
 :::
 
@@ -149,7 +149,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 
 **`onSave`도 `accept`도 `save`도 없습니다.** 파일 선택기는 위젯이 아니라 플러그인이고, 애플리케이션이 이미 어느 것을 골랐는지는 마크다운 에디터가 대신 정할 일이 아닙니다. 이음매는 `value`와 `onChange`가 전부입니다. 파일을 읽고, 문자열을 건네고, 문자열을 돌려받으면 됩니다.
 
-`onOpen`은 버튼이지 선택기가 아닙니다. 에디터는 컨트롤을 그리고 그것을 내놓을 만한 자리 — 툴바, 그리고 아무것도 들고 있지 않은 에디터의 판 — 를 정하고, 그 버튼을 눌렀을 때 무엇이 열리는지는 전적으로 여러분의 것입니다.
+`onOpen`은 파일 선택기가 아니라 버튼입니다. 에디터는 툴바와 빈 에디터의 판에 컨트롤을 그리고, 그 버튼을 눌렀을 때 무엇을 열지는 애플리케이션이 정합니다.
 
 :::
 
@@ -366,7 +366,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 ```
 
-문서를 어느 화면에서 보여줄지. 네 개의 에디터가 아니라 한 문서를 보는 네 가지 방식입니다 — [에디터](../guide/editor)를 보세요.
+문서를 어느 화면에서 보여줄지 정합니다. 네 화면 모두 같은 문서를 보여줍니다. [에디터](../guide/editor)를 보세요.
 
 - `'wysiwyg'` — 그려진 문서를 그 자리에서 편집.
 - `'plain'` — 마크다운 원문을 텍스트로 편집.
@@ -385,7 +385,7 @@ type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 enum MawyEditorMode { plain, split, preview }
 ```
 
-문서를 어느 화면에서 보여줄지. 세 개의 에디터가 아니라 한 문서를 보는 세 가지 방식입니다 — [에디터](../guide/editor)를 보세요.
+문서를 어느 화면에서 보여줄지 정합니다. 세 화면 모두 같은 문서를 보여줍니다. [에디터](../guide/editor)를 보세요.
 
 - `plain` — 색이 입혀진 마크다운 원문을 텍스트로 편집.
 - `split` — 한쪽에 원문, 다른 쪽에 그려진 문서를 동시에. 기본값입니다.
@@ -462,7 +462,7 @@ enum MawyEditorToolbarItem {
 
 :::
 
-에디터 툴바의 컨트롤 하나. `mode`·`find`·`colorScheme`·`separator`를 뺀 나머지는 전부 서식 명령이고, 그 모두에 키보드 단축키가 있습니다. 버튼은 명령을 실행하는 방법이 아니라 명령을 찾는 방법입니다. `find`에도 `Mod`+`F`가 있고, 버튼이 그려지든 아니든 동작합니다.
+에디터 툴바의 컨트롤 하나입니다. `mode`·`find`·`colorScheme`·`separator`를 뺀 나머지는 모두 서식 명령이고, 전부 키보드 단축키를 함께 갖습니다. `find`에도 `Mod`+`F`가 있으며, 버튼을 그리든 그리지 않든 동작합니다.
 
 ::: fw react
 
@@ -472,7 +472,7 @@ enum MawyEditorToolbarItem {
 
 ::: fw flutter
 
-`open`도 `save`도 없습니다. 여기서 그 둘은 애플리케이션의 몫입니다 — [열기와 저장](../guide/editor#열기와-저장)을 보세요.
+`open`과 `save`가 없습니다. 이 패키지에서 그 둘은 애플리케이션이 맡습니다. [열기와 저장](../guide/editor#열기와-저장)을 보세요.
 
 :::
 
@@ -562,7 +562,7 @@ enum MawyColorScheme { light, dark, system }
 
 :::
 
-어느 팔레트로 그릴지. `system`이 기본값이고, 플랫폼이 이미 말하고 있는 것을 따릅니다 — 브라우저에서는 `prefers-color-scheme`, 앱에서는 `MediaQuery.platformBrightnessOf`. 이미 그 질문에 답한 무언가 안에 들어간 뷰어가 어두운 화면 위의 흰 사각형 하나가 되어서는 안 되기 때문입니다. `light`과 `dark`는 따르지 않습니다. 자체 스위치가 있는 애플리케이션이 그것으로 뷰어를 몰 수 있게 하기 위해서입니다.
+어느 팔레트로 그릴지 정합니다. 기본값 `system`은 플랫폼 설정을 따릅니다. 브라우저에서는 `prefers-color-scheme`, 앱에서는 `MediaQuery.platformBrightnessOf`를 읽습니다. 이미 어두운 화면 안에 놓인 뷰어만 밝게 남는 것을 막기 위해서입니다. `light`과 `dark`는 플랫폼 설정을 따르지 않으므로, 자체 스위치가 있는 애플리케이션이 그 값으로 뷰어를 제어할 수 있습니다.
 
 ### `MawyLocale`
 
@@ -582,7 +582,7 @@ enum MawyLocale { en, ko }
 
 :::
 
-**영어와 한국어**이고 기본값은 `en`입니다. 뷰어와 에디터 자신의 인터페이스가 쓰는 언어 — 툴바 레이블, 메뉴 항목, 스크린 리더에게 주는 문장 — 이고, 문서가 쓰인 언어와는 무관합니다. 두 패키지가 같은 이름 아래 같은 낱말을 싣습니다. 한쪽에만 있는 언어는 이 라이브러리가 가진 언어가 아닙니다.
+**영어와 한국어**를 지원하고 기본값은 `en`입니다. 뷰어와 에디터가 직접 쓰는 텍스트, 곧 툴바 레이블과 메뉴 항목, 스크린 리더에게 주는 문장의 언어이며, 문서가 쓰인 언어와는 무관합니다. 두 패키지가 같은 이름으로 같은 문장을 싣고, 한쪽에만 있는 언어는 지원 언어로 보지 않습니다.
 
 ### `MawyParseOptions`
 
@@ -613,10 +613,10 @@ class MawyParseOptions {
 :::
 
 - **`gfm`** — GitHub Flavored Markdown: 표, 체크박스 목록, `~~취소선~~`, 알림 블록, 각주, 그리고 맨 URL이 링크가 되는 것.
-- **`breaks`** — 문단 안의 줄바꿈 하나를 줄바꿈으로 볼지. 기본은 꺼짐입니다. 마크다운이 그렇게 말하기 때문입니다. 켜면 채팅 클라이언트와 이슈 트래커의 동작과 같아집니다. 마크다운을 써 본 적 없는 독자가 기대하는 쪽입니다.
-- **`definitionLists`** — 글줄 아래에서 `: `로 시작하는 줄을 용어와 그 뜻으로 볼지. 켜져 있고, Mawy가 읽지만 GitHub은 읽지 않는 유일한 것입니다. 문법은 PHP Markdown Extra의 것이고, 이것을 쓰는 사람들이 실제로 쓰는 문법입니다. GitHub에서와 정확히 같은 뜻이어야 하는 문서라면 끄세요.
+- **`breaks`** — 문단 안의 줄바꿈 하나를 줄바꿈으로 볼지 정합니다. CommonMark 명세를 따라 기본은 꺼짐입니다. 켜면 채팅 클라이언트와 이슈 트래커처럼 동작하며, 마크다운을 써 본 적 없는 독자는 이쪽을 기대합니다.
+- **`definitionLists`** — 글줄 아래에서 `: `로 시작하는 줄을 용어와 그 뜻으로 볼지 정합니다. 기본은 켜짐이며, Mawy가 읽고 GitHub은 읽지 않는 유일한 문법입니다. PHP Markdown Extra의 문법을 그대로 따랐습니다. GitHub에서와 정확히 같게 읽혀야 하는 문서라면 끄세요.
 
-세 옵션은 두 패키지에서 같은 셋이고, 기본값도 효과도 같습니다. 파서가 하나이고, [CI의 검사](https://github.com/jooy2/mawy/blob/main/packages/flutter/tool/parity.dart)가 저장소의 모든 마크다운 파일에 대해 두 트리를 diff합니다.
+세 옵션은 두 패키지에서 이름도 기본값도 효과도 같습니다. 파서가 하나이고, [CI의 검사](https://github.com/jooy2/mawy/blob/main/packages/flutter/tool/parity.dart)가 저장소의 모든 마크다운 파일에 대해 두 트리를 diff합니다.
 
 ::: fw react
 
@@ -628,11 +628,11 @@ type MawyHtmlPolicy = 'escape' | 'sanitize' | 'raw';
 
 문서 안에 쓰인 원본 HTML을 어떻게 할지.
 
-- `'escape'` — 쓰인 글자 그대로 보여줍니다. 기본값이고, 조건 없이 안전한 유일한 값입니다.
+- `'escape'` — 쓰인 글자 그대로 보여줍니다. 기본값이며, 조건 없이 안전한 유일한 값입니다.
 - `'sanitize'` — 허용 목록 밖의 요소·속성·URL 스킴을 먼저 제거한 뒤 그립니다.
-- `'raw'` — 쓰인 그대로 그립니다. 아무것도 제거하지 않고 아무것도 검사하지 않습니다. 문서 안의 `<script>`가 실행되고, 이미지의 `onerror`가 실행되고, `<iframe>`이 로드됩니다. 전부 그 페이지의 출처에서, 그 페이지의 쿠키를 가지고 실행됩니다. **문서에 글자를 넣을 수 있는 사람은 애플리케이션이 할 수 있는 일을 전부 할 수 있습니다.** 애플리케이션이 직접 쓴 문서나 이미 스스로 안전하게 만든 문서에만 켜십시오.
+- `'raw'` — 쓰인 그대로 그립니다. 아무것도 제거하지 않고 검사하지도 않습니다. 문서 안의 `<script>`가 실행되고, 이미지의 `onerror`가 실행되며, `<iframe>`이 로드됩니다. 전부 그 페이지의 출처에서 그 페이지의 쿠키를 가지고 실행됩니다. **문서에 글자를 넣을 수 있는 사람은 애플리케이션이 할 수 있는 일을 전부 할 수 있습니다.** 애플리케이션이 직접 쓴 문서나 이미 안전하게 만들어 둔 문서에만 켜세요.
 
-셋 중 어느 것도 링크에는 영향을 주지 않습니다. `[click](javascript:…)`은 모든 값에서 거절됩니다. 그것은 HTML이 아니라 마크다운이고, HTML 정책을 바꾸는 일이 링크까지 두고 하는 말이었던 적은 없기 때문입니다.
+셋 중 어느 값도 링크에는 영향을 주지 않습니다. `[click](javascript:…)`은 모든 값에서 거절됩니다. 이 표기는 HTML이 아니라 마크다운이고, `html` 옵션은 HTML만 다루기 때문입니다.
 
 :::
 
@@ -650,7 +650,7 @@ interface MawyTypography {
 }
 ```
 
-문서를 어떻게 조판할지 정합니다. 모든 항목이 `--mawy-doc-*` 커스텀 속성으로 화면에 도달하므로, 범위를 벗어난 값은 망가진 문서가 아니라 이상해 보이는 문서가 됩니다.
+문서를 어떻게 조판할지 정합니다. 모든 항목이 `--mawy-doc-*` 커스텀 속성으로 화면에 전달되므로, 범위를 벗어난 값을 넣어도 문서가 깨지지 않고 보기에만 어색해집니다.
 
 :::
 
@@ -671,9 +671,9 @@ class MawyTypography {
 }
 ```
 
-문서를 어떻게 조판할지 정합니다. 모든 항목에 기본값이 있어서 `MawyTypography(fontSize: 18)`이 완전한 답이고, 나머지는 있던 자리에 그대로 있습니다. 이미 있는 설정에서 하나만 바꾸는 것은 `copyWith`입니다.
+문서를 어떻게 조판할지 정합니다. 모든 항목에 기본값이 있어서 `MawyTypography(fontSize: 18)`처럼 하나만 지정해도 되고, 나머지는 기본값을 유지합니다. 이미 있는 설정에서 하나만 바꿀 때는 `copyWith`를 씁니다.
 
-늘어난 항목은 `fontFamilyName` 하나이고, 그것이 React 패키지의 `fonts` 목록 자리를 대신합니다. 이 패키지는 글꼴을 싣지 않습니다. 세 역할은 각각 플랫폼이 그 역할에 쓰는 패밀리로 이어지고, 특정 서체를 원하는 애플리케이션은 그것을 번들해서 여기에 이름을 댑니다.
+늘어난 항목은 `fontFamilyName` 하나이며, React 패키지의 `fonts` 목록을 대신합니다. 이 패키지는 글꼴을 싣지 않습니다. 세 역할은 각각 플랫폼의 기본 패밀리로 이어지고, 특정 서체를 쓰려면 애플리케이션이 그 서체를 번들한 뒤 여기에 이름을 넘깁니다.
 
 :::
 
@@ -685,7 +685,7 @@ class MawyTypography {
 type MawyFontFamily = 'sans' | 'serif' | 'mono' | (string & {});
 ```
 
-뷰어가 받은 글꼴 중 하나의 `id`입니다. `sans`·`serif`·`mono`는 라이브러리가 스스로 제공하는 셋이고, 글꼴 이름이 아니라 역할입니다. 내려받는 것이 없고, 각 역할 뒤의 스택은 애플리케이션이 다시 선언할 수 있는 `--mawy-font-*` 커스텀 속성입니다. 그 밖의 문자열은 `fonts`로 넘긴 글꼴의 `id`입니다.
+뷰어가 받은 글꼴 중 하나의 `id`입니다. `sans`·`serif`·`mono`는 라이브러리가 기본으로 제공하는 셋이며, 특정 글꼴 이름이 아니라 역할입니다. 내려받는 파일이 없고, 각 역할 뒤의 스택은 애플리케이션이 다시 선언할 수 있는 `--mawy-font-*` 커스텀 속성입니다. 그 밖의 문자열은 `fonts`로 넘긴 글꼴의 `id`입니다.
 
 :::
 
@@ -695,7 +695,7 @@ type MawyFontFamily = 'sans' | 'serif' | 'mono' | (string & {});
 enum MawyFontFamily { sans, serif, mono }
 ```
 
-세 역할, 그리고 그 셋뿐입니다. 글꼴 이름이 아니라 역할이라서 각각은 플랫폼이 그 역할에 쓰는 패밀리로 이어지고, 특정 서체를 원하는 애플리케이션은 그것을 번들해서 [`MawyTypography.fontFamilyName`](#mawytypography)으로 이름을 댑니다. 네 번째 값은 없습니다. 값을 더할 글꼴 목록이라는 것이 없기 때문입니다.
+세 역할이 전부입니다. 특정 글꼴 이름이 아니라 역할이라서 각각 플랫폼의 기본 패밀리로 이어지고, 특정 서체를 쓰려면 애플리케이션이 그 서체를 번들한 뒤 [`MawyTypography.fontFamilyName`](#mawytypography)으로 이름을 넘깁니다. 네 번째 값은 없습니다. 값을 더할 글꼴 목록 자체가 없기 때문입니다.
 
 :::
 
@@ -712,7 +712,7 @@ interface MawyFont {
 }
 ```
 
-툴바가 제시하는 글꼴 하나이고, 아래의 두 목록이 넘길 만한 것들입니다. 글꼴을 처음 그리는 순간에 스타일시트를 받아오는 것은 브라우저의 재주이고, 그래서 이것은 이름 하나가 아니라 목록입니다.
+툴바가 제시하는 글꼴 하나이며, 아래 두 목록이 그대로 넘길 수 있는 값입니다. 글꼴을 처음 그리는 순간에 스타일시트를 받아오는 동작은 브라우저에서만 가능하므로, 이 값은 이름 하나가 아니라 목록입니다.
 
 - **`id`** — 이 글꼴을 고르기 위해 `typography.fontFamily`에 넣는 값.
 - **`label`** — 툴바에 보이는 이름. 빼면 `sans`·`serif`·`mono`는 로케일에서, 그 밖에는 `id`에서 가져옵니다.
@@ -743,7 +743,7 @@ const MAWY_WEB_FONTS: readonly MawyFont[];
 
 바로 쓸 수 있는 열세 개의 오픈 라이선스 글꼴. 전부 SIL Open Font License이며 상업적 사용·임베딩·재배포가 허용됩니다. Inter, IBM Plex Sans, Atkinson Hyperlegible, Source Serif 4, Literata, Lora, EB Garamond, JetBrains Mono, 그리고 한글 다섯: Pretendard, Noto Sans KR, Noto Serif KR, 나눔명조, 고운돋움.
 
-**애플리케이션이 직접 넘기지 않으면 절대 쓰이지 않습니다.** 남의 페이지 안에 들어간 컴포넌트가 그 페이지가 고르지 않은 폰트 CDN에 연결을 열 이유는 없습니다. 그래서 기본값이 아니라 export입니다.
+**애플리케이션이 직접 넘기지 않으면 쓰이지 않습니다.** 다른 사람의 페이지 안에 들어간 컴포넌트가 그 페이지가 고르지 않은 폰트 CDN에 연결을 열 이유는 없습니다. 그래서 기본값으로 두지 않고 export로 제공합니다.
 
 ```tsx
 <MawyViewer value={document} fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]} />
@@ -769,7 +769,7 @@ enum MawyDirectiveKind { container, leaf, text }
 
 :::
 
-디렉티브가 세 모양 중 어느 것으로 쓰였는지 말합니다. 콜론의 개수가 그 차이이고, 그 밖에는 아무것도 다르지 않습니다. `:::container`는 블록을 담고, `::leaf`는 한 줄이고, `:text`는 문장 안에 앉습니다. 무엇을 위한 것인지는 [디렉티브](../guide/viewer#디렉티브)에 있습니다.
+디렉티브가 세 모양 중 어느 것으로 쓰였는지 나타냅니다. 콜론의 개수만 다릅니다. `:::container`는 블록을 담고, `::leaf`는 한 줄이며, `:text`는 문장 안에 들어갑니다. 용도는 [디렉티브](../guide/viewer#디렉티브)에 있습니다.
 
 ::: fw react
 
@@ -779,7 +779,7 @@ enum MawyDirectiveKind { container, leaf, text }
 type MawyDirectives = Readonly<Record<string, React.ComponentType<MawyDirectiveProps>>>;
 ```
 
-애플리케이션이 아는 디렉티브를 이름에 붙여 둔 표입니다. 목록에 없는 이름은 쓰인 글자 그대로 그려집니다. 기본 `html` 정책에서 원시 HTML이 받는 것과 같은 답입니다.
+애플리케이션이 처리할 디렉티브를 이름별로 등록하는 표입니다. 목록에 없는 이름은 쓰인 글자 그대로 그립니다. 기본 `html` 정책에서 원시 HTML을 다루는 방식과 같습니다.
 
 :::
 
@@ -802,7 +802,7 @@ interface MawyDirectiveProps {
 }
 ```
 
-디렉티브의 컴포넌트가 받는 값입니다. 조각은 **이미 그려진 채로** 도착합니다. 그래서 컴포넌트는 React 엘리먼트를 조립할 뿐, 마크다운을 두 번 파싱하지도 마크업 문자열을 다루지도 않습니다.
+디렉티브의 컴포넌트가 받는 값입니다. 안쪽 조각은 **이미 그려진 채로** 도착합니다. 그래서 컴포넌트는 React 엘리먼트를 조립하기만 하고, 마크다운을 다시 파싱하거나 마크업 문자열을 다루지 않습니다.
 
 `attributes`는 `{…}`에 쓰인 것을 쓰인 순서대로 담습니다. `{#id}`는 `id`로, `{.a .b}`는 `class`로 도착하고, 맨 이름은 빈 문자열로 도착합니다. 그것이 플래그를 적는 방법입니다. 모든 값이 문자열인 것은 문서가 말한 것이 문자열뿐이기 때문입니다.
 
@@ -824,7 +824,7 @@ class MawyDirective {
 }
 ```
 
-디렉티브의 빌더가 받는 값입니다. 조각은 **이미 그려진 채로** 도착합니다. 그래서 빌더는 위젯을 조립할 뿐, 마크다운을 두 번 파싱하지 않습니다.
+디렉티브의 빌더가 받는 값입니다. 안쪽 조각은 **이미 그려진 채로** 도착합니다. 그래서 빌더는 위젯을 조립하기만 하고, 마크다운을 다시 파싱하지 않습니다.
 
 `attributes`는 `{…}`에 쓰인 것을 쓰인 순서대로 담습니다. `{#id}`는 `id`로, `{.a .b}`는 `class`로 도착하고, 맨 이름은 빈 문자열로 도착합니다. 그것이 플래그를 적는 방법입니다. 모든 값이 `String`인 것은 문서가 말한 것이 문자열뿐이기 때문입니다.
 
@@ -838,7 +838,7 @@ class MawyDirective {
 typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirective directive);
 ```
 
-디렉티브 하나를 그리는 함수입니다. `MawyDirectiveKind.text`인 것은 문장 안에 `WidgetSpan`으로 놓이므로, 인라인 디렉티브의 빌더는 글줄 위에 앉을 만한 것 — 대개는 자기 `Text.rich` — 을 돌려주는 편이 좋습니다.
+디렉티브 하나를 그리는 함수입니다. `MawyDirectiveKind.text`는 문장 안에 `WidgetSpan`으로 놓이므로, 인라인 디렉티브의 빌더는 글줄 높이에 맞는 위젯을 돌려주어야 합니다. 대개 `Text.rich`를 씁니다.
 
 :::
 
@@ -853,7 +853,7 @@ interface MawyRange {
 }
 ```
 
-문서의 한 조각이 어디에 쓰였는지를 컴포넌트가 받은 마크다운의 위치값으로 알려 줍니다. 모든 엘리먼트가 `data-mawy-range`로 들고 있는 그 두 수를, 컴포넌트가 직접 받는 자리에서는 수로 건넵니다. 지금 그런 자리는 [`MawyDirectiveProps`](#mawydirectiveprops) 하나뿐입니다.
+문서의 한 조각이 원문 어디에 쓰였는지를 위치값으로 알려 줍니다. 모든 엘리먼트가 `data-mawy-range`로 들고 있는 두 수를, 컴포넌트에는 숫자 그대로 건넵니다. 현재 이 값을 받는 곳은 [`MawyDirectiveProps`](#mawydirectiveprops) 하나뿐입니다.
 
 :::
 
@@ -879,7 +879,7 @@ extension MawyMeasureWidth on MawyMeasure {
 
 :::
 
-본문이 얼마나 넓게 뻗을 수 있는지: 34rem, 44rem, 56rem, 또는 제한 없음. Flutter에서는 논리 픽셀 560·704·880이며, 본문 16픽셀 기준으로 같은 세 폭입니다. 너무 긴 줄은 글자를 키웠을 때 따라오는 실패이고, 그래서 툴바에서 글자 크기 옆에 있습니다. `full`은 이미 자기 단을 받은 뷰어, 그 안에 또 하나를 만들 필요가 없는 경우를 위한 것입니다.
+본문의 최대 폭입니다. 34rem, 44rem, 56rem, 또는 제한 없음 중에서 고릅니다. Flutter에서는 논리 픽셀 560·704·880이며, 본문 16픽셀 기준으로 같은 세 폭입니다. 글자를 키우면 한 줄이 지나치게 길어지므로, 툴바에서 글자 크기 옆에 두었습니다. `full`은 이미 폭이 정해진 자리에 놓인 뷰어를 위한 값입니다.
 
 ### `MawyViewerToolbarItem`
 
@@ -921,7 +921,7 @@ enum MawyViewerToolbarItem {
 
 :::
 
-뷰어 툴바의 컨트롤 하나. `separator`는 컨트롤이 아니라 가는 구분선을 그립니다.
+뷰어 툴바의 컨트롤 하나입니다. `separator`만은 컨트롤이 아니라 가는 구분선을 그립니다.
 
 `find`는 문서 위에 찾기 바를 열고, 뷰어에 포커스가 있는 동안 `Ctrl`+`F`(`Cmd`+`F`)를 가져갑니다. 빼면 단축키는 다시 브라우저의 것이 되고, 페이지 전체를 채우는 뷰어라면 그편이 맞습니다. 이 컨트롤은 자기 영역 안에 들어앉은 뷰어를 위한 것이고, 그런 뷰어는 브라우저의 찾기가 안으로 들어오지 않고 지나쳐 갑니다. 찾는 대상은 문서가 _그리는_ 글자입니다. `**bold**` 안의 `bold`는 찾을 수 있고 `**`로는 아무것도 찾을 수 없습니다. 한 일치가 두 런에 걸칠 수는 없어서 `he**llo**`에서 `hello`도 찾을 수 없고, 코드 블록은 검색하지 않습니다.
 
@@ -941,7 +941,7 @@ type MawyViewerToolbarOption = boolean | readonly MawyViewerToolbarItem[];
 
 `true`는 위 순서대로 전부이고, `false`는 툴바 없음이며, 배열을 주면 정확히 그 컨트롤을 그 순서대로 그립니다.
 
-목록에 없는 컨트롤을 더할 방법은 두 패키지 어디에도 없습니다. 아무 자식이나 받는 툴바는 라이브러리가 더 이상 키보드로 다루게 만들어 줄 수 없는 툴바입니다.
+목록에 없는 컨트롤을 추가하는 방법은 두 패키지 모두 제공하지 않습니다. 임의의 자식을 받는 툴바는 라이브러리가 키보드 조작을 보장할 수 없습니다.
 
 :::
 
@@ -963,9 +963,9 @@ const List<MawyViewerToolbarItem> kMawyViewerToolbar;
 
 ### `mawy-react/styles.css`
 
-완성된 스타일시트이고, 애플리케이션이 한 번 가져옵니다. 라이브러리가 그리는 모든 값은 `--mawy-*` 커스텀 속성이며, 그 네임스페이스가 테마의 전부입니다.
+완성된 스타일시트이며, 애플리케이션이 한 번 가져오면 됩니다. 라이브러리가 그리는 모든 값이 `--mawy-*` 커스텀 속성이고, 테마는 이 네임스페이스만 다루면 됩니다.
 
-토큰은 `:root`가 아니라 **`.mawy-root`** 에 선언됩니다. 컴포넌트 라이브러리가 문서 루트에 값을 쓸 일은 없고, `:root`에서 팔레트를 읽는 뷰어는 밝은 페이지 안에서 어두울 수 없기 때문입니다. 토큰은 상속되므로, 감싸는 엘리먼트 하나에 선언하면 그 안의 모든 Mawy 표면에 닿습니다.
+토큰은 `:root`가 아니라 **`.mawy-root`** 에 선언합니다. 컴포넌트 라이브러리가 문서 루트에 값을 쓸 이유가 없고, `:root`에서 팔레트를 읽으면 밝은 페이지 안에 어두운 뷰어를 넣을 수 없기 때문입니다. 토큰은 상속되므로 감싸는 엘리먼트 하나에 선언하면 그 안의 모든 Mawy 화면에 적용됩니다.
 
 | 묶음 | 토큰 |
 | --- | --- |
@@ -980,7 +980,7 @@ const List<MawyViewerToolbarItem> kMawyViewerToolbar;
 | 알림 | `--mawy-note`, `--mawy-tip`, `--mawy-important`, `--mawy-warning`, `--mawy-caution` |
 | 모양과 움직임 | `--mawy-radius-sm`, `--mawy-radius-md`, `--mawy-radius-lg`, `--mawy-shadow-1`, `--mawy-shadow-2`, `--mawy-duration`, `--mawy-easing` |
 
-문서를 그리는 데 쓰는 클래스 이름 `.mawy-md-*` 역시 지원되는 표면입니다. 라이브러리가 렌더 프롭을 내주지 않아도 애플리케이션이 표나 코드 블록의 스타일을 바꿀 수 있습니다.
+문서를 그리는 데 쓰는 클래스 이름 `.mawy-md-*`도 공개된 확장 지점입니다. 라이브러리가 렌더 프롭을 내주지 않아도 애플리케이션이 표나 코드 블록의 스타일을 바꿀 수 있습니다.
 
 :::
 
@@ -1001,11 +1001,11 @@ class MawyTokens {
 typedef MawyTokensBuilder = MawyTokens Function(Brightness brightness);
 ```
 
-문서와 그 인터페이스를 그리는 모든 색을 한 객체로 담은 것입니다. 항목은 React 패키지의 `--mawy-*` 커스텀 속성을 Dart식 이름으로 옮긴 것들 — `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, 그리고 알림 종류마다 하나씩 — 이고, 값은 스타일시트의 값을 다시 고른 것이 아니라 그대로 옮긴 것입니다. 브라우저에서 `#5b34ea`인 색은 앱에서도 `#5b34ea`입니다.
+문서와 그 인터페이스를 그리는 모든 색을 한 객체에 담았습니다. 항목은 React 패키지의 `--mawy-*` 커스텀 속성을 Dart식 이름으로 옮긴 것입니다. `background`, `backgroundSunken`, `backgroundRaised`, `chrome`, `foreground`, `foregroundMuted`, `foregroundSubtle`, `border`, `borderStrong`, `accent`, `accentHover`, `accentForeground`, `accentSoft`, `find`, `findCurrent`, `codeBackground`, `codeForeground`, `markBackground`, `markForeground`, 그리고 알림 종류마다 하나씩 있습니다. 값도 스타일시트의 값을 그대로 옮겼으므로, 브라우저에서 `#5b34ea`인 색은 앱에서도 `#5b34ea`입니다.
 
-뷰어는 자기 `colorScheme`에서 `light`이나 `dark`를 고르며 전역을 읽지 않습니다. 문서 하나가 밝은 화면 안에서 어두울 수 있는 것이 그 덕분입니다.
+뷰어는 전역 설정을 읽지 않고 자기 `colorScheme`에서 `light`이나 `dark`를 고릅니다. 그래서 밝은 화면 안에서 문서 하나만 어둡게 할 수 있습니다.
 
-자기 색을 쓰고 싶은 애플리케이션은 `tokens`를 넘깁니다. 팔레트 하나가 아니라 `MawyTokensBuilder`인데, 뷰어는 나머지를 다 받은 다음에야 자기 밝기를 정하기 때문입니다. 플랫폼을 따라가는 문서라면 두 팔레트 모두에서 따라갈 수 있어야 합니다. 하나를 만드는 방법은 `copyWith`입니다. 색 하나를 바꾸려고 서른한 개를 쓰는 대신, `MawyTokens.of(brightness)`에서 출발해 다른 것만 말합니다.
+자기 색을 쓰려는 애플리케이션은 `tokens`를 넘깁니다. 팔레트 하나가 아니라 `MawyTokensBuilder`를 받는데, 뷰어가 나머지 인자를 다 받은 다음에야 자기 밝기를 정하기 때문입니다. 플랫폼을 따라가는 문서라면 두 팔레트 모두에 값을 준비해 두어야 합니다. 팔레트는 `copyWith`로 만듭니다. 색 하나를 바꾸려고 서른한 개를 다시 쓰지 않고, `MawyTokens.of(brightness)`에서 출발해 바꿀 값만 지정합니다.
 
 ```dart
 MawyViewer(
@@ -1032,7 +1032,7 @@ abstract final class MawyMotion {
 }
 ```
 
-모서리 반경, 그리고 움직이는 모든 것이 쓰는 하나의 시간과 하나의 곡선입니다. 반경은 눈금이 아니라 세 크기뿐입니다. [`MawyTokens`](#mawytokens)이 색에 대해 그런 것처럼, React 패키지의 `--mawy-radius-*`, `--mawy-duration`, `--mawy-easing`을 값 그대로 옮긴 것입니다.
+모서리 반경과, 움직이는 모든 요소가 공유하는 지속 시간 하나와 곡선 하나입니다. 반경은 연속된 눈금이 아니라 세 크기뿐입니다. [`MawyTokens`](#mawytokens)이 색을 옮긴 것처럼, React 패키지의 `--mawy-radius-*`, `--mawy-duration`, `--mawy-easing`을 값 그대로 옮겼습니다.
 
 :::
 
@@ -1040,7 +1040,7 @@ abstract final class MawyMotion {
 
 ::: fw react
 
-`mawy-react/markdown`은 별도의 진입점입니다. 문서를 _읽기만_ 하려는 애플리케이션 — 목차로 쓸 개요, 각주, 제목에 붙은 앵커 — 이 그것을 얻자고 컴포넌트를 끌고 들어올 이유는 없고, 여기에는 컴포넌트가 없습니다. React도 DOM도 필요 없어서 빌드 스크립트와 서버에도 페이지만큼 쉽게 닿습니다.
+`mawy-react/markdown`은 별도의 진입점입니다. 목차로 쓸 개요나 각주, 제목에 붙은 앵커만 필요한 애플리케이션이 컴포넌트까지 함께 설치할 필요는 없으므로, 여기에는 컴포넌트를 두지 않았습니다. React도 DOM도 필요 없어서 빌드 스크립트와 서버에서도 그대로 쓸 수 있습니다.
 
 ```ts
 import { parseMarkdown, slugify } from 'mawy-react/markdown';
@@ -1054,7 +1054,7 @@ const { outline, footnotes } = parseMarkdown(document);
 function parseMarkdown(source: string, options?: MarkdownOptions): MdDocument;
 ```
 
-`source`를 마크다운으로 읽습니다. 뷰어가 하는 것과 같은 호출이고 옵션도 같으므로, 여기서 파싱한 문서와 저기서 그린 문서는 같은 트리입니다.
+`source`를 마크다운으로 읽습니다. 뷰어와 같은 호출에 같은 옵션을 쓰므로, 여기서 파싱한 문서와 뷰어가 그린 문서는 같은 트리입니다.
 
 ### `MdDocument`
 
@@ -1066,9 +1066,9 @@ interface MdDocument {
 }
 ```
 
-파싱된 문서입니다. 트리와 개요, 그리고 그 아래의 각주. 각주는 `root`에 없습니다. 각주는 작성자가 편한 곳에 쓰고 맨 아래에서 읽는 것이므로, 문서를 그리는 쪽이 본문 다음에 그립니다.
+파싱된 문서입니다. 트리와 개요, 그리고 각주가 들어 있습니다. 각주는 `root`에 없습니다. 작성자는 편한 곳에 쓰고 독자는 맨 아래에서 읽으므로, 문서를 그리는 쪽이 본문 다음에 그립니다.
 
-노드 타입도 함께 나갑니다. `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage`을 비롯해 전부, 각자 쓰인 자리인 `MdRange`를 달고 있습니다. Flutter 패키지의 노드 클래스와 같은 이름이고, 그래서 두 파서를 비교할 수 있습니다. `tool/parity.dart`가 diff하는 것이 이 트리입니다.
+노드 타입도 함께 내보냅니다. `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage`을 비롯한 전부이며, 각각 쓰인 자리를 `MdRange`로 들고 있습니다. Flutter 패키지의 노드 클래스와 이름이 같아서 두 파서를 비교할 수 있고, `tool/parity.dart`가 diff하는 대상이 이 트리입니다.
 
 ### `slugify`
 
@@ -1076,13 +1076,13 @@ interface MdDocument {
 function slugify(text: string): string;
 ```
 
-제목의 앵커를 GitHub이 쓰는 철자로 만듭니다. 어떤 방식을 고르는지보다 GitHub과 같은 철자를 쓰는 것이 중요합니다. README 안의 앵커는 그것에 맞춰 손으로 쓰이므로, `#getting-started`로 링크하는 문서는 GitHub이 그 제목을 뭐라고 불렀을지에 링크하고 있는 것입니다.
+제목의 앵커를 GitHub과 같은 방식으로 만듭니다. 어떤 방식을 고르는지보다 GitHub과 철자를 맞추는 것이 중요합니다. README 안의 앵커는 GitHub 기준으로 손으로 쓰이므로, `#getting-started`로 링크하는 문서는 GitHub이 그 제목에 붙였을 앵커를 가리키고 있습니다.
 
 :::
 
 ::: fw flutter
 
-안에서 쓰기만 하는 것이 아니라 밖으로도 내보냅니다. 문서의 개요나 각주나 제목의 앵커가 필요한 Dart 애플리케이션에는 그것을 얻을 다른 길이 없기 때문입니다.
+파서는 내부에서만 쓰지 않고 밖으로도 내보냅니다. 문서의 개요나 각주, 제목의 앵커가 필요한 Dart 애플리케이션에는 그것을 얻을 다른 방법이 없기 때문입니다.
 
 ### `parseMarkdown`
 
@@ -1102,9 +1102,9 @@ class MdDocument {
 }
 ```
 
-파싱된 문서입니다. 트리와 그 개요, 그리고 그 아래의 각주가 들어 있습니다. 각주는 `root` 안에 없습니다. 각주는 글쓴이가 편한 곳에 쓰고 독자는 맨 아래에서 읽는 것이므로, 문서를 그리는 쪽이 문서 뒤에 각주를 그립니다.
+파싱된 문서입니다. 트리와 개요, 그리고 각주가 들어 있습니다. 각주는 `root` 안에 없습니다. 글쓴이는 편한 곳에 쓰고 독자는 맨 아래에서 읽으므로, 문서를 그리는 쪽이 본문 다음에 각주를 그립니다.
 
-모든 노드 클래스가 함께 나옵니다. `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage`, 그 밖의 것들이고, 각각 자기가 쓰인 자리를 `MdRange`로 들고 있습니다. React 패키지의 노드 타입과 같은 이름의 같은 것들입니다.
+모든 노드 클래스를 함께 내보냅니다. `MdHeading`, `MdParagraph`, `MdCode`, `MdList`, `MdTable`, `MdLink`, `MdImage`을 비롯한 전부이며, 각각 쓰인 자리를 `MdRange`로 들고 있습니다. React 패키지의 노드 타입과 이름도 구조도 같습니다.
 
 ### `slugify`
 
@@ -1112,7 +1112,7 @@ class MdDocument {
 String slugify(String text);
 ```
 
-제목의 앵커를 GitHub이 쓰는 철자로 만듭니다. 어떤 방식을 고르는지보다 GitHub과 같은 철자를 쓰는 것이 중요합니다. README 안의 앵커는 그것에 맞춰 손으로 쓰이므로, `#getting-started`로 링크하는 문서는 GitHub이 그 제목을 뭐라고 불렀을지에 링크하고 있는 것입니다.
+제목의 앵커를 GitHub과 같은 방식으로 만듭니다. 어떤 방식을 고르는지보다 GitHub과 철자를 맞추는 것이 중요합니다. README 안의 앵커는 GitHub 기준으로 손으로 쓰이므로, `#getting-started`로 링크하는 문서는 GitHub이 그 제목에 붙였을 앵커를 가리키고 있습니다.
 
 :::
 
@@ -1120,9 +1120,9 @@ String slugify(String text);
 
 ## 서버에서 그린 문서
 
-`mawy-react/server`는 문서를 서버에서 한 번 그리고, 그것 때문에 자바스크립트를 하나도 보내지 않습니다.
+`mawy-react/server`는 문서를 서버에서 한 번 그리고, 브라우저로 자바스크립트를 하나도 보내지 않습니다.
 
-`MawyViewer`도 서버에서 잘 그려지고 그다음 하이드레이션합니다. 독자에게 내주는 것 — 툴바, 찾기 막대, 목차, 복사 버튼 — 이 전부 동작이고, 동작하려면 컴포넌트가 페이지에 있어야 하기 때문입니다. 문서 사이트나 블로그나 변경 기록은 그중 아무것도 원하지 않습니다. 문단이 문단이기 위해 40킬로바이트를 보내는 거래를 이 진입점이 거절합니다.
+`MawyViewer`도 서버에서 잘 그려지고 그다음 하이드레이션합니다. 툴바와 찾기 막대, 목차, 복사 버튼은 모두 동작이 필요한 컨트롤이고, 동작하려면 컴포넌트가 페이지에 있어야 하기 때문입니다. 문서 사이트나 블로그, 변경 기록에는 이런 컨트롤이 필요 없습니다. 문서만 보여주는 페이지에 40 kB의 자바스크립트를 보내지 않기 위한 진입점입니다.
 
 ```tsx
 import { MawyDocument } from 'mawy-react/server';
@@ -1133,7 +1133,7 @@ export default async function Page() {
 }
 ```
 
-서버 컴포넌트가 있는 프레임워크에서는 React 서버 컴포넌트이고, 없는 곳에서는 `renderToStaticMarkup`에 넣는 평범한 컴포넌트입니다. 마크업도 스타일시트도 같으므로, 이렇게 만든 페이지와 뷰어가 올라간 페이지는 같아 보입니다.
+서버 컴포넌트를 지원하는 프레임워크에서는 React 서버 컴포넌트로, 그렇지 않은 곳에서는 `renderToStaticMarkup`에 넣는 일반 컴포넌트로 동작합니다. 마크업도 스타일시트도 같으므로, 이렇게 만든 페이지와 뷰어를 올린 페이지는 같아 보입니다.
 
 ### `MawyDocument`
 
@@ -1154,9 +1154,9 @@ export default async function Page() {
 
 없는 것과 그 이유:
 
-- **툴바도 찾기 막대도 목차도 없습니다.** 셋 다 컨트롤이고, 뒤에 아무것도 없는 페이지의 컨트롤은 거짓말입니다. 그것들이 필요한 애플리케이션에 필요한 것은 `MawyViewer`입니다.
+- **툴바와 찾기 막대, 목차가 없습니다.** 셋 다 자바스크립트가 있어야 동작하는 컨트롤이라 여기서는 그리지 않습니다. 이 컨트롤이 필요하면 `MawyViewer`를 쓰세요.
 - **코드 블록에 복사 버튼이 없습니다.** 같은 이유입니다.
-- **`html="sanitize"`는 마크업을 글자로 그립니다.** 살균하려면 파싱할 DOM이 있어야 하는데 서버에는 없습니다. `MawyViewer`도 서버에서는 그렇게 하지만, 저쪽에는 요소가 도착할 다음 렌더가 있습니다. 여기에는 다음 렌더가 없습니다. `html="raw"`는 작성자가 쓴 그대로 내보내고, 그것이 [무엇을 뜻하는지](../guide/viewer#안전)는 가이드에 있습니다.
-- **하이라이터는 즉시 답할 때만 씁니다.** 프로미스가 도착할 두 번째 렌더가 없습니다. `mawyHighlighter`나 다른 동기 하이라이터를 넘기면 색이 HTML 안에 들어갑니다.
+- **`html="sanitize"`는 마크업을 글자로 그립니다.** 살균하려면 파싱할 DOM이 있어야 하는데 서버에는 없습니다. `MawyViewer`도 서버에서는 같게 동작하지만, 그쪽에는 요소가 나타날 다음 렌더가 있습니다. 여기에는 다음 렌더가 없습니다. `html="raw"`는 작성자가 쓴 그대로 내보내며, 그 의미는 [안전](../guide/viewer#안전)에 있습니다.
+- **하이라이터는 동기로 답할 때만 씁니다.** 프로미스가 도착할 두 번째 렌더가 없기 때문입니다. `mawyHighlighter`나 다른 동기 하이라이터를 넘기면 색이 HTML 안에 들어갑니다.
 
 :::
