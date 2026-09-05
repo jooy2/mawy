@@ -27,6 +27,17 @@ const titles = {
   ko: '변경 기록'
 };
 
+/**
+ * A line placed above the entries, for a locale the changelog is not written in.
+ *
+ * The changelog lives beside the package and is written in English, so the
+ * Korean page carries the English entries. Saying so is better than leaving a
+ * reader to work out why one page of the site changed language.
+ */
+const notices = {
+  ko: '> 변경 기록은 패키지와 함께 관리하며 영어로 작성합니다. 아래 내용은 원문 그대로입니다.'
+};
+
 /** Which package's changelog becomes which page, per source. */
 const packages = [{ source: 'packages/react/CHANGELOG.md', page: 'changelog.md' }];
 
@@ -37,9 +48,11 @@ for (const { source, page } of packages) {
     const target = resolve(docsDir, locale, page);
 
     mkdirSync(dirname(target), { recursive: true });
+    const notice = notices[locale] ? `${notices[locale]}\n\n` : '';
+
     writeFileSync(
       target,
-      `---\ntitle: ${title}\norder: 1\neditLink: false\n---\n\n${changelog}`,
+      `---\ntitle: ${title}\norder: 1\neditLink: false\n---\n\n${notice}${changelog}`,
       'utf8'
     );
   }
