@@ -30,7 +30,7 @@ hero:
 
 features:
   - title: Write it as it will look
-    details: The WYSIWYG surface shows the finished document while you are still writing it: headings at the size they will be, the table laid out, the image in place. There is no separate preview step.
+    details: The WYSIWYG surface shows the finished document while you are still writing it, with headings at the size they will be, the table laid out and the image in place. There is no separate preview step.
     link: /guide/editor
     linkText: The editor
   - title: Or write the Markdown

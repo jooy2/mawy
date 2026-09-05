@@ -127,13 +127,13 @@ A caret in a place the page cannot draw is the same problem. Markdown does not k
 
 `Enter` is a different thing in every container it is pressed in, because a blank line means something different in each:
 
-| Where           | What `Enter` does                                                             |
-| --------------- | ----------------------------------------------------------------------------- |
-| Between blocks  | A blank line                                                                  |
-| In a list item  | A new item, marker carried down. On an item still empty, the marker goes     |
+| Where           | What `Enter` does                                                           |
+| --------------- | --------------------------------------------------------------------------- |
+| Between blocks  | A blank line                                                                |
+| In a list item  | A new item, marker carried down. On an item still empty, the marker goes    |
 | In a quotation  | Ends the paragraph. Continuing it takes a _blank quoted line_               |
-| In a code block | A newline and nothing else                                                    |
-| In a table      | Nothing: a row is a line, and there is nowhere in the file for a second one   |
+| In a code block | A newline and nothing else                                                  |
+| In a table      | Nothing: a row is a line, and there is nowhere in the file for a second one |
 
 `Backspace` at the start of a block joins it to the one before it: two list items run together, a paragraph joins the heading above it. Two joins are refused. Joining a table cell to the cell beside it would remove the pipe between them, and joining a code block to whatever is above it would remove the fence.
 

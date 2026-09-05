@@ -415,18 +415,18 @@ MawyViewer(
 
 :::
 
-| Item              | What it does                                                       |
-| ----------------- | ------------------------------------------------------------------ |
-| `'fontFamily'`    | whichever typefaces the viewer was given. See [below](#typefaces)  |
-| `'fontSize'`      | 13 to 26 pixels                                                    |
-| `'lineHeight'`    | 1.3 to 2.4                                                         |
-| `'letterSpacing'` | −0.04 to 0.16em                                                    |
-| `'measure'`       | how wide the column of text may run                                |
-| `'colorScheme'`   | light, dark, or whatever the system says                           |
-| `'outline'`       | opens the headings panel                                           |
-| `'copy'`          | the Markdown source, to the clipboard                              |
-| `'open'`          | the file picker                                                    |
-| `'separator'`     | a hairline, for grouping a long list                               |
+| Item              | What it does                                                      |
+| ----------------- | ----------------------------------------------------------------- |
+| `'fontFamily'`    | whichever typefaces the viewer was given. See [below](#typefaces) |
+| `'fontSize'`      | 13 to 26 pixels                                                   |
+| `'lineHeight'`    | 1.3 to 2.4                                                        |
+| `'letterSpacing'` | −0.04 to 0.16em                                                   |
+| `'measure'`       | how wide the column of text may run                               |
+| `'colorScheme'`   | light, dark, or whatever the system says                          |
+| `'outline'`       | opens the headings panel                                          |
+| `'copy'`          | the Markdown source, to the clipboard                             |
+| `'open'`          | the file picker                                                   |
+| `'separator'`     | a hairline, for grouping a long list                              |
 
 ::: fw flutter
 
