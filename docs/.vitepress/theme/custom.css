@@ -56,6 +56,96 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * The home page
+ *
+ * Two bands under the feature grid VitePress draws from the frontmatter: the
+ * key phrases, and the editor itself with a way through to the page that is
+ * nothing but the editor.
+ *
+ * The phrases are a list and are drawn as one. The band above them is already
+ * four cards of prose, and a second grid of cards under it would be the same
+ * shape saying shorter things — so this one keeps the marker, the rule between
+ * the rows and the single line each, and reads down rather than across.
+ * ------------------------------------------------------------------------- */
+
+.VPHome .vp-doc .mawy-keys {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin: 22px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two columns and no more. A phrase is one line and a third column would take
+   it down to two on the widths this site is actually read at. */
+@media (min-width: 768px) {
+  .VPHome .vp-doc .mawy-keys {
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 32px;
+  }
+}
+
+.VPHome .vp-doc .mawy-keys li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0;
+  padding: 13px 6px;
+  border-bottom: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-text-1);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* The marker: the brand colour with its own soft ring, which is what the
+   default disc would be if a disc could carry one. `margin-top` centres it on
+   the first line rather than on a phrase that has wrapped. */
+.VPHome .vp-doc .mawy-keys li::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background-color: var(--vp-c-brand-1);
+  box-shadow: 0 0 0 4px var(--vp-c-brand-soft);
+}
+
+/* The way through to the playground, above the demo it is about.
+ *
+ * Written as a link and painted as the hero's own brand button, rather than
+ * reaching for `VPButton`: that component takes a route and this is one line of
+ * Markdown, and the two would look the same either way. */
+.VPHome .mawy-cta {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0 2px;
+}
+
+.VPHome .vp-doc .mawy-cta a {
+  display: inline-block;
+  padding: 0 28px;
+  border: 1px solid var(--vp-button-brand-border);
+  border-radius: 24px;
+  background-color: var(--vp-button-brand-bg);
+  color: var(--vp-button-brand-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 46px;
+  text-decoration: none;
+  transition:
+    background-color 0.25s,
+    border-color 0.25s;
+}
+
+.VPHome .vp-doc .mawy-cta a:hover {
+  border-color: var(--vp-button-brand-hover-border);
+  background-color: var(--vp-button-brand-hover-bg);
+  color: var(--vp-button-brand-hover-text);
+}
+
+/* ---------------------------------------------------------------------------
  * The playground
  *
  * The one page here that is not reading. Everything the default layout puts

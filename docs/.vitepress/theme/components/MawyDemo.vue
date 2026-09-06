@@ -31,8 +31,13 @@ import { framework } from '../../data/framework';
 const props = withDefaults(
   defineProps<{
     name: string;
-    /** The Flutter gallery's name for the same demo. Its own `name` otherwise. */
-    flutter?: string;
+    /**
+     * The Flutter gallery's name for the same demo. Its own `name` otherwise,
+     * and `false` for a demo that has no Flutter half at all — the home page's,
+     * which shows the React package to every reader because the framework
+     * switch lives in the sidebar and the home page has no sidebar.
+     */
+    flutter?: string | false;
     /** How tall the frame is. A frame has no content of ours to measure. */
     height?: number;
   }>(),
@@ -72,8 +77,10 @@ function galleryBuilt(url: string): Promise<boolean> {
 const galleryUrl = withBase('/flutter/');
 /** Which of the two languages the library speaks this page is written in. */
 const demoLocale = computed<MawyLocale>(() => (lang.value.startsWith('ko') ? 'ko' : 'en'));
-const embedded = computed(() => framework.value === 'flutter' && built.value === true);
-const missing = computed(() => framework.value === 'flutter' && built.value === false);
+/** Whether the reader's choice applies here, which `:flutter="false"` denies. */
+const framed = computed(() => props.flutter !== false && framework.value === 'flutter');
+const embedded = computed(() => framed.value && built.value === true);
+const missing = computed(() => framed.value && built.value === false);
 /*
  * `index.html` is named rather than left to the directory.
  *
@@ -87,7 +94,9 @@ const missing = computed(() => framework.value === 'flutter' && built.value === 
  * half-translated. The gallery takes it out of its own query string.
  */
 const frameSrc = computed(
-  () => `${galleryUrl}index.html?demo=${props.flutter ?? props.name}&locale=${demoLocale.value}`
+  () =>
+    `${galleryUrl}index.html?demo=${typeof props.flutter === 'string' ? props.flutter : props.name}` +
+    `&locale=${demoLocale.value}`
 );
 
 /**
@@ -173,9 +182,14 @@ function paint() {
 onMounted(() => {
   paint();
   window.addEventListener('message', onFrameMessage);
-  void galleryBuilt(`${galleryUrl}version.json`).then((ok) => {
-    built.value = ok;
-  });
+
+  // Not asked at all for a demo that has no Flutter half: the answer would
+  // decide nothing, and the home page would spend a request on it.
+  if (props.flutter !== false) {
+    void galleryBuilt(`${galleryUrl}version.json`).then((ok) => {
+      built.value = ok;
+    });
+  }
 });
 
 watch([isDark, lang, () => props.name], () => {

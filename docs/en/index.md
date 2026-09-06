@@ -3,12 +3,12 @@ layout: home
 
 title: Mawy
 titleTemplate: A Markdown editor and viewer in one package
-description: A Markdown editor and viewer in one package. Write in WYSIWYG or in the source, switch between them freely, and show the finished document through a read-only viewer.
+description: A light, fast Markdown viewer and editor in one package, made to embed in a web page or an app. React and Flutter read the document with the same parser.
 
 hero:
   name: Mawy
-  text: One document, three ways of looking at it
-  tagline: A Markdown editor and viewer in one package. Write with the document in front of you as it will look, or switch to the Markdown source and work on that. When the document is finished, a read-only viewer shows it exactly as it looked while you were writing it.
+  text: A Markdown viewer and editor in one, made to embed
+  tagline: A light, fast graphical viewer and editor, so reading or writing a Markdown document takes nothing else. Put it in a code editor, a documentation page or an AI application. It embeds in more than one language and environment.
   image:
     src: /256x256.png
     alt: Mawy
@@ -29,16 +29,14 @@ hero:
       link: https://github.com/jooy2/mawy
 
 features:
-  - title: Write it as it will look
-    details: The WYSIWYG surface shows the finished document while you are still writing it, with headings at the size they will be, the table laid out and the image in place. There is no separate preview step.
+  - title: It goes wherever Markdown is shown
+    details: A code editor, a documentation page, an AI application. It draws inside a page that already has styles of its own without mixing with them, and the same library goes into React and into Flutter.
+  - title: The viewer and the editor are one
+    details: The surface that writes a document and the surface that reads it share a parser and a renderer. What a reader sees is what the author had in front of them, down to the line breaks.
     link: /guide/editor
     linkText: The editor
-  - title: Or write the Markdown
-    details: Switch to the source whenever the rendered view is in the way, such as a table that will not lay out or a block you want to paste in whole. Both surfaces edit the same document, so nothing is lost in the move.
-    link: /guide/editor
-    linkText: The editor
-  - title: Then hand it to a reader
-    details: When the writing is done, the viewer shows the same document and nothing else. What a reader sees is what the author had in front of them, down to the line breaks.
+  - title: Reading only? Take the viewer alone
+    details: A screen with nothing to edit gets the viewer on its own. The toolbar, the theme and the font settings come with it, and the document is drawn exactly as the editor drew it.
     link: /guide/viewer
     linkText: The viewer
   - title: Nothing to assemble first
@@ -47,12 +45,25 @@ features:
     linkText: Getting started
 ---
 
-## Where it stands
+## Key features
 
-Mawy's own parser reads CommonMark and GitHub's additions, `MawyViewer` draws the result, and `MawyEditor` puts the Markdown source, a live preview and a formatting toolbar around the same string. The demos on [the editor](./guide/editor) and [the viewer](./guide/viewer) pages run those components.
+<ul class="mawy-keys">
+  <li>Viewer and editor in one package</li>
+  <li>WYSIWYG and Markdown source, either way round</li>
+  <li>React and Flutter on the same parser</li>
+  <li>CommonMark and GitHub's extensions</li>
+  <li>Dark mode and typography built in</li>
+  <li>English and Korean interface included</li>
+  <li>Rendering that stays out of your page's styles</li>
+  <li>Directives for syntax it does not know</li>
+</ul>
 
-It is published as two packages: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. They are one library. The Dart parser and the TypeScript parser implement the same rules in the same functions, and a check in the repository diffs both parsers' trees over every document in it. Both have the viewer and the editor. The Flutter editor has three surfaces where the React one has four, and the editor page says why. Pick yours in the sidebar; it changes what every page here says.
+## Try it now
 
-The `wysiwyg` surface, which edits the drawn document in place, is on the React editor's default list of surfaces. The exported API is under semantic versioning, so a name only goes away or changes shape in a major version.
+Edit a Markdown file the way that suits the screen: the editor on its own, the viewer on its own, or the two together. The demo below shows what each of them is like.
 
-[Getting started](./guide/getting-started) has what exists today, and the [changelog](./changelog) records each release.
+<div class="mawy-cta">
+  <a href="/guide/playground">Try the full demo</a>
+</div>
+
+<MawyDemo name="playground/editor" :flutter="false" :height="460" />
