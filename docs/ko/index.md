@@ -49,10 +49,10 @@ features:
 
 ## 지금 상태
 
-Mawy는 `1.0.0`입니다. 직접 만든 파서가 CommonMark와 GitHub 확장을 읽고, `MawyViewer`가 그 결과를 그리며, `MawyEditor`는 같은 문자열에 마크다운 원문과 실시간 미리보기, 서식 툴바를 붙입니다. [에디터](./guide/editor)와 [뷰어](./guide/viewer) 페이지의 데모는 실제 컴포넌트를 띄운 것입니다.
+직접 만든 파서가 CommonMark와 GitHub 확장을 읽고, `MawyViewer`가 그 결과를 그리며, `MawyEditor`는 같은 문자열에 마크다운 원문과 실시간 미리보기, 서식 툴바를 붙입니다. [에디터](./guide/editor)와 [뷰어](./guide/viewer) 페이지의 데모는 실제 컴포넌트를 띄운 것입니다.
 
 패키지는 npm의 [`mawy-react`](https://www.npmjs.com/package/mawy-react)와 pub.dev의 [`mawy`](https://pub.dev/packages/mawy) 두 곳에 올라가 있습니다. 둘은 같은 라이브러리입니다. Dart 파서와 TypeScript 파서가 같은 규칙을 같은 함수로 구현하고, 저장소의 모든 문서로 두 파서의 트리를 맞춰 보는 검사가 돌아갑니다. 양쪽 다 뷰어와 에디터를 갖췄습니다. Flutter 에디터는 화면이 셋이고 React 에디터는 넷인데, 그 이유는 에디터 문서에 적어 두었습니다. 사이드바에서 쓰실 패키지를 고르면 이 사이트의 모든 페이지가 그에 맞춰 바뀝니다.
 
-그려진 문서를 그 자리에서 편집하는 `wysiwyg` 화면은 React 에디터의 기본 화면 목록에 들어 있습니다. 두 패키지 모두 `1.0.0`으로 게시되어 있습니다. 여기서부터 내보내는 API는 유의적 버전(semantic versioning)을 따르므로, 이름이 사라지거나 모양이 바뀌는 변경은 메이저 버전에서만 일어납니다.
+그려진 문서를 그 자리에서 편집하는 `wysiwyg` 화면은 React 에디터의 기본 화면 목록에 들어 있습니다. 내보내는 API는 유의적 버전(semantic versioning)을 따르므로, 이름이 사라지거나 모양이 바뀌는 변경은 메이저 버전에서만 일어납니다.
 
 지금 쓸 수 있는 것은 [시작하기](./guide/getting-started)에 있습니다. 릴리스마다 무엇이 바뀌었는지는 [변경 기록](./changelog)에 적어 둡니다.

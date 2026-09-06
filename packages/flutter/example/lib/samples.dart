@@ -54,8 +54,8 @@ Emphasis and **strong**, ~~struck through~~, `inline code`, and a [link](https:/
 
 | Package | Registry | Status |
 | :------ | :------: | -----: |
-| `mawy-react` | npm | 1.0.0 |
-| `mawy` | pub.dev | 1.0.0 |
+| `mawy-react` | npm | Published |
+| `mawy` | pub.dev | Published |
 
 ### A list that keeps track
 

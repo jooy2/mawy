@@ -49,10 +49,10 @@ features:
 
 ## Where it stands
 
-Mawy is at `1.0.0`. Its own parser reads CommonMark and GitHub's additions, `MawyViewer` draws the result, and `MawyEditor` puts the Markdown source, a live preview and a formatting toolbar around the same string. The demos on [the editor](./guide/editor) and [the viewer](./guide/viewer) pages run those components.
+Mawy's own parser reads CommonMark and GitHub's additions, `MawyViewer` draws the result, and `MawyEditor` puts the Markdown source, a live preview and a formatting toolbar around the same string. The demos on [the editor](./guide/editor) and [the viewer](./guide/viewer) pages run those components.
 
 It is published as two packages: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. They are one library. The Dart parser and the TypeScript parser implement the same rules in the same functions, and a check in the repository diffs both parsers' trees over every document in it. Both have the viewer and the editor. The Flutter editor has three surfaces where the React one has four, and the editor page says why. Pick yours in the sidebar; it changes what every page here says.
 
-The `wysiwyg` surface, which edits the drawn document in place, is on the React editor's default list of surfaces. Both packages are published at `1.0.0`. From here the exported API is under semantic versioning, so a name only goes away or changes shape in a major version.
+The `wysiwyg` surface, which edits the drawn document in place, is on the React editor's default list of surfaces. The exported API is under semantic versioning, so a name only goes away or changes shape in a major version.
 
 [Getting started](./guide/getting-started) has what exists today, and the [changelog](./changelog) records each release.

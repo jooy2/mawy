@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Both packages are published at `1.0.0`. Only the **latest release** of each package receives security fixes; there are no maintained release branches behind it, so upgrading is how a fix arrives.
+Only the **latest release** of each package receives security fixes; there are no maintained release branches behind it, so upgrading is how a fix arrives.
 
 | Package            | Version        | Supported |
 | ------------------ | -------------- | --------- |

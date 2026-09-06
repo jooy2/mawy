@@ -149,12 +149,12 @@ long document.
 
 ## Release
 
-`1.0.0` is the current number for both packages, dated in each changelog. The
-number is a promise as well as a version: from here the exported API is under
-semantic versioning, so a name that goes away or changes shape waits for a major.
+Each package carries a number of its own, dated in its own changelog. The number
+is a promise as well as a version: the exported API is under semantic
+versioning, so a name that goes away or changes shape waits for a major.
 
 The steps are bumping the version in `packages/react/package.json` and
-`packages/flutter/pubspec.yaml`, retitling `## Unreleased` with the number and
+`packages/flutter/pubspec.yaml`, retitling `## vNext` with the number and
 the date, `npm run size -- --update` if a change moved the bundle — the figures
 on the site's getting-started page are those numbers and move with them —
 tagging, and `--provenance` for npm, which wants a workflow with an id token.

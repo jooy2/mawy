@@ -7,13 +7,7 @@ order: 2
 
 This page lists everything the package exports, with what each one is, what it takes and what it gives back.
 
-:::: tip `1.0.0`
-
-Both packages are published at `1.0.0`. From here the names on this page are under semantic versioning: one that goes away or changes shape waits for a major version.
-
 Everything on this page exists and runs, in whichever package the switch above the menu is set to. A name only the other package has is not on this page at all while that one is selected.
-
-::::
 
 ## Components
 

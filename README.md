@@ -13,7 +13,7 @@ Guides and the full API, in English and Korean. This README covers the essential
 > **Mawy is a Markdown editor and viewer in one package.** Write with the document in front of you as it will look, or switch to the Markdown source and work on that. When the document is finished, a read-only viewer shows it exactly as it looked while you were writing it.
 
 > [!IMPORTANT]
-> **Published at `1.0.0`.** The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested in both packages: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. `wysiwyg`, which edits the drawn document in place, is on the React editor's default list of surfaces; the Flutter editor has the other three and says why. From here the exported names are under semantic versioning, so one that goes away or changes shape waits for a major version.
+> **The Markdown parser, `MawyViewer` and `MawyEditor` are written and tested in both packages**: [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm and [`mawy`](https://pub.dev/packages/mawy) on pub.dev. `wysiwyg`, which edits the drawn document in place, is on the React editor's default list of surfaces; the Flutter editor has the other three and says why. The exported names are under semantic versioning, so one that goes away or changes shape waits for a major version.
 
 ## Why Mawy
 

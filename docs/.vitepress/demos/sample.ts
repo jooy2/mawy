@@ -22,8 +22,8 @@ Emphasis and **strong**, ~~struck through~~, \`inline code\`, and a [link](https
 
 | Package | Registry | Status |
 | :------ | :------: | -----: |
-| \`packages/react\` | npm | 1.0.0 |
-| \`packages/flutter\` | pub.dev | 1.0.0 |
+| \`packages/react\` | npm | Published |
+| \`packages/flutter\` | pub.dev | Published |
 
 ### A list that keeps track
 

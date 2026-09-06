@@ -5,18 +5,12 @@ order: 1
 
 # Getting started
 
-Mawy ships as one package per framework, and the two are one library. They share the parser, the reading of a document, and the palette down to the colour values. Pick yours in the sidebar. The switch sits above the menu, and it changes what every page on this site says.
+Mawy ships as one package per framework, and the two are one library. They share the parser, the reading of a document, and the palette down to the colour values. Pick yours in the sidebar. The switch sits above the menu, and it changes what every page on this site says. This site draws both packages from the same source you install, so everything on this page runs.
 
 |  |  |  |
 | --- | --- | --- |
 | **React** | [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm | The viewer and the editor |
 | **Flutter** | [`mawy`](https://pub.dev/packages/mawy) on pub.dev | The viewer and the editor |
-
-::: tip Versioning at `1.0.0`
-
-Both packages are published at `1.0.0`. This site draws both packages from the same source you install, so everything on this page runs. From here the exported API is under semantic versioning, so a name that goes away or changes shape waits for a major version. The [changelog](../changelog) records each release.
-
-:::
 
 ## Requirements
 
