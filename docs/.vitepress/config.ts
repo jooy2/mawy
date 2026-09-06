@@ -45,7 +45,7 @@ const pubUrl = `https://pub.dev/packages/${
 }`;
 
 /** The card image. A square mark, which is why the Twitter card is `summary`. */
-const socialImage = `${siteUrl}/256x256.png`;
+const socialImage = `${siteUrl}/512x512.png`;
 
 /** `/` for whichever locale is the default, `/{lang}/` for every other one. */
 const localeBase = (lang: string) => (lang === defaultLocale ? '/' : `/${lang}/`);
@@ -322,8 +322,8 @@ const vitePressConfig: UserConfig = {
   head: [
     ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/logo-32.png' }],
     ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/logo-16.png' }],
-    ['link', { rel: 'icon', type: 'image/png', sizes: '256x256', href: '/256x256.png' }],
-    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/256x256.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/512x512.png' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '512x512', href: '/512x512.png' }],
     // Last, and without a `type`: this is the one a browser reaches for when it
     // has understood none of the above, and `favicon.ico` carries 16, 32 and 48
     // in one file for exactly that case.
@@ -337,8 +337,8 @@ const vitePressConfig: UserConfig = {
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'Mawy' }],
     ['meta', { property: 'og:image', content: socialImage }],
-    ['meta', { property: 'og:image:width', content: '256' }],
-    ['meta', { property: 'og:image:height', content: '256' }],
+    ['meta', { property: 'og:image:width', content: '512' }],
+    ['meta', { property: 'og:image:height', content: '512' }],
     ['meta', { property: 'og:image:alt', content: 'Mawy' }],
     // `summary` and not `summary_large_image`: the image is a square mark, and
     // a wide card would letterbox it into a strip of background.
