@@ -10,10 +10,10 @@ hero:
   text: A Markdown viewer and editor in one, made to embed
   tagline: A light, fast graphical viewer and editor, so reading or writing a Markdown document takes nothing else. Put it in a code editor, a documentation page or an AI application. It embeds in more than one language and environment.
   image:
-    src: /256x256.png
+    src: /512x512.png
     alt: Mawy
-    width: 200
-    height: 200
+    width: 280
+    height: 280
   actions:
     - theme: brand
       text: Get started

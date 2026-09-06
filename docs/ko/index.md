@@ -10,10 +10,10 @@ hero:
   text: 웹 및 앱에 탑재하기 가장 적합한 통합 마크다운 뷰어 &amp; 에디터
   tagline: 마크다운 문서를 가장 편하게 보거나 편집할 수 있는 가볍고 빠른 GUI 뷰어와 에디터 환경을 제공합니다. 코드 에디터나 문서 페이지, AI 애플리케이션 어디에나 활용할 수 있으며 여러 언어와 환경에 탑재할 수 있습니다.
   image:
-    src: /256x256.png
+    src: /512x512.png
     alt: Mawy
-    width: 200
-    height: 200
+    width: 280
+    height: 280
   actions:
     - theme: brand
       text: 시작하기

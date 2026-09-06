@@ -62,15 +62,16 @@
  * key phrases, and the editor itself with a way through to the page that is
  * nothing but the editor.
  *
- * The phrases are a list and are drawn as one. The band above them is already
- * four cards of prose, and a second grid of cards under it would be the same
- * shape saying shorter things — so this one keeps the marker, the rule between
- * the rows and the single line each, and reads down rather than across.
+ * The phrases are a list and are drawn as one: one line each, ticked, on a card
+ * of its own. The band above them is four cards of prose, so these stay a
+ * single line and keep the tick as the thing the eye runs down, rather than
+ * saying the same shape over again in smaller type.
  * ------------------------------------------------------------------------- */
 
 .VPHome .vp-doc .mawy-keys {
   display: grid;
   grid-template-columns: 1fr;
+  gap: 10px;
   margin: 22px 0 8px;
   padding: 0;
   list-style: none;
@@ -81,35 +82,44 @@
 @media (min-width: 768px) {
   .VPHome .vp-doc .mawy-keys {
     grid-template-columns: repeat(2, 1fr);
-    column-gap: 32px;
   }
 }
 
 .VPHome .vp-doc .mawy-keys li {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 12px;
   margin: 0;
-  padding: 13px 6px;
-  border-bottom: 1px solid var(--vp-c-divider);
+  padding: 14px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background-color: var(--vp-c-bg-soft);
   color: var(--vp-c-text-1);
   font-size: 15px;
   font-weight: 500;
   line-height: 1.5;
 }
 
-/* The marker: the brand colour with its own soft ring, which is what the
-   default disc would be if a disc could carry one. `margin-top` centres it on
-   the first line rather than on a phrase that has wrapped. */
+/* The tick.
+ *
+ * Masked rather than drawn: the shape is one file's worth of path and the
+ * colour is the theme's own brand step, so the light and the dark page share a
+ * mark instead of each carrying its own copy of it. The prefixed line is for
+ * the browsers that took the shorthand before it was standardised, and without
+ * it they paint the box the mask was meant to cut a tick out of. `margin-top`
+ * sits it on the first line rather than in the middle of a phrase that has
+ * wrapped. */
 .VPHome .vp-doc .mawy-keys li::before {
   content: '';
   flex: none;
-  width: 7px;
-  height: 7px;
-  margin-top: 8px;
-  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
   background-color: var(--vp-c-brand-1);
-  box-shadow: 0 0 0 4px var(--vp-c-brand-soft);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / 18px 18px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / 18px 18px no-repeat;
 }
 
 /* The way through to the playground, above the demo it is about.
