@@ -351,6 +351,42 @@ export interface MawyImageProps {
   title: string | null;
 }
 
+/** Which of the two a URL was written as. */
+export type MawyUrlKind = 'link' | 'image';
+
+/**
+ * Where a relative URL points.
+ *
+ * A URL written in a document is relative to the *document*. The page the
+ * document is drawn in is the application's, and it is somewhere else — so
+ * `![](./diagram.png)` in a file read off a disk, or out of a repository, or
+ * from behind an API, is a picture the browser looks for beside the
+ * application and does not find. Only the application knows where the document
+ * came from, so only the application can say what that address means.
+ *
+ *     <MawyViewer
+ *       value={document}
+ *       resolveUrl={(url, kind) =>
+ *         kind === 'image' ? new URL(url, base).href : `#/doc/${url}`
+ *       }
+ *     />
+ *
+ * Called for every relative URL in the document and for no other — see
+ * `isRelativeUrl` for what that means and why an anchor, a scheme and a
+ * protocol-relative address are all left alone. It reaches the `href` of a
+ * link, the source of a picture, and the same two inside raw HTML under
+ * `sanitize`, so an application writes the answer once.
+ *
+ * **What it returns is used as written.** The scheme allowlist has already run
+ * on what the *document* said by the time this is called, and what comes back
+ * is not checked again — an application that answers with `app-asset://…`, so
+ * that a protocol handler of its own serves the file, is the case this is for
+ * and a second check would make it impossible. The document is untrusted here
+ * and the application is not, which is the same line every other hook in this
+ * library draws.
+ */
+export type MawyUrlResolver = (url: string, kind: MawyUrlKind) => string;
+
 /**
  * What becomes of raw HTML written inside a document.
  *

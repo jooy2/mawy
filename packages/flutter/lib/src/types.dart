@@ -279,6 +279,44 @@ class MawyImage {
 /// read.
 typedef MawyImageBuilder = Widget Function(BuildContext context, MawyImage image);
 
+/// Which of the two a URL was written as.
+enum MawyUrlKind {
+  /// A link's destination.
+  link,
+
+  /// A picture's source.
+  image,
+}
+
+/// Where a relative URL points.
+///
+/// A URL written in a document is relative to the *document*. Whatever is
+/// drawing it is somewhere else — so `![](./diagram.png)` in a file read off a
+/// disk, or out of a repository, or from behind an API, is a picture with no
+/// address anybody can follow. Only the application knows where the document
+/// came from, so only the application can say what that address means.
+///
+/// ```dart
+/// MawyViewer(
+///   value: document,
+///   resolveUrl: (String url, MawyUrlKind kind) => Uri.parse(base).resolve(url).toString(),
+/// )
+/// ```
+///
+/// Called for every relative URL in the document and for no other — see
+/// `isRelativeUrl` for what that means and why an anchor, a scheme and a
+/// protocol-relative address are all left alone. It reaches a link's
+/// destination and a picture's source, so an application writes the answer
+/// once.
+///
+/// **What it returns is used as written.** The scheme allowlist has already run
+/// on what the *document* said by the time this is called, and what comes back
+/// is not checked again — an application answering with an address only it can
+/// serve is the case this is for, and a second check would make it impossible.
+/// The document is untrusted here and the application is not, which is the same
+/// line every other hook in this library draws.
+typedef MawyUrlResolver = String Function(String url, MawyUrlKind kind);
+
 /// What draws one directive.
 ///
 /// A [MawyDirectiveKind.text] one is placed in the sentence as a

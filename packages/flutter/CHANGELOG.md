@@ -2,6 +2,12 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
+## vNext (2026--)
+
+### Added
+
+- **An application can say where a document's relative addresses point.** `resolveUrl` is called for every relative URL a document writes — a picture's source and a link's destination — and what it answers is used as written. A URL in a document is relative to the _document_, and whatever is drawing it is somewhere else, so `![](./diagram.png)` in a file read off a disk had no address anybody could follow. It is on `MawyViewer` and `MawyEditor`. Unset, nothing changes.
+
 ## 1.1.0 (2026-09-06)
 
 ### Breaking changes

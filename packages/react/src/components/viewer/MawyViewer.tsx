@@ -4,14 +4,15 @@ import * as React from 'react';
 import type {
   MawyColorScheme,
   MawyDirectives,
-  MawyImageProps,
   MawyFont,
   MawyHighlight,
   MawyHtmlPolicy,
+  MawyImageProps,
   MawyLinkTarget,
   MawyLocale,
   MawyParseOptions,
   MawyTypography,
+  MawyUrlResolver,
   MawyViewerToolbarItem,
   MawyViewerToolbarOption
 } from '../../types.js';
@@ -191,6 +192,21 @@ export interface MawyViewerProps extends Omit<
   image?: React.ComponentType<MawyImageProps>;
 
   /**
+   * Where a relative URL points. See `MawyUrlResolver`.
+   *
+   * A URL written in a document is relative to the document, and the page it is
+   * drawn in is the application's. Without this, `![](./diagram.png)` in a file
+   * read off a disk or out of a repository is a picture the browser looks for
+   * beside the application and does not find.
+   *
+   *     <MawyViewer value={document} resolveUrl={(url) => new URL(url, base).href} />
+   *
+   * It reaches a link's `href`, a picture's source, and the same two inside raw
+   * HTML under `sanitize`. What it answers is used as written.
+   */
+  resolveUrl?: MawyUrlResolver;
+
+  /**
    * Put in front of every anchor this viewer gives a heading or a footnote.
    *
    * Unset — the default — a heading's anchor is the author's own words, so a
@@ -245,6 +261,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     highlight,
     directives,
     image,
+    resolveUrl,
     anchorPrefix,
     empty,
     className,
@@ -370,6 +387,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       directives,
       linkTarget,
       image,
+      resolveUrl,
       anchorPrefix,
       source: text,
       found,
@@ -384,6 +402,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       directives,
       linkTarget,
       image,
+      resolveUrl,
       anchorPrefix,
       text,
       found,

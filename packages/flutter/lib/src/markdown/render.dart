@@ -19,6 +19,7 @@ import 'package:mawy/src/internal/copying.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/find.dart';
+import 'package:mawy/src/markdown/url.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
 
@@ -34,6 +35,7 @@ class MawyRenderContext {
     this.onLinkTap,
     this.onImageError,
     this.imageBuilder,
+    this.resolveUrl,
     this.directives,
     this.source,
     this.recognizerFor,
@@ -79,6 +81,22 @@ class MawyRenderContext {
   /// What draws a picture, where the application would rather draw it itself.
   /// See [MawyImageBuilder].
   final MawyImageBuilder? imageBuilder;
+
+  /// Where a relative URL points. See [MawyUrlResolver].
+  ///
+  /// Applied where a URL becomes something to follow — a link's destination, a
+  /// picture's source — rather than in the parser, because it is the
+  /// application's answer and the parser's trees are the one thing both
+  /// packages have to produce identically.
+  final MawyUrlResolver? resolveUrl;
+
+  /// A URL this application has had its say about.
+  ///
+  /// Only the relative ones reach the resolver, and only when there is one: a
+  /// document whose addresses are absolute, or an application that never said
+  /// where the document came from, goes through here untouched.
+  String resolved(String url, MawyUrlKind kind) =>
+      resolveUrl != null && isRelativeUrl(url) ? resolveUrl!(url, kind) : url;
 
   /// What draws the constructs this package does not know about, by name.
   ///
@@ -382,7 +400,7 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
     // rather than a new one per frame for every link on the page.
     final GestureRecognizer? recognizer = context.recognizerFor?.call(
       node.range.start,
-      () => tap(node.url, node.title),
+      () => tap(context.resolved(node.url, MawyUrlKind.link), node.title),
     );
 
     if (recognizer == null) {
@@ -536,18 +554,25 @@ class _ImageState extends State<_Image> {
   /// time the document is drawn, and a base64 illustration is megabytes.
   Uint8List? _bytes;
 
+  /// Where the picture actually is, once the application has said.
+  ///
+  /// Read through here everywhere rather than from the node, because a resolver
+  /// can turn a path beside the document into a `data:` URL — and then the
+  /// bytes below are decoded from the answer rather than from the question.
+  String get _url => widget.context.resolved(widget.node.url, MawyUrlKind.image);
+
   @override
   void initState() {
     super.initState();
-    _bytes = _dataBytes(widget.node.url);
+    _bytes = _dataBytes(_url);
   }
 
   @override
   void didUpdateWidget(_Image old) {
     super.didUpdateWidget(old);
 
-    if (widget.node.url != old.node.url) {
-      _bytes = _dataBytes(widget.node.url);
+    if (_url != old.context.resolved(old.node.url, MawyUrlKind.image)) {
+      _bytes = _dataBytes(_url);
     }
   }
 
@@ -560,15 +585,15 @@ class _ImageState extends State<_Image> {
     // Handed over whole rather than fetched here. Which pictures are worth
     // fetching, and with what on the request, is the application's answer.
     if (builder != null) {
-      return builder(buildContext, MawyImage(url: node.url, alt: node.alt, title: node.title));
+      return builder(buildContext, MawyImage(url: _url, alt: node.alt, title: node.title));
     }
 
     final Widget Function(String)? onError = context.onImageError;
 
     Widget refused(BuildContext _, Object _, StackTrace? _) =>
-        onError?.call(node.url) ??
+        onError?.call(_url) ??
         Text(
-          node.alt.isEmpty ? node.url : node.alt,
+          node.alt.isEmpty ? _url : node.alt,
           style: context.body.copyWith(color: context.tokens.foregroundSubtle),
         );
 
@@ -593,7 +618,7 @@ class _ImageState extends State<_Image> {
 
           return _bytes == null
               ? Image.network(
-                  node.url,
+                  _url,
                   cacheWidth: cache,
                   semanticLabel: label,
                   excludeFromSemantics: unnamed,
@@ -1056,6 +1081,7 @@ class _Quote extends StatelessWidget {
               onLinkTap: context.onLinkTap,
               onImageError: context.onImageError,
               imageBuilder: context.imageBuilder,
+              resolveUrl: context.resolveUrl,
               recognizerFor: context.recognizerFor,
             ),
           ),
@@ -1366,6 +1392,7 @@ Widget? renderFootnotes(List<MdFootnoteDefinition> footnotes, MawyRenderContext 
     footnotes: context.footnotes,
     onLinkTap: context.onLinkTap,
     onImageError: context.onImageError,
+    resolveUrl: context.resolveUrl,
     recognizerFor: context.recognizerFor,
     // A note is a place a footnote can be mentioned like any other, and the
     // arrow at the end of one is drawn from here.

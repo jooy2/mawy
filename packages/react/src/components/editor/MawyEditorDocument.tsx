@@ -3,10 +3,11 @@
 import * as React from 'react';
 import type {
   MawyDirectives,
-  MawyImageProps,
   MawyHtmlPolicy,
+  MawyImageProps,
   MawyLinkTarget,
-  MawyParseOptions
+  MawyParseOptions,
+  MawyUrlResolver
 } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
@@ -81,6 +82,14 @@ export interface MawyEditorDocumentProps {
    * documents are being read.
    */
   image?: React.ComponentType<MawyImageProps>;
+
+  /**
+   * Where a relative URL points. See `MawyUrlResolver`.
+   *
+   * The drawn surface and the preview are both showing the document, so both
+   * resolve its addresses the same way.
+   */
+  resolveUrl?: MawyUrlResolver;
   strings: MawyStrings;
   /**
    * A place the caret was left where nothing is drawn, from the last edit. See
@@ -227,6 +236,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       linkTarget,
       directives,
       image,
+      resolveUrl,
       strings,
       room,
       aim,
@@ -300,12 +310,13 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         footnotes,
         directives,
         image,
+        resolveUrl,
         linkTarget,
         source: value,
         reveal,
         live: LIVE
       }),
-      [html, strings, footnotes, directives, image, linkTarget, value, reveal]
+      [html, strings, footnotes, directives, image, resolveUrl, linkTarget, value, reveal]
     );
 
     /**

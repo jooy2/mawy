@@ -4,20 +4,21 @@ import * as React from 'react';
 import type {
   MawyColorScheme,
   MawyDirectives,
-  MawyImageProps,
+  MawyEditorStatusItem,
   MawyEditorStatusOption,
   MawyEditorToolbarItem,
   MawyEditorToolbarOption,
-  MawyEditorStatusItem,
   MawyFont,
   MawyHighlight,
   MawyHtmlPolicy,
-  MawyLinkTarget,
+  MawyImageProps,
   MawyImageUpload,
+  MawyLinkTarget,
   MawyLocale,
   MawyMode,
   MawyParseOptions,
-  MawyTypography
+  MawyTypography,
+  MawyUrlResolver
 } from '../../types.js';
 import { MAWY_SYSTEM_FONTS } from '../../fonts.js';
 import { useControlled } from '../../internal/controlled.js';
@@ -201,6 +202,14 @@ export interface MawyEditorProps extends Omit<
    * drawn document. See `MawyViewer`'s own `image`.
    */
   image?: React.ComponentType<MawyImageProps>;
+
+  /**
+   * Where a relative URL points. See `MawyUrlResolver`.
+   *
+   * The drawn surface and the preview are both showing the document, so both
+   * resolve its addresses the same way.
+   */
+  resolveUrl?: MawyUrlResolver;
   fonts?: readonly MawyFont[];
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
@@ -243,6 +252,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     highlight,
     directives,
     image,
+    resolveUrl,
     onSave,
     accept = MAWY_ACCEPT,
     fileDrop = false,
@@ -1356,6 +1366,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               linkTarget={linkTarget}
               directives={directives}
               image={image}
+              resolveUrl={resolveUrl}
               strings={strings}
               room={room}
               aim={aim}
@@ -1407,6 +1418,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               highlight={highlight}
               directives={directives}
               image={image}
+              resolveUrl={resolveUrl}
               fonts={fonts}
               locale={locale}
               colorScheme={scheme}

@@ -68,6 +68,30 @@ String? _schemeOf(String url) {
   return before.toLowerCase();
 }
 
+/// Whether a URL points somewhere relative to the document that wrote it.
+///
+/// The three kinds of address that are *not*, and why each is left alone:
+///
+/// - One with a scheme — `https:`, `mailto:`, `data:` — already says where it
+///   is. Nothing about the document it was written in changes that.
+/// - One starting with `#` is a place in this document. Resolving it would send
+///   a link to a heading somewhere else entirely.
+/// - One starting with `//` is missing only its scheme, which whatever is
+///   drawing supplies. It is somewhere else, not somewhere near the document.
+///
+/// Everything else — `a.png`, `./guide.md`, `../up.md#anchor`, `/docs/a.png` —
+/// means nothing on its own, and that is exactly the case [MawyUrlResolver]
+/// exists for.
+bool isRelativeUrl(String url) {
+  final String trimmed = url.trim();
+
+  if (trimmed.isEmpty || trimmed.startsWith('#') || trimmed.startsWith('//')) {
+    return false;
+  }
+
+  return _schemeOf(trimmed.replaceAll(_ignored, '')) == null;
+}
+
 /// A URL a link may point at, or `null` if it may not.
 ///
 /// `null` rather than `'#'` or the empty string on purpose: the renderer draws

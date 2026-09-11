@@ -1615,6 +1615,84 @@ void main() {
       expect(opened, 'https://example.com');
     });
   });
+
+  /// The application's answer to "where is this, then".
+  ///
+  /// A URL written in a document is relative to the document, and whatever is
+  /// drawing it is somewhere else — so every one of these is a picture that
+  /// does not appear, or a link that goes nowhere, until somebody says what the
+  /// address means. What matters as much as that working is what it leaves
+  /// alone: an anchor and an absolute URL are already answers.
+  group('resolving the URLs a document writes', () {
+    String base(String url, MawyUrlKind kind) => 'resolved:${kind.name}:$url';
+
+    testWidgets('hands a picture over already resolved, and only a relative one', (
+      WidgetTester tester,
+    ) async {
+      final List<String> asked = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: '![near](./near.png)\n\n![far](https://nowhere.example/far.png)',
+            resolveUrl: base,
+            imageBuilder: (BuildContext context, MawyImage image) {
+              asked.add(image.url);
+
+              return Text('drew ${image.alt}');
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(asked, <String>['resolved:image:./near.png', 'https://nowhere.example/far.png']);
+    });
+
+    testWidgets('resolves where a link goes, and leaves a place in this document alone', (
+      WidgetTester tester,
+    ) async {
+      final List<String> opened = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: '# Heading\n\n[onward](../guide.md)\n\n[nearby](#heading)',
+            resolveUrl: base,
+            onLinkTap: (String url, String? _) => opened.add(url),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tapWords(tester, find.textContaining('onward'));
+      await tester.pump();
+      await tapWords(tester, find.textContaining('nearby'));
+      await tester.pump();
+
+      expect(opened, <String>['resolved:link:../guide.md', '#heading']);
+    });
+
+    testWidgets('draws the document unchanged when nobody answers', (WidgetTester tester) async {
+      final List<String> asked = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: '![near](./near.png)',
+            imageBuilder: (BuildContext context, MawyImage image) {
+              asked.add(image.url);
+
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(asked, <String>['./near.png']);
+    });
+  });
 }
 
 /// The block at [index], which is only on the tree while it is near the view.

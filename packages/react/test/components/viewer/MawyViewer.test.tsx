@@ -1274,3 +1274,103 @@ describe('the outline', () => {
     await vi.waitFor(() => expect(marked()).toBe('One'));
   });
 });
+
+/**
+ * The application's answer to "where is this, then".
+ *
+ * A URL written in a document is relative to the document, and the page it is
+ * drawn in is the application's — so every one of these is a picture that does
+ * not appear, or a link that goes nowhere, until somebody says what the address
+ * means. What matters as much as that working is what it leaves alone: an
+ * anchor and an absolute URL are already answers.
+ */
+describe('resolving the URLs a document writes', () => {
+  const base = (url: string, kind: string) => `resolved:${kind}:${url}`;
+
+  it('resolves a relative picture and a relative link, and leaves the rest', async () => {
+    const screen = await render(
+      <MawyViewer
+        toolbar={false}
+        resolveUrl={base}
+        value={[
+          '![near](./near.png)',
+          '',
+          '![far](https://example.com/far.png)',
+          '',
+          '[there](../guide.md)',
+          '',
+          '[out](https://example.com)',
+          '',
+          '# Heading',
+          '',
+          '[here](#heading)'
+        ].join('\n')}
+      />
+    );
+
+    const source = (alt: string) =>
+      screen.container.querySelector(`img[alt="${alt}"]`)?.getAttribute('src');
+    const href = (text: string) =>
+      [...screen.container.querySelectorAll('a.mawy-md-link')]
+        .find((link) => link.textContent === text)
+        ?.getAttribute('href');
+
+    expect(source('near')).toBe('resolved:image:./near.png');
+    expect(href('there')).toBe('resolved:link:../guide.md');
+
+    // Already an answer, both of them.
+    expect(source('far')).toBe('https://example.com/far.png');
+    expect(href('out')).toBe('https://example.com');
+
+    // A place in this document, which resolving would take somewhere else.
+    expect(href('here')).toBe('#heading');
+  });
+
+  it('hands a resolved picture to a component the application gave', async () => {
+    const seen: string[] = [];
+
+    await render(
+      <MawyViewer
+        toolbar={false}
+        resolveUrl={base}
+        image={({ src, alt }) => {
+          seen.push(src);
+
+          return <span>{alt}</span>;
+        }}
+        value={'![near](./near.png)'}
+      />
+    );
+
+    // The component draws what it is given, so it has to be given the answer
+    // rather than the question.
+    expect(seen).toEqual(['resolved:image:./near.png']);
+  });
+
+  it('reaches the addresses inside raw HTML as well', async () => {
+    const screen = await render(
+      <MawyViewer
+        toolbar={false}
+        html="sanitize"
+        resolveUrl={base}
+        value={'<p><a href="./guide.md">go</a> <img src="./near.png" alt="near"></p>'}
+      />
+    );
+
+    // An `<img src="./a.png">` inside raw HTML is as much the document's
+    // picture as `![](./a.png)` is, and was the half this did not cover.
+    const image = screen.container.querySelector('.mawy-md-html img');
+    const link = screen.container.querySelector('.mawy-md-html a');
+
+    expect(image?.getAttribute('src')).toBe('resolved:image:./near.png');
+    expect(link?.getAttribute('href')).toBe('resolved:link:./guide.md');
+  });
+
+  it('draws the document unchanged when nobody answers', async () => {
+    const screen = await render(<MawyViewer toolbar={false} value={'![near](./near.png)'} />);
+
+    expect(screen.container.querySelector('img[alt="near"]')?.getAttribute('src')).toBe(
+      './near.png'
+    );
+  });
+});

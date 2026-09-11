@@ -15,7 +15,8 @@
  * is adopted into the page.
  */
 
-import { safeImageUrl, safeUrl } from './url.js';
+import { isRelativeUrl, safeImageUrl, safeUrl } from './url.js';
+import type { MawyUrlResolver } from '../../types.js';
 
 /** Elements a document may draw. Nothing that loads, frames or scripts. */
 const ELEMENTS = new Set(
@@ -233,7 +234,40 @@ const PASSES = 3;
  * be made safe" as much as to "this cannot be read here": a sanitiser that
  * falls back to passing it through is not a sanitiser.
  */
-export function sanitizeHtml(html: string): string | null {
+/**
+ * The addresses in settled markup, resolved.
+ *
+ * A URL inside raw HTML is the document's, exactly as much as the one in
+ * `![](./a.png)` is, so the application gets the same say over it — see
+ * `MawyUrlResolver`.
+ *
+ * Held back until the markup has stopped changing, and run once over what came
+ * out. The loop below ends when a parse and a serialisation agree, and a
+ * resolver is under no obligation to answer the same way twice: one that turns
+ * a relative URL into another relative URL would keep changing the string, and
+ * the loop would give up on markup that is perfectly safe. What this writes is
+ * an attribute value, which the serialiser escapes, so it cannot bring markup
+ * of its own along with it.
+ */
+function resolvedHtml(html: string, resolveUrl: MawyUrlResolver): string {
+  const parsed = new DOMParser().parseFromString(`<body>${html}`, 'text/html');
+
+  for (const element of parsed.body.querySelectorAll('[src],[href],[cite]')) {
+    const kind = element.tagName.toLowerCase() === 'img' ? 'image' : 'link';
+
+    for (const name of URL_ATTRIBUTES) {
+      const value = element.getAttribute(name);
+
+      if (value !== null && isRelativeUrl(value)) {
+        element.setAttribute(name, resolveUrl(value, kind));
+      }
+    }
+  }
+
+  return parsed.body.innerHTML;
+}
+
+export function sanitizeHtml(html: string, resolveUrl?: MawyUrlResolver): string | null {
   if (typeof DOMParser === 'undefined') {
     return null;
   }
@@ -251,7 +285,7 @@ export function sanitizeHtml(html: string): string | null {
     const out = parsed.body.innerHTML;
 
     if (out === text) {
-      return out;
+      return resolveUrl ? resolvedHtml(out, resolveUrl) : out;
     }
 
     text = out;

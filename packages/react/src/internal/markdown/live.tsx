@@ -63,9 +63,9 @@ function RawHtml({
       context.html === 'raw'
         ? value
         : context.html === 'sanitize' && hydrated
-          ? sanitizeHtml(value)
+          ? sanitizeHtml(value, context.resolveUrl)
           : null,
-    [context.html, value, hydrated]
+    [context.html, context.resolveUrl, value, hydrated]
   );
 
   return drawnHtml({ value, context, inline, marks, reveal }, html);

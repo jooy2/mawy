@@ -88,6 +88,7 @@ class MawyViewer extends StatefulWidget {
     this.onLinkTap,
     this.directives,
     this.imageBuilder,
+    this.resolveUrl,
     this.highlight,
     this.padding,
     this.scrollController,
@@ -197,6 +198,24 @@ class MawyViewer extends StatefulWidget {
   /// the URLs in it are somebody else's, and fetching them all without asking
   /// tells whoever wrote them which documents are being read.
   final MawyImageBuilder? imageBuilder;
+
+  /// Where a relative URL points. See [MawyUrlResolver].
+  ///
+  /// A URL written in a document is relative to the document, and whatever is
+  /// drawing it is somewhere else. Without this, `![](./diagram.png)` in a file
+  /// read off a disk is a picture with no address anybody can follow.
+  ///
+  /// ```dart
+  /// MawyViewer(
+  ///   value: document,
+  ///   resolveUrl: (String url, MawyUrlKind kind) =>
+  ///       Uri.parse(base).resolve(url).toString(),
+  /// )
+  /// ```
+  ///
+  /// It reaches a link's destination and a picture's source. What it answers is
+  /// used as written.
+  final MawyUrlResolver? resolveUrl;
 
   /// What colours a code block.
   ///
@@ -950,6 +969,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       highlighter: widget.highlight,
       source: widget.value,
       imageBuilder: widget.imageBuilder,
+      resolveUrl: widget.resolveUrl,
       // Unconditional, where the link half of it once turned on whether the
       // application wanted links followed: the two halves of a footnote are
       // this viewer's own and are followed whatever the application asked for.
@@ -972,6 +992,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       _directives,
       widget.highlight,
       widget.imageBuilder,
+      widget.resolveUrl,
       // Whether a link does anything rather than what it does: the drawing is
       // handed `_tapLink`, which does not change, and an application writing
       // `onLinkTap: (url, _) => open(url)` where the widget is written hands

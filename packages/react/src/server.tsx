@@ -46,7 +46,8 @@ import type {
   MawyImageProps,
   MawyLocale,
   MawyParseOptions,
-  MawyTypography
+  MawyTypography,
+  MawyUrlResolver
 } from './types.js';
 import { MAWY_SYSTEM_FONTS } from './fonts.js';
 import { stringsFor } from './internal/i18n.js';
@@ -82,6 +83,22 @@ export interface MawyDocumentProps {
    * framework's own image component is.
    */
   image?: React.ComponentType<MawyImageProps>;
+
+  /**
+   * Where a relative URL points. See `MawyUrlResolver`.
+   *
+   * A URL written in a document is relative to the document, and the page it is
+   * drawn in is the application's. Without this, `![](./diagram.png)` in a file
+   * read off a disk or out of a repository is a picture the browser looks for
+   * beside the application and does not find.
+   *
+   *     renderMarkdown(document, { resolveUrl: (url) => new URL(url, base).href })
+   *
+   * It reaches a link's `href` and a picture's source. Raw HTML is drawn as
+   * characters here whatever the policy says — sanitising wants a DOM and a
+   * server has none — so there are no addresses inside it to resolve.
+   */
+  resolveUrl?: MawyUrlResolver;
 
   /**
    * Put in front of every anchor this drawing gives a heading or a footnote.
@@ -124,6 +141,7 @@ export function MawyDocument({
   linkTarget = 'blank',
   directives,
   image,
+  resolveUrl,
   anchorPrefix,
   locale = 'en',
   highlight,
@@ -146,6 +164,7 @@ export function MawyDocument({
     footnotes: new Map(document_.footnotes.map((each) => [each.label, each])),
     directives,
     image,
+    resolveUrl,
     anchorPrefix,
     linkTarget,
     source: value,

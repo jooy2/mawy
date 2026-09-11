@@ -28,7 +28,9 @@ import type {
   MawyDirectives,
   MawyHighlighter,
   MawyHtmlPolicy,
-  MawyLinkTarget
+  MawyLinkTarget,
+  MawyUrlKind,
+  MawyUrlResolver
 } from '../../types.js';
 import type {
   MdBlock,
@@ -43,6 +45,7 @@ import type {
   MdTextDirective
 } from './ast.js';
 import { toPlainText } from './inline.js';
+import { isRelativeUrl } from './url.js';
 import type { MawyFound } from './find.js';
 import type { MawyStrings } from '../i18n.js';
 import { CautionIcon, ImportantIcon, NoteIcon, TipIcon, WarningIcon } from '../icons.js';
@@ -81,6 +84,16 @@ export interface RenderContext {
    * through a loader of its own, answer it out of a cache, or refuse it.
    */
   image?: React.ComponentType<MawyImageProps>;
+
+  /**
+   * Where a relative URL points. See `MawyUrlResolver`.
+   *
+   * Applied where a URL becomes something the page follows — an `href`, a
+   * picture's source, and the same two inside sanitised HTML — rather than in
+   * the parser, because it is the application's answer and the parser's trees
+   * are the one thing both packages have to produce identically.
+   */
+  resolveUrl?: MawyUrlResolver;
 
   /**
    * The two pieces of a document that can hold state, where there is a page
@@ -220,8 +233,23 @@ const referenceId = (context: RenderContext, slug: string, index: number) =>
  * actually gave the heading, or a document stops being able to link to itself.
  * Anything that is not a fragment is left exactly as written.
  */
-const destination = (context: RenderContext, url: string) =>
-  context.anchorPrefix && url.startsWith('#') ? `#${context.anchorPrefix}${url.slice(1)}` : url;
+const destination = (context: RenderContext, url: string) => {
+  if (url.startsWith('#')) {
+    return context.anchorPrefix ? `#${context.anchorPrefix}${url.slice(1)}` : url;
+  }
+
+  return resolved(context, url, 'link');
+};
+
+/**
+ * A URL the application has had its say about.
+ *
+ * Only the relative ones reach the resolver, and only when there is one: a
+ * document whose addresses are absolute, or an application that never said
+ * where the document came from, goes through here untouched.
+ */
+const resolved = (context: RenderContext, url: string, kind: MawyUrlKind) =>
+  context.resolveUrl && isRelativeUrl(url) ? context.resolveUrl(url, kind) : url;
 
 /**
  * Which characters of the source an element was drawn from.
@@ -398,13 +426,17 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
           // worth fetching, and with what on the request, is the application's
           // answer.
           <span key={index} className="mawy-md-image-slot" {...origin(node)}>
-            <context.image src={node.url} alt={node.alt} title={node.title} />
+            <context.image
+              src={resolved(context, node.url, 'image')}
+              alt={node.alt}
+              title={node.title}
+            />
           </span>
         ) : (
           <img
             key={index}
             className="mawy-md-image"
-            src={node.url}
+            src={resolved(context, node.url, 'image')}
             alt={node.alt}
             title={node.title ?? undefined}
             loading="lazy"

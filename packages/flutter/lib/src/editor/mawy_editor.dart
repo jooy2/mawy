@@ -207,6 +207,7 @@ class MawyEditor extends StatefulWidget {
     this.directives,
     this.highlight,
     this.onLinkTap,
+    this.resolveUrl,
     this.readOnly = false,
     this.onOpen,
     this.lineNumbers = true,
@@ -283,6 +284,13 @@ class MawyEditor extends StatefulWidget {
 
   /// What tapping a link in the preview does.
   final void Function(String url, String? title)? onLinkTap;
+
+  /// Where a relative URL points. See [MawyUrlResolver].
+  ///
+  /// A URL written in a document is relative to the document, and the pane
+  /// drawing it is somewhere else — so the preview resolves the document's
+  /// addresses the same way a viewer does.
+  final MawyUrlResolver? resolveUrl;
 
   /// Whether the document can be changed.
   final bool readOnly;
@@ -386,6 +394,7 @@ class _MawyEditorState extends State<MawyEditor> {
       widget.directives,
       widget.highlight,
       widget.onLinkTap,
+      widget.resolveUrl,
       widget.onOpen,
       widget.readOnly,
     );
@@ -408,6 +417,7 @@ class _MawyEditorState extends State<MawyEditor> {
             directives: widget.directives,
             highlight: widget.highlight,
             onLinkTap: widget.onLinkTap,
+            resolveUrl: widget.resolveUrl,
             scrollController: _previewScroll,
             // Where each block of the drawn document ended up, which is half of
             // what lines the two panes up. See `_syncScroll`.
