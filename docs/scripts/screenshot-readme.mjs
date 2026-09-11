@@ -21,6 +21,8 @@
  * browser tests. This folder does not install it, because one screenshot a
  * release is not worth a second copy of a browser.
  */
+import { spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,15 +36,16 @@ const target = resolve(repoRoot, '.github/media/editor-split.png');
 const url = process.env.MAWY_DOCS_URL ?? 'http://localhost:5173';
 
 /*
- * 1440 by 320, at twice the scale.
+ * 1440 by 640, at twice the scale.
  *
- * The height is what a README can spend on a picture before it stops being a
- * banner and starts being the page. The width is what makes that height work:
- * narrower and the sample document's first paragraph wraps past the bottom of
- * the frame on both sides, which photographs as a sentence cut in half.
+ * Tall enough for the document to be a document. A banner-shaped strip shows a
+ * heading and one paragraph, which photographs the chrome and not the point —
+ * the point is that the two panes are the same document, and seeing that takes
+ * enough of it to have a list, a table or a fence in view. The width is what
+ * keeps the two columns from wrapping every sentence twice.
  */
 const width = 1440;
-const height = 320;
+const height = 640;
 
 const require = createRequire(resolve(repoRoot, 'packages/react/package.json'));
 
@@ -87,7 +90,47 @@ try {
   await page.waitForTimeout(1500);
   await editor.screenshot({ path: target });
 
-  console.log(`wrote ${target}`);
+  console.log(`wrote ${target} (${kb(target)})`);
 } finally {
   await browser.close();
+}
+
+/*
+ * Smaller, where the machine has the tools to make it smaller.
+ *
+ * Playwright writes a true-colour PNG, and most of this picture is a
+ * photograph, so it lands around a megabyte — which three READMEs then ask
+ * every reader to download. A palette takes two thirds of that off without a
+ * mark on the text, which was the thing worth checking before doing it.
+ *
+ * Both are skipped when they are not installed rather than demanded, because
+ * what comes out either way is the same picture and nobody should have to
+ * install two things to remake it. `brew install pngquant oxipng` if you want
+ * the smaller file.
+ */
+const shrink = [
+  ['pngquant', ['--quality', '70-95', '--speed', '1', '--force', '--output', target, target]],
+  ['oxipng', ['-o', '4', '--strip', 'safe', '-q', target]]
+];
+
+let shrank = false;
+
+for (const [command, args] of shrink) {
+  const run = spawnSync(command, args, { stdio: 'ignore' });
+
+  if (run.error) {
+    console.log(`${command} is not installed, leaving the file as it is`);
+    break;
+  }
+
+  shrank = true;
+}
+
+if (shrank) {
+  console.log(`shrank to ${kb(target)}`);
+}
+
+/** What a file weighs, for a line that says whether the shrinking worked. */
+function kb(file) {
+  return `${Math.round(statSync(file).size / 1024)} kB`;
 }
