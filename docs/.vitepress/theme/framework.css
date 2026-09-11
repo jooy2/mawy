@@ -187,20 +187,6 @@ html[data-fw='flutter'] .mawy-fw-option[data-fw='flutter'] .mawy-fw-mark,
   opacity: 1;
 }
 
-/* ---------------------------------------------------------------------------
- * When a page has nothing to say for the selected framework
- * ------------------------------------------------------------------------- */
-
-.mawy-fw-missing {
-  padding: 14px 16px;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 10px;
-  background-color: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-2);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
 /*
  * An outline entry for a heading the selected framework cannot see.
  *
