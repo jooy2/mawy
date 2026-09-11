@@ -243,6 +243,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `linkTarget` | `'blank' \| 'self'` | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
 | `locale` | [`MawyLocale`](#mawylocale) | `'en'` | 뷰어 자신의 인터페이스가 쓰는 언어. 문서와는 무관합니다. |
 | `directives` | [`MawyDirectives`](#mawydirectives) | — | 이 패키지가 모르는 구성을 무엇으로 그릴지. |
+| `resolveUrl` | [`MawyUrlResolver`](#mawyurlresolver) | — | 문서 안의 상대 URL이 가리키는 곳. |
 
 :::
 
@@ -254,6 +255,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `locale` | [`MawyLocale`](#mawylocale) | `MawyLocale.en` | 뷰어 자신의 인터페이스가 쓰는 언어. 문서와는 무관합니다. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | 링크를 눌렀을 때 무엇을 할지. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](#mawydirectivebuilder)`>?` | — | 이 패키지가 모르는 구성을 무엇으로 그릴지. |
+| `resolveUrl` | [`MawyUrlResolver?`](#mawyurlresolver) | — | 문서 안의 상대 URL이 가리키는 곳. |
 
 `linkTarget`도 없습니다. 링크를 연다는 것이 무슨 뜻인지가 여기서는 `onLinkTap`의 주제 전부이고, 어디서 열지도 애플리케이션이 함께 답하는 것입니다.
 
@@ -629,6 +631,58 @@ type MawyHtmlPolicy = 'escape' | 'sanitize' | 'raw';
 셋 중 어느 값도 링크에는 영향을 주지 않습니다. `[click](javascript:…)`은 모든 값에서 거절됩니다. 이 표기는 HTML이 아니라 마크다운이고, `html` 옵션은 HTML만 다루기 때문입니다.
 
 :::
+
+### `MawyUrlResolver`
+
+::: fw react
+
+```ts
+type MawyUrlKind = 'link' | 'image';
+type MawyUrlResolver = (url: string, kind: MawyUrlKind) => string;
+```
+
+:::
+
+::: fw flutter
+
+```dart
+enum MawyUrlKind { link, image }
+
+typedef MawyUrlResolver = String Function(String url, MawyUrlKind kind);
+```
+
+:::
+
+문서 안의 상대 URL이 가리키는 곳.
+
+문서에 쓰인 URL은 *그 문서*를 기준으로 합니다. 그런데 문서를 그리는 쪽은 다른 곳에 있습니다. 디스크에서 읽어 온 파일이나 저장소, API 뒤에서 가져온 문서에 적힌 `![](./diagram.png)`은 누구도 따라갈 수 없는 주소입니다. 브라우저는 이걸 페이지 주소를 기준으로 푸는데, 그 페이지는 애플리케이션의 것이지 문서의 것이 아니기 때문입니다. 문서가 어디에서 왔는지는 애플리케이션만 알고, 그래서 그 주소가 무슨 뜻인지도 애플리케이션만 답할 수 있습니다.
+
+::: fw react
+
+```tsx
+<MawyViewer value={document} resolveUrl={(url) => new URL(url, base).href} />
+```
+
+링크의 `href`와 이미지의 주소, 그리고 [`html="sanitize"`](#mawyhtmlpolicy)에서 그려지는 원본 HTML 안의 같은 두 곳에 적용됩니다.
+
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(
+  value: document,
+  resolveUrl: (String url, MawyUrlKind kind) => Uri.parse(base).resolve(url).toString(),
+)
+```
+
+링크가 가는 곳과 이미지의 주소에 적용됩니다.
+
+:::
+
+문서가 쓴 상대 URL 전부에 대해 불리고, 그 밖에는 불리지 않습니다. 세 가지는 그대로 둡니다. 이미 어디인지 말하고 있기 때문입니다. 스킴이 붙은 주소, 이 문서 안의 위치를 뜻하는 `#`으로 시작하는 주소, 그리고 스킴만 빠진 `//`로 시작하는 주소입니다.
+
+**돌려준 값은 쓰인 그대로 씁니다.** 이 함수가 불릴 때는 *문서*가 쓴 주소에 대한 스킴 허용 목록 검사가 이미 끝나 있고, 돌아온 값은 다시 검사하지 않습니다. 애플리케이션만 서빙할 수 있는 주소로 답하는 것이 바로 이 기능이 있는 이유이고, 한 번 더 검사하면 그게 불가능해집니다. 여기서 문서는 신뢰하지 않고 애플리케이션은 신뢰합니다. 이 라이브러리의 다른 모든 후크가 긋는 선과 같습니다.
 
 ### `MawyTypography`
 
@@ -1138,6 +1192,7 @@ export default async function Page() {
 | `html` | [`MawyHtmlPolicy`](#mawyhtmlpolicy) | `'escape'` | 문서 안의 원본 HTML을 어떻게 할지. |
 | `linkTarget` | `'blank' \| 'self'` | `'blank'` | 문서가 쓴 링크가 어디서 열릴지. |
 | `directives` | [`MawyDirectives`](#mawydirectives) | — | 이 패키지가 모르는 구성 요소를 무엇이 그릴지. |
+| `resolveUrl` | [`MawyUrlResolver`](#mawyurlresolver) | — | 문서 안의 상대 URL이 가리키는 곳. |
 | `locale` | [`MawyLocale`](#mawylocale) | `'en'` | 이 라이브러리가 직접 쓰는 몇 낱말의 언어. |
 | `highlight` | [`MawyHighlighter`](#mawyhighlighter) | — | 코드 블록을 무엇이 칠할지. |
 | `typography` | [`MawyTypography`](#mawytypography) | — | 문서를 어떻게 조판할지. 같은 커스텀 프로퍼티로 나갑니다. |
