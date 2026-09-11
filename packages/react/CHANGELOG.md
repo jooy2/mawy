@@ -20,6 +20,8 @@
 
 ### Fixed
 
+- **A name of nothing in raw HTML is dropped rather than turned into one.** `<p id="">` came back as `id="user-content-"`, so two of them on a page were two elements claiming the same name. It only affects `html="sanitize"`.
+
 - **A paragraph of a quarter of a megabyte is a document rather than a `RangeError`.** Its inline nodes were handed to the array they belong in by spreading them into a call, which puts every one of them on the stack as an argument, and a hundred and twenty thousand of them is past what the engine takes.
 
 - **A paragraph that is one long line of emphasis is read ten times faster.** Every pair that closed searched the whole paragraph for the two chunks it had just been handed; the search starts where the last pair was found now. It is still the slowest shape this parser has, and a quarter of a megabyte of it is six seconds.

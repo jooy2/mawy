@@ -66,7 +66,7 @@ describe('sanitising raw HTML', () => {
   /**
    * An `id` becomes a global on the page and a `name` does the same to
    * `document`, so a document that writes either of them writes into the
-   * application around it: `<img name="getElementById">` takes that method away
+   * application around it: `<a name="getElementById">` takes that method away
    * from every script on the page.
    */
   it('puts a name the document gave something under a prefix of its own', () => {
@@ -78,6 +78,14 @@ describe('sanitising raw HTML', () => {
     expect(sanitizeHtml('<p id="user-content-content">a</p>')).toBe(
       '<p id="user-content-content">a</p>'
     );
+  });
+
+  it('drops a name that is nothing rather than making one out of the prefix', () => {
+    // `id=""` matches no link, and two of them are two elements claiming the
+    // same empty string. Under a prefix it would have become `user-content-`,
+    // which is a name, and the same one every time.
+    expect(sanitizeHtml('<p id="">a</p><p id="">b</p>')).toBe('<p>a</p><p>b</p>');
+    expect(sanitizeHtml('<a name="">a</a>')).toBe('<a>a</a>');
   });
 
   it('moves the links to those names with them, and leaves the rest alone', () => {

@@ -77,9 +77,9 @@ const URL_ATTRIBUTES = new Set(['href', 'src', 'cite']);
  * What a name written in a document is put under, and why there is one.
  *
  * An `id` becomes a global on the page — `<a id="config">` is `window.config`
- * in every browser — and a `name` does the same to `document`. So a document
- * that says `<img name="getElementById">` takes that method away from every
- * script on the page around it, and one that says `id="content"` quietly
+ * in every browser — and a `name` on an anchor does the same to `document`. So
+ * a document that says `<a name="getElementById">` takes that method away from
+ * every script on the page around it, and one that says `id="content"` quietly
  * becomes whatever the application was looking for. Neither needs a mistake by
  * the application to happen; they are what the platform does with those two
  * attributes.
@@ -111,7 +111,16 @@ function scrub(element: Element, named: Set<string>): void {
       continue;
     }
 
-    if (NAME_ATTRIBUTES.has(name) && (tag === 'a' || name === 'id')) {
+    if (NAME_ATTRIBUTES.has(name)) {
+      // Nothing to put under a prefix, and `id=""` is not a name anyway: it
+      // matches no link, and two of them on one page are two elements claiming
+      // the same empty string. `name` reaches here only on an anchor, which is
+      // the one element the allowlist above gives it to.
+      if (!attribute.value) {
+        element.removeAttribute(attribute.name);
+        continue;
+      }
+
       const under = prefixed(attribute.value);
 
       named.add(under);
