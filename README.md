@@ -1,4 +1,4 @@
-<img src="docs/public/128x128.png" alt="Mawy" width="96" height="96" />
+<img src="docs/public/512x512.png" alt="Mawy" width="128" height="128" />
 
 # Mawy
 
@@ -6,7 +6,7 @@
 
 ### [**mawy.cdget.com**](https://mawy.cdget.com)
 
-Guides and the full API, in English and Korean. This README covers the essentials, and each package has a quick start of its own.
+Guides and the full API. This README covers the essentials, and each package has a quick start of its own.
 
 ---
 
@@ -71,8 +71,6 @@ There is no install at the repository root and no root manifest of any kind. Eac
 | [**Viewer**](https://mawy.cdget.com/guide/viewer)                   | Rendering a document without editing it, with live demos.                     |
 | [**API**](https://mawy.cdget.com/api/)                              | Every component, type and function, one page each.                            |
 | [**Changelog**](https://mawy.cdget.com/changelog)                   | What changed in each release.                                                 |
-
-The site is also served in Korean at [mawy.cdget.com/ko/](https://mawy.cdget.com/ko/).
 
 ## Contributing
 

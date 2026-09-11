@@ -1,4 +1,4 @@
-<img src="https://mawy.cdget.com/128x128.png" alt="Mawy" width="96" height="96" />
+<img src="https://mawy.cdget.com/512x512.png" alt="Mawy" width="128" height="128" />
 
 # Mawy for Flutter
 
@@ -6,7 +6,7 @@
 
 ### [**mawy.cdget.com**](https://mawy.cdget.com)
 
-Guides and the full API, in English and Korean. This README is the quick start.
+Guides and the full API. This README is the quick start.
 
 ---
 
