@@ -13,6 +13,7 @@
     "build": "npm run changelog && vitepress build",
     "serve": "npm run build && vitepress serve",
     "lint": "eslint . --report-unused-disable-directives",
+    "screenshot": "node scripts/screenshot-readme.mjs",
     "lint:fix": "eslint . --report-unused-disable-directives --fix",
     "format": "prettier .",
     "format:fix": "prettier . --write",
