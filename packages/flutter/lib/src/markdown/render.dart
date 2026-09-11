@@ -33,7 +33,6 @@ class MawyRenderContext {
     required this.body,
     required this.footnotes,
     this.onLinkTap,
-    this.onImageError,
     this.imageBuilder,
     this.resolveUrl,
     this.directives,
@@ -74,9 +73,6 @@ class MawyRenderContext {
   /// What a tapped link does. Nothing at all without one — this package opens
   /// no URLs on anybody's behalf.
   final void Function(String url, String? title)? onLinkTap;
-
-  /// What is drawn where a picture will not load.
-  final Widget Function(String url)? onImageError;
 
   /// What draws a picture, where the application would rather draw it itself.
   /// See [MawyImageBuilder].
@@ -181,7 +177,6 @@ class MawyRenderContext {
     body: body,
     footnotes: footnotes,
     onLinkTap: onLinkTap,
-    onImageError: onImageError,
     imageBuilder: imageBuilder,
     resolveUrl: resolveUrl,
     directives: directives,
@@ -622,14 +617,14 @@ class _ImageState extends State<_Image> {
       return builder(buildContext, MawyImage(url: _url, alt: node.alt, title: node.title));
     }
 
-    final Widget Function(String)? onError = context.onImageError;
-
-    Widget refused(BuildContext _, Object _, StackTrace? _) =>
-        onError?.call(_url) ??
-        Text(
-          node.alt.isEmpty ? _url : node.alt,
-          style: context.body.copyWith(color: context.tokens.foregroundSubtle),
-        );
+    // The alt text, or the address where the author wrote none. The same thing
+    // a browser draws for a picture it cannot fetch, and the reason there is no
+    // hook for it: an application that wants to draw something else has
+    // [imageBuilder], which is handed the picture before anything is requested.
+    Widget refused(BuildContext _, Object _, StackTrace? _) => Text(
+      node.alt.isEmpty ? _url : node.alt,
+      style: context.body.copyWith(color: context.tokens.foregroundSubtle),
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(MawyRadius.medium),
