@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -205,6 +205,116 @@ function summaryOf(filePath: string): string | undefined {
   }
 
   return undefined;
+}
+
+/** One field out of a page's frontmatter, if the page declares it. */
+function frontmatterOf(filePath: string, field: string): string | undefined {
+  const file = resolve(srcDir, filePath);
+
+  if (!existsSync(file)) {
+    return undefined;
+  }
+
+  const source = readFileSync(file, 'utf8');
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(source)?.[1];
+
+  return block ? new RegExp(`^${field}:[ \\t]*(.+?)[ \\t]*$`, 'm').exec(block)?.[1] : undefined;
+}
+
+/** Every Markdown page under a folder, in the order a reader meets them. */
+function pagesUnder(folder: string): string[] {
+  const found: string[] = [];
+
+  const walk = (at: string) => {
+    const entries = readdirSync(resolve(srcDir, at), { withFileTypes: true });
+
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const path = `${at}/${entry.name}`;
+
+      if (entry.isDirectory()) {
+        walk(path);
+      } else if (entry.name.endsWith('.md')) {
+        found.push(path);
+      }
+    }
+  };
+
+  walk(folder);
+
+  return found;
+}
+
+/**
+ * `llms.txt`, which is this site's own map written for something reading it
+ * rather than browsing it.
+ *
+ * The default locale only. The two are the same pages, an agent asking what
+ * this library is does not need both, and the sitemap's `hreflang` is where the
+ * other one is announced.
+ *
+ * Built from the pages that are actually there, for the same reason
+ * `robots.txt` is: a hand-written list of links is a list that goes stale, and
+ * the convention this follows says plainly that a stale one is worse than no
+ * file at all.
+ */
+function llmsTxt(): string {
+  const lines = [
+    '# Mawy',
+    '',
+    `> ${packageJson.description}`,
+    '',
+    'One parser, one document model and one renderer, shipped twice: `mawy-react` on npm and',
+    '`mawy` on pub.dev. A document means the same thing in a browser and in an app, and the',
+    'library writes its own CommonMark parser, syntax highlighter, editing surface and toolbar',
+    'rather than pulling any of them in.',
+    ''
+  ];
+
+  for (const [name, folder] of [
+    ['Guide', `${defaultLocale}/guide`],
+    ['API', `${defaultLocale}/api`]
+  ]) {
+    lines.push(`## ${name}`, '');
+
+    // In the order the sidebar puts them in, which is the order somebody
+    // reading the site meets them: the folders in turn, and inside each the
+    // `order` its pages carry. A page with no `order` goes last, where
+    // `vitepress-sidebar` puts it, and `order` only ever ranks a page against
+    // its own siblings — sorting the whole list by it interleaves the
+    // components with the types.
+    // A folder's own `index.md` first, the way the sidebar reads it as the
+    // name of the group rather than as one page inside it.
+    const rank = (filePath: string) =>
+      filePath.endsWith('/index.md') ? -1 : Number(frontmatterOf(filePath, 'order') ?? 9);
+    const pages = pagesUnder(folder).sort(
+      (a, b) => dirname(a).localeCompare(dirname(b)) || rank(a) - rank(b) || a.localeCompare(b)
+    );
+
+    for (const filePath of pages) {
+      const title = frontmatterOf(filePath, 'title');
+      // The page's own description where it wrote one, and its opening
+      // sentence where it did not — the same two the `<meta>` comes from.
+      const summary = frontmatterOf(filePath, 'description') ?? summaryOf(filePath);
+
+      if (title && summary) {
+        lines.push(`- [${title}](${siteUrl}${pathOf(filePath)}): ${summary}`);
+      }
+    }
+
+    lines.push('');
+  }
+
+  // What a reader may skip when its context is short, which is the whole of
+  // what this heading is reserved for.
+  lines.push(
+    '## Optional',
+    '',
+    `- [Changelog](${siteUrl}${pathOf(`${defaultLocale}/changelog`)}): every released version of the React package, newest first`,
+    `- [Repository](${repoUrl}): both packages, the parity check between them, and how to build either`,
+    ''
+  );
+
+  return lines.join('\n');
 }
 
 /** The locales that actually have this page — a mirror is not a guarantee. */
@@ -441,17 +551,33 @@ const vitePressConfig: UserConfig = {
     }
   },
   /**
-   * `robots.txt`, written rather than committed.
+   * `robots.txt` and `llms.txt`, written rather than committed.
    *
-   * It exists to name the sitemap, and the sitemap's own URL is already derived
-   * from `package.json`. A copy of that host sitting in `public/` would be one
-   * more place to forget when the site moves.
+   * Both name URLs derived from `package.json`, and a copy of either sitting in
+   * `public/` would be one more place to forget when the site moves.
+   *
+   * The crawler list is the split every vendor now documents: one that collects
+   * pages to train a model takes the content and gives nothing back, and one
+   * that fetches a page because somebody asked an assistant about it, or that
+   * indexes the site so an assistant can find it, is how this site stays
+   * reachable. The first kind is refused and the second is not. Nothing here
+   * touches Googlebot or Bingbot, and a token that is not listed is covered by
+   * the `*` rule, which allows everything.
    */
   async buildEnd({ outDir }) {
+    const refused = ['GPTBot', 'ClaudeBot', 'Google-Extended'];
+    const allowed = ['ChatGPT-User', 'Claude-User', 'OAI-SearchBot', 'Claude-SearchBot'];
+    const rules = [
+      ...refused.map((bot) => `User-agent: ${bot}\nDisallow: /`),
+      ...allowed.map((bot) => `User-agent: ${bot}\nAllow: /`),
+      'User-agent: *\nAllow: /'
+    ];
+
     await writeFile(
       resolve(outDir, 'robots.txt'),
-      `User-agent: *\nAllow: /\n\nSitemap: ${siteUrl}/sitemap.xml\n`
+      `${rules.join('\n\n')}\n\nSitemap: ${siteUrl}/sitemap.xml\n`
     );
+    await writeFile(resolve(outDir, 'llms.txt'), llmsTxt());
   },
   /**
    * A description that is about this page rather than about the library.

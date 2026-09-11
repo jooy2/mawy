@@ -63,6 +63,7 @@ Where the two packages genuinely differ, it is because the platform differs, and
 - **One page says both packages' halves.** `::: fw react` and `::: fw flutter` blocks are both in the document and CSS shows one, which is what keeps the search index complete and the two halves from drifting into two pages. `<Fw react="…" flutter="…" />` is the inline form for a phrase.
 - **The sidebar is generated from the folder tree** by `vitepress-sidebar` and then reshaped in `.vitepress/config.ts`. Frontmatter `title` names a page and `order` places it. A folder's `index.md` names and fills the group.
 - **A page's `<meta name="description">` is its own first paragraph**, read out of the source. So open every page with one sentence that says what it is about.
+- **`robots.txt` and `llms.txt` are written at build time**, in `buildEnd`, from `package.json`'s host and the pages that are actually there. Neither is committed, because a hand-written link list goes stale and a second copy of the host is one more place to forget. `robots.txt` refuses the crawlers that collect training data and allows the ones that fetch a page for a reader or index it for an assistant's search.
 - **Live demos are React islands.** `.vitepress/demos/**/*.tsx` are real components mounted by `MawyDemo.vue`; the Flutter half of the same demo is the gallery in an `<iframe>`.
 
 ## Decided, and not to be quietly fixed
