@@ -123,17 +123,38 @@ void _drop(List<_Chunk> list, _Chunk item) {
 final RegExp _punctuation = RegExp(r'[\p{P}\p{S}]', unicode: true);
 final RegExp _whitespace = RegExp(r'\s');
 
-/// The five characters the specification calls whitespace.
+/// The five characters the specification calls whitespace, by code.
 ///
 /// Not `\s`, which is every Unicode space there is — and a no-break space is
-/// one of those and is not one of these. `[link](/url "title")` has a
-/// destination of `/url "title"` and no title at all, because nothing
+/// one of those and is not one of these. `[link](/url "title")` has a
+/// destination of `/url "title"` and no title at all, because nothing
 /// separated the two.
 ///
 /// The flanking rules above *do* want `\s`: those are written in terms of
 /// Unicode whitespace rather than these five, which is why both are here.
-final RegExp _asciiWhitespace = RegExp(r'[ \t\n\f\r]');
-final RegExp _escapable = RegExp(r'''[!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]''');
+///
+/// A code rather than a pattern, because the caller that matters reads a
+/// destination one character at a time and reads it again from every `]` after
+/// it, which is the length of a paragraph squared on a document written to
+/// make it. A regular expression for one character, and in Dart the
+/// one-character string to hand it, was most of what that cost.
+bool _isAsciiWhitespaceCode(int code) =>
+    code == 0x20 || code == 0x09 || code == 0x0a || code == 0x0c || code == 0x0d;
+
+/// ASCII punctuation, which is the whole of what a backslash may escape.
+///
+/// The four ranges are `!` to `/`, `:` to `@`, `[` to a backtick, and `{` to
+/// `~`, which is every printable ASCII character that is neither a letter nor
+/// a digit.
+bool _isEscapableCode(int code) =>
+    (code >= 0x21 && code <= 0x2f) ||
+    (code >= 0x3a && code <= 0x40) ||
+    (code >= 0x5b && code <= 0x60) ||
+    (code >= 0x7b && code <= 0x7e);
+
+/// The code at [index], or `-1` where there is no character there.
+int _codeAt(String source, int index) =>
+    index >= 0 && index < source.length ? source.codeUnitAt(index) : -1;
 
 /// Whether a delimiter run has content on its left, on its right, or both.
 ///
@@ -300,28 +321,35 @@ _Destination? _readInlineDestination(String source, int start) {
   int at = start + 1;
 
   void skipSpace() {
-    while (at < source.length && _asciiWhitespace.hasMatch(source[at])) {
+    while (at < source.length && _isAsciiWhitespaceCode(source.codeUnitAt(at))) {
       at += 1;
     }
   }
 
   skipSpace();
 
-  String url = '';
+  // Written into a buffer rather than onto a string. A Dart string is
+  // immutable, so `url += character` copies everything read so far on every
+  // character, and a destination this loop reads to the end of the document
+  // before refusing it cost the square of its own length. A paragraph of
+  // `[a](` repeated — which is a destination that never closes, read again
+  // from every `]` in it — took eighty-five seconds at thirty-two kilobytes,
+  // on the thread that draws.
+  final StringBuffer url = StringBuffer();
 
   if (_at(source, at) == '<') {
     at += 1;
 
-    while (at < source.length && source[at] != '>') {
-      if (source[at] == '\n') {
+    while (at < source.length && source.codeUnitAt(at) != 0x3e) {
+      if (source.codeUnitAt(at) == 0x0a) {
         return null;
       }
 
-      if (source[at] == r'\' && _escapable.hasMatch(_at(source, at + 1))) {
+      if (source.codeUnitAt(at) == 0x5c && _isEscapableCode(_codeAt(source, at + 1))) {
         at += 1;
       }
 
-      url += source[at];
+      url.writeCharCode(source.codeUnitAt(at));
       at += 1;
     }
 
@@ -333,22 +361,25 @@ _Destination? _readInlineDestination(String source, int start) {
   } else {
     int depth = 0;
 
+    // By code rather than by character: this is the loop a hostile document
+    // makes quadratic, and a one-character string plus a regular expression
+    // for every character of it is most of what that costs.
     while (at < source.length) {
-      final String character = source[at];
+      final int code = source.codeUnitAt(at);
 
-      if (_asciiWhitespace.hasMatch(character)) {
+      if (_isAsciiWhitespaceCode(code)) {
         break;
       }
 
-      if (character == r'\' && _escapable.hasMatch(_at(source, at + 1))) {
-        url += source[at + 1];
+      if (code == 0x5c && _isEscapableCode(_codeAt(source, at + 1))) {
+        url.writeCharCode(source.codeUnitAt(at + 1));
         at += 2;
         continue;
       }
 
-      if (character == '(') {
+      if (code == 0x28) {
         depth += 1;
-      } else if (character == ')') {
+      } else if (code == 0x29) {
         if (depth == 0) {
           break;
         }
@@ -356,28 +387,28 @@ _Destination? _readInlineDestination(String source, int start) {
         depth -= 1;
       }
 
-      url += character;
+      url.writeCharCode(code);
       at += 1;
     }
   }
 
   skipSpace();
 
-  String? title;
+  StringBuffer? title;
   final String quote = _at(source, at);
 
   if (quote == '"' || quote == "'" || quote == '(') {
     final String closing = quote == '(' ? ')' : quote;
 
     at += 1;
-    title = '';
+    title = StringBuffer();
 
     while (at < source.length && source[at] != closing) {
-      if (source[at] == r'\' && _escapable.hasMatch(_at(source, at + 1))) {
+      if (source.codeUnitAt(at) == 0x5c && _isEscapableCode(_codeAt(source, at + 1))) {
         at += 1;
       }
 
-      title = title! + source[at];
+      title.writeCharCode(source.codeUnitAt(at));
       at += 1;
     }
 
@@ -393,7 +424,11 @@ _Destination? _readInlineDestination(String source, int start) {
     return null;
   }
 
-  return _Destination(decodeEntities(url), title == null ? null : decodeEntities(title), at + 1);
+  return _Destination(
+    decodeEntities(url.toString()),
+    title == null ? null : decodeEntities(title.toString()),
+    at + 1,
+  );
 }
 
 final RegExp _runsOfSpace = RegExp(r'\s+');
@@ -440,7 +475,7 @@ _Reference? _readReferenceLabel(String source, int start) {
   while (at < source.length) {
     final String character = source[at];
 
-    if (character == r'\' && _escapable.hasMatch(_at(source, at + 1))) {
+    if (character == r'\' && _isEscapableCode(_codeAt(source, at + 1))) {
       label += source.substring(at, at + 2);
       at += 2;
       continue;
@@ -845,7 +880,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         continue;
       }
 
-      if (next.isNotEmpty && _escapable.hasMatch(next)) {
+      if (next.isNotEmpty && _isEscapableCode(next.codeUnitAt(0))) {
         flush();
         chunks.add(_textChunk(next, span(at, at + 2)));
         at += 2;

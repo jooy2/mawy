@@ -101,7 +101,7 @@ function drop<T>(list: T[], item: T): void {
 const PUNCTUATION = /[\p{P}\p{S}]/u;
 const WHITESPACE = /\s/;
 /**
- * The five characters the specification calls whitespace.
+ * The five characters the specification calls whitespace, by code.
  *
  * Not `\s`, which is every Unicode space there is — and a no-break space is
  * one of those and is not one of these. `[link](/url\u00a0"title")` has a
@@ -110,9 +110,32 @@ const WHITESPACE = /\s/;
  *
  * The flanking rules above *do* want `\s`: those are written in terms of
  * Unicode whitespace rather than these five, which is why both are here.
+ *
+ * A code rather than a pattern, because the caller that matters reads a
+ * destination one character at a time and reads it again from every `]` after
+ * it, which is the length of a paragraph squared on a document written to make
+ * it. A regular expression run for every single character was most of what
+ * that cost.
  */
-const ASCII_WHITESPACE = /[ \t\n\f\r]/;
-const ESCAPABLE = /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/;
+const isAsciiWhitespaceCode = (code: number) =>
+  code === 0x20 || code === 0x09 || code === 0x0a || code === 0x0c || code === 0x0d;
+
+/**
+ * ASCII punctuation, which is the whole of what a backslash may escape.
+ *
+ * The four ranges are `!` to `/`, `:` to `@`, `[` to a backtick, and `{` to
+ * `~`, which is every printable ASCII character that is neither a letter nor a
+ * digit.
+ */
+const isEscapableCode = (code: number) =>
+  (code >= 0x21 && code <= 0x2f) ||
+  (code >= 0x3a && code <= 0x40) ||
+  (code >= 0x5b && code <= 0x60) ||
+  (code >= 0x7b && code <= 0x7e);
+
+/** The code at `index`, or `-1` where there is no character there. */
+const codeAt = (source: string, index: number) =>
+  index >= 0 && index < source.length ? source.charCodeAt(index) : -1;
 
 /**
  * Whether a delimiter run has content on its left, on its right, or both.
@@ -283,7 +306,7 @@ function readInlineDestination(source: string, start: number): Destination | nul
   let at = start + 1;
 
   const skipSpace = () => {
-    while (at < source.length && ASCII_WHITESPACE.test(source[at])) {
+    while (at < source.length && isAsciiWhitespaceCode(source.charCodeAt(at))) {
       at += 1;
     }
   };
@@ -300,7 +323,7 @@ function readInlineDestination(source: string, start: number): Destination | nul
         return null;
       }
 
-      if (source[at] === '\\' && ESCAPABLE.test(source[at + 1] ?? '')) {
+      if (source[at] === '\\' && isEscapableCode(codeAt(source, at + 1))) {
         at += 1;
       }
 
@@ -319,11 +342,11 @@ function readInlineDestination(source: string, start: number): Destination | nul
     while (at < source.length) {
       const character = source[at];
 
-      if (ASCII_WHITESPACE.test(character)) {
+      if (isAsciiWhitespaceCode(source.charCodeAt(at))) {
         break;
       }
 
-      if (character === '\\' && ESCAPABLE.test(source[at + 1] ?? '')) {
+      if (character === '\\' && isEscapableCode(codeAt(source, at + 1))) {
         url += source[at + 1];
         at += 2;
         continue;
@@ -355,7 +378,7 @@ function readInlineDestination(source: string, start: number): Destination | nul
     title = '';
 
     while (at < source.length && source[at] !== closing) {
-      if (source[at] === '\\' && ESCAPABLE.test(source[at + 1] ?? '')) {
+      if (source[at] === '\\' && isEscapableCode(codeAt(source, at + 1))) {
         at += 1;
       }
 
@@ -422,7 +445,7 @@ function readReferenceLabel(source: string, start: number): { label: string; end
   while (at < source.length) {
     const character = source[at];
 
-    if (character === '\\' && ESCAPABLE.test(source[at + 1] ?? '')) {
+    if (character === '\\' && isEscapableCode(codeAt(source, at + 1))) {
       label += source.slice(at, at + 2);
       at += 2;
       continue;
@@ -786,7 +809,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         continue;
       }
 
-      if (next !== undefined && ESCAPABLE.test(next)) {
+      if (next !== undefined && isEscapableCode(next.charCodeAt(0))) {
         flush();
         chunks.push(textChunk(next, span(at, at + 2)));
         at += 2;

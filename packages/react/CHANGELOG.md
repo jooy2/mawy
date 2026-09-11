@@ -14,6 +14,8 @@
 
 ### Fixed
 
+- **A document cannot hold the page while a link destination is read.** A destination that never closes is read to the end of the paragraph, and read again from every `]` after it, so `[a](` repeated was the length of that paragraph squared. Each character of it cost a regular expression match; they are read by code now, and thirty-two kilobytes of it parses in eight hundred milliseconds rather than two seconds.
+
 - **Two footnote definitions on adjacent lines are two notes.** `[^a]: …` with `[^b]: …` on the line under it came back as one note whose text ended in the characters of the second, and the sentence pointing at the second showed its brackets. A definition's paragraph was continued lazily into the definition below it, as a paragraph is continued by any line that follows it; a line opening the next definition ends the one above it now. A blank line between them was the way round it and still reads the same.
 
 ## 1.1.0 (2026-09-06)
