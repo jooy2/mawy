@@ -10,15 +10,17 @@ Guides and the full API, in English and Korean. This README is the quick start.
 
 ---
 
-> **Mawy is a Markdown editor and viewer in one package.** Write with the document in front of you as it will look, or switch to the Markdown source and work on that. When the document is finished, a read-only viewer shows it exactly as it looked while you were writing it.
+**Write a Markdown document, and read it, in the same place.**
 
-> [!IMPORTANT] **The parser, `MawyViewer` and `MawyEditor` are written and tested**, `wysiwyg` among the editor's surfaces. The exported API is under semantic versioning: a name that goes away or changes shape waits for a major version.
+Mawy is a Markdown editor and a Markdown viewer standing on one parser and one renderer. It reads CommonMark and GitHub's additions itself, then turns the result into React elements rather than a string of HTML — a document arrives as a tree your page can style, not as markup it has to trust. An author writes in the drawn document or in the source and moves between the two without losing anything on the way. A reader gets that document as it was written, with the typeface, the text size, the line height, the column width and the palette under their own hand.
+
+![The Mawy editor in split view: the Markdown source on the left, the document it draws on the right](https://raw.githubusercontent.com/jooy2/mawy/main/.github/media/editor-split.png)
 
 - **Editor and viewer are the same library.** They share the parser and the renderer, so what was typed is what a reader sees, not what a second renderer makes of it.
 - **WYSIWYG and source are two views of one value.** Toggling does not round-trip through another implementation, so nothing is lost that the other view could not express.
-- **The document becomes React elements, not a string of HTML.** There is no `innerHTML` on the path from Markdown to the page, so there is nothing to escape.
+- **Nothing is injected.** There is no `innerHTML` on the path from Markdown to the page, so there is nothing to escape, and every URL is checked against a scheme allowlist whatever else a document contains.
 - **One runtime dependency.** [`lucide-react`](https://lucide.dev), for the toolbar's icons. A test in the suite fails the build if a source file imports anything undeclared, and anything added later has to be permissively licensed.
-- **ESM only, with TypeScript declarations included.**
+- **ESM only, with TypeScript declarations included.** The exported names are under semantic versioning: one that goes away or changes shape waits for a major version.
 
 ## Install
 
@@ -104,11 +106,17 @@ A document can carry a construct this package has never heard of, written in the
 
 Raw HTML inside a document is shown as text unless you ask otherwise (`html="sanitize"` or `html="raw"`), and **every URL is checked whichever you choose**. `[click](javascript:…)` is Markdown rather than HTML, so the scheme allowlist is not part of that option and is not switched off with it. A refused destination is drawn as the words the author wrote, with no link around them.
 
-### Types
+### Other entry points
 
-`MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyDirectives`, `MawyDirectiveProps`, `MawyRange`, `MawyViewerToolbarItem` and `MawyViewerToolbarOption`. They are also available from `mawy-react/types`, so an application can name one in its own props without importing a component.
+| Import | What it is |
+| --- | --- |
+| `mawy-react/markdown` | The parser alone — `parseMarkdown`, `slugify` and the node types. No React, no DOM. |
+| `mawy-react/highlight` | `mawyHighlighter`, the syntax colouring, loaded only when a document needs it. |
+| `mawy-react/server` | `MawyDocument`, which draws a document on a server and ships no JavaScript for it. |
+| `mawy-react/types` | Every exported type, so a prop can be named without importing a component. |
+| `mawy-react/styles.css` | The stylesheet, above. |
 
-The full reference is at [mawy.cdget.com/api/](https://mawy.cdget.com/api/).
+The full reference is at [mawy.cdget.com/api/](https://mawy.cdget.com/api/), one page per component, type and function.
 
 ## Development
 
@@ -132,8 +140,8 @@ It runs in a real browser rather than a DOM emulator on purpose. Selection range
 
 The live previews are on the documentation site. `cd ../../docs && npm install && npm run dev` renders the real components from `src/` through a Vite alias, so an edit appears on screen without a rebuild.
 
-[CONTRIBUTING.md](../../CONTRIBUTING.md) has the rest.
+[CONTRIBUTING.md](https://github.com/jooy2/mawy/blob/main/CONTRIBUTING.md) has the rest.
 
 ## License
 
-[MIT](../../LICENSE) © [CDGet](https://cdget.com)
+[MIT](LICENSE) © [CDGet](https://cdget.com)
