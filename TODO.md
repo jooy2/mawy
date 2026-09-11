@@ -44,7 +44,9 @@ something to read before starting rather than a job waiting for somebody.
 
 ## Confirmed
 
-- **`[a](` repeated is still read in the square of its own length**, in both packages. A destination that never closes is read to the end of the paragraph, and read again from every `]` after it: a hundred and twenty-five kilobytes of it is fifteen seconds in the React package and twenty-five in the Flutter one. Every other shape measured is linear now and this is the one left. What would close it is knowing, without reading, that a scan from here runs off the end — which is a question about the running count of brackets and where the next space is, both of which can be worked out once for the whole run and asked in the time of a lookup. It would be the first thing in this parser that precomputes anything, and it has to be the same thing in both languages. `readInlineDestination`, in `inline.ts` and `inline.dart`.
+Nothing, at the moment. The last of it was the inline parser's cost on a
+document nobody wrote by hand, and every shape measured is linear in both
+packages now. The next finding goes under this heading with where the code is.
 
 ## Release
 

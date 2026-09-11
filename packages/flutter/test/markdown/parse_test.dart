@@ -275,6 +275,20 @@ void main() {
       }
     });
 
+    /// The two shapes that were the square of their own length, sized so that a
+    /// quadratic is a minute and a linear read is no work at all. One is a
+    /// destination that never closes, read again from every `]` after it; the
+    /// other is a line of emphasis, which used to move every chunk after the
+    /// cut on every pair that closed.
+    test('reads a line of unclosed destinations, and one of emphasis', () {
+      expect(parseMarkdown('[a](' * 50000).root.children.length, 1);
+
+      final MdParagraph paragraph =
+          parseMarkdown('*a* ' * 50000).root.children.first as MdParagraph;
+
+      expect(paragraph.children.whereType<MdEmphasis>().length, 50000);
+    });
+
     /// A run of letters with no space in it — a base64 blob, a hash, a token —
     /// is where the bare-address pattern used to read to the end of the
     /// paragraph looking for an `@`, give a character back, and look again,

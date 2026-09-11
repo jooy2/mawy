@@ -443,7 +443,70 @@ interface Destination {
 }
 
 /** `(url "title")` — the parenthesised half of an inline link. */
-function readInlineDestination(source: string, start: number): Destination | null {
+/**
+ * Where a destination read from each place could first stop, or `-1` for the
+ * places a read from which runs off the end of the text.
+ *
+ * A destination that never closes is read to the end, and read again from every
+ * `]` written after it, so `[a](` repeated cost the square of its own length —
+ * the one shape left after the chunks became a list. This is what lets the
+ * second read answer without reading: a run that stops nowhere is refused,
+ * always, because the check at the end of the read wants a `)` and there is
+ * none.
+ *
+ * Three things stop a read, and the table holds the nearest of them:
+ *
+ * - A space, which is where a bare destination ends.
+ * - A `)` the read is not inside a pair of brackets for. Whether it is depends
+ *   on where the read began, and the running count of brackets is what says so:
+ *   a read from `s` breaks at the first `)` at `r` where the count is what it
+ *   was at `s`, because that is what a depth of zero means.
+ * - A backslash, which is not a stop at all and is counted as one anyway. What
+ *   it escapes depends on where the read began — `\\(` is a bracket to a read
+ *   starting on the second character and an escape to one starting on the
+ *   first — so one table cannot answer for both, and the answer is to stop
+ *   claiming to. A run with a backslash in it is read the long way.
+ *
+ * Built once, and only after a read has run off the end and been refused, so a
+ * document whose destinations all close pays nothing for it.
+ */
+function reachOf(source: string): Int32Array {
+  const stop = new Int32Array(source.length + 1).fill(-1);
+  const closes = new Map<number, number>();
+  // Counted from the right, so it is the count at `at` rather than up to it.
+  // Only ever compared against itself, so where it starts does not matter.
+  let brackets = 0;
+  let halt = -1;
+
+  for (let at = source.length - 1; at >= 0; at -= 1) {
+    const code = source.charCodeAt(at);
+
+    if (code === 0x28) {
+      brackets -= 1;
+    } else if (code === 0x29) {
+      brackets += 1;
+    }
+
+    if (isAsciiWhitespaceCode(code) || code === 0x5c) {
+      halt = at;
+    } else if (code === 0x29) {
+      closes.set(brackets, at);
+    }
+
+    const close = closes.get(brackets) ?? -1;
+
+    stop[at] = halt === -1 ? close : close === -1 ? halt : Math.min(halt, close);
+  }
+
+  return stop;
+}
+
+/** What has been worked out about a run of text, once anything needed it. */
+interface Reach {
+  stop: Int32Array | null;
+}
+
+function readInlineDestination(source: string, start: number, reach: Reach): Destination | null {
   let at = start + 1;
 
   const skipSpace = () => {
@@ -478,6 +541,12 @@ function readInlineDestination(source: string, start: number): Destination | nul
 
     at += 1;
   } else {
+    // Already known to read to the end of the text, and a read that does that
+    // is refused below whatever it read. See `reachOf`.
+    if (reach.stop && reach.stop[at] === -1) {
+      return null;
+    }
+
     let depth = 0;
 
     while (at < source.length) {
@@ -505,6 +574,13 @@ function readInlineDestination(source: string, start: number): Destination | nul
 
       url += character;
       at += 1;
+    }
+
+    // Off the end, which is refused below and will be refused every time. The
+    // table is what makes the next one cheap, and this is the first moment
+    // anybody needs it.
+    if (at >= source.length) {
+      reach.stop ??= reachOf(source);
     }
   }
 
@@ -902,6 +978,7 @@ export function toPlainText(nodes: MdInline[]): string {
 export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
   const source = raw.text;
   const state: State = { chunks: { head: null, tail: null }, delimiters: [], openers: [] };
+  const reach: Reach = { stop: null };
   const { chunks, delimiters, openers } = state;
 
   /** Where a stretch of this text sits in the document. */
@@ -1161,7 +1238,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
       let end = at + 1;
 
       if (source[at + 1] === '(') {
-        destination = readInlineDestination(source, at + 1);
+        destination = readInlineDestination(source, at + 1, reach);
 
         if (destination) {
           end = destination.end;

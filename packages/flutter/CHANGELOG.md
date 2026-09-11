@@ -18,6 +18,10 @@
 
 ### Fixed
 
+- **A destination that never closes is read once rather than from every `]` after it.** `[a](` repeated was the last shape in this parser that cost the square of its own length. The first read that runs off the end of a paragraph now works out, for every place a destination could start in it, where a read from there could first stop — a space, a `)` it is not inside brackets for, or a backslash, which is counted as a stop because what it escapes depends on where the read began. A read that stops nowhere is refused without being read. A quarter of a megabyte of it went from a minute to fifty milliseconds.
+
+- **A paragraph's text is joined once rather than a piece at a time.** Adjacent runs of text are merged into one node at the end of reading a line, and a Dart string copies itself on every append — so half a million pieces, which is what `[a](` repeated comes to, cost the square of the paragraph. A megabyte of it went from over a minute to 328 milliseconds. The React package needs none of this: a JavaScript engine already does it behind `+=`.
+
 - **A paragraph that is one long line of emphasis is read at its own size.** The chunks a line is read into were a list, and what this algorithm does to them is take a span out of the middle and put one node in its place — once for every pair of delimiters and once for every link — which in a list moves everything after the cut. They are a linked list now, and the delimiters that pair off leave a hole rather than being taken out, so neither costs anything. A hundred and twenty-five kilobytes of `*a*` repeated went from forty seconds to 94 milliseconds.
 
 - **A long paragraph, a long reference label and a long run of letters are each read at their own size.** Dart strings are immutable, so building one a character at a time — which is how a paragraph's text, a reference label and a link destination are all read — copies everything held so far on every character. Three hundred kilobytes of prose went from a second and a half to 43 milliseconds, and a sixty-three-kilobyte label from forty-six seconds to 102.

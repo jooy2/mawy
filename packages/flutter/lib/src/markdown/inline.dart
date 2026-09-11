@@ -14,6 +14,8 @@
 /// This is the React package's `internal/markdown/inline.ts`, in Dart.
 library;
 
+import 'dart:typed_data';
+
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/directive.dart';
 import 'package:mawy/src/markdown/entities.dart';
@@ -443,7 +445,68 @@ class _Destination {
 String _at(String source, int index) => index >= 0 && index < source.length ? source[index] : '';
 
 /// `(url "title")` — the parenthesised half of an inline link.
-_Destination? _readInlineDestination(String source, int start) {
+/// Where a destination read from each place could first stop, or `-1` for the
+/// places a read from which runs off the end of the text.
+///
+/// A destination that never closes is read to the end, and read again from
+/// every `]` written after it, so `[a](` repeated cost the square of its own
+/// length — the one shape left after the chunks became a list. This is what
+/// lets the second read answer without reading: a run that stops nowhere is
+/// refused, always, because the check at the end of the read wants a `)` and
+/// there is none.
+///
+/// Three things stop a read, and the table holds the nearest of them:
+///
+/// - A space, which is where a bare destination ends.
+/// - A `)` the read is not inside a pair of brackets for. Whether it is depends
+///   on where the read began, and the running count of brackets is what says
+///   so: a read from `s` breaks at the first `)` at `r` where the count is what
+///   it was at `s`, because that is what a depth of zero means.
+/// - A backslash, which is not a stop at all and is counted as one anyway. What
+///   it escapes depends on where the read began — `\\(` is a bracket to a read
+///   starting on the second character and an escape to one starting on the
+///   first — so one table cannot answer for both, and the answer is to stop
+///   claiming to. A run with a backslash in it is read the long way.
+///
+/// Built once, and only after a read has run off the end and been refused, so a
+/// document whose destinations all close pays nothing for it.
+Int32List _reachOf(String source) {
+  final Int32List stop = Int32List(source.length + 1)..fillRange(0, source.length + 1, -1);
+  final Map<int, int> closes = <int, int>{};
+  // Counted from the right, so it is the count at `at` rather than up to it.
+  // Only ever compared against itself, so where it starts does not matter.
+  int brackets = 0;
+  int halt = -1;
+
+  for (int at = source.length - 1; at >= 0; at -= 1) {
+    final int code = source.codeUnitAt(at);
+
+    if (code == 0x28) {
+      brackets -= 1;
+    } else if (code == 0x29) {
+      brackets += 1;
+    }
+
+    if (_isAsciiWhitespaceCode(code) || code == 0x5c) {
+      halt = at;
+    } else if (code == 0x29) {
+      closes[brackets] = at;
+    }
+
+    final int close = closes[brackets] ?? -1;
+
+    stop[at] = halt == -1 ? close : (close == -1 ? halt : (halt < close ? halt : close));
+  }
+
+  return stop;
+}
+
+/// What has been worked out about a run of text, once anything needed it.
+class _Reach {
+  Int32List? stop;
+}
+
+_Destination? _readInlineDestination(String source, int start, _Reach reach) {
   int at = start + 1;
 
   void skipSpace() {
@@ -485,6 +548,12 @@ _Destination? _readInlineDestination(String source, int start) {
 
     at += 1;
   } else {
+    // Already known to read to the end of the text, and a read that does that
+    // is refused below whatever it read. See [_reachOf].
+    if (reach.stop != null && reach.stop![at] == -1) {
+      return null;
+    }
+
     int depth = 0;
 
     // By code rather than by character: this is the loop a hostile document
@@ -515,6 +584,13 @@ _Destination? _readInlineDestination(String source, int start) {
 
       url.writeCharCode(code);
       at += 1;
+    }
+
+    // Off the end, which is refused below and will be refused every time. The
+    // table is what makes the next one cheap, and this is the first moment
+    // anybody needs it.
+    if (at >= source.length) {
+      reach.stop ??= _reachOf(source);
     }
   }
 
@@ -862,6 +938,23 @@ List<MdInline> _linkify(List<MdInline> nodes) {
 /// Adjacent text nodes joined, empty ones dropped.
 List<MdInline> _merge(List<MdInline> nodes) {
   final List<MdInline> out = <MdInline>[];
+  // The run of text being joined, if the last node out was one. A buffer
+  // rather than the node's own string, because a Dart string is immutable and
+  // joining a run of them one at a time copies the whole run on every piece:
+  // a paragraph of `[a](` repeated is half a million pieces, and the copying
+  // was most of the time it took to read it. Emptied into the node the moment
+  // anything else goes out, which is what [_settle] is for.
+  MdText? joining;
+  StringBuffer? joined;
+
+  void settle() {
+    if (joining != null && joined != null) {
+      joining!.value = joined.toString();
+    }
+
+    joining = null;
+    joined = null;
+  }
 
   for (final MdInline node in nodes) {
     if (node is MdText) {
@@ -869,17 +962,19 @@ List<MdInline> _merge(List<MdInline> nodes) {
         continue;
       }
 
-      final MdInline? previous = out.isEmpty ? null : out.last;
-
-      if (previous is MdText) {
-        previous.value += node.value;
-        previous.range = MdRange(previous.range.start, node.range.end);
+      if (joining != null) {
+        joined!.write(node.value);
+        joining!.range = MdRange(joining!.range.start, node.range.end);
         continue;
       }
 
-      out.add(MdText(node.range, node.value));
+      joining = MdText(node.range, node.value);
+      joined = StringBuffer(node.value);
+      out.add(joining!);
       continue;
     }
+
+    settle();
 
     if (node is MdEmphasis) {
       out.add(MdEmphasis(node.range, _merge(node.children)));
@@ -905,6 +1000,8 @@ List<MdInline> _merge(List<MdInline> nodes) {
 
     out.add(node);
   }
+
+  settle();
 
   return out;
 }
@@ -956,6 +1053,7 @@ final RegExp _trailingSpace = RegExp(r'[ \t]+$');
 List<MdInline> parseInline(Sourced raw, InlineOptions options) {
   final String source = raw.text;
   final _State state = _State();
+  final _Reach reach = _Reach();
   final _Chain chunks = state.chunks;
   final List<_Chunk?> delimiters = state.delimiters;
   final List<_Chunk> openers = state.openers;
@@ -1214,7 +1312,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       int end = at + 1;
 
       if (_at(source, at + 1) == '(') {
-        destination = _readInlineDestination(source, at + 1);
+        destination = _readInlineDestination(source, at + 1, reach);
 
         if (destination != null) {
           end = destination.end;
