@@ -433,6 +433,34 @@ describe('footnotes', () => {
   });
 
   /**
+   * A definition's paragraph is continued lazily, like any other, and used to
+   * continue into the definition under it: two notes written on adjacent lines
+   * came back as one whose text ended in the characters of the second, and the
+   * sentence pointing at the second showed its brackets. A blank line between
+   * them was the way round it, which is not something an author should have to
+   * know.
+   */
+  it('ends a definition where the next one starts', () => {
+    const adjacent = 'A.[^a] B.[^b]\n\n[^a]: First.\n[^b]: Second.';
+    const { footnotes } = parseMarkdown(adjacent);
+
+    expect(footnotes.map((each) => [each.label, each.number])).toEqual([
+      ['a', 1],
+      ['b', 2]
+    ]);
+    expect(bare(inline(footnotes[0].children[0]))).toEqual([{ type: 'text', value: 'First.' }]);
+  });
+
+  it('still continues a definition lazily where the next line is prose', () => {
+    const lazy = 'A.[^a]\n\n[^a]: First,\nand the rest of it.';
+    const [one] = parseMarkdown(lazy).footnotes;
+
+    expect(bare(inline(one.children[0]))).toEqual([
+      { type: 'text', value: 'First,\nand the rest of it.' }
+    ]);
+  });
+
+  /**
    * Two labels can slug to the same word, and an `id` given out twice is a link
    * that lands on whichever the browser met first. The note's own number is
    * what a second one is called after, and the one case that was not enough is

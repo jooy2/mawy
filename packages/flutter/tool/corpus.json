@@ -21,6 +21,7 @@
  "See https://example.com/a. And www.b.co, and a@b.co!",
  "[click](javascript:alert(1)) and ![i](javascript:x)",
  "Text.[^one] More.[^two] Again.[^one]\n\n[^one]: First.\n\n[^two]: Second,\n    over two lines.\n\n    And a block.",
+ "One.[^a] Two.[^b] Three.[^c]\n\n[^a]: A definition, and the line under it opens the next one.\n[^b]: Which a lazy continuation used to swallow whole.\n[^c]: This one is\n  continued lazily, which still reads as one note.\n",
  "Markdown\n: A way of writing.\n\nMawy\n: This.\n: And that.",
  "Apple\n: A fruit.\n\nPear\n: Another.",
  "See below\n:warning: careful",

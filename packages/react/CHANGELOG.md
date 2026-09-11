@@ -8,6 +8,10 @@
 
 - **An application can say where a document's relative addresses point.** `resolveUrl` is called for every relative URL a document writes — a picture's source, a link's destination, and the same two inside raw HTML under `html="sanitize"` — and what it answers is used as written. A URL in a document is relative to the _document_, and the page it is drawn in is the application's, so `![](./diagram.png)` in a file read off a disk or out of a repository had no address anybody could follow. It is on `MawyViewer`, `MawyEditor` and `renderMarkdown`. Unset, nothing changes.
 
+### Fixed
+
+- **Two footnote definitions on adjacent lines are two notes.** `[^a]: …` with `[^b]: …` on the line under it came back as one note whose text ended in the characters of the second, and the sentence pointing at the second showed its brackets. A definition's paragraph was continued lazily into the definition below it, as a paragraph is continued by any line that follows it; a line opening the next definition ends the one above it now. A blank line between them was the way round it and still reads the same.
+
 ## 1.1.0 (2026-09-06)
 
 ### Security

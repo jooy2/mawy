@@ -446,6 +446,12 @@ function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): S
  * separate the blocks in there, and a line that is neither taken anyway if the
  * paragraph above it is still open — which is the lazy continuation every
  * container in Markdown allows and every reader relies on without knowing.
+ *
+ * What that continuation may not swallow is the next one of these. A line
+ * opening a footnote definition or a meaning ends whichever is open, so that
+ * `[^a]: …` with `[^b]: …` under it is two notes rather than one note whose
+ * text ends in the characters of the second — which is what it was, and what
+ * left the sentence pointing at `[^b]` showing the brackets.
  */
 function takeIndented(
   lines: Line[],
@@ -477,7 +483,13 @@ function takeIndented(
       continue;
     }
 
-    if (!running || blankInside || interrupts(next.text) || DESCRIBES.test(next.text)) {
+    if (
+      !running ||
+      blankInside ||
+      interrupts(next.text) ||
+      DESCRIBES.test(next.text) ||
+      FOOTNOTE.test(next.text)
+    ) {
       break;
     }
 

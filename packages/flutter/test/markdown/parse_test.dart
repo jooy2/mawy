@@ -331,5 +331,38 @@ void main() {
         'See [^nope] here.',
       );
     });
+
+    /// A definition's paragraph is continued lazily, like any other, and used
+    /// to continue into the definition under it: two notes written on adjacent
+    /// lines came back as one whose text ended in the characters of the
+    /// second, and the sentence pointing at the second showed its brackets. A
+    /// blank line between them was the way round it, which is not something an
+    /// author should have to know.
+    test('ends a definition where the next one starts', () {
+      final MdDocument document = parseMarkdown('A.[^a] B.[^b]\n\n[^a]: First.\n[^b]: Second.');
+
+      expect(
+        document.footnotes
+            .map((MdFootnoteDefinition each) => <Object>[each.label, each.number])
+            .toList(),
+        <List<Object>>[
+          <Object>['a', 1],
+          <Object>['b', 2],
+        ],
+      );
+      expect(
+        ((document.footnotes.first.children.first as MdParagraph).children.first as MdText).value,
+        'First.',
+      );
+    });
+
+    test('still continues a definition lazily where the next line is prose', () {
+      final MdDocument document = parseMarkdown('A.[^a]\n\n[^a]: First,\nand the rest of it.');
+
+      expect(
+        ((document.footnotes.first.children.first as MdParagraph).children.first as MdText).value,
+        'First,\nand the rest of it.',
+      );
+    });
   });
 }

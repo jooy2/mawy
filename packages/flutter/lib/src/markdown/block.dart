@@ -484,6 +484,12 @@ class _Indented {
 /// separate the blocks in there, and a line that is neither taken anyway if the
 /// paragraph above it is still open — which is the lazy continuation every
 /// container in Markdown allows and every reader relies on without knowing.
+///
+/// What that continuation may not swallow is the next one of these. A line
+/// opening a footnote definition or a meaning ends whichever is open, so that
+/// `[^a]: …` with `[^b]: …` under it is two notes rather than one note whose
+/// text ends in the characters of the second — which is what it was, and what
+/// left the sentence pointing at `[^b]` showing the brackets.
 _Indented _takeIndented(List<Line> lines, int from, int width, bool opened) {
   final List<Line> body = <Line>[];
   int at = from;
@@ -509,7 +515,11 @@ _Indented _takeIndented(List<Line> lines, int from, int width, bool opened) {
       continue;
     }
 
-    if (!running || blankInside || _interrupts(next.text) || _describes.hasMatch(next.text)) {
+    if (!running ||
+        blankInside ||
+        _interrupts(next.text) ||
+        _describes.hasMatch(next.text) ||
+        _footnote.hasMatch(next.text)) {
       break;
     }
 

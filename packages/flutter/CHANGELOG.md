@@ -10,6 +10,8 @@
 
 ### Fixed
 
+- **Two footnote definitions on adjacent lines are two notes.** `[^a]: …` with `[^b]: …` on the line under it came back as one note whose text ended in the characters of the second, and the sentence pointing at the second showed its brackets. A definition's paragraph was continued lazily into the definition below it, as a paragraph is continued by any line that follows it; a line opening the next definition ends the one above it now. A blank line between them was the way round it and still reads the same.
+
 - **A quotation and a footnote are drawn with the whole of what the document is drawn with.** Both set their own body text — a quotation's is muted, a note's is smaller — and both built a second rendering context that had lost some of the rest of it. A code block inside either was never coloured, a directive inside either was drawn as nothing at all rather than as the characters the author typed, a picture inside a note was fetched by the viewer even where `imageBuilder` said the application would draw it, and neither the find bar's marks nor a footnote's two taps reached inside a quotation.
 
 ## 1.1.0 (2026-09-06)
