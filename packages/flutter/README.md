@@ -30,7 +30,7 @@ The exported names are under semantic versioning: one that goes away or changes 
 flutter pub add mawy
 ```
 
-Flutter 3.32 or later and the Dart SDK that comes with it. The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_icons_flutter), for the toolbar's icons.
+Flutter 3.32 or later and the Dart SDK that comes with it. The one dependency is the toolbar's icon set.
 
 `package:mawy/mawy.dart` is the only import you need.
 
@@ -102,7 +102,7 @@ flutter run
 
 ## A note on size
 
-The icon font is the one large item this package adds. `lucide_icons_flutter` ships its variable faces whole, and Flutter's icon tree-shaking removes very little from a variable font, so it adds about 3 MB to a build. That is ordinary in an app bundle, and it provides the same icons the React package draws. On the web it is 3 MB the reader downloads, and `--no-tree-shake-icons` does not help there; a web build that needs the size back should use a smaller icon source instead.
+The icon font is the one large item this package adds. The icon package ships its variable faces whole, and Flutter's icon tree-shaking removes very little from a variable font, so it adds about 3 MB to a build. That is ordinary in an app bundle, and it provides the same icons the React package draws. On the web it is 3 MB the reader downloads, and `--no-tree-shake-icons` does not help there; a web build that needs the size back should use a smaller icon source instead.
 
 ## Related
 

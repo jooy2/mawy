@@ -44,13 +44,13 @@ The exported names are under semantic versioning, so one that goes away or chang
 npm install mawy-react
 ```
 
-`react` and `react-dom` are peer dependencies, and React 18 or 19 is supported. The one runtime dependency is [`lucide-react`](https://lucide.dev), for the toolbar's icons.
+`react` and `react-dom` are peer dependencies, and React 18 or 19 is supported. The one runtime dependency is the toolbar's icon set.
 
 ```bash
 flutter pub add mawy
 ```
 
-Nothing beyond the Flutter SDK, apart from [`lucide_icons_flutter`](https://pub.dev/packages/lucide_icons_flutter) for the same icons.
+Nothing beyond the Flutter SDK, apart from the same icon set.
 
 ## Repository layout
 

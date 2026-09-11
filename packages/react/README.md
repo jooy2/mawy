@@ -19,7 +19,7 @@ Mawy is a Markdown editor and a Markdown viewer standing on one parser and one r
 - **Editor and viewer are the same library.** They share the parser and the renderer, so what was typed is what a reader sees, not what a second renderer makes of it.
 - **WYSIWYG and source are two views of one value.** Toggling does not round-trip through another implementation, so nothing is lost that the other view could not express.
 - **Nothing is injected.** There is no `innerHTML` on the path from Markdown to the page, so there is nothing to escape, and every URL is checked against a scheme allowlist whatever else a document contains.
-- **One runtime dependency.** [`lucide-react`](https://lucide.dev), for the toolbar's icons. A test in the suite fails the build if a source file imports anything undeclared, and anything added later has to be permissively licensed.
+- **One runtime dependency**, the toolbar's icon set. A test in the suite fails the build if a source file imports anything undeclared, and anything added later has to be permissively licensed.
 - **ESM only, with TypeScript declarations included.** The exported names are under semantic versioning: one that goes away or changes shape waits for a major version.
 
 ## Install
