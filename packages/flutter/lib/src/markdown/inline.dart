@@ -101,13 +101,38 @@ class _Chunk {
   /// that was just built and every node would be walked once per level above
   /// it. See [_nesting].
   int depth;
+
+  /// What this chunk sits between. See [_Chain].
+  _Chunk? prev;
+  _Chunk? next;
+}
+
+/// The chunks of one run of text, in the order they were read.
+///
+/// A list rather than an array, and that is the one structural decision in this
+/// file. What this algorithm does to the chunks is take a span out of the
+/// middle and put one node in its place, once for every pair of delimiters and
+/// once for every link — and in an array that moves everything after the cut,
+/// so a paragraph of `*a*` repeated cost the square of its own length. Reading
+/// them back in order is the only other thing anybody does with them, and a
+/// list is as good at that as an array is.
+class _Chain {
+  _Chunk? head;
+  _Chunk? tail;
 }
 
 class _State {
-  final List<_Chunk> chunks = <_Chunk>[];
+  final _Chain chunks = _Chain();
 
-  /// The chunks that are delimiter runs, in source order.
-  final List<_Chunk> delimiters = <_Chunk>[];
+  /// The chunks that are delimiter runs, in source order, with a hole where one
+  /// has been used up.
+  ///
+  /// A list, because the pairing walks it by index and remembers positions in
+  /// it — `openersBottom` is a note that says "no opener for this kind before
+  /// here". So a run that is finished with is replaced by `null` rather than
+  /// taken out, which keeps every position anybody is holding and costs
+  /// nothing: removing from the middle moved the rest, once per pair.
+  final List<_Chunk?> delimiters = <_Chunk?>[];
 
   /// The `[` and `![` chunks that have not been closed, innermost last.
   final List<_Chunk> openers = <_Chunk>[];
@@ -131,58 +156,77 @@ const int _nesting = 100;
 
 _Chunk _textChunk(String value, MdRange range) => _Chunk(MdText(range, value));
 
-/// Where [item] is in [list], looked for outward from [hint].
+/// Onto the end of the chain, which is where reading puts every chunk.
+_Chunk _append(_Chain chain, _Chunk chunk) {
+  chunk.prev = chain.tail;
+  chunk.next = null;
+
+  if (chain.tail == null) {
+    chain.head = chunk;
+  } else {
+    chain.tail!.next = chunk;
+  }
+
+  chain.tail = chunk;
+
+  return chunk;
+}
+
+/// Out of the chain, leaving what was on either side of it beside each other.
+void _unlink(_Chain chain, _Chunk chunk) {
+  if (chunk.prev == null) {
+    chain.head = chunk.next;
+  } else {
+    chunk.prev!.next = chunk.next;
+  }
+
+  if (chunk.next == null) {
+    chain.tail = chunk.prev;
+  } else {
+    chunk.next!.prev = chunk.prev;
+  }
+
+  chunk.prev = null;
+  chunk.next = null;
+}
+
+/// Everything from [chunk] to the end of the chain goes, and [chunk] with it.
+void _cut(_Chain chain, _Chunk chunk) {
+  chain.tail = chunk.prev;
+
+  if (chunk.prev == null) {
+    chain.head = null;
+  } else {
+    chunk.prev!.next = null;
+  }
+}
+
+/// The nodes strictly between two chunks, and how deep the deepest of them
+/// goes.
 ///
-/// An exact search either way, and the hint only says where to start. Both
-/// callers know roughly where what they are looking for is — emphasis pairs off
-/// left to right and each pair sits beside the last, and a link's opener is at
-/// the far end because everything after it is the link's own label — and a
-/// search from one end of the list read the whole paragraph for every pair in
-/// it. A line of `*a*` repeated took over a minute at a quarter of a megabyte.
-int _indexNear(List<_Chunk> list, _Chunk item, int hint) {
-  int below = hint.clamp(0, list.length - 1);
-  int above = below + 1;
+/// A [to] of `null` means the end of the chain, which is what a link's label
+/// is: everything written after the `[` that opened it.
+({List<MdInline> children, int depth}) _between(_Chunk from, _Chunk? to) {
+  final List<MdInline> children = <MdInline>[];
+  int depth = 0;
 
-  while (below >= 0 || above < list.length) {
-    if (below >= 0) {
-      if (identical(list[below], item)) {
-        return below;
-      }
+  for (_Chunk? at = from.next; at != null && !identical(at, to); at = at.next) {
+    children.add(at.node);
 
-      below -= 1;
-    }
-
-    if (above < list.length) {
-      if (identical(list[above], item)) {
-        return above;
-      }
-
-      above += 1;
+    if (at.depth > depth) {
+      depth = at.depth;
     }
   }
 
-  return -1;
+  return (children: children, depth: depth);
 }
 
-/// How deep the deepest of these goes, counting itself.
-int _deepest(List<_Chunk> list, int from, int to) {
-  int found = 0;
-
-  for (int at = from; at < to; at += 1) {
-    if (list[at].depth > found) {
-      found = list[at].depth;
-    }
-  }
-
-  return found;
-}
-
-void _drop(List<_Chunk> list, _Chunk item) {
-  final int at = list.indexOf(item);
-
-  if (at != -1) {
-    list.removeAt(at);
-  }
+/// One chunk in place of everything between these two.
+void _fold(_Chunk opener, _Chunk made, _Chunk closer) {
+  opener.next = made;
+  made.prev = opener;
+  made.next = closer;
+  closer.prev = made;
 }
 
 /* -------------------------------------------------------------------------
@@ -279,16 +323,20 @@ bool _blockedByRuleOfThree(_Delimiter opener, _Delimiter closer) {
 /// the delimiter's characters live in a real text node the whole time rather
 /// than being held to one side and put back on failure.
 void _processEmphasis(_State state, int bottom) {
-  final List<_Chunk> chunks = state.chunks;
-  final List<_Chunk> delimiters = state.delimiters;
+  final _Chain chunks = state.chunks;
+  final List<_Chunk?> delimiters = state.delimiters;
   final Map<String, int> openersBottom = <String, int>{};
   int closerIndex = bottom;
-  // Where the last pair was found. The next one is a few chunks along from it,
-  // so this is what keeps the search off the rest of the paragraph.
-  int near = 0;
 
   while (closerIndex < delimiters.length) {
-    final _Chunk closerChunk = delimiters[closerIndex];
+    final _Chunk? closerChunk = delimiters[closerIndex];
+
+    // A hole, where a run that used to be here has been used up.
+    if (closerChunk == null) {
+      closerIndex += 1;
+      continue;
+    }
+
     final _Delimiter closer = closerChunk.delimiter!;
 
     if (!closer.canClose) {
@@ -302,9 +350,10 @@ void _processEmphasis(_State state, int bottom) {
     int found = -1;
 
     for (int at = closerIndex - 1; at >= floor; at -= 1) {
-      final _Delimiter candidate = delimiters[at].delimiter!;
+      final _Delimiter? candidate = delimiters[at]?.delimiter;
 
-      if (candidate.canOpen &&
+      if (candidate != null &&
+          candidate.canOpen &&
           candidate.char == closer.char &&
           !_blockedByRuleOfThree(candidate, closer)) {
         found = at;
@@ -318,26 +367,19 @@ void _processEmphasis(_State state, int bottom) {
       // A run that can only close and matched nothing is finished with: it
       // stays on the page as text, but nothing later can pair with it.
       if (!closer.canOpen) {
-        delimiters.removeAt(closerIndex);
-      } else {
-        closerIndex += 1;
+        delimiters[closerIndex] = null;
       }
 
+      closerIndex += 1;
       continue;
     }
 
-    final _Chunk openerChunk = delimiters[found];
+    final _Chunk openerChunk = delimiters[found]!;
     final _Delimiter opener = openerChunk.delimiter!;
     final int use = closer.char == '~' || (opener.length >= 2 && closer.length >= 2) ? 2 : 1;
-
-    // From the end, for the reason the link below gives: the pair is a span of
-    // chunks near the end of them, and a forward search reads everything the
-    // paragraph held before it.
-    final int openerAt = _indexNear(chunks, openerChunk, near);
-    final int closerAt = _indexNear(chunks, closerChunk, openerAt);
-
-    near = openerAt;
-    final int depth = _deepest(chunks, openerAt + 1, closerAt) + 1;
+    final ({List<MdInline> children, int depth}) inside = _between(openerChunk, closerChunk);
+    final List<MdInline> children = inside.children;
+    final int depth = inside.depth + 1;
 
     // Too deep to wrap, and every pair still waiting is one level deeper than
     // this one — so nothing more is paired in this paragraph and the runs that
@@ -345,10 +387,6 @@ void _processEmphasis(_State state, int bottom) {
     if (depth > _nesting) {
       break;
     }
-    final List<MdInline> children = chunks
-        .sublist(openerAt + 1, closerAt)
-        .map((_Chunk chunk) => chunk.node)
-        .toList();
 
     // The characters that pair off are the *last* of the opening run and the
     // first of the closing one, so the node starts where what is left of the
@@ -361,9 +399,13 @@ void _processEmphasis(_State state, int bottom) {
         ? MdDelete(range, children)
         : (use == 2 ? MdStrong(range, children) : MdEmphasis(range, children));
 
-    chunks.replaceRange(openerAt + 1, closerAt, <_Chunk>[_Chunk(node, depth)]);
-    delimiters.removeRange(found + 1, closerIndex);
-    closerIndex = found + 1;
+    _fold(openerChunk, _Chunk(node, depth), closerChunk);
+
+    // Everything between the two is inside the node now, so no run in there can
+    // pair with anything ever again.
+    for (int at = found + 1; at < closerIndex; at += 1) {
+      delimiters[at] = null;
+    }
 
     opener.length -= use;
     closer.length -= use;
@@ -373,14 +415,13 @@ void _processEmphasis(_State state, int bottom) {
     closerNode.range = MdRange(range.end, closerNode.range.end);
 
     if (closer.length == 0) {
-      _drop(chunks, closerChunk);
-      _drop(delimiters, closerChunk);
+      _unlink(chunks, closerChunk);
+      delimiters[closerIndex] = null;
     }
 
     if (opener.length == 0) {
-      _drop(chunks, openerChunk);
-      _drop(delimiters, openerChunk);
-      closerIndex -= 1;
+      _unlink(chunks, openerChunk);
+      delimiters[found] = null;
     }
   }
 
@@ -915,8 +956,8 @@ final RegExp _trailingSpace = RegExp(r'[ \t]+$');
 List<MdInline> parseInline(Sourced raw, InlineOptions options) {
   final String source = raw.text;
   final _State state = _State();
-  final List<_Chunk> chunks = state.chunks;
-  final List<_Chunk> delimiters = state.delimiters;
+  final _Chain chunks = state.chunks;
+  final List<_Chunk?> delimiters = state.delimiters;
   final List<_Chunk> openers = state.openers;
 
   /// Where a stretch of this text sits in the document.
@@ -942,7 +983,8 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
   void flush() {
     if (pending.isNotEmpty) {
-      chunks.add(
+      _append(
+        chunks,
         _textChunk(decodeEntities(pending.toString()), span(pendingAt, pendingAt + pending.length)),
       );
       pending.clear();
@@ -961,7 +1003,9 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
     final int after = chunk.node.range.start;
 
     for (int index = 0; index < delimiters.length; index += 1) {
-      if (delimiters[index].node.range.start > after) {
+      final _Chunk? each = delimiters[index];
+
+      if (each != null && each.node.range.start > after) {
         return index;
       }
     }
@@ -978,7 +1022,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
       if (next == '\n') {
         flush();
-        chunks.add(_Chunk(MdBreak(span(at, at + 2))));
+        _append(chunks, _Chunk(MdBreak(span(at, at + 2))));
         at += 2;
 
         while (at < source.length && _whitespace.hasMatch(source[at]) && source[at] != '\n') {
@@ -990,7 +1034,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
       if (next.isNotEmpty && _isEscapableCode(next.codeUnitAt(0))) {
         flush();
-        chunks.add(_textChunk(next, span(at, at + 2)));
+        _append(chunks, _textChunk(next, span(at, at + 2)));
         at += 2;
         continue;
       }
@@ -1005,7 +1049,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
       if (code != null) {
         flush();
-        chunks.add(_Chunk(MdInlineCode(span(at, code.end), code.value)));
+        _append(chunks, _Chunk(MdInlineCode(span(at, code.end), code.value)));
         at = code.end;
         continue;
       }
@@ -1031,7 +1075,8 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         final MdRange inside = span(at + 1, at + 1 + uri.group(1)!.length);
 
         flush();
-        chunks.add(
+        _append(
+          chunks,
           url != null
               ? _Chunk(
                   MdLink(
@@ -1051,7 +1096,8 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
       if (email != null) {
         flush();
-        chunks.add(
+        _append(
+          chunks,
           _Chunk(
             MdLink(
               span(at, at + email.group(0)!.length),
@@ -1074,7 +1120,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         // Whether this reaches the page as markup or as four visible characters
         // is the renderer's decision, not the parser's — the tree says what the
         // document says.
-        chunks.add(_Chunk(MdInlineHtml(span(at, at + html.group(0)!.length), html.group(0)!)));
+        _append(chunks, _Chunk(MdInlineHtml(span(at, at + html.group(0)!.length), html.group(0)!)));
         at += html.group(0)!.length;
         continue;
       }
@@ -1096,7 +1142,8 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         final DirectiveLabel? label = head.label;
 
         flush();
-        chunks.add(
+        _append(
+          chunks,
           _Chunk(
             MdTextDirective(
               span(at, head.end),
@@ -1120,7 +1167,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
       if (label.isNotEmpty && options.footnotes.contains(label)) {
         flush();
-        chunks.add(_Chunk(MdFootnoteReference(span(at, close + 1), label)));
+        _append(chunks, _Chunk(MdFootnoteReference(span(at, close + 1), label)));
         at = close + 1;
         continue;
       }
@@ -1135,7 +1182,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       final _Chunk chunk = _textChunk(text, span(at, at + text.length));
 
       chunk.opener = _Opener(image: image, active: true, textStart: at + text.length);
-      chunks.add(chunk);
+      _append(chunks, chunk);
       openers.add(chunk);
       at += text.length;
       continue;
@@ -1147,7 +1194,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       final _Chunk? openerChunk = openers.isEmpty ? null : openers.removeLast();
 
       if (openerChunk?.opener == null) {
-        chunks.add(_textChunk(']', span(at, at + 1)));
+        _append(chunks, _textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
@@ -1157,7 +1204,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       if (!opener.active) {
         // Deactivated by a link that closed inside this one. Both brackets are
         // now text — the opening one stays exactly where it was written.
-        chunks.add(_textChunk(']', span(at, at + 1)));
+        _append(chunks, _textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
@@ -1201,47 +1248,45 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         // Not a link after all. The bracket that opened it is text, and so is
         // this one — but the opener is gone, so a later `]` cannot claim it.
         openerChunk.opener = null;
-        chunks.add(_textChunk(']', span(at, at + 1)));
+        _append(chunks, _textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
 
       _processEmphasis(state, delimiterBottom(openerChunk));
 
-      // From the end: everything after the opener is this link's own label, so
-      // starting there costs the label rather than the paragraph.
-      final int openerAt = _indexNear(chunks, openerChunk, chunks.length - 1);
-      final List<MdInline> children = chunks
-          .sublist(openerAt + 1)
-          .map((_Chunk each) => each.node)
-          .toList();
+      // Everything after the opener is this link's own label.
+      final ({List<MdInline> children, int depth}) inside = _between(openerChunk, null);
+      final List<MdInline> children = inside.children;
       final String? url = opener.image ? safeImageUrl(destination.url) : safeUrl(destination.url);
-      final int taken = chunks.length - openerAt;
-      final int depth = _deepest(chunks, openerAt + 1, chunks.length) + 1;
+      final int depth = inside.depth + 1;
       final MdRange range = MdRange(openerChunk.node.range.start, endOffset(raw, end));
 
       if (opener.image && url != null) {
         // An image is one node however deep its description was: the words are
         // all that is kept of it.
-        chunks.replaceRange(openerAt, openerAt + taken, <_Chunk>[
+        _cut(chunks, openerChunk);
+        _append(
+          chunks,
           _Chunk(MdImage(range, url: url, title: destination.title, alt: toPlainText(children))),
-        ]);
+        );
       } else if (opener.image) {
         // A destination we will not follow. An image has nothing to fall back
         // to but the words the author wrote in place of it.
-        chunks.replaceRange(openerAt, openerAt + taken, <_Chunk>[
-          _textChunk(toPlainText(children), range),
-        ]);
+        _cut(chunks, openerChunk);
+        _append(chunks, _textChunk(toPlainText(children), range));
       } else if (url != null && depth <= _nesting) {
-        chunks.replaceRange(openerAt, openerAt + taken, <_Chunk>[
+        _cut(chunks, openerChunk);
+        _append(
+          chunks,
           _Chunk(MdLink(range, url: url, title: destination.title, children: children), depth),
-        ]);
+        );
       } else {
         // The same for a link: the label stays and reads as ordinary text, so a
         // reader sees the sentence rather than a control that does nothing.
         // A link too deep to wrap lands here as well, keeping its label and
         // losing only what it pointed at. See [_nesting].
-        chunks.replaceRange(openerAt, openerAt + taken, chunks.sublist(openerAt + 1));
+        _unlink(chunks, openerChunk);
       }
 
       if (!opener.image) {
@@ -1297,7 +1342,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         canOpen: canOpen,
         canClose: canClose,
       );
-      chunks.add(chunk);
+      _append(chunks, chunk);
       delimiters.add(chunk);
       at += run;
       continue;
@@ -1320,7 +1365,8 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
       flush();
 
-      chunks.add(
+      _append(
+        chunks,
         hard || options.breaks
             ? _Chunk(MdBreak(span(from, at + 1)))
             : _textChunk('\n', span(at, at + 1)),
@@ -1342,7 +1388,13 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
   flush();
   _processEmphasis(state, 0);
 
-  final List<MdInline> nodes = _merge(chunks.map((_Chunk each) => each.node).toList());
+  final List<MdInline> read = <MdInline>[];
+
+  for (_Chunk? each = chunks.head; each != null; each = each.next) {
+    read.add(each.node);
+  }
+
+  final List<MdInline> nodes = _merge(read);
 
   return options.gfm ? _merge(_linkify(nodes)) : nodes;
 }

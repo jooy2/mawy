@@ -20,11 +20,11 @@
 
 ### Fixed
 
+- **A paragraph that is one long line of emphasis is read at its own size.** The chunks a line is read into were an array, and what this algorithm does to them is take a span out of the middle and put one node in its place — once for every pair of delimiters and once for every link — which in an array moves everything after the cut. They are a list now, and the delimiters that pair off leave a hole rather than being taken out, so neither costs anything. A quarter of a megabyte of `*a*` repeated went from 6.2 seconds to 158 milliseconds, and 63 kilobytes of it from 380 milliseconds to 60.
+
 - **A name of nothing in raw HTML is dropped rather than turned into one.** `<p id="">` came back as `id="user-content-"`, so two of them on a page were two elements claiming the same name. It only affects `html="sanitize"`.
 
 - **A paragraph of a quarter of a megabyte is a document rather than a `RangeError`.** Its inline nodes were handed to the array they belong in by spreading them into a call, which puts every one of them on the stack as an argument, and a hundred and twenty thousand of them is past what the engine takes.
-
-- **A paragraph that is one long line of emphasis is read ten times faster.** Every pair that closed searched the whole paragraph for the two chunks it had just been handed; the search starts where the last pair was found now. It is still the slowest shape this parser has, and a quarter of a megabyte of it is six seconds.
 
 - **A paragraph that is a list of links is read in the time a list should take.** Every link that closed built a map of everything read so far, or searched it, which is the length of the paragraph squared. Forty-eight kilobytes of links went from 1.4 seconds to 5 milliseconds.
 

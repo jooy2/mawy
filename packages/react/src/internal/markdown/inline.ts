@@ -76,12 +76,40 @@ interface Chunk {
    * it. See `NESTING`.
    */
   depth: number;
+  /** What this chunk sits between. See `Chain`. */
+  prev: Chunk | null;
+  next: Chunk | null;
+}
+
+/**
+ * The chunks of one run of text, in the order they were read.
+ *
+ * A list rather than an array, and that is the one structural decision in this
+ * file. What this algorithm does to the chunks is take a span out of the middle
+ * and put one node in its place, once for every pair of delimiters and once for
+ * every link — and in an array that moves everything after the cut, so a
+ * paragraph of `*a*` repeated cost the square of its own length. Reading them
+ * back in order is the only other thing anybody does with them, and a list is
+ * as good at that as an array is.
+ */
+interface Chain {
+  head: Chunk | null;
+  tail: Chunk | null;
 }
 
 interface State {
-  chunks: Chunk[];
-  /** The chunks that are delimiter runs, in source order. */
-  delimiters: Chunk[];
+  chunks: Chain;
+  /**
+   * The chunks that are delimiter runs, in source order, with a hole where one
+   * has been used up.
+   *
+   * An array, because the pairing walks it by index and remembers positions in
+   * it — `openersBottom` is a note that says "no opener for this kind before
+   * here". So a run that is finished with is replaced by `null` rather than
+   * taken out, which keeps every position anybody is holding and costs nothing:
+   * removing from the middle moved the rest, once per pair.
+   */
+  delimiters: (Chunk | null)[];
   /** The `[` and `![` chunks that have not been closed, innermost last. */
   openers: Chunk[];
 }
@@ -105,67 +133,92 @@ interface State {
 const NESTING = 100;
 
 function textChunk(value: string, range: MdRange): Chunk {
-  return { node: { type: 'text', range, value }, delimiter: null, opener: null, depth: 1 };
+  return {
+    node: { type: 'text', range, value },
+    delimiter: null,
+    opener: null,
+    depth: 1,
+    prev: null,
+    next: null
+  };
 }
 
 function nodeChunk(node: MdInline, depth = 1): Chunk {
-  return { node, delimiter: null, opener: null, depth };
+  return { node, delimiter: null, opener: null, depth, prev: null, next: null };
+}
+
+/** Onto the end of the chain, which is where reading puts every chunk. */
+function append(chain: Chain, chunk: Chunk): Chunk {
+  chunk.prev = chain.tail;
+  chunk.next = null;
+
+  if (chain.tail) {
+    chain.tail.next = chunk;
+  } else {
+    chain.head = chunk;
+  }
+
+  chain.tail = chunk;
+
+  return chunk;
+}
+
+/** Out of the chain, leaving what was on either side of it beside each other. */
+function unlink(chain: Chain, chunk: Chunk): void {
+  if (chunk.prev) {
+    chunk.prev.next = chunk.next;
+  } else {
+    chain.head = chunk.next;
+  }
+
+  if (chunk.next) {
+    chunk.next.prev = chunk.prev;
+  } else {
+    chain.tail = chunk.prev;
+  }
+
+  chunk.prev = null;
+  chunk.next = null;
+}
+
+/** Everything from `chunk` to the end of the chain goes, and `chunk` with it. */
+function cut(chain: Chain, chunk: Chunk): void {
+  chain.tail = chunk.prev;
+
+  if (chunk.prev) {
+    chunk.prev.next = null;
+  } else {
+    chain.head = null;
+  }
 }
 
 /**
- * Where `item` is in `list`, looked for outward from `hint`.
+ * The nodes strictly between two chunks, and how deep the deepest of them goes.
  *
- * An exact search either way, and the hint only says where to start. Both
- * callers know roughly where what they are looking for is — emphasis pairs off
- * left to right and each pair sits beside the last, and a link's opener is at
- * the far end because everything after it is the link's own label — and a
- * search from one end of the array read the whole paragraph for every pair in
- * it. A line of `*a*` repeated took a minute at a quarter of a megabyte.
+ * `to` of `null` means the end of the chain, which is what a link's label is:
+ * everything written after the `[` that opened it.
  */
-function indexNear(list: Chunk[], item: Chunk, hint: number): number {
-  let below = Math.min(Math.max(hint, 0), list.length - 1);
-  let above = below + 1;
+function between(from: Chunk, to: Chunk | null): { children: MdInline[]; depth: number } {
+  const children: MdInline[] = [];
+  let depth = 0;
 
-  while (below >= 0 || above < list.length) {
-    if (below >= 0) {
-      if (list[below] === item) {
-        return below;
-      }
+  for (let at = from.next; at && at !== to; at = at.next) {
+    children.push(at.node);
 
-      below -= 1;
-    }
-
-    if (above < list.length) {
-      if (list[above] === item) {
-        return above;
-      }
-
-      above += 1;
+    if (at.depth > depth) {
+      depth = at.depth;
     }
   }
 
-  return -1;
+  return { children, depth };
 }
 
-/** How deep the deepest of these goes, counting itself. */
-function deepest(list: Chunk[], from: number, to: number): number {
-  let found = 0;
-
-  for (let at = from; at < to; at += 1) {
-    if (list[at].depth > found) {
-      found = list[at].depth;
-    }
-  }
-
-  return found;
-}
-
-function drop<T>(list: T[], item: T): void {
-  const at = list.indexOf(item);
-
-  if (at !== -1) {
-    list.splice(at, 1);
-  }
+/** One chunk in place of everything between these two. */
+function fold(opener: Chunk, made: Chunk, closer: Chunk): void {
+  opener.next = made;
+  made.prev = opener;
+  made.next = closer;
+  closer.prev = made;
 }
 
 /* -------------------------------------------------------------------------
@@ -272,12 +325,16 @@ function processEmphasis(state: State, bottom: number): void {
   const { chunks, delimiters } = state;
   const openersBottom = new Map<string, number>();
   let closerIndex = bottom;
-  // Where the last pair was found. The next one is a few chunks along from it,
-  // so this is what keeps the search off the rest of the paragraph.
-  let near = 0;
 
   while (closerIndex < delimiters.length) {
     const closerChunk = delimiters[closerIndex];
+
+    // A hole, where a run that used to be here has been used up.
+    if (!closerChunk) {
+      closerIndex += 1;
+      continue;
+    }
+
     const closer = closerChunk.delimiter as Delimiter;
 
     if (!closer.canClose) {
@@ -290,10 +347,10 @@ function processEmphasis(state: State, bottom: number): void {
     let found = -1;
 
     for (let at = closerIndex - 1; at >= floor; at -= 1) {
-      const candidate = delimiters[at].delimiter as Delimiter;
+      const candidate = delimiters[at]?.delimiter as Delimiter | undefined;
 
       if (
-        candidate.canOpen &&
+        candidate?.canOpen &&
         candidate.char === closer.char &&
         !blockedByRuleOfThree(candidate, closer)
       ) {
@@ -308,23 +365,18 @@ function processEmphasis(state: State, bottom: number): void {
       // A run that can only close and matched nothing is finished with: it
       // stays on the page as text, but nothing later can pair with it.
       if (!closer.canOpen) {
-        delimiters.splice(closerIndex, 1);
-      } else {
-        closerIndex += 1;
+        delimiters[closerIndex] = null;
       }
 
+      closerIndex += 1;
       continue;
     }
 
-    const openerChunk = delimiters[found];
+    const openerChunk = delimiters[found] as Chunk;
     const opener = openerChunk.delimiter as Delimiter;
     const use = closer.char === '~' || (opener.length >= 2 && closer.length >= 2) ? 2 : 1;
-
-    const openerAt = indexNear(chunks, openerChunk, near);
-    const closerAt = indexNear(chunks, closerChunk, openerAt);
-
-    near = openerAt;
-    const depth = deepest(chunks, openerAt + 1, closerAt) + 1;
+    const { children, depth: under } = between(openerChunk, closerChunk);
+    const depth = under + 1;
 
     // Too deep to wrap, and every pair still waiting is one level deeper than
     // this one — so nothing more is paired in this paragraph and the runs that
@@ -332,8 +384,6 @@ function processEmphasis(state: State, bottom: number): void {
     if (depth > NESTING) {
       break;
     }
-
-    const children = chunks.slice(openerAt + 1, closerAt).map((chunk) => chunk.node);
 
     // The characters that pair off are the *last* of the opening run and the
     // first of the closing one, so the node starts where what is left of the
@@ -353,9 +403,13 @@ function processEmphasis(state: State, bottom: number): void {
           ? { type: 'strong', range, children }
           : { type: 'emphasis', range, children };
 
-    chunks.splice(openerAt + 1, closerAt - openerAt - 1, nodeChunk(node, depth));
-    delimiters.splice(found + 1, closerIndex - found - 1);
-    closerIndex = found + 1;
+    fold(openerChunk, nodeChunk(node, depth), closerChunk);
+
+    // Everything between the two is inside the node now, so no run in there can
+    // pair with anything ever again.
+    for (let at = found + 1; at < closerIndex; at += 1) {
+      delimiters[at] = null;
+    }
 
     opener.length -= use;
     closer.length -= use;
@@ -365,14 +419,13 @@ function processEmphasis(state: State, bottom: number): void {
     closerNode.range = { start: range.end, end: closerNode.range.end };
 
     if (closer.length === 0) {
-      drop(chunks, closerChunk);
-      drop(delimiters, closerChunk);
+      unlink(chunks, closerChunk);
+      delimiters[closerIndex] = null;
     }
 
     if (opener.length === 0) {
-      drop(chunks, openerChunk);
-      drop(delimiters, openerChunk);
-      closerIndex -= 1;
+      unlink(chunks, openerChunk);
+      delimiters[found] = null;
     }
   }
 
@@ -848,7 +901,7 @@ export function toPlainText(nodes: MdInline[]): string {
 
 export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
   const source = raw.text;
-  const state: State = { chunks: [], delimiters: [], openers: [] };
+  const state: State = { chunks: { head: null, tail: null }, delimiters: [], openers: [] };
   const { chunks, delimiters, openers } = state;
 
   /** Where a stretch of this text sits in the document. */
@@ -869,7 +922,10 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
   const flush = () => {
     if (pending) {
-      chunks.push(textChunk(decodeEntities(pending), span(pendingAt, pendingAt + pending.length)));
+      append(
+        chunks,
+        textChunk(decodeEntities(pending), span(pendingAt, pendingAt + pending.length))
+      );
       pending = '';
     }
   };
@@ -888,7 +944,9 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
     const after = chunk.node.range.start;
 
     for (let index = 0; index < delimiters.length; index += 1) {
-      if (delimiters[index].node.range.start > after) {
+      const each = delimiters[index];
+
+      if (each && each.node.range.start > after) {
         return index;
       }
     }
@@ -905,7 +963,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       if (next === '\n') {
         flush();
-        chunks.push(nodeChunk({ type: 'break', range: span(at, at + 2) }));
+        append(chunks, nodeChunk({ type: 'break', range: span(at, at + 2) }));
         at += 2;
 
         while (WHITESPACE.test(source[at] ?? '') && source[at] !== '\n') {
@@ -917,7 +975,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       if (next !== undefined && isEscapableCode(next.charCodeAt(0))) {
         flush();
-        chunks.push(textChunk(next, span(at, at + 2)));
+        append(chunks, textChunk(next, span(at, at + 2)));
         at += 2;
         continue;
       }
@@ -932,7 +990,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       if (code) {
         flush();
-        chunks.push(
+        append(
+          chunks,
           nodeChunk({ type: 'inlineCode', range: span(at, code.end), value: code.value })
         );
         at = code.end;
@@ -959,7 +1018,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         const range = span(at, at + uri[0].length);
         const inside = span(at + 1, at + 1 + uri[1].length);
         flush();
-        chunks.push(
+        append(
+          chunks,
           url
             ? nodeChunk({
                 type: 'link',
@@ -978,7 +1038,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       if (email) {
         flush();
-        chunks.push(
+        append(
+          chunks,
           nodeChunk({
             type: 'link',
             range: span(at, at + email[0].length),
@@ -1000,7 +1061,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         // Whether this reaches the page as markup or as four visible characters
         // is the renderer's decision, not the parser's — the tree says what the
         // document says, and policy is applied once, where it can be seen.
-        chunks.push(
+        append(
+          chunks,
           nodeChunk({
             type: 'inlineHtml',
             range: span(at, at + html[0].length),
@@ -1026,7 +1088,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       if (head && named) {
         flush();
-        chunks.push(
+        append(
+          chunks,
           nodeChunk({
             type: 'textDirective',
             range: span(at, head.end),
@@ -1049,7 +1112,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       if (label && options.footnotes.has(label)) {
         flush();
-        chunks.push(
+        append(
+          chunks,
           nodeChunk({ type: 'footnoteReference', range: span(at, close + 1), label, index: 0 })
         );
         at = close + 1;
@@ -1064,7 +1128,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       const chunk = textChunk(text, span(at, at + text.length));
       chunk.opener = { image, active: true, textStart: at + text.length };
-      chunks.push(chunk);
+      append(chunks, chunk);
       openers.push(chunk);
       at += text.length;
       continue;
@@ -1076,7 +1140,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
       const openerChunk = openers.pop();
 
       if (!openerChunk?.opener) {
-        chunks.push(textChunk(']', span(at, at + 1)));
+        append(chunks, textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
@@ -1087,7 +1151,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         // Deactivated by a link that closed inside this one. Both brackets are
         // now text — the opening one stays exactly where it was written, which
         // is what `[a [b](c)](d)` needs to keep its first character.
-        chunks.push(textChunk(']', span(at, at + 1)));
+        append(chunks, textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
@@ -1127,28 +1191,25 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         // Not a link after all. The bracket that opened it is text, and so is
         // this one — but the opener is gone, so a later `]` cannot claim it.
         openerChunk.opener = null;
-        chunks.push(textChunk(']', span(at, at + 1)));
+        append(chunks, textChunk(']', span(at, at + 1)));
         at += 1;
         continue;
       }
 
       processEmphasis(state, delimiterBottom(openerChunk));
 
-      // From the end: everything after the opener is this link's own label, so
-      // starting there costs the label rather than the paragraph.
-      const openerAt = indexNear(chunks, openerChunk, chunks.length - 1);
-      const children = chunks.slice(openerAt + 1).map((each) => each.node);
+      // Everything after the opener is this link's own label.
+      const { children, depth: under } = between(openerChunk, null);
       const url = opener.image ? safeImageUrl(destination.url) : safeUrl(destination.url);
-      const taken = chunks.length - openerAt;
-      const depth = deepest(chunks, openerAt + 1, chunks.length) + 1;
+      const depth = under + 1;
       const range: MdRange = { start: openerChunk.node.range.start, end: endOffset(raw, end) };
 
       if (opener.image && url) {
         // An image is one node however deep its description was: the words are
         // all that is kept of it.
-        chunks.splice(
-          openerAt,
-          taken,
+        cut(chunks, openerChunk);
+        append(
+          chunks,
           nodeChunk({
             type: 'image',
             range,
@@ -1160,11 +1221,12 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
       } else if (opener.image) {
         // A destination we will not follow. An image has nothing to fall back
         // to but the words the author wrote in place of it.
-        chunks.splice(openerAt, taken, textChunk(toPlainText(children), range));
+        cut(chunks, openerChunk);
+        append(chunks, textChunk(toPlainText(children), range));
       } else if (url && depth <= NESTING) {
-        chunks.splice(
-          openerAt,
-          taken,
+        cut(chunks, openerChunk);
+        append(
+          chunks,
           nodeChunk({ type: 'link', range, url, title: destination.title, children }, depth)
         );
       } else {
@@ -1172,7 +1234,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         // reader sees the sentence rather than a control that does nothing.
         // A link too deep to wrap lands here as well, keeping its label and
         // losing only what it pointed at. See `NESTING`.
-        chunks.splice(openerAt, taken, ...chunks.slice(openerAt + 1));
+        unlink(chunks, openerChunk);
       }
 
       if (!opener.image) {
@@ -1214,7 +1276,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       const chunk = textChunk(source.slice(at, at + run), span(at, at + run));
       chunk.delimiter = { char: character, length: run, original: run, canOpen, canClose };
-      chunks.push(chunk);
+      append(chunks, chunk);
       delimiters.push(chunk);
       at += run;
       continue;
@@ -1228,7 +1290,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
       const from = hard && pending ? pendingAt + pending.length : at;
       flush();
 
-      chunks.push(
+      append(
+        chunks,
         hard || options.breaks
           ? nodeChunk({ type: 'break', range: span(from, at + 1) })
           : textChunk('\n', span(at, at + 1))
@@ -1250,7 +1313,13 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
   flush();
   processEmphasis(state, 0);
 
-  const nodes = merge(chunks.map((each) => each.node));
+  const read: MdInline[] = [];
+
+  for (let each = chunks.head; each; each = each.next) {
+    read.push(each.node);
+  }
+
+  const nodes = merge(read);
 
   return options.gfm ? merge(linkify(nodes)) : nodes;
 }

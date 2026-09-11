@@ -18,9 +18,9 @@
 
 ### Fixed
 
-- **A long paragraph, a long reference label and a long run of letters are each read at their own size.** Dart strings are immutable, so building one a character at a time — which is how a paragraph's text, a reference label and a link destination are all read — copies everything held so far on every character. Three hundred kilobytes of prose went from a second and a half to 43 milliseconds, and a sixty-three-kilobyte label from forty-six seconds to 102.
+- **A paragraph that is one long line of emphasis is read at its own size.** The chunks a line is read into were a list, and what this algorithm does to them is take a span out of the middle and put one node in its place — once for every pair of delimiters and once for every link — which in a list moves everything after the cut. They are a linked list now, and the delimiters that pair off leave a hole rather than being taken out, so neither costs anything. A hundred and twenty-five kilobytes of `*a*` repeated went from forty seconds to 94 milliseconds.
 
-- **A paragraph that is one long line of emphasis is read faster.** Every pair that closed searched the whole paragraph for the two chunks it had just been handed; the search starts where the last pair was found now. It is still much the slowest shape this parser has.
+- **A long paragraph, a long reference label and a long run of letters are each read at their own size.** Dart strings are immutable, so building one a character at a time — which is how a paragraph's text, a reference label and a link destination are all read — copies everything held so far on every character. Three hundred kilobytes of prose went from a second and a half to 43 milliseconds, and a sixty-three-kilobyte label from forty-six seconds to 102.
 
 - **A paragraph that is a list of links is read in the time a list should take.** Every link that closed searched everything read so far, once for each delimiter run in it, so the cost grew with the square of the paragraph. Forty-seven kilobytes of links went from 39 milliseconds to 8, and the same shape in the React package from 1.4 seconds to 5 milliseconds.
 
