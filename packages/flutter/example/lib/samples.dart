@@ -173,11 +173,14 @@ const String _playground = '''
 
 The garden takes the roof water off the four houses on the corner and holds it long enough for the ground to drink it. Nobody owns it and everybody looks after it.
 
-**Where** the corner lot, 12 Maple Court  
-**Shed key** number 14, or the box behind the gate  
-**Work morning** Saturdays at 08:00, unless it rained in the night
+- **Where** the corner lot, 12 Maple Court
+- **Shed key** number 14, or the box behind the gate
+- **Work morning** Saturdays at 08:00  
+  Skipped if it rained in the night.
 
 Pull a weed when you walk past, and put anything *broken* at the bottom of this file with your name against it. Anything the [district office](https://example.org/stormwater) has to hear about goes there as well, under `maple-court-c`.
+
+![The corner lot the morning after the March rain](/sample/rain-garden.webp 'Looking north from the steps at number 14')
 
 ## The four zones
 
@@ -189,8 +192,6 @@ Water arrives at **A**, slows down through **B**, stands in **C** for a day at m
 | B — swale | sedge, blue flag iris, coneflower | weekly | 25 cm |
 | C — basin | soft rush, joe-pye weed | weekly | 60 cm |
 | D — overflow | turf only, ~~low shrubs~~ nothing woody | after rain | 10 cm |
-
-![The corner lot the morning after the March rain](/sample/rain-garden.webp 'Looking north from the steps at number 14')
 
 > [!IMPORTANT]
 > Zone C has to be empty within a day of the rain stopping. Water standing on the second morning means the basin has silted up, and that is the one job here that does not wait for Saturday.
@@ -320,11 +321,14 @@ const String _playgroundKo = '''
 
 모퉁이 집 네 채의 지붕물을 받아 땅이 마실 시간을 벌어 주는 정원입니다. 주인은 없고 지나가는 사람이 돌봅니다.
 
-**위치** 은행나무길 12, 모퉁이 필지  
-**창고 열쇠** 14호, 또는 대문 뒤 상자  
-**작업일** 토요일 오전 8시. 밤새 비가 왔으면 쉽니다
+- **위치** 은행나무길 12, 모퉁이 필지
+- **창고 열쇠** 14호, 또는 대문 뒤 상자
+- **작업일** 토요일 오전 8시  
+  밤새 비가 왔으면 쉽니다.
 
 잡초는 보이는 대로 뽑고, *고장 난 것*은 이 파일 맨 아래에 이름과 함께 적어 둡니다. 구청에 알려야 하는 일은 [구청 창구](https://example.org/stormwater)에 `maple-court-c`로 함께 접수합니다.
+
+![3월 비가 그친 다음 날 아침의 모퉁이 필지](/sample/rain-garden.webp '14호 계단에서 북쪽으로')
 
 ## 네 구역
 
@@ -336,8 +340,6 @@ const String _playgroundKo = '''
 | B — 수로 | 사초, 꽃창포, 에키네시아 | 매주 | 25 cm |
 | C — 저류지 | 골풀, 등골나물 | 매주 | 60 cm |
 | D — 월류부 | 잔디만, ~~낮은 관목~~ 목본은 금지 | 비 온 뒤 | 10 cm |
-
-![3월 비가 그친 다음 날 아침의 모퉁이 필지](/sample/rain-garden.webp '14호 계단에서 북쪽으로')
 
 > [!IMPORTANT]
 > C는 비가 그친 뒤 하루 안에 비어야 합니다. 이튿날 아침까지 물이 남아 있으면 저류지가 막힌 것이고, 여기서 토요일까지 기다리면 안 되는 일은 그것 하나입니다.
