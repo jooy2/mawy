@@ -213,11 +213,11 @@ MawyEditor(defaultValue: '# Hello', onChange: save);
 
 | 이름 | 무엇인지 |
 | --- | --- |
-| `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer), [API](../api/#mawyviewer) |
-| `MawyEditor` | 에디터. [가이드](./editor) |
+| `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer), [API](../api/components/mawy-viewer) |
+| `MawyEditor` | 에디터. [가이드](./editor), [API](../api/components/mawy-editor) |
 | `mawy-react/highlight` | 문법 하이라이터. 진입점이 따로 있습니다 |
 | `mawy-react/styles.css` | 위의 스타일시트 |
-| 타입 | `MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyHighlight`, `MawyImageUpload`, 그리고 툴바·상태 항목 타입들 |
+| 타입 | `MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyHighlight`, `MawyImageUpload`, 그리고 툴바·상태 항목 타입들. [API](../api/types/) |
 
 타입은 `mawy-react/types`에서도 가져올 수 있습니다. 컴포넌트를 import하지 않고 자기 props에 이 이름들을 쓰려는 애플리케이션을 위한 진입점입니다.
 
@@ -227,12 +227,12 @@ MawyEditor(defaultValue: '# Hello', onChange: save);
 
 | 이름 | 무엇인지 |
 | --- | --- |
-| `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer) |
-| `MawyEditor` | 에디터. 원문과 미리보기, 그 사이의 전환. [가이드](./editor) |
+| `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer), [API](../api/components/mawy-viewer) |
+| `MawyEditor` | 에디터. 원문과 미리보기, 그 사이의 전환. [가이드](./editor), [API](../api/components/mawy-editor) |
 | `parseMarkdown` | 파서, 그리고 그것이 만드는 `Md*` 트리 전부 |
 | `MawyTokens` | 팔레트. `MawyTokens.light`와 `MawyTokens.dark`, 그리고 직접 만들 때의 `copyWith` |
 | `mawyHighlighter` | 문법 하이라이터. 직접 참조해야 빌드에 남습니다 |
-| 타입 | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind`, `MawyMatch` |
+| 타입 | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind`, `MawyMatch`. [API](../api/types/) |
 
 `package:mawy/mawy.dart` 하나를 import하면 전부입니다.
 
@@ -243,4 +243,4 @@ MawyEditor(defaultValue: '# Hello', onChange: save);
 - [**직접 써보기**](./playground) — 두 컴포넌트를 아무것도 끄지 않고 올려 둔, 직접 입력해 보는 페이지.
 - [**뷰어**](./viewer) — 편집하지 않고 문서를 그리기.
 - [**에디터**](./editor) — 원문과 미리보기, 그 사이의 전환. React에서는 그려진 문서를 그 자리에서 고치는 화면까지.
-- [**API**](../api/) — 모든 컴포넌트와 모든 옵션.
+- [**API**](../api/) — 모든 컴포넌트와 타입과 함수를, 하나에 한 페이지씩.

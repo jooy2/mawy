@@ -607,7 +607,7 @@ Both packages ship the same set of words under the same names, so a screen that 
 
 ::: fw flutter
 
-The palette is [`MawyTokens`](../api/#mawytokens), which holds the stylesheet's custom properties under Dart names, value for value. `accent` corresponds to `--mawy-accent`, and both are `#5b34ea`. The two palettes are `MawyTokens.light` and `MawyTokens.dark`, and the viewer picks between them from `colorScheme` rather than from anything global, so one document can be dark inside a light screen.
+The palette is [`MawyTokens`](../api/theming), which holds the stylesheet's custom properties under Dart names, value for value. `accent` corresponds to `--mawy-accent`, and both are `#5b34ea`. The two palettes are `MawyTokens.light` and `MawyTokens.dark`, and the viewer picks between them from `colorScheme` rather than from anything global, so one document can be dark inside a light screen.
 
 To redeclare one, pass `tokens`. It takes a function of the brightness rather than a palette, because a viewer settles on its brightness only after it has been handed everything else, from `colorScheme` or from the platform when that is `system`. A document that follows the platform needs values ready in both palettes, not only the one it opened on. `copyWith` builds a palette without rewriting thirty-one colours:
 
@@ -654,7 +654,7 @@ The light and dark palettes are chosen by `colorScheme`, which is `system` unles
 
 ::: fw flutter
 
-The ranges are in the Dart tree too, with the same offsets: every `MdNode` carries one, text nodes included. What is missing is an element to hang them on, since there is no DOM, so an application reads a range from [`parseMarkdown`](../api/#parsemarkdown) rather than from the screen. The rest of this section, which covers the attribute, applies to the React package only.
+The ranges are in the Dart tree too, with the same offsets: every `MdNode` carries one, text nodes included. What is missing is an element to hang them on, since there is no DOM, so an application reads a range from [`parseMarkdown`](../api/functions/parse-markdown) rather than from the screen. The rest of this section, which covers the attribute, applies to the React package only.
 
 :::
 

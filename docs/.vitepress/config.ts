@@ -52,7 +52,10 @@ const localeBase = (lang: string) => (lang === defaultLocale ? '/' : `/${lang}/`
 
 const commonSidebarConfig: VitePressSidebarOptions = {
   collapsed: false,
-  capitalizeFirst: true,
+  // Off, because every page here declares its own title and a reference page is
+  // named after the thing it documents. Capitalising would print `parseMarkdown`
+  // as "ParseMarkdown" — a name that is not the name.
+  capitalizeFirst: false,
   useTitleFromFileHeading: true,
   useTitleFromFrontmatter: true,
   useFolderTitleFromIndexFile: true,
@@ -537,6 +540,24 @@ function cleanUpItems<T extends GeneratedSidebarItem>(items: T[]): T[] {
   });
 }
 
+/**
+ * A group whose heading is a link, turned into a group with an "Overview" row.
+ *
+ * `useFolderLinkFromIndexFile` points the *heading* at the folder's
+ * `index.md`, which means the page listing everything in the group is reachable
+ * only by clicking a word that does not look like a link. It becomes a row of
+ * its own instead, and the heading stops being clickable.
+ */
+function liftIndexLink<T extends GeneratedSidebarItem>(group: T, label: string): void {
+  if (!group.link || !group.items?.length) {
+    return;
+  }
+
+  group.items = [{ text: label, link: group.link } as unknown as T, ...group.items];
+
+  delete group.link;
+}
+
 /** The first link anywhere in a subtree — how a group is identified below. */
 function firstLink(item: GeneratedSidebarItem): string | undefined {
   return item.link ?? item.items?.map(firstLink).find(Boolean);
@@ -575,18 +596,23 @@ function arrangeSidebar<T extends GeneratedSidebarItem>(items: T[], lang: string
 
   // Only once `api/` holds more than its index. Until then it is a single row
   // and a heading over one entry would be noise.
-  //
-  // `useFolderLinkFromIndexFile` points the *heading* at `api/index.md`, which
-  // means the page listing everything in the group is reachable only by
-  // clicking a word that does not look like a link. It becomes a row of its own
-  // instead, and the heading stops being clickable.
   if (api?.items?.length) {
-    const overview = api.link
-      ? ({ text: labels.overview, link: api.link } as unknown as T)
-      : undefined;
+    liftIndexLink(api, labels.overview);
 
-    delete api.link;
-    api.items = [...([overview].filter(Boolean) as T[]), ...api.items];
+    /*
+     * The reference is one page per component, type and function, which is more
+     * rows than the rest of the site put together. Its subgroups are the one
+     * place on this site that folds: a reader looking up a type should not have
+     * to scroll past twenty of them to reach the group underneath. VitePress
+     * opens whichever group holds the page being read, so the one a reader is
+     * in is never the folded one.
+     */
+    for (const group of api.items) {
+      if (group.items?.length) {
+        liftIndexLink(group, labels.overview);
+        group.collapsed = true;
+      }
+    }
   }
 
   const loose = [playground, changelog].filter(Boolean) as T[];

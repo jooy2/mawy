@@ -213,11 +213,11 @@ This package has three surfaces: `plain`, `split` and `preview`. The React packa
 
 | Name | What it is |
 | --- | --- |
-| `MawyViewer` | The read-only viewer. [Guide](./viewer), [API](../api/#mawyviewer) |
-| `MawyEditor` | The editor. [Guide](./editor) |
+| `MawyViewer` | The read-only viewer. [Guide](./viewer), [API](../api/components/mawy-viewer) |
+| `MawyEditor` | The editor. [Guide](./editor), [API](../api/components/mawy-editor) |
 | `mawy-react/highlight` | The syntax highlighter, in an entry point of its own |
 | `mawy-react/styles.css` | The stylesheet, above |
-| Types | `MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyHighlight`, `MawyImageUpload`, and the toolbar and status item types |
+| Types | `MawyMode`, `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyHtmlPolicy`, `MawyHighlight`, `MawyImageUpload`, and the toolbar and status item types. [API](../api/types/) |
 
 The types are also available from `mawy-react/types`, so an application can name one in its own props without importing a component.
 
@@ -227,12 +227,12 @@ The types are also available from `mawy-react/types`, so an application can name
 
 | Name | What it is |
 | --- | --- |
-| `MawyViewer` | The read-only viewer. [Guide](./viewer) |
-| `MawyEditor` | The editor: source, preview, and a switch. [Guide](./editor) |
+| `MawyViewer` | The read-only viewer. [Guide](./viewer), [API](../api/components/mawy-viewer) |
+| `MawyEditor` | The editor: source, preview, and a switch. [Guide](./editor), [API](../api/components/mawy-editor) |
 | `parseMarkdown` | The parser, and the whole `Md*` tree it produces |
 | `MawyTokens` | The palette, as `MawyTokens.light` and `MawyTokens.dark`, with `copyWith` for one of your own |
 | `mawyHighlighter` | The syntax highlighter, which a build keeps only if you reference it |
-| Types | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind`, `MawyMatch` |
+| Types | `MawyColorScheme`, `MawyLocale`, `MawyTypography`, `MawyFontFamily`, `MawyMeasure`, `MawyParseOptions`, `MawyViewerToolbarItem`, `MawyTokensBuilder`, `MawyHighlighter`, `MawyCodeToken`, `MawyCodeTokenKind`, `MawyMatch`. [API](../api/types/) |
 
 `package:mawy/mawy.dart` is the only import you need.
 
@@ -243,4 +243,4 @@ The types are also available from `mawy-react/types`, so an application can name
 - [**The playground**](./playground) — both components with nothing switched off, to type into.
 - [**The viewer**](./viewer) — rendering a document without editing it.
 - [**The editor**](./editor) — the source, the preview and switching between them, plus the drawn document edited in place in React.
-- [**API**](../api/) — every component and every option.
+- [**API**](../api/) — every component, type and function, one page each.

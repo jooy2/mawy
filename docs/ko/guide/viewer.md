@@ -607,7 +607,7 @@ MawyViewer(value: document, locale: MawyLocale.ko)
 
 ::: fw flutter
 
-팔레트는 [`MawyTokens`](../api/#mawytokens)이며, 스타일시트의 커스텀 속성을 Dart 이름으로 옮긴 것입니다. 값까지 그대로여서 `accent`는 `--mawy-accent`에 대응하고 둘 다 `#5b34ea`입니다. 밝은 팔레트와 어두운 팔레트가 `MawyTokens.light`과 `MawyTokens.dark`이고, 뷰어는 전역 설정을 읽지 않고 `colorScheme`에서 둘 중 하나를 고릅니다. 그래서 밝은 화면 안에서 문서 하나만 어둡게 할 수 있습니다.
+팔레트는 [`MawyTokens`](../api/theming)이며, 스타일시트의 커스텀 속성을 Dart 이름으로 옮긴 것입니다. 값까지 그대로여서 `accent`는 `--mawy-accent`에 대응하고 둘 다 `#5b34ea`입니다. 밝은 팔레트와 어두운 팔레트가 `MawyTokens.light`과 `MawyTokens.dark`이고, 뷰어는 전역 설정을 읽지 않고 `colorScheme`에서 둘 중 하나를 고릅니다. 그래서 밝은 화면 안에서 문서 하나만 어둡게 할 수 있습니다.
 
 토큰을 다시 선언하는 인자가 `tokens`입니다. 팔레트가 아니라 밝기를 받는 함수인데, 뷰어가 나머지 인자를 다 받은 다음에야 자기 밝기를 정하기 때문입니다. 밝기는 `colorScheme`에서 정하고, 그 값이 `system`이면 플랫폼을 따릅니다. 플랫폼을 따라가는 문서라면 두 팔레트 모두에 값을 준비해 두어야 합니다. 서른한 개의 색을 다시 쓰지 않고 하나만 바꾸려면 `copyWith`를 씁니다.
 
@@ -654,7 +654,7 @@ Container(color: tokens.backgroundSunken, child: /* … */);
 
 ::: fw flutter
 
-범위는 Dart 트리에도 같은 값으로 들어 있습니다. 모든 `MdNode`가 하나씩 갖고 있고 텍스트 노드도 마찬가지입니다. 없는 것은 그 값을 붙일 엘리먼트입니다. DOM이 없으므로 범위는 화면이 아니라 [`parseMarkdown`](../api/#parsemarkdown)에서 읽습니다. 속성을 다루는 이 절의 나머지 내용은 React 패키지에만 해당합니다.
+범위는 Dart 트리에도 같은 값으로 들어 있습니다. 모든 `MdNode`가 하나씩 갖고 있고 텍스트 노드도 마찬가지입니다. 없는 것은 그 값을 붙일 엘리먼트입니다. DOM이 없으므로 범위는 화면이 아니라 [`parseMarkdown`](../api/functions/parse-markdown)에서 읽습니다. 속성을 다루는 이 절의 나머지 내용은 React 패키지에만 해당합니다.
 
 :::
 
