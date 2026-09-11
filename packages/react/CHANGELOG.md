@@ -2,7 +2,13 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
-## vNext (2026--)
+## 1.2.0 (2026-09-11)
+
+### Breaking changes
+
+- **A host page's own element rules no longer reach inside the document.** A page that styles prose writes `article p { padding: 4px 8px }` or `ul { list-style-type: square }` against bare element names, and every one of those landed on a Mawy document unopposed — a rule under `.mawy-root` settles who wins a property both sheets set and says nothing about a property only the host sets. Inside `.mawy-md`, every element the parser produces now has its box, type, colour and list marker set back to the browser's own before this stylesheet says what they are.
+
+  **A page that meant to style the document has to say so more specifically**: `.my-docs .mawy-md p` reaches in where `article p` no longer does, and redeclaring a `--mawy-*` token is the way this was always meant to be done. `div` and `span` are left alone, because a directive is drawn out of the application's own markup. See [Theming](https://mawy.cdget.com/api/theming). This moves `styles.css` from 6.0 kB to 6.2 kB gzipped.
 
 ### Added
 
@@ -12,8 +18,6 @@
 
 - **The icon set this package draws is `lucide-react` 1.44 or newer.** It was 1.37 or newer, and every version in between is still allowed. Nothing else about the dependency changed: it is the only one this package ships with.
 
-- **A host page's own element rules no longer reach inside the document.** A page that styles prose writes `article p { padding: 4px 8px }` or `ul { list-style-type: square }` against bare element names, and every one of those landed on a Mawy document unopposed — a rule under `.mawy-root` settles who wins a property both sheets set and says nothing about a property only the host sets. Inside `.mawy-md`, every element the parser produces now has its box, type, colour and list marker set back to the browser's own before this stylesheet says what they are. A more specific selector still reaches in, which is an application overriding the library on purpose; `div` and `span` are left alone, because a directive is drawn out of the application's own markup. This moves `styles.css` from 6.0 kB to 6.2 kB gzipped.
-
 - **A bare address is only linked where its local part is short enough to be one.** Sixty-four characters, which is the whole of what RFC 5321 allows. Unbounded, the pattern read to the end of the paragraph looking for an `@`, gave a character back and looked again, from every position it could have started at — so a run of letters with no space in it, a base64 blob or a hash among them, cost the square of its own length. Sixty-three kilobytes of it took seven seconds and now takes fourteen milliseconds.
 
 ### Security
@@ -22,7 +26,7 @@
 
 ### Fixed
 
-- **A destination that never closes is read once rather than from every `]` after it.** `[a](` repeated was the last shape in this parser that cost the square of its own length. The first read that runs off the end of a paragraph now works out, for every place a destination could start in it, where a read from there could first stop — a space, a `)` it is not inside brackets for, or a backslash, which is counted as a stop because what it escapes depends on where the read began. A read that stops nowhere is refused without being read. A quarter of a megabyte of it went from a minute to fifty milliseconds.
+- **A destination that never closes is read once rather than from every `]` after it.** `[a](` repeated cost the square of its own paragraph: a destination with nothing to close it is read to the end, and read again from every `]` written after it, and every character of it cost a regular expression match besides. The characters are read by code now, and the first read that runs off the end works out, for every place a destination could start in that paragraph, where a read from there could first stop — a space, a `)` it is not inside brackets for, or a backslash, which counts as a stop because what it escapes depends on where the read began. A read that stops nowhere is refused without being read. A quarter of a megabyte went from a minute to fifty milliseconds.
 
 - **A paragraph that is one long line of emphasis is read at its own size.** The chunks a line is read into were an array, and what this algorithm does to them is take a span out of the middle and put one node in its place — once for every pair of delimiters and once for every link — which in an array moves everything after the cut. They are a list now, and the delimiters that pair off leave a hole rather than being taken out, so neither costs anything. A quarter of a megabyte of `*a*` repeated went from 6.2 seconds to 158 milliseconds, and 63 kilobytes of it from 380 milliseconds to 60. This and the two entries around it move the parser from 10.5 kB to 10.9 kB gzipped.
 
@@ -31,8 +35,6 @@
 - **A paragraph of a quarter of a megabyte is a document rather than a `RangeError`.** Its inline nodes were handed to the array they belong in by spreading them into a call, which puts every one of them on the stack as an argument, and a hundred and twenty thousand of them is past what the engine takes.
 
 - **A paragraph that is a list of links is read in the time a list should take.** Every link that closed built a map of everything read so far, or searched it, which is the length of the paragraph squared. Forty-eight kilobytes of links went from 1.4 seconds to 5 milliseconds.
-
-- **A document cannot hold the page while a link destination is read.** A destination that never closes is read to the end of the paragraph, and read again from every `]` after it, so `[a](` repeated was the length of that paragraph squared. Each character of it cost a regular expression match; they are read by code now, and thirty-two kilobytes of it parses in eight hundred milliseconds rather than two seconds.
 
 - **Two footnote definitions on adjacent lines are two notes.** `[^a]: …` with `[^b]: …` on the line under it came back as one note whose text ended in the characters of the second, and the sentence pointing at the second showed its brackets. A definition's paragraph was continued lazily into the definition below it, as a paragraph is continued by any line that follows it; a line opening the next definition ends the one above it now. A blank line between them was the way round it and still reads the same.
 

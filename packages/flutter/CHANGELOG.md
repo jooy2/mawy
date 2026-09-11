@@ -2,7 +2,7 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
-## vNext (2026--)
+## 1.2.0 (2026-09-11)
 
 ### Added
 
@@ -18,17 +18,13 @@
 
 ### Fixed
 
-- **A destination that never closes is read once rather than from every `]` after it.** `[a](` repeated was the last shape in this parser that cost the square of its own length. The first read that runs off the end of a paragraph now works out, for every place a destination could start in it, where a read from there could first stop — a space, a `)` it is not inside brackets for, or a backslash, which is counted as a stop because what it escapes depends on where the read began. A read that stops nowhere is refused without being read. A quarter of a megabyte of it went from a minute to fifty milliseconds.
+- **A destination that never closes is read once rather than from every `]` after it.** `[a](` repeated cost the square of its own paragraph: a destination with nothing to close it is read to the end, and read again from every `]` written after it, and every character of it cost a regular expression match besides. The characters are read by code now, and the first read that runs off the end works out, for every place a destination could start in that paragraph, where a read from there could first stop — a space, a `)` it is not inside brackets for, or a backslash, which counts as a stop because what it escapes depends on where the read began. A read that stops nowhere is refused without being read. A quarter of a megabyte went from a hundred seconds to 90 milliseconds.
 
-- **A paragraph's text is joined once rather than a piece at a time.** Adjacent runs of text are merged into one node at the end of reading a line, and a Dart string copies itself on every append — so half a million pieces, which is what `[a](` repeated comes to, cost the square of the paragraph. A megabyte of it went from over a minute to 328 milliseconds. The React package needs none of this: a JavaScript engine already does it behind `+=`.
+- **Every string this parser builds is built in a buffer.** A Dart string is immutable, so appending to one copies everything held so far — and a paragraph's text, a reference label, a link destination and its title are all read a character at a time, as are the runs of text merged into one node at the end of a line. Each of those cost the square of its own length. Three hundred kilobytes of prose went from a second and a half to 43 milliseconds, a sixty-three-kilobyte reference label from forty-six seconds to 102, and a megabyte of `[a](` repeated from over a minute to 328. The React package needs none of this: a JavaScript engine already does it behind `+=`.
 
 - **A paragraph that is one long line of emphasis is read at its own size.** The chunks a line is read into were a list, and what this algorithm does to them is take a span out of the middle and put one node in its place — once for every pair of delimiters and once for every link — which in a list moves everything after the cut. They are a linked list now, and the delimiters that pair off leave a hole rather than being taken out, so neither costs anything. A hundred and twenty-five kilobytes of `*a*` repeated went from forty seconds to 94 milliseconds.
 
-- **A long paragraph, a long reference label and a long run of letters are each read at their own size.** Dart strings are immutable, so building one a character at a time — which is how a paragraph's text, a reference label and a link destination are all read — copies everything held so far on every character. Three hundred kilobytes of prose went from a second and a half to 43 milliseconds, and a sixty-three-kilobyte label from forty-six seconds to 102.
-
 - **A paragraph that is a list of links is read in the time a list should take.** Every link that closed searched everything read so far, once for each delimiter run in it, so the cost grew with the square of the paragraph. Forty-seven kilobytes of links went from 39 milliseconds to 8, and the same shape in the React package from 1.4 seconds to 5 milliseconds.
-
-- **A document cannot hold the thread that draws while a link destination is read.** A destination that never closes is read to the end of the paragraph, and read again from every `]` after it. Dart strings are immutable, so building one a character at a time squared that again, and each character cost a regular expression match besides: `[a](` repeated took eighty-five seconds at thirty-two kilobytes and a minute and a half of it was the copying. The destination is built in a `StringBuffer` and read by code now, and the same document parses in under a second.
 
 - **Two footnote definitions on adjacent lines are two notes.** `[^a]: …` with `[^b]: …` on the line under it came back as one note whose text ended in the characters of the second, and the sentence pointing at the second showed its brackets. A definition's paragraph was continued lazily into the definition below it, as a paragraph is continued by any line that follows it; a line opening the next definition ends the one above it now. A blank line between them was the way round it and still reads the same.
 
