@@ -236,6 +236,70 @@ void main() {
       expect(depth, 99);
     });
 
+    /// The same worry one level down. Emphasis nests too, and it nests without
+    /// a container to open: `*` written sixteen thousand times is a paragraph
+    /// eight thousand levels deep, which ran the stack out in the merge pass —
+    /// and would have run it out again in the renderer, and in any application
+    /// walking the tree afterwards.
+    test('stops pairing emphasis rather than running out of stack', () {
+      int deepest(Object node) {
+        int found = 0;
+
+        final List<Object> children = switch (node) {
+          MdParagraph node => node.children,
+          MdEmphasis node => node.children,
+          MdStrong node => node.children,
+          MdDelete node => node.children,
+          MdLink node => node.children,
+          _ => const <Object>[],
+        };
+
+        for (final Object child in children) {
+          final int under = deepest(child);
+
+          if (under > found) {
+            found = under;
+          }
+        }
+
+        return found + 1;
+      }
+
+      for (final String source in <String>[
+        '${'*' * 20000}a${'*' * 20000}',
+        '${'**' * 20000}a${'**' * 20000}',
+        '${'~~' * 20000}a${'~~' * 20000}',
+      ]) {
+        // The paragraph, a hundred levels of emphasis, and the text inside them.
+        expect(deepest(parseMarkdown(source).root.children.first), lessThanOrEqualTo(102));
+      }
+    });
+
+    test('still pairs emphasis right up to the limit', () {
+      // A run of stars pairs two at a time, so a hundred and ninety-eight of
+      // them on each side is ninety-nine levels of strong — one short of where
+      // the pairing stops.
+      Object at = parseMarkdown('${'*' * 198}a${'*' * 198}').root.children.first;
+      int depth = 0;
+
+      while (true) {
+        final Object? inside = switch (at) {
+          MdParagraph node => node.children.first,
+          MdStrong node => node.children.first,
+          _ => null,
+        };
+
+        if (inside is! MdStrong) {
+          break;
+        }
+
+        depth += 1;
+        at = inside;
+      }
+
+      expect(depth, 99);
+    });
+
     test('reads a long one, and the last block still says where it came from', () {
       final String source = List<String>.generate(
         5000,

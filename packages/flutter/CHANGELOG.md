@@ -8,7 +8,13 @@
 
 - **An application can say where a document's relative addresses point.** `resolveUrl` is called for every relative URL a document writes — a picture's source and a link's destination — and what it answers is used as written. A URL in a document is relative to the _document_, and whatever is drawing it is somewhere else, so `![](./diagram.png)` in a file read off a disk had no address anybody could follow. It is on `MawyViewer` and `MawyEditor`. Unset, nothing changes.
 
+### Security
+
+- **A document cannot take the page down by nesting emphasis.** Emphasis, strong, strikethrough and links nest inside a paragraph without a container to open, and nothing bounded how far: `*` written sixteen thousand times is a thirty-two-kilobyte file whose paragraph is eight thousand levels deep, and the stack ran out reading it — and would have run out again drawing it, and in any application walking the tree. A hundred levels now, which is what the containers have had since 1.1.0 and for the same reason. Past it nothing more pairs in that paragraph and the runs left over are the characters they were written with. The two packages gave up at different depths before this, which made it a difference between them as well as a crash.
+
 ### Fixed
+
+- **A paragraph that is a list of links is read in the time a list should take.** Every link that closed searched everything read so far, once for each delimiter run in it, so the cost grew with the square of the paragraph. Forty-seven kilobytes of links went from 39 milliseconds to 8, and the same shape in the React package from 1.4 seconds to 5 milliseconds.
 
 - **A document cannot hold the thread that draws while a link destination is read.** A destination that never closes is read to the end of the paragraph, and read again from every `]` after it. Dart strings are immutable, so building one a character at a time squared that again, and each character cost a regular expression match besides: `[a](` repeated took eighty-five seconds at thirty-two kilobytes and a minute and a half of it was the copying. The destination is built in a `StringBuffer` and read by code now, and the same document parses in under a second.
 

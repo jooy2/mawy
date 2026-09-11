@@ -89,11 +89,18 @@ class _Opener {
 }
 
 class _Chunk {
-  _Chunk(this.node);
+  _Chunk(this.node, [this.depth = 1]);
 
   MdInline node;
   _Delimiter? delimiter;
   _Opener? opener;
+
+  /// How deep the tree under [node] goes, counting the node itself as one.
+  ///
+  /// Carried rather than measured, because measuring it would walk the subtree
+  /// that was just built and every node would be walked once per level above
+  /// it. See [_nesting].
+  int depth;
 }
 
 class _State {
@@ -106,7 +113,36 @@ class _State {
   final List<_Chunk> openers = <_Chunk>[];
 }
 
+/// How deep emphasis, strong, strikethrough and links may nest inside one
+/// paragraph before the delimiters left over are drawn as characters.
+///
+/// The block parser has the same limit for the same reason, written up under
+/// its own `nesting` in `block.dart`: reading a document is a stack of calls as
+/// deep as the document is nested, and so is every walk of the tree afterwards.
+/// `*` written sixteen thousand times is a paragraph eight thousand levels
+/// deep, and it ran the stack out — in the renderer, in the merge pass, in an
+/// application's own walk of the tree — at a different depth in each of the two
+/// languages this parser is written in.
+///
+/// A hundred is past anything a person writes. Past it, pairing simply stops
+/// for the rest of the paragraph and what is left of the run is the characters
+/// it was written with, which is what an unmatched delimiter is anyway.
+const int _nesting = 100;
+
 _Chunk _textChunk(String value, MdRange range) => _Chunk(MdText(range, value));
+
+/// How deep the deepest of these goes, counting itself.
+int _deepest(List<_Chunk> list, int from, int to) {
+  int found = 0;
+
+  for (int at = from; at < to; at += 1) {
+    if (list[at].depth > found) {
+      found = list[at].depth;
+    }
+  }
+
+  return found;
+}
 
 void _drop(List<_Chunk> list, _Chunk item) {
   final int at = list.indexOf(item);
@@ -258,8 +294,19 @@ void _processEmphasis(_State state, int bottom) {
     final _Delimiter opener = openerChunk.delimiter!;
     final int use = closer.char == '~' || (opener.length >= 2 && closer.length >= 2) ? 2 : 1;
 
-    final int openerAt = chunks.indexOf(openerChunk);
-    final int closerAt = chunks.indexOf(closerChunk);
+    // From the end, for the reason the link below gives: the pair is a span of
+    // chunks near the end of them, and a forward search reads everything the
+    // paragraph held before it.
+    final int openerAt = chunks.lastIndexOf(openerChunk);
+    final int closerAt = chunks.lastIndexOf(closerChunk);
+    final int depth = _deepest(chunks, openerAt + 1, closerAt) + 1;
+
+    // Too deep to wrap, and every pair still waiting is one level deeper than
+    // this one — so nothing more is paired in this paragraph and the runs that
+    // are left stay the characters they were written with. See [_nesting].
+    if (depth > _nesting) {
+      break;
+    }
     final List<MdInline> children = chunks
         .sublist(openerAt + 1, closerAt)
         .map((_Chunk chunk) => chunk.node)
@@ -276,7 +323,7 @@ void _processEmphasis(_State state, int bottom) {
         ? MdDelete(range, children)
         : (use == 2 ? MdStrong(range, children) : MdEmphasis(range, children));
 
-    chunks.replaceRange(openerAt + 1, closerAt, <_Chunk>[_Chunk(node)]);
+    chunks.replaceRange(openerAt + 1, closerAt, <_Chunk>[_Chunk(node, depth)]);
     delimiters.removeRange(found + 1, closerIndex);
     closerIndex = found + 1;
 
@@ -849,11 +896,18 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
   }
 
   /// Where in [delimiters] the run that follows this chunk begins.
+  ///
+  /// Asked of where each chunk was written rather than of where it sits in the
+  /// list, because the two orders are the same one — chunks are appended as the
+  /// source is read, and what replaces a span of them covers that same span —
+  /// and the list position had to be searched for. Searching it for every
+  /// delimiter, on every link that closes, was the length of a paragraph cubed
+  /// for a paragraph that is a list of links.
   int delimiterBottom(_Chunk chunk) {
-    final int after = chunks.indexOf(chunk);
+    final int after = chunk.node.range.start;
 
     for (int index = 0; index < delimiters.length; index += 1) {
-      if (chunks.indexOf(delimiters[index]) > after) {
+      if (delimiters[index].node.range.start > after) {
         return index;
       }
     }
@@ -1100,16 +1154,22 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
 
       _processEmphasis(state, delimiterBottom(openerChunk));
 
-      final int openerAt = chunks.indexOf(openerChunk);
+      // From the end: everything after the opener is this link's own label, so
+      // searching backwards costs the label rather than the paragraph. There is
+      // one of each chunk, so the last is the only.
+      final int openerAt = chunks.lastIndexOf(openerChunk);
       final List<MdInline> children = chunks
           .sublist(openerAt + 1)
           .map((_Chunk each) => each.node)
           .toList();
       final String? url = opener.image ? safeImageUrl(destination.url) : safeUrl(destination.url);
       final int taken = chunks.length - openerAt;
+      final int depth = _deepest(chunks, openerAt + 1, chunks.length) + 1;
       final MdRange range = MdRange(openerChunk.node.range.start, endOffset(raw, end));
 
       if (opener.image && url != null) {
+        // An image is one node however deep its description was: the words are
+        // all that is kept of it.
         chunks.replaceRange(openerAt, openerAt + taken, <_Chunk>[
           _Chunk(MdImage(range, url: url, title: destination.title, alt: toPlainText(children))),
         ]);
@@ -1119,14 +1179,16 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
         chunks.replaceRange(openerAt, openerAt + taken, <_Chunk>[
           _textChunk(toPlainText(children), range),
         ]);
-      } else if (url != null) {
+      } else if (url != null && depth <= _nesting) {
         chunks.replaceRange(openerAt, openerAt + taken, <_Chunk>[
-          _Chunk(MdLink(range, url: url, title: destination.title, children: children)),
+          _Chunk(MdLink(range, url: url, title: destination.title, children: children), depth),
         ]);
       } else {
         // The same for a link: the label stays and reads as ordinary text, so a
         // reader sees the sentence rather than a control that does nothing.
-        chunks.replaceRange(openerAt, openerAt + taken, children.map(_Chunk.new).toList());
+        // A link too deep to wrap lands here as well, keeping its label and
+        // losing only what it pointed at. See [_nesting].
+        chunks.replaceRange(openerAt, openerAt + taken, chunks.sublist(openerAt + 1));
       }
 
       if (!opener.image) {

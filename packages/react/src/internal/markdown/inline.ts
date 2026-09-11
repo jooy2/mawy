@@ -68,6 +68,14 @@ interface Chunk {
   node: MdInline;
   delimiter: Delimiter | null;
   opener: Opener | null;
+  /**
+   * How deep the tree under `node` goes, counting the node itself as one.
+   *
+   * Carried rather than measured, because measuring it would walk the subtree
+   * that was just built and every node would be walked once per level above
+   * it. See `NESTING`.
+   */
+  depth: number;
 }
 
 interface State {
@@ -78,12 +86,43 @@ interface State {
   openers: Chunk[];
 }
 
+/**
+ * How deep emphasis, strong, strikethrough and links may nest inside one
+ * paragraph before the delimiters left over are drawn as characters.
+ *
+ * The block parser has the same limit for the same reason, written up under
+ * its own `NESTING`: reading a document is a stack of calls as deep as the
+ * document is nested, and so is every walk of the tree afterwards. `*` written
+ * sixteen thousand times is a paragraph eight thousand levels deep, and it ran
+ * the stack out — in the renderer, in the merge pass, in an application's own
+ * walk of the tree — at a different depth in each of the two languages this
+ * parser is written in.
+ *
+ * A hundred is past anything a person writes. Past it, pairing simply stops
+ * for the rest of the paragraph and what is left of the run is the characters
+ * it was written with, which is what an unmatched delimiter is anyway.
+ */
+const NESTING = 100;
+
 function textChunk(value: string, range: MdRange): Chunk {
-  return { node: { type: 'text', range, value }, delimiter: null, opener: null };
+  return { node: { type: 'text', range, value }, delimiter: null, opener: null, depth: 1 };
 }
 
-function nodeChunk(node: MdInline): Chunk {
-  return { node, delimiter: null, opener: null };
+function nodeChunk(node: MdInline, depth = 1): Chunk {
+  return { node, delimiter: null, opener: null, depth };
+}
+
+/** How deep the deepest of these goes, counting itself. */
+function deepest(list: Chunk[], from: number, to: number): number {
+  let found = 0;
+
+  for (let at = from; at < to; at += 1) {
+    if (list[at].depth > found) {
+      found = list[at].depth;
+    }
+  }
+
+  return found;
 }
 
 function drop<T>(list: T[], item: T): void {
@@ -243,8 +282,20 @@ function processEmphasis(state: State, bottom: number): void {
     const opener = openerChunk.delimiter as Delimiter;
     const use = closer.char === '~' || (opener.length >= 2 && closer.length >= 2) ? 2 : 1;
 
-    const openerAt = chunks.indexOf(openerChunk);
-    const closerAt = chunks.indexOf(closerChunk);
+    // From the end, for the reason the link below gives: the pair is a span of
+    // chunks near the end of them, and a forward search reads everything the
+    // paragraph held before it.
+    const openerAt = chunks.lastIndexOf(openerChunk);
+    const closerAt = chunks.lastIndexOf(closerChunk);
+    const depth = deepest(chunks, openerAt + 1, closerAt) + 1;
+
+    // Too deep to wrap, and every pair still waiting is one level deeper than
+    // this one — so nothing more is paired in this paragraph and the runs that
+    // are left stay the characters they were written with. See `NESTING`.
+    if (depth > NESTING) {
+      break;
+    }
+
     const children = chunks.slice(openerAt + 1, closerAt).map((chunk) => chunk.node);
 
     // The characters that pair off are the *last* of the opening run and the
@@ -265,7 +316,7 @@ function processEmphasis(state: State, bottom: number): void {
           ? { type: 'strong', range, children }
           : { type: 'emphasis', range, children };
 
-    chunks.splice(openerAt + 1, closerAt - openerAt - 1, nodeChunk(node));
+    chunks.splice(openerAt + 1, closerAt - openerAt - 1, nodeChunk(node, depth));
     delimiters.splice(found + 1, closerIndex - found - 1);
     closerIndex = found + 1;
 
@@ -776,13 +827,21 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
     }
   };
 
-  /** Where in `delimiters` the run that follows this chunk begins. */
+  /**
+   * Where in `delimiters` the run that follows this chunk begins.
+   *
+   * Asked of where each chunk was written rather than of where it sits in the
+   * array, because the two orders are the same one — chunks are appended as
+   * the source is read, and what replaces a span of them covers that same span
+   * — and the array position had to be looked up. Building a map of every
+   * chunk to do it, on every link that closes, was the length of a paragraph
+   * squared for a paragraph that is a list of links.
+   */
   const delimiterBottom = (chunk: Chunk): number => {
-    const positions = new Map(chunks.map((each, index) => [each, index]));
-    const after = positions.get(chunk) ?? 0;
+    const after = chunk.node.range.start;
 
     for (let index = 0; index < delimiters.length; index += 1) {
-      if ((positions.get(delimiters[index]) ?? 0) > after) {
+      if (delimiters[index].node.range.start > after) {
         return index;
       }
     }
@@ -1028,13 +1087,19 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
 
       processEmphasis(state, delimiterBottom(openerChunk));
 
-      const openerAt = chunks.indexOf(openerChunk);
+      // From the end: everything after the opener is this link's own label, so
+      // searching backwards costs the label rather than the paragraph. There is
+      // one of each chunk, so the last is the only.
+      const openerAt = chunks.lastIndexOf(openerChunk);
       const children = chunks.slice(openerAt + 1).map((each) => each.node);
       const url = opener.image ? safeImageUrl(destination.url) : safeUrl(destination.url);
       const taken = chunks.length - openerAt;
+      const depth = deepest(chunks, openerAt + 1, chunks.length) + 1;
       const range: MdRange = { start: openerChunk.node.range.start, end: endOffset(raw, end) };
 
       if (opener.image && url) {
+        // An image is one node however deep its description was: the words are
+        // all that is kept of it.
         chunks.splice(
           openerAt,
           taken,
@@ -1050,16 +1115,18 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
         // A destination we will not follow. An image has nothing to fall back
         // to but the words the author wrote in place of it.
         chunks.splice(openerAt, taken, textChunk(toPlainText(children), range));
-      } else if (url) {
+      } else if (url && depth <= NESTING) {
         chunks.splice(
           openerAt,
           taken,
-          nodeChunk({ type: 'link', range, url, title: destination.title, children })
+          nodeChunk({ type: 'link', range, url, title: destination.title, children }, depth)
         );
       } else {
         // The same for a link: the label stays and reads as ordinary text, so a
         // reader sees the sentence rather than a control that does nothing.
-        chunks.splice(openerAt, taken, ...children.map(nodeChunk));
+        // A link too deep to wrap lands here as well, keeping its label and
+        // losing only what it pointed at. See `NESTING`.
+        chunks.splice(openerAt, taken, ...chunks.slice(openerAt + 1));
       }
 
       if (!opener.image) {

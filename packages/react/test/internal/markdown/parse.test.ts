@@ -332,6 +332,52 @@ describe('a document nobody wrote by hand', () => {
 
     expect(depth).toBe(99);
   });
+
+  /**
+   * The same worry one level down. Emphasis nests too, and it nests without a
+   * container to open: `*` written sixteen thousand times is a paragraph eight
+   * thousand levels deep, which ran the stack out in the merge pass — and would
+   * have run it out again in the renderer, and in any application walking the
+   * tree afterwards.
+   */
+  it('stops pairing emphasis rather than running out of stack', () => {
+    const deepest = (node: MdInline | MdBlock): number => {
+      let found = 0;
+
+      for (const child of 'children' in node ? node.children : []) {
+        found = Math.max(found, deepest(child));
+      }
+
+      return found + 1;
+    };
+
+    for (const source of [
+      `${'*'.repeat(20_000)}a${'*'.repeat(20_000)}`,
+      `${'**'.repeat(20_000)}a${'**'.repeat(20_000)}`,
+      `${'~~'.repeat(20_000)}a${'~~'.repeat(20_000)}`
+    ]) {
+      const [paragraph] = parseMarkdown(source).root.children;
+
+      // The paragraph, a hundred levels of emphasis, and the text inside them.
+      expect(deepest(paragraph)).toBeLessThanOrEqual(102);
+    }
+  });
+
+  it('still pairs emphasis right up to the limit', () => {
+    // A run of stars pairs two at a time, so a hundred and ninety-eight of
+    // them on each side is ninety-nine levels of `strong` — one short of where
+    // the pairing stops.
+    let at: MdInline | MdBlock = parseMarkdown(`${'*'.repeat(198)}a${'*'.repeat(198)}`).root
+      .children[0];
+    let depth = 0;
+
+    while ('children' in at && at.children[0] && at.children[0].type === 'strong') {
+      depth += 1;
+      at = at.children[0];
+    }
+
+    expect(depth).toBe(99);
+  });
 });
 
 describe('link reference definitions', () => {
