@@ -101,7 +101,7 @@ Four hundred blocks is past a long README, a reference page or a chapter. Past i
 
 CommonMark, and GitHub's additions on top of it:
 
-|  |  |
+| Group | What is read |
 | --- | --- |
 | **Blocks** | ATX and setext headings, paragraphs, fenced and indented code, block quotations, ordered and bullet lists to any depth, thematic breaks, HTML blocks |
 | **Inline** | emphasis, strong, `code`, links, images, autolinks, hard line breaks, character references, backslash escapes |
@@ -486,7 +486,7 @@ import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 
 Every family in `MAWY_WEB_FONTS` is under the SIL Open Font License, which permits commercial use, embedding and redistribution. Nothing on the list needs a licence bought for it.
 
-|  |  |
+| Role | Families |
 | --- | --- |
 | **Sans** | Inter, IBM Plex Sans, [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) |
 | **Serif** | Source Serif 4, Literata, Lora, EB Garamond |

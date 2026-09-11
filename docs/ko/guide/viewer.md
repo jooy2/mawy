@@ -101,7 +101,7 @@ Flutter 패키지에는 이 기능이 없고 `value`가 필수입니다. 파일�
 
 CommonMark, 그리고 그 위에 GitHub이 더한 것들입니다.
 
-|  |  |
+| 갈래 | 읽는 것 |
 | --- | --- |
 | **블록** | ATX·setext 제목, 문단, 펜스·들여쓰기 코드 블록, 인용, 순서 있는·없는 목록(깊이 제한 없음), 구분선, HTML 블록 |
 | **인라인** | 강조, 굵게, `코드`, 링크, 이미지, 자동 링크, 강제 줄바꿈, 문자 참조, 백슬래시 이스케이프 |
@@ -486,7 +486,7 @@ import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 
 `MAWY_WEB_FONTS`의 모든 글꼴은 SIL Open Font License입니다. 상업적 사용과 임베딩, 재배포가 허용되므로 목록에 라이선스를 구매해야 하는 것은 없습니다.
 
-|  |  |
+| 갈래 | 글꼴 |
 | --- | --- |
 | **고딕** | Inter, IBM Plex Sans, [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) |
 | **명조** | Source Serif 4, Literata, Lora, EB Garamond |

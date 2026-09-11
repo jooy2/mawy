@@ -7,7 +7,7 @@ order: 1
 
 Mawy는 프레임워크마다 패키지 하나로 배포되고, 그 둘은 같은 라이브러리입니다. 파서가 같고, 문서를 읽는 방식이 같으며, 팔레트의 색 값도 같습니다. 사이드바에서 쓰실 패키지를 고르세요. 메뉴 위의 스위치가 이 사이트 모든 페이지의 내용을 바꿉니다. 이 사이트는 설치하는 것과 같은 소스로 두 패키지를 그리므로, 이 페이지에 적힌 것은 전부 실제로 동작합니다.
 
-|             |                                                                |               |
+| 패키지      | 레지스트리                                                     | 들어 있는 것  |
 | ----------- | -------------------------------------------------------------- | ------------- |
 | **React**   | npm의 [`mawy-react`](https://www.npmjs.com/package/mawy-react) | 뷰어와 에디터 |
 | **Flutter** | pub.dev의 [`mawy`](https://pub.dev/packages/mawy)              | 뷰어와 에디터 |
@@ -211,7 +211,7 @@ MawyEditor(defaultValue: '# Hello', onChange: save);
 
 ::: fw react
 
-|  |  |
+| 이름 | 무엇인지 |
 | --- | --- |
 | `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer), [API](../api/#mawyviewer) |
 | `MawyEditor` | 에디터. [가이드](./editor) |
@@ -225,7 +225,7 @@ MawyEditor(defaultValue: '# Hello', onChange: save);
 
 ::: fw flutter
 
-|  |  |
+| 이름 | 무엇인지 |
 | --- | --- |
 | `MawyViewer` | 읽기 전용 뷰어. [가이드](./viewer) |
 | `MawyEditor` | 에디터. 원문과 미리보기, 그 사이의 전환. [가이드](./editor) |

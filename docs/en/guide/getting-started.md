@@ -7,7 +7,7 @@ order: 1
 
 Mawy ships as one package per framework, and the two are one library. They share the parser, the reading of a document, and the palette down to the colour values. Pick yours in the sidebar. The switch sits above the menu, and it changes what every page on this site says. This site draws both packages from the same source you install, so everything on this page runs.
 
-|  |  |  |
+| Package | Registry | Ships |
 | --- | --- | --- |
 | **React** | [`mawy-react`](https://www.npmjs.com/package/mawy-react) on npm | The viewer and the editor |
 | **Flutter** | [`mawy`](https://pub.dev/packages/mawy) on pub.dev | The viewer and the editor |
@@ -211,7 +211,7 @@ This package has three surfaces: `plain`, `split` and `preview`. The React packa
 
 ::: fw react
 
-|  |  |
+| Name | What it is |
 | --- | --- |
 | `MawyViewer` | The read-only viewer. [Guide](./viewer), [API](../api/#mawyviewer) |
 | `MawyEditor` | The editor. [Guide](./editor) |
@@ -225,7 +225,7 @@ The types are also available from `mawy-react/types`, so an application can name
 
 ::: fw flutter
 
-|  |  |
+| Name | What it is |
 | --- | --- |
 | `MawyViewer` | The read-only viewer. [Guide](./viewer) |
 | `MawyEditor` | The editor: source, preview, and a switch. [Guide](./editor) |
