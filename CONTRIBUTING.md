@@ -57,6 +57,21 @@ Seven more things go through the same check in the same run. Each is written twi
 
 CI runs it on every change to either parser. Two implementations of CommonMark drift as soon as nobody compares them, and a document that means one thing in a browser and another in an app is the failure this library is built to prevent. **A change to one parser is a change to both**, and the diff is what catches a missed one.
 
+**What the diff cannot reach is the drawing**, and that drifted too. One renderer makes elements and the other makes widgets, so there is nothing to put a diff between — and a directive written inside a footnote was drawn as the characters the author typed in one package and as nothing at all in the other, for months, because the rendering context a note is built from had quietly lost a field.
+
+So the drawing is checked against a list rather than against itself. `packages/flutter/tool/drawn.json` holds a document and, for each, the words the drawn document has to contain and the characters it must not:
+
+```json
+{
+  "why": "A quotation is the words inside it and nothing added.",
+  "markdown": "> Quoted words.",
+  "says": ["Quoted words."],
+  "omits": [">"]
+}
+```
+
+Both suites read that one file — `packages/react/test/internal/markdown/drawn.test.tsx` and `packages/flutter/test/markdown/drawn_test.dart` — so a case added for one package is a case the other answers too. Only what both packages draw belongs in it: there is no raw HTML to draw in Flutter, and a picture's alt text is drawn by the browser from an attribute on one side and by the renderer as words on the other.
+
 **The specification is run against the parser as well.** `packages/react/test/internal/markdown/commonmark.test.ts` runs all 652 of CommonMark's own examples, passes 640, and writes down the other 12 with the reason each one is there. A change that fixes one deletes a line from that list. A change that breaks one adds a line, which the test will tell you to do and you should not. The suite runs against the TypeScript parser alone, because the parity check already shows the Dart one produces the same tree.
 
 The examples come from `commonmark-spec`, the specification document itself, which is a devDependency of `packages/react`. It is CC-BY-SA. The rule on [third-party dependencies](#third-party-dependencies) refuses that licence for a *runtime* dependency, but nothing in it reaches a consumer or a build.

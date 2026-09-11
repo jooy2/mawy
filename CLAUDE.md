@@ -44,7 +44,9 @@ cd packages/flutter && dart run tool/parity.dart > /tmp/flutter.json && diff /tm
 
 The corpus is `packages/flutter/tool/corpus.json` — the awkward cases, written down — plus every Markdown file in the repository, so adding a document here adds a test. CI runs this on every push that touches either package.
 
-Where the two packages genuinely differ, it is because the platform differs, and the difference is written down rather than left to be discovered: no `wysiwyg` surface in Flutter (`contenteditable` has no equivalent), no raw HTML policy (there is no HTML to draw), no file picker or font list (both are a plugin's job, not a widget's).
+**The check stops at the parse trees, and a second list carries the drawing.** What draws is elements on one side and a widget tree on the other, so there is nothing to diff — and the two renderers drifted for months without anything saying so. `packages/flutter/tool/drawn.json` is a list of documents and, for each, the words the drawn document has to contain and the characters it must not. Both suites read that one file — `test/internal/markdown/drawn.test.tsx` and `test/markdown/drawn_test.dart` — so a case added for one is a case the other answers too. Only what both packages draw belongs in it.
+
+Where the two packages genuinely differ, it is because the platform differs, and the difference is written down rather than left to be discovered: no `wysiwyg` surface in Flutter (`contenteditable` has no equivalent), no raw HTML policy (there is no HTML to draw), no file picker or font list (both are a plugin's job, not a widget's), and a picture's alt text drawn by the browser from an attribute on one side and by the renderer as words on the other.
 
 ## Things that surprise
 

@@ -1,0 +1,80 @@
+[
+ {
+  "why": "A directive nobody claimed is the characters the author typed, in both packages. The Flutter renderer lost the source inside a footnote and drew nothing at all.",
+  "markdown": "Before.\n\n::video{src=/a.mp4}\n\nAfter.",
+  "says": ["Before.", "::video{src=/a.mp4}", "After."]
+ },
+ {
+  "why": "The same, inside a footnote, which is drawn from a context of its own — and lost the source it needs for months.",
+  "markdown": "Noted.[^a]\n\n[^a]: Press :kbd[Ctrl], and see:\n\n    ::video{src=/a.mp4}",
+  "says": ["Noted.", ":kbd[Ctrl]", "::video{src=/a.mp4}", "and see:"]
+ },
+ {
+  "why": "A note's own words, and the number that points at it.",
+  "markdown": "A sentence.[^one] Another.[^two]\n\n[^one]: The first note.\n\n[^two]: The second note.",
+  "says": ["A sentence.", "Another.", "The first note.", "The second note.", "1", "2"]
+ },
+ {
+  "why": "A code block keeps every character of the code, wherever it is written.",
+  "markdown": "```ts\nconst a = 1;\n```\n\n> ```ts\n> const b = 2;\n> ```",
+  "says": ["const a = 1;", "const b = 2;"]
+ },
+ {
+  "why": "An alert says which kind it is, in words, because the colour and the icon say it to nobody who cannot see them.",
+  "markdown": "> [!NOTE]\n> Something worth knowing.\n\n> [!WARNING]\n> Something to be careful of.",
+  "says": ["Note", "Something worth knowing.", "Warning", "Something to be careful of."]
+ },
+ {
+  "why": "A quotation is the words inside it and nothing added.",
+  "markdown": "> Quoted words.\n>\n> And more of them.",
+  "says": ["Quoted words.", "And more of them."],
+  "omits": [">"]
+ },
+ {
+  "why": "A table draws every cell, header row included.",
+  "markdown": "| Zone | Planting |\n| - | - |\n| A | river stone |\n| B | sedge |",
+  "says": ["Zone", "Planting", "river stone", "sedge"]
+ },
+ {
+  "why": "A list item's words, and a task's, with the marker drawn as a control rather than as characters.",
+  "markdown": "- one\n- two\n\n1. first\n1. second\n\n- [x] done\n- [ ] not done",
+  "says": ["one", "two", "first", "second", "done", "not done"],
+  "omits": ["[x]", "[ ]"]
+ },
+ {
+  "why": "A definition list is the term and what it means, and the colon that wrote it is markup.",
+  "markdown": "Markdown\n: A way of writing.\n\nMawy\n: This.",
+  "says": ["Markdown", "A way of writing.", "Mawy", "This."],
+  "omits": [": A way"]
+ },
+ {
+  "why": "Emphasis, strong and strikethrough are the words, and the marks around them are markup.",
+  "markdown": "A word **strong**, one *emphasised*, one ~~struck~~ and one in `code`.",
+  "says": ["strong", "emphasised", "struck", "code"],
+  "omits": ["**", "~~"]
+ },
+ {
+  "why": "A heading and a link are their own words, and a link's destination is not drawn.",
+  "markdown": "# The heading\n\nRead [the guide](https://example.com/guide) first.",
+  "says": ["The heading", "the guide", "first."],
+  "omits": ["https://example.com/guide"]
+ },
+ {
+  "why": "A thematic break draws no characters of its own, and the blocks either side keep theirs.",
+  "markdown": "Above.\n\n---\n\nBelow.",
+  "says": ["Above.", "Below."],
+  "omits": ["---"]
+ },
+ {
+  "why": "An escape is the character it escaped, and the backslash is gone.",
+  "markdown": "Not \\*emphasis\\* and not a \\# heading.",
+  "says": ["*emphasis*", "# heading"],
+  "omits": ["\\*", "\\#"]
+ },
+ {
+  "why": "A character reference is the character, and a bare address is the address.",
+  "markdown": "Caf&eacute; &amp; bar, at www.example.com or a@example.com.",
+  "says": ["Café & bar", "www.example.com", "a@example.com"],
+  "omits": ["&eacute;", "&amp;"]
+ }
+]
