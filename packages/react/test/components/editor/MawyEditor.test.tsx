@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { page } from '@vitest/browser/context';
+import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { MawyEditor } from 'mawy-react';
 import { rowHeight, rowRect } from '../../../src/internal/source.js';

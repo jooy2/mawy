@@ -10,6 +10,8 @@
 
 ### Changed
 
+- **The icon set this package draws is `lucide-react` 1.44 or newer.** It was 1.37 or newer, and every version in between is still allowed. Nothing else about the dependency changed: it is the only one this package ships with.
+
 - **A host page's own element rules no longer reach inside the document.** A page that styles prose writes `article p { padding: 4px 8px }` or `ul { list-style-type: square }` against bare element names, and every one of those landed on a Mawy document unopposed — a rule under `.mawy-root` settles who wins a property both sheets set and says nothing about a property only the host sets. Inside `.mawy-md`, every element the parser produces now has its box, type, colour and list marker set back to the browser's own before this stylesheet says what they are. A more specific selector still reaches in, which is an application overriding the library on purpose; `div` and `span` are left alone, because a directive is drawn out of the application's own markup. This moves `styles.css` from 6.0 kB to 6.2 kB gzipped.
 
 - **A bare address is only linked where its local part is short enough to be one.** Sixty-four characters, which is the whole of what RFC 5321 allows. Unbounded, the pattern read to the end of the paragraph looking for an `@`, gave a character back and looked again, from every position it could have started at — so a run of letters with no space in it, a base64 blob or a hash among them, cost the square of its own length. Sixty-three kilobytes of it took seven seconds and now takes fourteen milliseconds.
