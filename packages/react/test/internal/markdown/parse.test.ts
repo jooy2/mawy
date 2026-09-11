@@ -341,7 +341,7 @@ describe('a document nobody wrote by hand', () => {
    * tree afterwards.
    */
   it('stops pairing emphasis rather than running out of stack', () => {
-    const deepest = (node: MdInline | MdBlock): number => {
+    const deepest = (node: MdNode): number => {
       let found = 0;
 
       for (const child of 'children' in node ? node.children : []) {
@@ -389,8 +389,7 @@ describe('a document nobody wrote by hand', () => {
     // A run of stars pairs two at a time, so a hundred and ninety-eight of
     // them on each side is ninety-nine levels of `strong` — one short of where
     // the pairing stops.
-    let at: MdInline | MdBlock = parseMarkdown(`${'*'.repeat(198)}a${'*'.repeat(198)}`).root
-      .children[0];
+    let at: MdNode = parseMarkdown(`${'*'.repeat(198)}a${'*'.repeat(198)}`).root.children[0];
     let depth = 0;
 
     while ('children' in at && at.children[0] && at.children[0].type === 'strong') {
