@@ -12,11 +12,17 @@
 
 - **A host page's own element rules no longer reach inside the document.** A page that styles prose writes `article p { padding: 4px 8px }` or `ul { list-style-type: square }` against bare element names, and every one of those landed on a Mawy document unopposed — a rule under `.mawy-root` settles who wins a property both sheets set and says nothing about a property only the host sets. Inside `.mawy-md`, every element the parser produces now has its box, type, colour and list marker set back to the browser's own before this stylesheet says what they are. A more specific selector still reaches in, which is an application overriding the library on purpose; `div` and `span` are left alone, because a directive is drawn out of the application's own markup. This moves `styles.css` from 6.0 kB to 6.2 kB gzipped.
 
+- **A bare address is only linked where its local part is short enough to be one.** Sixty-four characters, which is the whole of what RFC 5321 allows. Unbounded, the pattern read to the end of the paragraph looking for an `@`, gave a character back and looked again, from every position it could have started at — so a run of letters with no space in it, a base64 blob or a hash among them, cost the square of its own length. Sixty-three kilobytes of it took seven seconds and now takes fourteen milliseconds.
+
 ### Security
 
 - **A document cannot take the page down by nesting emphasis.** Emphasis, strong, strikethrough and links nest inside a paragraph without a container to open, and nothing bounded how far: `*` written sixteen thousand times is a thirty-two-kilobyte file whose paragraph is eight thousand levels deep, and the stack ran out reading it — and would have run out again drawing it, and in any application walking the tree. A hundred levels now, which is what the containers have had since 1.1.0 and for the same reason. Past it nothing more pairs in that paragraph and the runs left over are the characters they were written with. The two packages gave up at different depths before this, which made it a difference between them as well as a crash.
 
 ### Fixed
+
+- **A paragraph of a quarter of a megabyte is a document rather than a `RangeError`.** Its inline nodes were handed to the array they belong in by spreading them into a call, which puts every one of them on the stack as an argument, and a hundred and twenty thousand of them is past what the engine takes.
+
+- **A paragraph that is one long line of emphasis is read ten times faster.** Every pair that closed searched the whole paragraph for the two chunks it had just been handed; the search starts where the last pair was found now. It is still the slowest shape this parser has, and a quarter of a megabyte of it is six seconds.
 
 - **A paragraph that is a list of links is read in the time a list should take.** Every link that closed built a map of everything read so far, or searched it, which is the length of the paragraph squared. Forty-eight kilobytes of links went from 1.4 seconds to 5 milliseconds.
 

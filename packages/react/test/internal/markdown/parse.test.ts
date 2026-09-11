@@ -363,6 +363,28 @@ describe('a document nobody wrote by hand', () => {
     }
   });
 
+  /**
+   * A run of letters with no space in it — a base64 blob, a hash, a token — is
+   * where the bare-address pattern used to read to the end of the paragraph
+   * looking for an `@`, give a character back, and look again, from every
+   * position it could have started at.
+   */
+  it('reads a run with no space in it at its own size', () => {
+    const [paragraph] = parseMarkdown('x'.repeat(200_000)).root.children;
+
+    expect(paragraph.type).toBe('paragraph');
+  });
+
+  it('leaves an address alone whose local part is longer than one may be', () => {
+    // Sixty-four characters is the whole of what RFC 5321 allows, and what the
+    // pattern is held to so that it cannot read the paragraph twice over.
+    const links = (source: string) =>
+      bare(inline(parseMarkdown(source).root.children[0])).filter((node) => node.type === 'link');
+
+    expect(links(`${'a'.repeat(64)}@example.com`)).toHaveLength(1);
+    expect(links(`${'b'.repeat(65)}@example.com`)).toHaveLength(0);
+  });
+
   it('still pairs emphasis right up to the limit', () => {
     // A run of stars pairs two at a time, so a hundred and ninety-eight of
     // them on each side is ninety-nine levels of `strong` — one short of where

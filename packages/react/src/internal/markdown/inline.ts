@@ -112,6 +112,41 @@ function nodeChunk(node: MdInline, depth = 1): Chunk {
   return { node, delimiter: null, opener: null, depth };
 }
 
+/**
+ * Where `item` is in `list`, looked for outward from `hint`.
+ *
+ * An exact search either way, and the hint only says where to start. Both
+ * callers know roughly where what they are looking for is — emphasis pairs off
+ * left to right and each pair sits beside the last, and a link's opener is at
+ * the far end because everything after it is the link's own label — and a
+ * search from one end of the array read the whole paragraph for every pair in
+ * it. A line of `*a*` repeated took a minute at a quarter of a megabyte.
+ */
+function indexNear(list: Chunk[], item: Chunk, hint: number): number {
+  let below = Math.min(Math.max(hint, 0), list.length - 1);
+  let above = below + 1;
+
+  while (below >= 0 || above < list.length) {
+    if (below >= 0) {
+      if (list[below] === item) {
+        return below;
+      }
+
+      below -= 1;
+    }
+
+    if (above < list.length) {
+      if (list[above] === item) {
+        return above;
+      }
+
+      above += 1;
+    }
+  }
+
+  return -1;
+}
+
 /** How deep the deepest of these goes, counting itself. */
 function deepest(list: Chunk[], from: number, to: number): number {
   let found = 0;
@@ -237,6 +272,9 @@ function processEmphasis(state: State, bottom: number): void {
   const { chunks, delimiters } = state;
   const openersBottom = new Map<string, number>();
   let closerIndex = bottom;
+  // Where the last pair was found. The next one is a few chunks along from it,
+  // so this is what keeps the search off the rest of the paragraph.
+  let near = 0;
 
   while (closerIndex < delimiters.length) {
     const closerChunk = delimiters[closerIndex];
@@ -282,11 +320,10 @@ function processEmphasis(state: State, bottom: number): void {
     const opener = openerChunk.delimiter as Delimiter;
     const use = closer.char === '~' || (opener.length >= 2 && closer.length >= 2) ? 2 : 1;
 
-    // From the end, for the reason the link below gives: the pair is a span of
-    // chunks near the end of them, and a forward search reads everything the
-    // paragraph held before it.
-    const openerAt = chunks.lastIndexOf(openerChunk);
-    const closerAt = chunks.lastIndexOf(closerChunk);
+    const openerAt = indexNear(chunks, openerChunk, near);
+    const closerAt = indexNear(chunks, closerChunk, openerAt);
+
+    near = openerAt;
     const depth = deepest(chunks, openerAt + 1, closerAt) + 1;
 
     // Too deep to wrap, and every pair still waiting is one level deeper than
@@ -580,8 +617,18 @@ const INLINE_HTML =
  * Bare URLs
  * ---------------------------------------------------------------------- */
 
+/**
+ * A bare URL or an address, written with no markup around it.
+ *
+ * The local part is held to sixty-four characters, which is the limit RFC 5321
+ * puts on it. Without a bound the `+` reads to the end of the paragraph looking
+ * for an `@`, gives the last character back, looks again, and does that from
+ * every position it could start at — so a run of letters with no space in it,
+ * a base64 blob among them, cost the square of its own length. Sixty-four
+ * kilobytes of it took seven seconds and now takes fourteen milliseconds.
+ */
 const LITERAL =
-  /(?:https?:\/\/|www\.)[^\s<]+|[A-Za-z\d._%+-]+@[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?)+/g;
+  /(?:https?:\/\/|www\.)[^\s<]+|[A-Za-z\d._%+-]{1,64}@[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?)+/g;
 
 /** Only after whitespace or one of the few marks a URL is written next to. */
 function canStartLiteral(before: string | undefined): boolean {
@@ -1088,9 +1135,8 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
       processEmphasis(state, delimiterBottom(openerChunk));
 
       // From the end: everything after the opener is this link's own label, so
-      // searching backwards costs the label rather than the paragraph. There is
-      // one of each chunk, so the last is the only.
-      const openerAt = chunks.lastIndexOf(openerChunk);
+      // starting there costs the label rather than the paragraph.
+      const openerAt = indexNear(chunks, openerChunk, chunks.length - 1);
       const children = chunks.slice(openerAt + 1).map((each) => each.node);
       const url = opener.image ? safeImageUrl(destination.url) : safeUrl(destination.url);
       const taken = chunks.length - openerAt;

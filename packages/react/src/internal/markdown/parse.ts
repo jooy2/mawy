@@ -359,7 +359,13 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
   const labels = new Set(footnotes.keys());
 
   for (const { raw, target } of pending) {
-    target.push(...parseInline(raw, { gfm, breaks, definitions, footnotes: labels }));
+    // Pushed one at a time rather than spread. A spread puts every element on
+    // the stack as an argument, and a paragraph of a quarter of a megabyte is
+    // a hundred and twenty thousand of them — past what an engine will take,
+    // and the answer was a thrown `RangeError` rather than a document.
+    for (const node of parseInline(raw, { gfm, breaks, definitions, footnotes: labels })) {
+      target.push(node);
+    }
   }
 
   const root: MdRoot = { type: 'root', range: { start: 0, end: reading.length }, children };

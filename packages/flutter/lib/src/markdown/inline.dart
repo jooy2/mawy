@@ -131,6 +131,39 @@ const int _nesting = 100;
 
 _Chunk _textChunk(String value, MdRange range) => _Chunk(MdText(range, value));
 
+/// Where [item] is in [list], looked for outward from [hint].
+///
+/// An exact search either way, and the hint only says where to start. Both
+/// callers know roughly where what they are looking for is — emphasis pairs off
+/// left to right and each pair sits beside the last, and a link's opener is at
+/// the far end because everything after it is the link's own label — and a
+/// search from one end of the list read the whole paragraph for every pair in
+/// it. A line of `*a*` repeated took over a minute at a quarter of a megabyte.
+int _indexNear(List<_Chunk> list, _Chunk item, int hint) {
+  int below = hint.clamp(0, list.length - 1);
+  int above = below + 1;
+
+  while (below >= 0 || above < list.length) {
+    if (below >= 0) {
+      if (identical(list[below], item)) {
+        return below;
+      }
+
+      below -= 1;
+    }
+
+    if (above < list.length) {
+      if (identical(list[above], item)) {
+        return above;
+      }
+
+      above += 1;
+    }
+  }
+
+  return -1;
+}
+
 /// How deep the deepest of these goes, counting itself.
 int _deepest(List<_Chunk> list, int from, int to) {
   int found = 0;
@@ -250,6 +283,9 @@ void _processEmphasis(_State state, int bottom) {
   final List<_Chunk> delimiters = state.delimiters;
   final Map<String, int> openersBottom = <String, int>{};
   int closerIndex = bottom;
+  // Where the last pair was found. The next one is a few chunks along from it,
+  // so this is what keeps the search off the rest of the paragraph.
+  int near = 0;
 
   while (closerIndex < delimiters.length) {
     final _Chunk closerChunk = delimiters[closerIndex];
@@ -297,8 +333,10 @@ void _processEmphasis(_State state, int bottom) {
     // From the end, for the reason the link below gives: the pair is a span of
     // chunks near the end of them, and a forward search reads everything the
     // paragraph held before it.
-    final int openerAt = chunks.lastIndexOf(openerChunk);
-    final int closerAt = chunks.lastIndexOf(closerChunk);
+    final int openerAt = _indexNear(chunks, openerChunk, near);
+    final int closerAt = _indexNear(chunks, closerChunk, openerAt);
+
+    near = openerAt;
     final int depth = _deepest(chunks, openerAt + 1, closerAt) + 1;
 
     // Too deep to wrap, and every pair still waiting is one level deeper than
@@ -517,13 +555,15 @@ _Reference? _readReferenceLabel(String source, int start) {
   }
 
   int at = start + 1;
-  String label = '';
+  // A buffer, for the reason the text a paragraph holds is one: a label is read
+  // a character at a time and a Dart string copies itself on every append.
+  final StringBuffer label = StringBuffer();
 
   while (at < source.length) {
     final String character = source[at];
 
     if (character == r'\' && _isEscapableCode(_codeAt(source, at + 1))) {
-      label += source.substring(at, at + 2);
+      label.write(source.substring(at, at + 2));
       at += 2;
       continue;
     }
@@ -533,10 +573,10 @@ _Reference? _readReferenceLabel(String source, int start) {
     }
 
     if (character == ']') {
-      return _Reference(label, at + 1);
+      return _Reference(label.toString(), at + 1);
     }
 
-    label += character;
+    label.write(character);
     at += 1;
   }
 
@@ -618,8 +658,15 @@ final RegExp _inlineHtml = RegExp(
  * Bare URLs
  * ---------------------------------------------------------------------- */
 
+/// A bare URL or an address, written with no markup around it.
+///
+/// The local part is held to sixty-four characters, which is the limit RFC 5321
+/// puts on it. Without a bound the `+` reads to the end of the paragraph looking
+/// for an `@`, gives the last character back, looks again, and does that from
+/// every position it could start at — so a run of letters with no space in it,
+/// a base64 blob among them, cost the square of its own length.
 final RegExp _literal = RegExp(
-  r'(?:https?://|www\.)[^\s<]+|[A-Za-z\d._%+-]+@[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?)+',
+  r'(?:https?://|www\.)[^\s<]+|[A-Za-z\d._%+-]{1,64}@[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?)+',
 );
 final RegExp _schemed = RegExp(r'^(?:https?://|www\.)', caseSensitive: false);
 final RegExp _trailingEntity = RegExp(r'&[A-Za-z\d]+;$');
@@ -875,7 +922,12 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
   /// Where a stretch of this text sits in the document.
   MdRange span(int from, int to) => rangeOf(raw, from, to);
 
-  String pending = '';
+  /// A buffer rather than a string, which is the one place this file reads
+  /// differently from its TypeScript half. Most of a paragraph arrives here a
+  /// character at a time, and a Dart string is immutable, so appending to one
+  /// copies everything held so far and a paragraph cost the square of its own
+  /// length. A JavaScript engine already does this much behind `+=`.
+  final StringBuffer pending = StringBuffer();
   int pendingAt = 0;
   int at = 0;
 
@@ -885,13 +937,15 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       pendingAt = from;
     }
 
-    pending += text;
+    pending.write(text);
   }
 
   void flush() {
     if (pending.isNotEmpty) {
-      chunks.add(_textChunk(decodeEntities(pending), span(pendingAt, pendingAt + pending.length)));
-      pending = '';
+      chunks.add(
+        _textChunk(decodeEntities(pending.toString()), span(pendingAt, pendingAt + pending.length)),
+      );
+      pending.clear();
     }
   }
 
@@ -1155,9 +1209,8 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       _processEmphasis(state, delimiterBottom(openerChunk));
 
       // From the end: everything after the opener is this link's own label, so
-      // searching backwards costs the label rather than the paragraph. There is
-      // one of each chunk, so the last is the only.
-      final int openerAt = chunks.lastIndexOf(openerChunk);
+      // starting there costs the label rather than the paragraph.
+      final int openerAt = _indexNear(chunks, openerChunk, chunks.length - 1);
       final List<MdInline> children = chunks
           .sublist(openerAt + 1)
           .map((_Chunk each) => each.node)
@@ -1251,13 +1304,19 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
     }
 
     if (character == '\n') {
-      final bool hard = _hardBreak.hasMatch(pending);
+      final String held = pending.toString();
+      final bool hard = _hardBreak.hasMatch(held);
+      final String trimmed = held.replaceAll(_trailingSpace, '');
 
-      pending = pending.replaceAll(_trailingSpace, '');
+      // Read out and written back, which costs the line rather than the
+      // paragraph: this happens once for each line the paragraph has.
+      pending
+        ..clear()
+        ..write(trimmed);
 
       // A hard break is the spaces as well as the newline: they are what makes
       // it one, and they are no part of the text node in front of it.
-      final int from = hard && pending.isNotEmpty ? pendingAt + pending.length : at;
+      final int from = hard && trimmed.isNotEmpty ? pendingAt + trimmed.length : at;
 
       flush();
 

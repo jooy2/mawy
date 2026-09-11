@@ -8,11 +8,19 @@
 
 - **An application can say where a document's relative addresses point.** `resolveUrl` is called for every relative URL a document writes — a picture's source and a link's destination — and what it answers is used as written. A URL in a document is relative to the _document_, and whatever is drawing it is somewhere else, so `![](./diagram.png)` in a file read off a disk had no address anybody could follow. It is on `MawyViewer` and `MawyEditor`. Unset, nothing changes.
 
+### Changed
+
+- **A bare address is only linked where its local part is short enough to be one.** Sixty-four characters, which is the whole of what RFC 5321 allows. Unbounded, the pattern read to the end of the paragraph looking for an `@`, gave a character back and looked again, from every position it could have started at — so a run of letters with no space in it, a base64 blob or a hash among them, cost the square of its own length. Sixty-three kilobytes of it took seven seconds and now takes fourteen milliseconds.
+
 ### Security
 
 - **A document cannot take the page down by nesting emphasis.** Emphasis, strong, strikethrough and links nest inside a paragraph without a container to open, and nothing bounded how far: `*` written sixteen thousand times is a thirty-two-kilobyte file whose paragraph is eight thousand levels deep, and the stack ran out reading it — and would have run out again drawing it, and in any application walking the tree. A hundred levels now, which is what the containers have had since 1.1.0 and for the same reason. Past it nothing more pairs in that paragraph and the runs left over are the characters they were written with. The two packages gave up at different depths before this, which made it a difference between them as well as a crash.
 
 ### Fixed
+
+- **A long paragraph, a long reference label and a long run of letters are each read at their own size.** Dart strings are immutable, so building one a character at a time — which is how a paragraph's text, a reference label and a link destination are all read — copies everything held so far on every character. Three hundred kilobytes of prose went from a second and a half to 43 milliseconds, and a sixty-three-kilobyte label from forty-six seconds to 102.
+
+- **A paragraph that is one long line of emphasis is read faster.** Every pair that closed searched the whole paragraph for the two chunks it had just been handed; the search starts where the last pair was found now. It is still much the slowest shape this parser has.
 
 - **A paragraph that is a list of links is read in the time a list should take.** Every link that closed searched everything read so far, once for each delimiter run in it, so the cost grew with the square of the paragraph. Forty-seven kilobytes of links went from 39 milliseconds to 8, and the same shape in the React package from 1.4 seconds to 5 milliseconds.
 
@@ -39,8 +47,6 @@
 ### Security
 
 - **A document cannot take the page down by being deeply nested.** Containers nest a hundred deep now and no further, so a four-kilobyte file of `> ` repeated a couple of thousand times no longer runs the stack out. The two packages gave up at different depths before this, which made it a difference between them as well as a crash.
-
-### Changed
 
 - **Inline code is drawn in the accent colour, in a box the height of the words.** The pair clears 5.5:1 on that box in either theme. The box was the height of the whole line, because a run inheriting the paragraph's line height fills the paragraph's line. The React package draws both the same way.
 
