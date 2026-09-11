@@ -59,11 +59,11 @@ The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_i
 
 | What you import         | Gzipped |
 | ----------------------- | ------- |
-| `MawyViewer`            | 26.8 kB |
-| `MawyEditor`            | 44.8 kB |
+| `MawyViewer`            | 27.1 kB |
+| `MawyEditor`            | 45.1 kB |
 | `mawy-react/markdown`   | 10.5 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
-| `mawy-react/styles.css` | 6.0 kB  |
+| `mawy-react/styles.css` | 6.2 kB  |
 
 React is not counted, because your application already has it. `lucide-react` is counted, because it installs with the package. **A page that only reads documents does not ship the editor.** The toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, which saves 18 kB.
 

@@ -814,6 +814,101 @@
   }
 }
 
+/*
+ * The document's elements, taken back from whatever the page says about them.
+ *
+ * A rule under `.mawy-root` settles who wins a property both sheets set, and
+ * says nothing at all about a property only the host sets. That is most of
+ * them: a documentation theme writes `article p { padding: 4px 8px }` and
+ * `ul { list-style-type: square }` against bare element names, and every one of
+ * those lands on the document unopposed, because a library has no reason to
+ * declare a padding it does not want. The heading over the footnotes was the
+ * first one anybody noticed — it set neither a border nor a padding, so the
+ * page drew a rule through the section — and the rest of the document had the
+ * same shape all along.
+ *
+ * `revert` rather than a value, because the answer is not "zero": it is the
+ * browser's own, which is what this stylesheet was written on top of. A `<del>`
+ * goes back to being struck through and a `<pre>` to keeping its newlines,
+ * without any of it being written out here a second time.
+ *
+ * `:where()` puts this at (0,2,0), which is the one place it can be. Above an
+ * element rule in the host's sheet, so the page does not reach in. Below every
+ * rule in this file, so the lines under this one say what the document actually
+ * looks like. A host that means it — `.vp-doc .content p`, at (0,2,1) — still
+ * wins, and should: an application overriding a component library on purpose is
+ * not the case this is about.
+ *
+ * `div` and `span` are deliberately not in the list. A directive is drawn by
+ * the application, out of whatever markup it likes, and reverting that would
+ * take the application's own styling off its own widget.
+ */
+.mawy-root
+  .mawy-md
+  :where(
+    a,
+    blockquote,
+    code,
+    dd,
+    del,
+    details,
+    dl,
+    dt,
+    em,
+    figcaption,
+    figure,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    hr,
+    img,
+    input,
+    li,
+    mark,
+    ol,
+    p,
+    pre,
+    section,
+    strong,
+    sub,
+    summary,
+    sup,
+    table,
+    tbody,
+    td,
+    th,
+    thead,
+    tr,
+    ul
+  ) {
+  display: revert;
+  margin: revert;
+  padding: revert;
+  border: revert;
+  border-radius: revert;
+  border-spacing: revert;
+  background: revert;
+  color: revert;
+  accent-color: revert;
+  font-family: revert;
+  font-size: revert;
+  font-style: revert;
+  font-weight: revert;
+  line-height: revert;
+  letter-spacing: revert;
+  list-style: revert;
+  text-align: revert;
+  text-decoration: revert;
+  text-indent: revert;
+  text-transform: revert;
+  text-underline-offset: revert;
+  vertical-align: revert;
+  white-space: revert;
+}
+
 .mawy-root .mawy-md > :first-child {
   margin-top: 0;
 }
@@ -974,11 +1069,21 @@
   list-style: none;
 }
 
+/*
+ * Its own type and colour, rather than the shell's `:where(button, input)`
+ * reset, which is deliberately the weakest thing in the file and loses to a
+ * host page's `input { font-size: 19px }`. The box is an `em` square, so the
+ * type is the size of it: a checkbox that took the page's font size would be
+ * a different size from the line it marks.
+ */
 .mawy-root .mawy-md-checkbox {
   width: 1em;
   height: 1em;
+  margin-block: 0;
   margin-inline: -1.45em 0.45em;
   vertical-align: -0.12em;
+  color: inherit;
+  font: inherit;
   accent-color: var(--mawy-accent);
 }
 

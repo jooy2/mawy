@@ -44,6 +44,22 @@ The tokens are declared on **`.mawy-root`** rather than on `:root`. A component 
 
 The class names the document is drawn with are `.mawy-md-*` and are also part of the supported surface, so an application can restyle a table or a code block without the library exposing a render prop for it.
 
+### Your page's own rules stop at the document
+
+A page that styles prose writes `article p { padding: 4px 8px }` or `ul { list-style-type: square }` against bare element names, and those rules used to land on a Mawy document as readily as on the rest of the page. They no longer do: inside `.mawy-md`, every element the parser produces has its box, type, colour and list marker set back to the browser's own before this stylesheet says what they are.
+
+It is a defence rather than a wall, and a selector that means it still wins:
+
+```css
+/* Reaches the document. Two classes and an element, which is more specific
+   than the reset and is read as an application overriding the library. */
+.my-docs .mawy-md p {
+  padding: 4px 8px;
+}
+```
+
+Two things are deliberately left alone. `div` and `span` are not reset, because a directive is drawn out of the application's own markup and resetting that would take the application's styling off its own widget. And the tokens are untouched, because redeclaring one is how this is meant to be done.
+
 :::
 
 ::: fw flutter

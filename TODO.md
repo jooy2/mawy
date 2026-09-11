@@ -44,7 +44,8 @@ something to read before starting rather than a job waiting for somebody.
 
 ## Confirmed
 
-- **A host page's rules reach whatever the stylesheet leaves unset**, in the React package. Every rule is written under `.mawy-root`, which settles who wins a property both of them set and says nothing about a property only the host sets. The footnotes' heading was one: it set neither a border nor a padding, so a documentation page's `.vp-doc h2` drew a rule through the section and left a gap above it. That heading is gone, and nothing has read the rest of `styles.css` looking for the same shape.
+Nothing, at the moment. The last three lines here are commits, and the next
+finding goes under this heading with where the code is.
 
 ## Release
 
