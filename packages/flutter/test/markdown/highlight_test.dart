@@ -95,5 +95,31 @@ void main() {
       expect(documentText(tester), contains('const a = 1;'));
       expect(styleOf(tester, 'const'), isNull);
     });
+
+    /// The two places this package draws body text in a style of its own, and
+    /// so builds a second context to draw them with. Each had left the
+    /// highlighter out of that context, and a reader saw a code block that was
+    /// coloured everywhere except inside a quotation or a note.
+    testWidgets('is coloured inside a quotation', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyViewer(value: '> ```ts\n> const a = 1;\n> ```', highlight: mawyHighlighter)),
+      );
+
+      expect(styleOf(tester, 'const')?.color, MawyTokens.light.highlightKeyword);
+    });
+
+    testWidgets('is coloured inside a footnote', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyViewer(
+            value: 'Noted.[^a]\n\n[^a]: See:\n\n    ```ts\n    const a = 1;\n    ```',
+            highlight: mawyHighlighter,
+          ),
+        ),
+      );
+
+      expect(documentText(tester), contains('const a = 1;'));
+      expect(styleOf(tester, 'const')?.color, MawyTokens.light.highlightKeyword);
+    });
   });
 }

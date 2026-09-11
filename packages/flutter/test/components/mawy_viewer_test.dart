@@ -910,6 +910,20 @@ void main() {
       expect(toolbarButton('Replace'), findsNothing);
     });
 
+    /// A quotation is drawn from a context of its own, because its paragraphs
+    /// are muted, and that context carried nothing the find bar had found. So
+    /// the count said a match was there and no mark was drawn on it.
+    testWidgets('marks a match inside a quotation', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: '> one two one')));
+
+      await open(tester);
+      await tester.enterText(field(), 'one');
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 2'), findsOneWidget);
+      expect(_marks(tester).length, 2);
+    });
+
     testWidgets('is not offered where the toolbar left it out', (WidgetTester tester) async {
       await tester.pumpWidget(
         host(
@@ -1204,6 +1218,29 @@ void main() {
 
       expect(find.text('::video{src=/a.mp4}'), findsOneWidget);
     });
+
+    /// A note is drawn from a context of its own, because the type in it is
+    /// smaller, and that context carried neither the builders nor the source a
+    /// directive is drawn from. So a claimed name drew nothing and an unclaimed
+    /// one drew nothing either, where the rule everywhere else is that a
+    /// document shows what it says.
+    testWidgets('draws one inside a footnote', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: 'Noted.[^a]\n\n[^a]: Press :kbd[Ctrl], and see ::video{src=/a.mp4}.',
+            toolbar: const <MawyViewerToolbarItem>[],
+            directives: <String, MawyDirectiveBuilder>{
+              'kbd': (BuildContext context, MawyDirective directive) =>
+                  Text.rich(directive.label!, key: const Key('kbd')),
+            },
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('kbd')), findsOneWidget);
+      expect(documentText(tester), contains('::video{src=/a.mp4}'));
+    });
   });
 
   /// The two halves of a footnote, and the two taps between them.
@@ -1465,6 +1502,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('a cat'), findsOneWidget);
+    });
+
+    /// Wherever the picture is written. An application that draws its own
+    /// pictures has said the viewer will fetch none, and a note is not an
+    /// exception to that — it went round the promise there, which is the sort
+    /// of thing an application finds out from its network log.
+    testWidgets('hands over a picture inside a footnote', (WidgetTester tester) async {
+      final List<MawyImage> asked = <MawyImage>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: 'Noted.[^a]\n\n[^a]: ![a cat](https://nowhere.example/c.png)',
+            imageBuilder: (BuildContext context, MawyImage image) {
+              asked.add(image);
+
+              return Text('drew ${image.alt}');
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(asked.single.url, 'https://nowhere.example/c.png');
+      expect(find.text('drew a cat'), findsOneWidget);
+      expect(find.byType(Image), findsNothing);
     });
   });
 

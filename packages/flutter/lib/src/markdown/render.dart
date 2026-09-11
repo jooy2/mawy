@@ -160,6 +160,40 @@ class MawyRenderContext {
 
   /// The monospace family, which is a role rather than a font name.
   String? get monoFamily => null;
+
+  /// This context again, with the document's body text set differently.
+  ///
+  /// The renderer chooses the type in two places, because in this package a
+  /// style is carried rather than inherited: a quotation's paragraphs are drawn
+  /// muted, and a note under the document is drawn smaller. Both used to build
+  /// a second context field by field, which is a list somebody has to remember
+  /// to keep whole, and both had lost some of it. A code block inside either
+  /// was never coloured, a directive inside either was drawn as nothing at all,
+  /// and a picture inside either went round the [imageBuilder] the application
+  /// had given, which is a promise the viewer keeps everywhere else.
+  ///
+  /// Copying carries whatever is added to this class next without anybody
+  /// having to notice, which is the part that failed twice.
+  MawyRenderContext withBody(TextStyle body) => MawyRenderContext(
+    tokens: tokens,
+    typography: typography,
+    strings: strings,
+    body: body,
+    footnotes: footnotes,
+    onLinkTap: onLinkTap,
+    onImageError: onImageError,
+    imageBuilder: imageBuilder,
+    resolveUrl: resolveUrl,
+    directives: directives,
+    source: source,
+    recognizerFor: recognizerFor,
+    highlighter: highlighter,
+    found: found,
+    currentMatch: currentMatch,
+    onFootnoteTap: onFootnoteTap,
+    onFootnoteBack: onFootnoteBack,
+    footnoteKey: footnoteKey,
+  );
 }
 
 /// The em, in logical pixels — the unit every margin here is expressed in.
@@ -1072,18 +1106,7 @@ class _Quote extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: renderBlocks(
             block.children,
-            MawyRenderContext(
-              tokens: context.tokens,
-              typography: context.typography,
-              strings: context.strings,
-              body: context.body.copyWith(color: context.tokens.foregroundMuted),
-              footnotes: context.footnotes,
-              onLinkTap: context.onLinkTap,
-              onImageError: context.onImageError,
-              imageBuilder: context.imageBuilder,
-              resolveUrl: context.resolveUrl,
-              recognizerFor: context.recognizerFor,
-            ),
+            context.withBody(context.body.copyWith(color: context.tokens.foregroundMuted)),
           ),
         ),
       );
@@ -1384,22 +1407,11 @@ Widget? renderFootnotes(List<MdFootnoteDefinition> footnotes, MawyRenderContext 
   final MawyTokens tokens = context.tokens;
   final double em = _em(context);
   final TextStyle small = context.body.copyWith(fontSize: em * 0.92);
-  final MawyRenderContext inner = MawyRenderContext(
-    tokens: tokens,
-    typography: context.typography,
-    strings: context.strings,
-    body: small,
-    footnotes: context.footnotes,
-    onLinkTap: context.onLinkTap,
-    onImageError: context.onImageError,
-    resolveUrl: context.resolveUrl,
-    recognizerFor: context.recognizerFor,
-    // A note is a place a footnote can be mentioned like any other, and the
-    // arrow at the end of one is drawn from here.
-    onFootnoteTap: context.onFootnoteTap,
-    onFootnoteBack: context.onFootnoteBack,
-    footnoteKey: context.footnoteKey,
-  );
+  // Smaller type and nothing else. A note is a place a footnote can be
+  // mentioned like any other, a code block in one is a code block, and the
+  // find bar carries through harmlessly: it does not search a note, so it has
+  // nothing to say about any run in here, and it will have if it ever does.
+  final MawyRenderContext inner = context.withBody(small);
 
   // Said rather than written: the rule above them and the numbers down the side
   // are what a footnote section looks like, and the word across the top is the

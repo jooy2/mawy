@@ -8,6 +8,10 @@
 
 - **An application can say where a document's relative addresses point.** `resolveUrl` is called for every relative URL a document writes — a picture's source and a link's destination — and what it answers is used as written. A URL in a document is relative to the _document_, and whatever is drawing it is somewhere else, so `![](./diagram.png)` in a file read off a disk had no address anybody could follow. It is on `MawyViewer` and `MawyEditor`. Unset, nothing changes.
 
+### Fixed
+
+- **A quotation and a footnote are drawn with the whole of what the document is drawn with.** Both set their own body text — a quotation's is muted, a note's is smaller — and both built a second rendering context that had lost some of the rest of it. A code block inside either was never coloured, a directive inside either was drawn as nothing at all rather than as the characters the author typed, a picture inside a note was fetched by the viewer even where `imageBuilder` said the application would draw it, and neither the find bar's marks nor a footnote's two taps reached inside a quotation.
+
 ## 1.1.0 (2026-09-06)
 
 ### Breaking changes
