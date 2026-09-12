@@ -228,6 +228,25 @@ export interface MawyEditorProps extends Omit<
    * resolve its addresses the same way.
    */
   resolveUrl?: MawyUrlResolver;
+
+  /**
+   * Put in front of every anchor the editor gives a heading or a footnote, on
+   * the drawn document and in the preview alike.
+   *
+   * Two editors on one page is what this is for — a page with one document per
+   * language, say. Both documents open with `# Introduction`, both headings are
+   * given `id="introduction"`, and a footnote reference in the second editor
+   * goes to the first editor's note. A prefix each and the names stop colliding;
+   * the links the document wrote to its own headings and notes move with them.
+   *
+   * Unset, which is the default, a heading's anchor is its own words, the way
+   * it is in `MawyViewer` and for the same reason. The editor does not make a
+   * prefix up when it is given none: which editors share a page is something
+   * only the application knows, and a name generated for it would be one no
+   * application could link to from its own interface. See `MawyViewer`'s own
+   * `anchorPrefix`.
+   */
+  anchorPrefix?: string;
   fonts?: readonly MawyFont[];
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
@@ -296,6 +315,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     directives,
     image,
     resolveUrl,
+    anchorPrefix,
     onSave,
     accept = MAWY_ACCEPT,
     fileDrop = false,
@@ -1566,6 +1586,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               directives={directives}
               image={image}
               resolveUrl={resolveUrl}
+              anchorPrefix={anchorPrefix}
               strings={strings}
               room={room}
               aim={aim}
@@ -1619,6 +1640,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               directives={directives}
               image={image}
               resolveUrl={resolveUrl}
+              anchorPrefix={anchorPrefix}
               fonts={fonts}
               locale={locale}
               colorScheme={scheme}

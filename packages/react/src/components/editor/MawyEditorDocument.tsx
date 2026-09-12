@@ -94,6 +94,8 @@ export interface MawyEditorDocumentProps {
    * resolve its addresses the same way.
    */
   resolveUrl?: MawyUrlResolver;
+  /** Put in front of every anchor this drawing gives. See `MawyEditor.anchorPrefix`. */
+  anchorPrefix?: string;
   strings: MawyStrings;
   /**
    * A place the caret was left where nothing is drawn, from the last edit. See
@@ -242,6 +244,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       directives,
       image,
       resolveUrl,
+      anchorPrefix,
       strings,
       room,
       aim,
@@ -318,6 +321,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         directives,
         image,
         resolveUrl,
+        anchorPrefix,
         linkTarget,
         linkRel,
         firstImage: picture,
@@ -332,6 +336,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         directives,
         image,
         resolveUrl,
+        anchorPrefix,
         linkTarget,
         linkRel,
         picture,

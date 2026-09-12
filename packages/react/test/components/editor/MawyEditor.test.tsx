@@ -340,6 +340,38 @@ describe('the document', () => {
   });
 });
 
+/**
+ * Two editors on one page, which is a page showing one document per language.
+ *
+ * A heading's anchor is the author's own words and a footnote's is its label, so
+ * two editors holding documents that share either give two elements one `id`,
+ * and a reference in the second lands on the first one's note.
+ */
+describe('two editors on one page', () => {
+  const SOURCE = '# Introduction\n\nSee [above](#introduction), and a note.[^a]\n\n[^a]: The note.';
+
+  it('keeps their names apart on every drawn surface when each is given a prefix', async () => {
+    for (const mode of ['wysiwyg', 'split', 'preview'] as const) {
+      const screen = await render(
+        <div>
+          <MawyEditor defaultValue={SOURCE} mode={mode} anchorPrefix="en-" />
+          <MawyEditor defaultValue={SOURCE} mode={mode} anchorPrefix="ko-" />
+        </div>
+      );
+      const [, second] = screen.container.querySelectorAll('.mawy-editor');
+      const named = [...screen.container.querySelectorAll('h1[id], .mawy-md-footnotes li[id]')];
+
+      expect(new Set(named.map((element) => element.id)).size).toBe(named.length);
+      expect(second.querySelector('h1')?.id).toBe('ko-introduction');
+      expect(second.querySelector('.mawy-md-footnote-ref a')?.getAttribute('href')).toBe(
+        '#ko-mawy-fn-a'
+      );
+
+      await screen.unmount();
+    }
+  });
+});
+
 describe('the modes', () => {
   it('shows the source, the preview, or both', async () => {
     const source = await render(<MawyEditor defaultValue={DOCUMENT} defaultMode="plain" />);

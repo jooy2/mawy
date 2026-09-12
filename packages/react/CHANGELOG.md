@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **`MawyEditor` takes `anchorPrefix`, and uses it on the drawn document and in the preview.** Two editors on one page whose documents shared a heading gave both headings the same `id`, and a footnote reference in the second editor went to the first editor's note, with no way to say otherwise: the prop existed on `MawyViewer` and `MawyDocument` and the editor had nowhere to pass it. Unset, nothing changes, and the editor does not make a prefix up — which editors share a page is the application's knowledge, and a generated name is one it could not link to.
+
 ### Fixed
 
 - **A failed upload is still said to have failed when another one finishes after it.** Every upload shares the note under the document, and the last one to finish took the note down — so a failure said a moment earlier disappeared as soon as a different file arrived safely, and nothing told the reader which image was missing. A failure now stays until the next upload starts or something else is said there.

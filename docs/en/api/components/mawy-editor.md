@@ -181,7 +181,9 @@ It is there because a platform's own find reaches a page of text and not the ins
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives` reaches the drawn document as well.
+`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives` and `anchorPrefix` reach the drawn document as well.
+
+`anchorPrefix` is what keeps two editors on one page apart. Both documents opening with `# Introduction` give two headings `id="introduction"`, and a footnote reference in the second editor lands on the first editor's note, until each editor is given a prefix of its own. Unset, the editor makes none up: which editors share a page is the application's knowledge, and a generated name is one the application could not link to.
 
 :::
 
