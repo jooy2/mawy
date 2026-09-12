@@ -85,6 +85,41 @@ describe('a document rendered on a server', () => {
     expect(html).toContain('data-mawy-range');
   });
 
+  /**
+   * A page whose own title is its `h1` and whose document opens with one has
+   * told a screen reader and a search engine that it is about two things.
+   */
+  it('draws the headings from the level it was given', () => {
+    const value = '# One\n\n## Two\n\n### Three';
+
+    expect(renderToStaticMarkup(<MawyDocument value={value} />)).toContain('<h1 id="one"');
+
+    const shifted = renderToStaticMarkup(<MawyDocument value={value} headingBase={2} />);
+
+    // Every heading moves by the same amount, so the hierarchy survives.
+    expect(shifted).toContain('<h2 id="one"');
+    expect(shifted).toContain('<h3 id="two"');
+    expect(shifted).toContain('<h4 id="three"');
+    // And the anchors stay where a link written by hand is aimed.
+    expect(shifted).not.toContain('id="mawy-one"');
+  });
+
+  it('flattens against `h6` rather than writing an element that does not exist', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument value={'##### Five\n\n###### Six'} headingBase={3} />
+    );
+
+    expect(html).toContain('<h6 id="five"');
+    expect(html).toContain('<h6 id="six"');
+    expect(html).not.toContain('<h7');
+    expect(html).not.toContain('<h8');
+  });
+
+  it('refuses a base outside the six levels there are', () => {
+    expect(renderToStaticMarkup(<MawyDocument value="# One" headingBase={0} />)).toContain('<h1');
+    expect(renderToStaticMarkup(<MawyDocument value="# One" headingBase={9} />)).toContain('<h6');
+  });
+
   it('reads the footnotes and the outline the way the viewer does', () => {
     const html = renderToStaticMarkup(
       <MawyDocument value={'A sentence.[^a]\n\n[^a]: The note.'} />

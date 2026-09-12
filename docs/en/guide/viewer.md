@@ -650,6 +650,35 @@ They are on `.mawy-root` rather than on `:root` on purpose. A component library 
 
 The light and dark palettes are chosen by `colorScheme`, which is `system` unless you set it. `system` follows the platform setting: `prefers-color-scheme` in a browser, the platform brightness in an app. `light` and `dark` do not follow it, so an application with its own switch can drive the viewer from that, and a reader on a dark machine still gets the light document you asked for.
 
+## Heading levels
+
+::: fw react
+
+A `#` is an `h1`, a `##` is an `h2`, and so on down. That is right when the document _is_ the page, and wrong as soon as it is not: a blog post whose page writes the title as its own `h1` and then draws a document that opens with one has two, and a page with two `h1` elements has said it is about two things.
+
+`headingBase` is which of `h1` to `h6` the document's own `#` is drawn as.
+
+```tsx
+<article>
+  <h1>{post.title}</h1>
+  <MawyDocument value={post.body} headingBase={2} />
+</article>
+```
+
+Every heading moves by the same amount, so the hierarchy the author wrote survives: under `2` a `#` is an `h2` and a `##` is an `h3`. Nothing goes past `h6`, so `######` under a base of `3` is an `h6` rather than an element that does not exist — two headings that were different levels can come out the same one, which is the cost of a base that high.
+
+The anchors do not move. A heading's `id` is its own words either way, so a link written by hand against `#getting-started` still lands, and so does the outline.
+
+The two headings this library writes itself — the outline's title and the empty state's — are `h2` and stay there. See [Accessibility](#accessibility).
+
+:::
+
+::: fw flutter
+
+A heading is a run of text at a size, and there is no `h1` to be. The depth is on the node, and [`MawyViewerAnchors`](../api/types/viewer-anchors) is how an application reads the structure back.
+
+:::
+
 ## Mapping the page back to the source
 
 ::: fw flutter

@@ -322,6 +322,15 @@ describe('images', () => {
     expect(asked).toEqual([true, false]);
   });
 
+  it('draws the headings from the level it was given', async () => {
+    const screen = await render(<MawyViewer value={'# One\n\n## Two'} headingBase={3} />);
+
+    expect(screen.container.querySelector('h3')?.textContent).toBe('One');
+    expect(screen.container.querySelector('h4')?.textContent).toBe('Two');
+    // The outline is indented from the shallowest heading, so it does not move.
+    expect(screen.container.querySelector('h1')).toBeNull();
+  });
+
   it('never hands over a URL the scheme allowlist refused', async () => {
     const asked: string[] = [];
     const Mine = ({ src }: { src: string }) => {

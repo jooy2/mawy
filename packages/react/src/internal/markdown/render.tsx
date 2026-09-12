@@ -196,6 +196,11 @@ export interface RenderContext {
    * renders — a counter on it would be right once and wrong every time after.
    */
   firstImage?: MdImage | null;
+  /**
+   * Which of `h1` to `h6` the document's own `#` is drawn as. See
+   * `headingLevel`. One, so that it is `h1`, unless the drawing says otherwise.
+   */
+  headingBase?: number;
 }
 
 /**
@@ -209,6 +214,23 @@ export interface RenderContext {
  * a string until something draws it and there is no node here to be first, and
  * a footnote's is not looked at because a footnote is read at the bottom.
  */
+/**
+ * Which of `h1` to `h6` a heading of this depth is drawn as.
+ *
+ * The document's own depths, moved down together so that the shallowest one
+ * lands on `headingBase`. Every heading moves by the same amount, so the
+ * hierarchy the author wrote is the hierarchy on the page.
+ *
+ * `h6` is the floor rather than an error: a `######` under a base of 3 has no
+ * `h8` to be, and the alternative to flattening it is refusing to draw a
+ * document that is perfectly good Markdown. Two headings that were different
+ * levels can come out the same one, which is the cost and is why the default
+ * moves nothing.
+ */
+function headingLevel(depth: number, context: RenderContext): number {
+  return Math.min(6, depth + Math.min(6, Math.max(1, context.headingBase ?? 1)) - 1);
+}
+
 export function firstImage(nodes: readonly { type: string }[]): MdImage | null {
   for (const node of nodes) {
     if (node.type === 'image') {
@@ -1001,7 +1023,7 @@ export function renderBlocks(
 
     switch (block.type) {
       case 'heading': {
-        const Tag = `h${block.depth}` as 'h1';
+        const Tag = `h${headingLevel(block.depth, context)}` as 'h1';
 
         return (
           <Tag

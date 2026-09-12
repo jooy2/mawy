@@ -71,6 +71,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `image` | `ComponentType<`[`MawyImageProps`](../types/image)`>` | `<img>` | 문서가 가리키는 그림을 무엇으로 그릴지. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | 문서의 상대 URL이 어디를 가리키는지. |
 | `anchorPrefix` | `string` | — | 이 뷰어가 제목과 각주에 주는 앵커 앞에 붙일 것. 한 페이지에 뷰어가 둘일 때 이름이 부딪히지 않게 합니다. |
+| `headingBase` | `number` | `1` | 문서의 `#`을 `h1`부터 `h6` 중 무엇으로 그릴지. |
 
 :::
 

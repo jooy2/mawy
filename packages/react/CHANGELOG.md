@@ -6,6 +6,8 @@
 
 ### Added
 
+- **`headingBase` says which of `h1` to `h6` a document's own `#` is drawn as.** A `#` was always an `h1`, which is right when the document is the page and wrong as soon as it is not: a blog post whose page writes the title as its own `h1` and then draws a document that opens with one has two, and a page with two `h1` elements has said it is about two things. Every heading moves by the same amount, so the hierarchy the author wrote survives, and nothing goes past `h6` — a `######` under a base of 3 flattens against it rather than becoming an element that does not exist. The anchors do not move, so a link written by hand against a heading still lands. On `MawyViewer` and `MawyDocument`; the two headings this library writes itself are unaffected. Unset, nothing changes.
+
 - **The first picture in a document is fetched with the page.** A page is measured on how long its largest piece of content takes to arrive, and on a page whose document opens with a picture that picture is usually the piece — so telling the browser to put it off, as every picture here was told, is a measurement made twice: once when the page is laid out and again when the fetch it was told not to make is made after all. The first one is now written `loading="eager"` with `fetchpriority="high"`, and every other one is lazy as before. `MawyImageProps` gained `first` so that a picture drawn by the application can say the same thing to `next/image`'s `priority` or to whatever stands in for it. First in the document rather than first on the screen: a document reached halfway down a long page pays one fetch made sooner than it needed to be, and an application that knows better draws its own pictures.
 
 ### Changed

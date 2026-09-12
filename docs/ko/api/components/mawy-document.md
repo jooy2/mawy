@@ -38,6 +38,7 @@ React 서버 컴포넌트를 가진 프레임워크에서는 서버 컴포넌트
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | 이 패키지가 모르는 구성물을 무엇으로 그릴지. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | 문서의 상대 URL이 어디를 가리키는지. |
+| `headingBase` | `number` | `1` | 문서의 `#`을 `h1`부터 `h6` 중 무엇으로 그릴지. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 이 라이브러리가 직접 쓰는 몇 낱말의 언어. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | 코드 블록에 색을 입히는 것. |
 | `typography` | [`MawyTypography`](../types/typography) | — | 문서 조판. 같은 커스텀 속성으로 나갑니다. |

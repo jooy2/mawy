@@ -226,6 +226,34 @@ export interface MawyViewerProps extends Omit<
    */
   anchorPrefix?: string;
 
+  /**
+   * Which of `h1` to `h6` the document's own `#` is drawn as.
+   *
+   * A `#` is an `h1`, which is right when the document *is* the page and wrong
+   * as soon as it is not. A blog post whose page already writes the title as
+   * its `h1`, and then draws a document that opens with one, has two — and a
+   * page with two `h1` elements has told a screen reader and a search engine
+   * that it is about two things.
+   *
+   * ```tsx
+   * <article>
+   *   <h1>{post.title}</h1>
+   *   <MawyViewer value={post.body} headingBase={2} />
+   * </article>
+   * ```
+   *
+   * Every heading moves by the same amount, so the hierarchy the author wrote
+   * survives: under `2` a `#` is an `h2` and a `##` is an `h3`. Nothing goes
+   * past `h6`, so a deep heading under a high base flattens against it rather
+   * than becoming an element that does not exist.
+   *
+   * The anchors do not move. A heading's `id` is its own words either way, so a
+   * link written against it still lands.
+   *
+   * @default 1
+   */
+  headingBase?: number;
+
   /** What to draw instead of the file picker when there is no document. */
   empty?: React.ReactNode;
 }
@@ -263,6 +291,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     image,
     resolveUrl,
     anchorPrefix,
+    headingBase,
     empty,
     className,
     style,
@@ -391,6 +420,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       image,
       resolveUrl,
       anchorPrefix,
+      headingBase,
       firstImage: picture,
       source: text,
       found,
@@ -407,6 +437,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       image,
       resolveUrl,
       anchorPrefix,
+      headingBase,
       picture,
       text,
       found,

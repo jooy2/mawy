@@ -38,6 +38,7 @@ A React Server Component in a framework that has them, and an ordinary component
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | Where a link the document wrote opens. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | What draws the constructs this package does not know about. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | Where a relative URL in the document points. |
+| `headingBase` | `number` | `1` | Which of `h1` to `h6` the document's own `#` is drawn as. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the few words this library writes itself. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | What colours a code block. |
 | `typography` | [`MawyTypography`](../types/typography) | — | How the document is set, as the same custom properties. |
