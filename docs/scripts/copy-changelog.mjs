@@ -21,18 +21,25 @@
  *
  * - **The frontmatter.** The sidebar reads `title` for the label and `order`
  *   for where it sits, and a source file cannot carry either without npm and
- *   GitHub rendering it as a stray table at the top. `outline: false` because
- *   a changelog is already a list of its own headings, and two packages' worth
- *   of them in the margin is a second list of the same thing twice over.
+ *   GitHub rendering it as a stray table at the top. `outline: 2` narrows the
+ *   margin to the versions: this site shows `h3` as well, which is right for a
+ *   reference page and here would be `Added` and `Fixed` seventeen times.
  * - **The heading and the note at the top**, which belong to the page rather
  *   than to either package, so neither file grows a line that only makes sense
  *   on a website.
- * - **A framework on every version's anchor.** Both packages have reached
- *   1.2.0, so both files have a `## 1.2.0` in them and the two would land on
- *   one name — with the loser silently becoming `-1`, which is a link to a
- *   heading nobody can see under the other framework. `#react-1-2-0` and
- *   `#flutter-1-2-0` are stable, tell a reader which package they arrived at,
- *   and are the only thing here that touches the entries at all.
+ * - **The package's name on every version heading.** Both packages have
+ *   reached 1.2.0, so both files have a `## 1.2.0` in them and the two would
+ *   land on one anchor — with the loser silently becoming `-1`, which is a link
+ *   to a heading nobody can see under the other framework. Naming the package
+ *   in the heading itself rather than writing an explicit `{#anchor}`: the
+ *   anchor VitePress derives is then unique on its own, and the permalink beside
+ *   the heading gets an `aria-label` a screen reader can read out — with an
+ *   explicit anchor it reads the braces and the hash as words. It says the
+ *   useful thing on a page holding two histories besides.
+ *
+ * The outline in the margin needs nothing from any of this: `Layout.vue`
+ * already walks from each entry to its heading and drops the ones inside the
+ * other half's block.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -67,22 +74,14 @@ const packages = [
 ];
 
 /**
- * A version heading, with the framework written into the name it gets.
+ * A version heading, with the package it belongs to in front of it.
  *
  * Only `##`, which is what a version is in both files. The `###` under them are
- * `Added` and `Fixed` and every other file has those too; naming them would be
- * a page of anchors nobody links to.
+ * `Added` and `Fixed` and every other page has those too; there is nothing to
+ * be gained from naming a heading nobody links to.
  */
-function anchored(changelog, framework) {
-  return changelog.replace(/^## (.+)$/gm, (line, heading) => {
-    const slug = heading
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
-
-    return `## ${heading} {#${framework}-${slug}}`;
-  });
+function named(changelog, pkg) {
+  return changelog.replace(/^## (.+)$/gm, (line, heading) => `## ${pkg} ${heading}`);
 }
 
 /**
@@ -90,22 +89,15 @@ function anchored(changelog, framework) {
  *
  * The file's own `# Changelog` and the blockquote under it go: the page has a
  * heading already, and the note about the two versioning independently is said
- * once above rather than twice inside.
+ * once above rather than twice inside. Nothing else says which package this is,
+ * because every version heading now does.
  */
 function half({ framework, pkg, source }) {
   const changelog = readFileSync(resolve(repoRoot, source), 'utf8')
     .replace(/^# Changelog\n+> [^\n]*\n+/, '')
     .trimEnd();
 
-  return [
-    `::: fw ${framework}`,
-    '',
-    `**\`${pkg}\`**`,
-    '',
-    anchored(changelog, framework),
-    '',
-    ':::'
-  ].join('\n');
+  return [`::: fw ${framework}`, '', named(changelog, pkg), '', ':::'].join('\n');
 }
 
 for (const [locale, title] of Object.entries(titles)) {
@@ -120,7 +112,7 @@ for (const [locale, title] of Object.entries(titles)) {
       `title: ${title}`,
       'order: 1',
       'editLink: false',
-      'outline: false',
+      'outline: 2',
       '---',
       '',
       `# ${title}`,
