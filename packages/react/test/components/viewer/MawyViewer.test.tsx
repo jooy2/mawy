@@ -269,8 +269,8 @@ describe('images', () => {
   });
 
   it('hands the picture over where the application says how to draw one', async () => {
-    const asked: { src: string; alt: string; title: string | null }[] = [];
-    const Mine = (props: { src: string; alt: string; title: string | null }) => {
+    const asked: { src: string; alt: string; title: string | null; first: boolean }[] = [];
+    const Mine = (props: { src: string; alt: string; title: string | null; first: boolean }) => {
       asked.push(props);
 
       return <span data-mine={props.src}>{props.alt}</span>;
@@ -278,10 +278,48 @@ describe('images', () => {
 
     const screen = await render(<MawyViewer value={'![a cat](/c.png "Mine")'} image={Mine} />);
 
-    expect(asked).toEqual([{ src: '/c.png', alt: 'a cat', title: 'Mine' }]);
+    expect(asked).toEqual([{ src: '/c.png', alt: 'a cat', title: 'Mine', first: true }]);
     expect(screen.container.querySelector('[data-mine="/c.png"]')).not.toBeNull();
     // And nothing was fetched behind its back.
     expect(screen.container.querySelector('img')).toBeNull();
+  });
+
+  /**
+   * A page is measured on how long its largest piece of content takes to
+   * arrive, and on a document that opens with a picture that picture is
+   * usually it. See `MawyImageProps.first`.
+   */
+  it('fetches the first picture with the page and the rest when they are reached', async () => {
+    const screen = await render(
+      <MawyViewer value={'![one](/1.png)\n\nWords.\n\n![two](/2.png)\n\n![three](/3.png)'} />
+    );
+    const images = [...screen.container.querySelectorAll('img')];
+
+    expect(images.map((image) => image.getAttribute('loading'))).toEqual(['eager', 'lazy', 'lazy']);
+    expect(images[0].getAttribute('fetchPriority')).toBe('high');
+    expect(images[1].getAttribute('fetchPriority')).toBeNull();
+  });
+
+  it('finds the first picture wherever in the document it was written', async () => {
+    const screen = await render(
+      <MawyViewer value={'| a |\n| --- |\n| ![in a cell](/1.png) |\n\n![after](/2.png)'} />
+    );
+    const images = [...screen.container.querySelectorAll('img')];
+
+    expect(images.map((image) => image.getAttribute('loading'))).toEqual(['eager', 'lazy']);
+  });
+
+  it('says which picture is first to the component drawing them', async () => {
+    const asked: boolean[] = [];
+    const Mine = ({ alt, first }: { alt: string; first: boolean }) => {
+      asked.push(first);
+
+      return <span>{alt}</span>;
+    };
+
+    await render(<MawyViewer value={'![one](/1.png) ![two](/2.png)'} image={Mine} />);
+
+    expect(asked).toEqual([true, false]);
   });
 
   it('never hands over a URL the scheme allowlist refused', async () => {

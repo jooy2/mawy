@@ -25,7 +25,7 @@ import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { stringsFor } from '../../internal/i18n.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { LIVE } from '../../internal/markdown/live.js';
-import { renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
+import { firstImage, renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
 import { findInDocument, NOTHING_FOUND } from '../../internal/markdown/find.js';
 import { FindBar } from '../../internal/find.js';
 import { useHighlighter } from '../../internal/highlighter.js';
@@ -378,6 +378,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   );
   /** The one being stepped through, kept inside a count that may have shrunk. */
   const currentMatch = found.total ? Math.min(at, found.total - 1) : -1;
+  /** Which picture is fetched with the page rather than when it is reached. */
+  const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
   const context = React.useMemo(
     () => ({
       html,
@@ -389,6 +391,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       image,
       resolveUrl,
       anchorPrefix,
+      firstImage: picture,
       source: text,
       found,
       currentMatch,
@@ -404,6 +407,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       image,
       resolveUrl,
       anchorPrefix,
+      picture,
       text,
       found,
       currentMatch

@@ -349,6 +349,32 @@ export interface MawyImageProps {
   alt: string;
   /** The `title`, if one was written. */
   title: string | null;
+  /**
+   * Whether this is the first picture in the document.
+   *
+   * A page is measured on how long its largest piece of content takes to
+   * arrive, and on a page whose document opens with a picture that picture is
+   * usually the piece. Everything Mawy draws itself is text, so the one thing
+   * this library can say about that measurement is which picture came first —
+   * which is what an image component needs to know to fetch it at once instead
+   * of when it is scrolled to:
+   *
+   * ```tsx
+   * <MawyDocument
+   *   value={document}
+   *   image={({ src, alt, title, first }) => (
+   *     <Image src={src} alt={alt} title={title ?? undefined} priority={first} />
+   *   )}
+   * />
+   * ```
+   *
+   * First in the document rather than first on the screen, and the two are the
+   * same thing only when the document starts at the top of the page. A
+   * document reached halfway down a long page, or one of many drawn in a list,
+   * is a case where this says yes and the answer that would have helped is no.
+   * The renderer's own `<img>` makes the same guess — see the guide.
+   */
+  first: boolean;
 }
 
 /** Which of the two a URL was written as. */

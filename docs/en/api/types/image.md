@@ -19,12 +19,40 @@ interface MawyImageProps {
   alt: string;
   /** The `title`, if one was written. */
   title: string | null;
+  /** Whether this is the first picture in the document. */
+  first: boolean;
 }
 ```
 
 What the viewer's `image` component is handed. Without one an `<img>` is written and the browser fetches it; with one the application draws the picture instead, which is the only way to put a header on the request, send it through a loader of its own, answer it out of a cache, or refuse it.
 
 `alt` is empty where the author wrote `![](…)`, which in Markdown means decoration.
+
+### The first picture
+
+A page is measured on how long its largest piece of content takes to arrive, and on a page whose document opens with a picture that picture is usually the piece. Everything Mawy draws itself is text, so the one thing this library can say about that measurement is which picture came first.
+
+The renderer's own `<img>` acts on it: the first picture is written `loading="eager"` with `fetchpriority="high"` and every other one `loading="lazy"`. An `image` component is told the same thing and decides for itself, which is how a picture becomes a framework's own image component with its priority set:
+
+```tsx
+import Image from 'next/image';
+
+<MawyDocument
+  value={document}
+  image={({ src, alt, title, first }) => (
+    <Image
+      src={src}
+      alt={alt}
+      title={title ?? undefined}
+      width={1200}
+      height={630}
+      priority={first}
+    />
+  )}
+/>;
+```
+
+First in the document rather than first on the screen, and the two are the same thing only when the document starts at the top of the page. A document reached halfway down a long page, or one of many drawn in a list, is a case where this says yes and the answer that would have helped is no: the cost is one fetch made sooner than it needed to be, and an application that knows better draws its own pictures.
 
 Which pictures an application is willing to fetch is not a viewer's decision to make. A document from somewhere else has somebody else's URLs in it, and fetching them all without asking tells whoever wrote them which documents are being read.
 

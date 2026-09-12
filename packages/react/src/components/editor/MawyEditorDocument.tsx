@@ -14,6 +14,7 @@ import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
 import { LIVE } from '../../internal/markdown/live.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import {
+  firstImage,
   renderBlocks,
   renderFootnotes,
   type RenderContext
@@ -303,6 +304,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       () => (focused ? revealedIn(document_.root.children, selection.start, selection.end) : null),
       [document_, focused, selection.start, selection.end]
     );
+    /** Which picture is fetched with the page rather than when it is reached. */
+    const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
     const context: RenderContext = React.useMemo(
       () => ({
         html,
@@ -312,11 +315,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         image,
         resolveUrl,
         linkTarget,
+        firstImage: picture,
         source: value,
         reveal,
         live: LIVE
       }),
-      [html, strings, footnotes, directives, image, resolveUrl, linkTarget, value, reveal]
+      [html, strings, footnotes, directives, image, resolveUrl, linkTarget, picture, value, reveal]
     );
 
     /**

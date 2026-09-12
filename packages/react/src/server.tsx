@@ -58,7 +58,12 @@ import type {
 import { MAWY_SYSTEM_FONTS } from './fonts.js';
 import { stringsFor } from './internal/i18n.js';
 import { parseMarkdown } from './internal/markdown/parse.js';
-import { renderBlocks, renderFootnotes, type RenderContext } from './internal/markdown/render.js';
+import {
+  firstImage,
+  renderBlocks,
+  renderFootnotes,
+  type RenderContext
+} from './internal/markdown/render.js';
 import { DEFAULT_TYPOGRAPHY, typographyStyle } from './internal/typography.js';
 
 export interface MawyDocumentProps {
@@ -175,6 +180,7 @@ export function MawyDocument({
     linkTarget,
     source: value,
     highlighter: highlight ?? null,
+    firstImage: firstImage(document_.root.children),
     // The whole of what makes this entry point different from the viewer's
     // drawing. See `RenderContext.still`.
     still: true

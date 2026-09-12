@@ -37,6 +37,7 @@ import type {
   MdCode,
   MdContainerDirective,
   MdFootnoteDefinition,
+  MdImage,
   MdInline,
   MdLeafDirective,
   MdListItem,
@@ -187,6 +188,48 @@ export interface RenderContext {
    * will ever read the drawing back.
    */
   still?: boolean;
+  /**
+   * The first picture the document asks for, by identity. See `firstImage`.
+   *
+   * Compared against rather than counted up to, because the count would have to
+   * live somewhere that survives the walk and a context is reused across
+   * renders — a counter on it would be right once and wrong every time after.
+   */
+  firstImage?: MdImage | null;
+}
+
+/**
+ * The first picture in the document, in the order a reader meets them.
+ *
+ * A tree walk rather than a flag the parser sets, because the parser's trees
+ * are the one thing both packages have to produce identically and which
+ * picture arrives first is a question about a page.
+ *
+ * Only the pictures the document itself asks for. A picture inside raw HTML is
+ * a string until something draws it and there is no node here to be first, and
+ * a footnote's is not looked at because a footnote is read at the bottom.
+ */
+export function firstImage(nodes: readonly { type: string }[]): MdImage | null {
+  for (const node of nodes) {
+    if (node.type === 'image') {
+      return node as MdImage;
+    }
+
+    // Every node that holds anything holds it under `children`, whatever the
+    // node is — a list holds items, a table holds rows, a row holds cells, and
+    // a paragraph holds the run of inlines a picture is written in.
+    const children = (node as { children?: unknown }).children;
+
+    if (Array.isArray(children)) {
+      const found = firstImage(children as readonly { type: string }[]);
+
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -470,8 +513,33 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
               src={resolved(context, node.url, 'image')}
               alt={node.alt}
               title={node.title}
+              first={node === context.firstImage}
             />
           </span>
+        ) : node === context.firstImage ? (
+          // The first picture is the one a page whose document opens with a
+          // picture is measured on, and a picture the browser was told to put
+          // off is a measurement made twice: once when the page is laid out and
+          // again when the fetch it was told not to make is made after all. So
+          // this one is fetched with the page and asked for early.
+          //
+          // First in the document, which is first on the screen only when the
+          // document starts at the top of the page. A document further down, or
+          // one of a list of them, pays a fetch it did not need — a request
+          // that would have been made anyway, made sooner. An application that
+          // knows better draws its own pictures through `image`, which is told
+          // which one this is.
+          <img
+            key={index}
+            className="mawy-md-image"
+            src={resolved(context, node.url, 'image')}
+            alt={node.alt}
+            title={node.title ?? undefined}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            {...origin(node, context)}
+          />
         ) : (
           <img
             key={index}

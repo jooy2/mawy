@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **The first picture in a document is fetched with the page.** A page is measured on how long its largest piece of content takes to arrive, and on a page whose document opens with a picture that picture is usually the piece — so telling the browser to put it off, as every picture here was told, is a measurement made twice: once when the page is laid out and again when the fetch it was told not to make is made after all. The first one is now written `loading="eager"` with `fetchpriority="high"`, and every other one is lazy as before. `MawyImageProps` gained `first` so that a picture drawn by the application can say the same thing to `next/image`'s `priority` or to whatever stands in for it. First in the document rather than first on the screen: a document reached halfway down a long page pays one fetch made sooner than it needed to be, and an application that knows better draws its own pictures.
+
 ### Changed
 
 - **A document drawn by `MawyDocument` writes no `data-mawy-range`.** Every element `MawyViewer` draws carries the offsets it came from, because a range is the only way back from a place on the page to the place in the document — the editor's preview scrolls by them and a click in it finds its word by them. A page built by `mawy-react/server` has no component on it to ask that question, and the attribute was a quarter of what such a page sends: this repository's own README came out at 16.8 kB and now comes out at 12.2 kB, and at 3.4 kB rather than 4.6 kB once gzip has had it. A coloured code block also stops counting every character of every token to work out where it was written, which was the most this renderer did per element. `MawyViewer` and `MawyEditor` are unchanged.
