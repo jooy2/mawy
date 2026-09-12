@@ -19,6 +19,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/toolbar.dart';
 import 'package:mawy/src/theme/tokens.dart';
+import 'package:mawy/src/types.dart';
 
 /// The bar itself.
 class MawyFindBar extends StatefulWidget {
@@ -39,11 +40,20 @@ class MawyFindBar extends StatefulWidget {
     this.onReplace,
     this.onReplaceAll,
     this.editable = false,
+    this.frame = MawyFrame.box,
+    this.placement = MawyToolbarPlacement.top,
     super.key,
   });
 
   /// The palette.
   final MawyTokens tokens;
+
+  /// Whether the bar is barred across the surface or floating over it. It goes
+  /// where the toolbar goes and looks the way the toolbar looks.
+  final MawyFrame frame;
+
+  /// Which end of the surface it is at, which is which side its line is on.
+  final MawyToolbarPlacement placement;
 
   /// The library's own words.
   final MawyStrings strings;
@@ -189,6 +199,8 @@ class _MawyFindBarState extends State<MawyFindBar> {
     final MawyTokens tokens = widget.tokens;
     final MawyStrings strings = widget.strings;
     final bool none = widget.total == 0;
+    final bool floating = widget.frame == MawyFrame.floating;
+    final BorderSide line = BorderSide(color: tokens.border);
 
     return Semantics(
       container: true,
@@ -199,8 +211,25 @@ class _MawyFindBarState extends State<MawyFindBar> {
         onKeyEvent: _onKey,
         child: Container(
           decoration: BoxDecoration(
-            color: tokens.backgroundSunken,
-            border: Border(bottom: BorderSide(color: tokens.border)),
+            color: floating ? tokens.backgroundRaised : tokens.backgroundSunken,
+            border: floating
+                ? Border.all(color: tokens.border)
+                : Border(
+                    bottom: widget.placement == MawyToolbarPlacement.top ? line : BorderSide.none,
+                    top: widget.placement == MawyToolbarPlacement.bottom ? line : BorderSide.none,
+                  ),
+            // A card rather than a pill: there is a field in here, and a pill
+            // around a line of text is a lozenge nobody wants.
+            borderRadius: floating ? BorderRadius.circular(MawyRadius.large) : null,
+            boxShadow: floating
+                ? <BoxShadow>[
+                    BoxShadow(
+                      color: const Color(0xFF101018).withValues(alpha: 0.14),
+                      blurRadius: 28,
+                      offset: const Offset(0, 10),
+                    ),
+                  ]
+                : null,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Column(

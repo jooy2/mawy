@@ -171,34 +171,41 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
       ),
     );
 
-    return Semantics(
-      container: true,
-      label: widget.strings.toolbar,
-      child: Container(
-        decoration: BoxDecoration(
-          color: floating ? widget.tokens.backgroundRaised : widget.tokens.chrome,
-          border: floating
-              ? Border.all(color: widget.tokens.border)
-              : Border(
-                  bottom: widget.placement == MawyToolbarPlacement.top ? line : BorderSide.none,
-                  top: widget.placement == MawyToolbarPlacement.bottom ? line : BorderSide.none,
-                ),
-          borderRadius: floating ? BorderRadius.circular(_floatingRadius(drawn)) : null,
-          boxShadow: floating
-              ? <BoxShadow>[
-                  BoxShadow(
-                    color: const Color(0xFF101018).withValues(alpha: 0.14),
-                    blurRadius: 28,
-                    offset: const Offset(0, 10),
+    return MawyOpensUp(
+      // A bar along the bottom has nothing under it to open into, so the
+      // menus and the names its buttons carry go up instead.
+      up: widget.placement == MawyToolbarPlacement.bottom,
+      child: Semantics(
+        container: true,
+        label: widget.strings.toolbar,
+        child: Container(
+          decoration: BoxDecoration(
+            color: floating ? widget.tokens.backgroundRaised : widget.tokens.chrome,
+            border: floating
+                ? Border.all(color: widget.tokens.border)
+                : Border(
+                    bottom: widget.placement == MawyToolbarPlacement.top ? line : BorderSide.none,
+                    top: widget.placement == MawyToolbarPlacement.bottom ? line : BorderSide.none,
                   ),
-                ]
-              : null,
+            borderRadius: floating ? BorderRadius.circular(_floatingRadius(drawn)) : null,
+            boxShadow: floating
+                ? <BoxShadow>[
+                    BoxShadow(
+                      color: const Color(0xFF101018).withValues(alpha: 0.14),
+                      blurRadius: 28,
+                      offset: const Offset(0, 10),
+                    ),
+                  ]
+                : null,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          // More controls than a narrow screen has room for scroll under a
+          // finger rather than squashing, which is what this package's toolbars
+          // already do. A bar the width of its buttons has to say so itself.
+          child: floating
+              ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: row)
+              : row,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        // More controls than a narrow screen has room for scroll under a
-        // finger rather than squashing, which is what this package's toolbars
-        // already do. A bar the width of its buttons has to say so itself.
-        child: floating ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: row) : row,
       ),
     );
   }

@@ -887,6 +887,8 @@ class _MawyEditorState extends State<MawyEditor> {
         ),
       if (_finding && showSource)
         MawyFindBar(
+          frame: widget.frame,
+          placement: widget.toolbarPlacement,
           tokens: tokens,
           strings: strings,
           query: _query,
@@ -904,6 +906,15 @@ class _MawyEditorState extends State<MawyEditor> {
           editable: !widget.readOnly,
         ),
     ];
+
+    // The toolbar is the one against the edge and the find bar is on the inside
+    // of it, which is why the two swap under `bottom`. Put the other way round,
+    // a floating group anchored to the bottom would push its own toolbar up the
+    // moment the find bar opened — the toolbar would move under the finger that
+    // had just pressed it.
+    if (widget.toolbarPlacement == MawyToolbarPlacement.bottom) {
+      chrome.setAll(0, chrome.reversed.toList());
+    }
 
     final Widget panes = Expanded(
       child: LayoutBuilder(
@@ -1342,42 +1353,47 @@ class _ToolbarState extends State<_Toolbar> {
     final bool floating = widget.frame == MawyFrame.floating;
     final BorderSide line = BorderSide(color: widget.tokens.border);
 
-    return Container(
-      constraints: const BoxConstraints(minHeight: 44),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: floating ? widget.tokens.backgroundRaised : widget.tokens.chrome,
-        border: floating
-            ? Border.all(color: widget.tokens.border)
-            : Border(
-                bottom: widget.placement == MawyToolbarPlacement.top ? line : BorderSide.none,
-                top: widget.placement == MawyToolbarPlacement.bottom ? line : BorderSide.none,
-              ),
-        // A row of round buttons and nothing else, so the box around them is
-        // round too. The editor's toolbar has no line of text in it either.
-        borderRadius: floating ? BorderRadius.circular(999) : null,
-        boxShadow: floating
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: const Color(0xFF101018).withValues(alpha: 0.14),
-                  blurRadius: 28,
-                  offset: const Offset(0, 10),
+    return MawyOpensUp(
+      // A bar along the bottom has nothing under it to open into, so the
+      // menus and the names its buttons carry go up instead.
+      up: widget.placement == MawyToolbarPlacement.bottom,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: floating ? widget.tokens.backgroundRaised : widget.tokens.chrome,
+          border: floating
+              ? Border.all(color: widget.tokens.border)
+              : Border(
+                  bottom: widget.placement == MawyToolbarPlacement.top ? line : BorderSide.none,
+                  top: widget.placement == MawyToolbarPlacement.bottom ? line : BorderSide.none,
                 ),
-              ]
-            : null,
-      ),
-      child: Semantics(
-        container: true,
-        label: widget.strings.toolbar,
-        child: MawyRovingRow(
-          roving: _roving,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            // Barred across the editor the row is the width of the editor;
-            // floating it is the width of its own buttons.
-            child: Row(
-              mainAxisSize: floating ? MainAxisSize.min : MainAxisSize.max,
-              children: children,
+          // A row of round buttons and nothing else, so the box around them is
+          // round too. The editor's toolbar has no line of text in it either.
+          borderRadius: floating ? BorderRadius.circular(999) : null,
+          boxShadow: floating
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: const Color(0xFF101018).withValues(alpha: 0.14),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                ]
+              : null,
+        ),
+        child: Semantics(
+          container: true,
+          label: widget.strings.toolbar,
+          child: MawyRovingRow(
+            roving: _roving,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              // Barred across the editor the row is the width of the editor;
+              // floating it is the width of its own buttons.
+              child: Row(
+                mainAxisSize: floating ? MainAxisSize.min : MainAxisSize.max,
+                children: children,
+              ),
             ),
           ),
         ),

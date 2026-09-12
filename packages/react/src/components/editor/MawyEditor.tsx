@@ -1286,78 +1286,81 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * readable under it. A box hangs from nothing and stays a sibling.
    */
   const inside = frame === 'floating';
-  const chrome =
-    items.length || (finding && showSource) ? (
-      <div className="mawy-chrome">
-        {items.length ? (
-          <MawyEditorToolbar
-            items={items}
-            strings={strings}
-            mode={current}
-            modes={modes}
-            onModeChange={setMode}
-            colorScheme={scheme}
-            onColorSchemeChange={setScheme}
-            onCommand={command}
-            active={(name) => commandActive(name, { value: text, ...selection })}
-            editable={editable}
-            onFind={showSource ? openFind : undefined}
-            finding={finding && showSource}
-            onOpen={readOnly ? undefined : openFile}
-            onSave={save}
-          />
-        ) : null}
+  const bars = [
+    items.length ? (
+      <React.Fragment key="toolbar">
+        <MawyEditorToolbar
+          items={items}
+          strings={strings}
+          mode={current}
+          modes={modes}
+          onModeChange={setMode}
+          colorScheme={scheme}
+          onColorSchemeChange={setScheme}
+          onCommand={command}
+          active={(name) => commandActive(name, { value: text, ...selection })}
+          editable={editable}
+          onFind={showSource ? openFind : undefined}
+          finding={finding && showSource}
+          onOpen={readOnly ? undefined : openFile}
+          onSave={save}
+        />
+      </React.Fragment>
+    ) : null,
+    finding && showSource ? (
+      <React.Fragment key="find">
+        <FindBar
+          query={query}
+          onQueryChange={setQuery}
+          replacement={replacement}
+          onReplacementChange={setReplacement}
+          matchCase={matchCase}
+          onMatchCaseChange={setMatchCase}
+          total={matches.length}
+          current={currentMatch}
+          onStep={step}
+          onReplace={() => {
+            const match = matches[currentMatch];
 
-        {finding && showSource ? (
-          <FindBar
-            query={query}
-            onQueryChange={setQuery}
-            replacement={replacement}
-            onReplacementChange={setReplacement}
-            matchCase={matchCase}
-            onMatchCaseChange={setMatchCase}
-            total={matches.length}
-            current={currentMatch}
-            onStep={step}
-            onReplace={() => {
-              const match = matches[currentMatch];
+            if (!match) {
+              return;
+            }
 
-              if (!match) {
-                return;
+            const next = replaceMatch(text, match, replacement);
+
+            apply(
+              { value: text, ...selection },
+              {
+                value: next.value,
+                start: match.start,
+                end: next.caret
               }
+            );
+          }}
+          onReplaceAll={() => {
+            const next = replaceAll(text, query, replacement, matchCase);
 
-              const next = replaceMatch(text, match, replacement);
-
+            if (next.count) {
               apply(
                 { value: text, ...selection },
                 {
                   value: next.value,
-                  start: match.start,
-                  end: next.caret
+                  start: selection.start,
+                  end: selection.start
                 }
               );
-            }}
-            onReplaceAll={() => {
-              const next = replaceAll(text, query, replacement, matchCase);
-
-              if (next.count) {
-                apply(
-                  { value: text, ...selection },
-                  {
-                    value: next.value,
-                    start: selection.start,
-                    end: selection.start
-                  }
-                );
-              }
-            }}
-            onClose={closeFind}
-            editable={editable}
-            strings={strings}
-          />
-        ) : null}
-      </div>
-    ) : null;
+            }
+          }}
+          onClose={closeFind}
+          editable={editable}
+          strings={strings}
+        />
+      </React.Fragment>
+    ) : null
+  ].filter(Boolean);
+  const chrome = bars.length ? (
+    <div className="mawy-chrome">{toolbarPlacement === 'bottom' ? [...bars].reverse() : bars}</div>
+  ) : null;
 
   return (
     <div

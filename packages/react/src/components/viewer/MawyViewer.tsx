@@ -819,48 +819,57 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
    * are stacked in one box that hovers over the document, and under `box` with
    * `toolbarPlacement="bottom"` they both have to move to the other end — a
    * find bar left at the top with its toolbar at the bottom is a bar belonging
-   * to nothing. Rendered in the order they are read, so the DOM says what the
-   * screen says and a keyboard walks it in that order.
+   * to nothing.
+   *
+   * The toolbar is the one against the edge and the find bar is on the inside
+   * of it, which is why the two swap under `bottom`. Put the other way round,
+   * a floating group anchored to the bottom would push its own toolbar up the
+   * moment the find bar opened — the toolbar would move under the hand that
+   * had just pressed it.
+   *
+   * Written in the order they are drawn rather than reordered by CSS, so the
+   * DOM says what the screen says and a keyboard walks it in that order.
    */
-  const chrome =
-    items.length || (finding && searchable) ? (
-      <div className="mawy-chrome">
-        {items.length ? (
-          <MawyViewerToolbar
-            items={items}
-            strings={strings}
-            typography={type}
-            onTypographyChange={setType}
-            fonts={fonts}
-            colorScheme={scheme}
-            onColorSchemeChange={setScheme}
-            outlineOpen={outlineOpen}
-            onOutlineToggle={() => setOutlineOpen((was) => !was)}
-            onFind={hasDocument ? openFind : undefined}
-            finding={finding}
-            onOpenFile={takesFile ? () => picker.current?.click() : undefined}
-            onCopy={() => copy(text)}
-            copyState={copyState}
-            fileName={fileName}
-            hasDocument={hasDocument}
-          />
-        ) : null}
-
-        {finding && searchable ? (
-          <FindBar
-            query={query}
-            onQueryChange={setQuery}
-            matchCase={matchCase}
-            onMatchCaseChange={setMatchCase}
-            total={found.total}
-            current={currentMatch}
-            onStep={step}
-            onClose={() => setFinding(false)}
-            strings={strings}
-          />
-        ) : null}
-      </div>
-    ) : null;
+  const bars = [
+    items.length ? (
+      <MawyViewerToolbar
+        items={items}
+        strings={strings}
+        typography={type}
+        onTypographyChange={setType}
+        fonts={fonts}
+        colorScheme={scheme}
+        onColorSchemeChange={setScheme}
+        outlineOpen={outlineOpen}
+        onOutlineToggle={() => setOutlineOpen((was) => !was)}
+        onFind={hasDocument ? openFind : undefined}
+        finding={finding}
+        onOpenFile={takesFile ? () => picker.current?.click() : undefined}
+        onCopy={() => copy(text)}
+        copyState={copyState}
+        fileName={fileName}
+        hasDocument={hasDocument}
+        key="toolbar"
+      />
+    ) : null,
+    finding && searchable ? (
+      <FindBar
+        query={query}
+        onQueryChange={setQuery}
+        matchCase={matchCase}
+        onMatchCaseChange={setMatchCase}
+        total={found.total}
+        current={currentMatch}
+        onStep={step}
+        onClose={() => setFinding(false)}
+        strings={strings}
+        key="find"
+      />
+    ) : null
+  ].filter(Boolean);
+  const chrome = bars.length ? (
+    <div className="mawy-chrome">{toolbarPlacement === 'bottom' ? [...bars].reverse() : bars}</div>
+  ) : null;
 
   return (
     <div

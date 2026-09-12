@@ -1072,6 +1072,8 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
         ),
       if (_finding && _searchable)
         MawyFindBar(
+          frame: widget.frame,
+          placement: widget.toolbarPlacement,
           tokens: tokens,
           strings: strings,
           query: _query,
@@ -1087,6 +1089,15 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
           onClose: _closeFind,
         ),
     ];
+
+    // The toolbar is the one against the edge and the find bar is on the inside
+    // of it, which is why the two swap under `bottom`. Put the other way round,
+    // a floating group anchored to the bottom would push its own toolbar up the
+    // moment the find bar opened — the toolbar would move under the finger that
+    // had just pressed it.
+    if (widget.toolbarPlacement == MawyToolbarPlacement.bottom) {
+      chrome.setAll(0, chrome.reversed.toList());
+    }
 
     final Widget pane = Expanded(
       child: Row(

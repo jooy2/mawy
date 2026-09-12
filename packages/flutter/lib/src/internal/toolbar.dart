@@ -32,6 +32,31 @@ import 'package:mawy/src/types.dart';
 /// Focusable, and activated by Enter and by the space bar as well as by a
 /// pointer — the shortcuts are written out here rather than inherited, because
 /// this package does not require a [WidgetsApp] and it is a [WidgetsApp] that
+/// Which way the things a toolbar opens should go.
+///
+/// A bar along the bottom has nothing under it to open into, so its menus and
+/// the names under its buttons go up instead. The toolbars declare it once and
+/// every control inside reads it, rather than each one taking a flag it would
+/// have to be handed at all ten of its construction sites.
+///
+/// Read at the moment something opens rather than subscribed to, which is why
+/// this uses [getInheritedWidgetOfExactType]: a menu that is already open when
+/// the bar moves is a menu about to be closed anyway.
+class MawyOpensUp extends InheritedWidget {
+  /// Declares which way, for everything below.
+  const MawyOpensUp({required this.up, required super.child, super.key});
+
+  /// Whether what opens goes above what opened it.
+  final bool up;
+
+  /// What the nearest toolbar said, or down where nothing has said anything.
+  static bool of(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<MawyOpensUp>()?.up ?? false;
+
+  @override
+  bool updateShouldNotify(MawyOpensUp old) => old.up != up;
+}
+
 /// would otherwise be supplying them.
 class MawyToolbarButton extends StatefulWidget {
   /// Creates a toolbar button.
@@ -116,15 +141,17 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
       return;
     }
 
+    final bool up = MawyOpensUp.of(context);
+
     _tip = OverlayEntry(
       builder: (BuildContext context) => IgnorePointer(
         child: CompositedTransformFollower(
           link: _link,
-          targetAnchor: Alignment.bottomCenter,
-          followerAnchor: Alignment.topCenter,
-          offset: const Offset(0, 6),
+          targetAnchor: up ? Alignment.topCenter : Alignment.bottomCenter,
+          followerAnchor: up ? Alignment.bottomCenter : Alignment.topCenter,
+          offset: Offset(0, up ? -6 : 6),
           child: Align(
-            alignment: Alignment.topCenter,
+            alignment: up ? Alignment.bottomCenter : Alignment.topCenter,
             child: Container(
               constraints: const BoxConstraints(maxWidth: 220),
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -424,16 +451,30 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
 
     _fromEnd = _runsOff(overlay);
 
+    final bool up = MawyOpensUp.of(context);
+    final Alignment target = switch ((up, _fromEnd)) {
+      (true, true) => Alignment.topRight,
+      (true, false) => Alignment.topLeft,
+      (false, true) => Alignment.bottomRight,
+      (false, false) => Alignment.bottomLeft,
+    };
+    final Alignment follower = switch ((up, _fromEnd)) {
+      (true, true) => Alignment.bottomRight,
+      (true, false) => Alignment.bottomLeft,
+      (false, true) => Alignment.topRight,
+      (false, false) => Alignment.topLeft,
+    };
+
     _entry = OverlayEntry(
       builder: (BuildContext context) => Stack(
         children: <Widget>[
           CompositedTransformFollower(
             link: _link,
-            targetAnchor: _fromEnd ? Alignment.bottomRight : Alignment.bottomLeft,
-            followerAnchor: _fromEnd ? Alignment.topRight : Alignment.topLeft,
-            offset: const Offset(0, 6),
+            targetAnchor: target,
+            followerAnchor: follower,
+            offset: Offset(0, up ? -6 : 6),
             child: Align(
-              alignment: _fromEnd ? Alignment.topRight : Alignment.topLeft,
+              alignment: follower,
               child: FocusScope(
                 node: _panel,
                 onKeyEvent: _onKey,

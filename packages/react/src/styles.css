@@ -408,10 +408,37 @@
   inset-inline-end: 0;
 }
 
+/* And so does the name under a button, for the same reason. */
+.mawy-root[data-mawy-toolbar='bottom'] .mawy-chrome [data-mawy-tip]::after {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+/* A menu opens away from the edge its toolbar is on.
+ *
+ * A bar along the bottom has nothing under it to open into — on a floating one
+ * that is the edge of the viewer, and on a boxed one it is the last row of the
+ * surface. So the panel goes up, and the little slide it arrives with turns
+ * over with it. Only inside the chrome: a menu anywhere else opens the way
+ * menus open. */
+.mawy-root[data-mawy-toolbar='bottom'] .mawy-chrome .mawy-menu-panel {
+  top: auto;
+  bottom: calc(100% + 6px);
+  animation-name: mawy-menu-up;
+}
+
 @keyframes mawy-menu-in {
   from {
     opacity: 0;
     transform: translateY(-4px);
+  }
+}
+
+/* The same arrival, from under. See the rule above that reaches for it. */
+@keyframes mawy-menu-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
 }
 
@@ -625,18 +652,6 @@
  * as well, and a pill around a line of text is a lozenge nobody wants. */
 .mawy-root[data-mawy-frame='floating'] .mawy-toolbar:not(:has(.mawy-toolbar-title)) {
   border-radius: 999px;
-}
-
-/* More controls than a narrow screen has room for scroll under a finger rather
- * than squashing. The bar is the width of the screen at that point, so it is
- * the one place a floating toolbar stops being the width of its contents. */
-.mawy-root[data-mawy-frame='floating'] .mawy-toolbar {
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.mawy-root[data-mawy-frame='floating'] .mawy-toolbar::-webkit-scrollbar {
-  display: none;
 }
 
 /* Room for the bar to hover over, so the first or last line of the document is
