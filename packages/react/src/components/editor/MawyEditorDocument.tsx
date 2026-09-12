@@ -30,7 +30,8 @@ import {
   type MawyDrag,
   type MawyEdit
 } from '../../internal/editing.js';
-import { pastedImagesIn } from '../../internal/images.js';
+import { fileFromDataUrl, pastedImagesIn } from '../../internal/images.js';
+import { pasteFromHtml } from '../../internal/markdown/paste.js';
 import { domAt, sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
@@ -113,7 +114,11 @@ export interface MawyEditorDocumentProps {
    * not said where an image goes, which is when there is nothing to be done
    * with one — see `MawyImageUpload`.
    */
-  onImages?: (files: readonly File[], at: { start: number; end: number }) => void;
+  onImages?: (
+    files: readonly File[],
+    at: { start: number; end: number },
+    after?: string | null
+  ) => void;
 }
 
 /**
@@ -469,16 +474,15 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         const selection = element.ownerDocument.getSelection();
         const where = selection?.anchorNode;
         const literal = Boolean(where && blockAt(element, where)?.tagName === 'PRE');
-        const images = now.onImages ? pastedImagesIn(event.clipboardData) : [];
+        const images = now.onImages && !literal ? pastedImagesIn(event.clipboardData) : [];
 
-        if (images.length && !literal) {
-          // A file on the clipboard with no markup beside it is a screenshot.
-          // Inside a code block it is not one, because everything in there is
-          // the characters it is.
-          //
-          // The range rather than the anchor, which is the end of a selection
-          // made backwards: what is selected is replaced, whichever way it was
-          // dragged.
+        /**
+         * What is selected, in the document's offsets.
+         *
+         * The range rather than the anchor, which is the end of a selection made
+         * backwards: what is selected is replaced, whichever way it was dragged.
+         */
+        const selected = () => {
           const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
           const from =
             range &&
@@ -488,7 +492,47 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
             documentAt(element, range.endContainer, range.endOffset, now.value, aim.current);
           const start = from ?? now.value.length;
 
-          now.onImages?.(images, { start, end: Math.max(start, to ?? start) });
+          return { start, end: Math.max(start, to ?? start) };
+        };
+
+        if (images.length) {
+          // A file on the clipboard with no markup beside it is a screenshot.
+          // Inside a code block it is not one, because everything in there is
+          // the characters it is.
+          now.onImages?.(images, selected());
+
+          return;
+        }
+
+        // Pictures carried inline, as bytes, go where the application says an
+        // image goes. See `pasteFromHtml`.
+        const pasted =
+          now.onImages && !literal
+            ? pasteFromHtml(event.clipboardData?.getData('text/html') ?? '')
+            : null;
+
+        if (pasted?.images.length) {
+          const edit = pasted.markdown
+            ? editForText(element, now.value, pasted.markdown, aim.current)
+            : null;
+          const start = edit ? edit.caret - pasted.markdown.length : 0;
+          const range = edit ? null : selected();
+
+          if (edit) {
+            now.onEdit(edit);
+          }
+
+          for (const image of pasted.images) {
+            const file = fileFromDataUrl(image.url, image.alt);
+
+            if (file) {
+              now.onImages?.(
+                [file],
+                range ?? { start: start + image.at, end: start + image.at },
+                edit?.value ?? null
+              );
+            }
+          }
 
           return;
         }

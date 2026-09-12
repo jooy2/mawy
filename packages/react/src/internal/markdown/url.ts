@@ -134,3 +134,39 @@ export function safeImageUrl(url: string): string | null {
 
   return safeUrl(trimmed);
 }
+
+/**
+ * The bytes a `data:` image carries, or `null` where it is not one this file
+ * allows or its payload cannot be read.
+ *
+ * Base64 has the whitespace a browser ignores taken out first, the way a browser
+ * reads it; anything else is percent-decoded, which is how an `svg+xml` image is
+ * usually written.
+ */
+export function dataImageBytes(
+  url: string
+): { type: string; bytes: Uint8Array<ArrayBuffer> } | null {
+  const trimmed = url.trim();
+
+  if (!SAFE_IMAGE_DATA.test(trimmed.replace(IGNORED, ''))) {
+    return null;
+  }
+
+  const comma = trimmed.indexOf(',');
+  const head = trimmed.slice(5, comma).replace(IGNORED, '');
+  const payload = trimmed.slice(comma + 1);
+  const type = head.split(';')[0].toLowerCase();
+
+  try {
+    if (/;base64$/i.test(head)) {
+      return {
+        type,
+        bytes: Uint8Array.from(atob(payload.replace(IGNORED, '')), (c) => c.charCodeAt(0))
+      };
+    }
+
+    return { type, bytes: new TextEncoder().encode(decodeURIComponent(payload)) };
+  } catch {
+    return null;
+  }
+}

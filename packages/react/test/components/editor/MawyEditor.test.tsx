@@ -2824,6 +2824,69 @@ describe('images', () => {
     }
   });
 
+  it('uploads a picture the markup carried inline, and writes it where it was', async () => {
+    for (const modes of [['plain'], ['wysiwyg']] as const) {
+      const onChange = vi.fn();
+      const onUploadImage = vi.fn(async (file: File) =>
+        file.type === 'image/png' ? '/up.png' : null
+      );
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Before."
+          modes={modes}
+          onChange={onChange}
+          onUploadImage={onUploadImage}
+        />
+      );
+      const markup = { 'text/html': `<p>A <img src="${DOT}" alt="dot"> here</p>` };
+
+      if (modes[0] === 'plain') {
+        const input = sourceOf(screen);
+
+        input.focus();
+        input.setSelectionRange(7, 7);
+        pasteFiles(input, [], markup);
+      } else {
+        put(bodyOf(screen), 'Before.', 7);
+        pasteFiles(bodyOf(screen), [], markup);
+      }
+
+      // The words at once, and the picture once the application has somewhere
+      // for it: a `data:` address is bytes, and where bytes go is its answer.
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith('Before.A ![dot](/up.png) here')
+      );
+      expect(onChange).not.toHaveBeenCalledWith(expect.stringContaining('data:'));
+      expect(onUploadImage).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('uploads the file once when the markup beside it is the same picture inline', async () => {
+    const onUploadImage = vi.fn(async () => '/up.png');
+    const screen = await render(
+      <MawyEditor defaultValue="Before." modes={['plain']} onUploadImage={onUploadImage} />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    pasteFiles(input, [png('image.png')], { 'text/html': `<img src="${DOT}" alt="png (1×1)"/>` });
+
+    await vi.waitFor(() => expect(input.value).toBe('Before.![image](/up.png)'));
+    expect(onUploadImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes a picture the markup carried inline as it was, with nowhere to upload it', async () => {
+    const screen = await render(<MawyEditor defaultValue="Before." modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    pasteFiles(input, [], { 'text/html': `<p><img src="${DOT}" alt="dot"></p>` });
+
+    await vi.waitFor(() => expect(input.value).toBe(`Before.![dot](${DOT})`));
+  });
+
   it('says so while it is uploading, and says so when it could not', async () => {
     let settle: (url: string) => void = () => {};
     const screen = await render(

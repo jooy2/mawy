@@ -82,6 +82,12 @@ export type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[]
  * does nothing: an image *already on the web*, pasted as part of a page, still
  * arrives as the URL it already had.
  *
+ * A picture pasted as part of a page with a `data:` address is not on the web
+ * anywhere; the address is the picture's bytes. With an `onUploadImage` it goes
+ * through it like a file, and is written where it stood once it has an address.
+ * Without one it is written as the `data:` address it arrived as, which is what
+ * the page it came from said and the only thing there is to write.
+ *
  * What comes back is the URL to write, or the URL with what to write beside it:
  *
  * ```tsx

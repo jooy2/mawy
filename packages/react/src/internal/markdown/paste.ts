@@ -18,7 +18,7 @@
  * browser, and the document it builds is inert — no scripts, no loads.
  */
 
-import { safeImageUrl, safeUrl } from './url.js';
+import { dataImageBytes, safeImageUrl, safeUrl } from './url.js';
 
 /**
  * How a piece of markup is being read.
@@ -31,6 +31,30 @@ import { safeImageUrl, safeUrl } from './url.js';
  */
 interface Reading {
   alts: boolean;
+  /**
+   * Where the `data:` pictures go, when they are being taken out to be uploaded
+   * rather than written into the document as the bytes they are. See
+   * `pasteFromHtml`.
+   */
+  inline: { url: string; alt: string }[] | null;
+}
+
+/**
+ * Where a picture taken out of the markup was, until the markup is finished.
+ *
+ * The object replacement character, which is what it means: something stood
+ * here that is not text. Offsets into the Markdown cannot be counted while it is
+ * being built, because the whitespace is tidied once it is whole — so the place
+ * is marked in the string and read off at the end. The same character arriving
+ * as text is dropped where the text is read, so every one left is one of these.
+ */
+const STOOD = '\uFFFC';
+
+/** A `data:` picture taken out of pasted markup, and where it stood in the Markdown. */
+export interface MawyInlineImage {
+  at: number;
+  url: string;
+  alt: string;
 }
 
 /** Elements that stand on their own rather than sitting inside a sentence. */
@@ -147,7 +171,7 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
     if (node.nodeType === 3) {
       // HTML collapses its whitespace and so does this: the line breaks in the
       // markup are the author's typing, not the document's.
-      out += escapeText((node as Text).data.replace(/\s+/g, ' '));
+      out += escapeText((node as Text).data.replace(/\s+/g, ' ').replaceAll(STOOD, ''));
       continue;
     }
 
@@ -198,6 +222,12 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
       case 'IMG': {
         const url = safeImageUrl(element.getAttribute('src') ?? '');
         const alt = escapeText(element.getAttribute('alt') ?? '');
+
+        if (url && reading.inline && dataImageBytes(url)) {
+          reading.inline.push({ url, alt: element.getAttribute('alt') ?? '' });
+          out += STOOD;
+          break;
+        }
 
         out += url ? `![${alt}](${url})` : reading.alts ? alt : '';
         break;
@@ -377,7 +407,39 @@ function blockOf(element: HTMLElement, reading: Reading): string {
  * carried alongside, which is what it would have pasted anyway.
  */
 export function markdownFromHtml(html: string): string {
-  return read(html, { alts: true });
+  return read(html, { alts: true, inline: null });
+}
+
+/**
+ * Markdown for a piece of HTML, with its `data:` pictures taken out and said
+ * where they stood.
+ *
+ * What a paste reads when the application has said where an image goes. A
+ * `data:` address is not an address but the picture's bytes, and whether bytes
+ * belong in the document is the decision `onUploadImage` exists to take away
+ * from a text editor — so they are put through it, the same as the file a
+ * screenshot arrives as, and written where they were once it has answered. With
+ * nowhere to upload them they stay what they were, which is `markdownFromHtml`.
+ */
+export function pasteFromHtml(html: string): { markdown: string; images: MawyInlineImage[] } {
+  const found: { url: string; alt: string }[] = [];
+  const marked = read(html, { alts: true, inline: found });
+  const images: MawyInlineImage[] = [];
+  let markdown = '';
+  let from = 0;
+
+  for (let at = marked.indexOf(STOOD); at !== -1; at = marked.indexOf(STOOD, from)) {
+    markdown += marked.slice(from, at);
+    from = at + 1;
+
+    const image = found[images.length];
+
+    if (image) {
+      images.push({ at: markdown.length, ...image });
+    }
+  }
+
+  return { markdown: markdown + marked.slice(from), images };
 }
 
 /**
@@ -394,7 +456,10 @@ export function markdownFromHtml(html: string): string {
  * on the clipboard the whole time is never uploaded.
  */
 export function markupHasContent(html: string): boolean {
-  return read(html, { alts: false }) !== '';
+  // A `data:` picture is taken out rather than counted: this is only asked
+  // where there is somewhere to upload one, and there it is bytes to upload
+  // rather than an address the markup had to give.
+  return read(html, { alts: false, inline: [] }).replaceAll(STOOD, '').trim() !== '';
 }
 
 function read(html: string, reading: Reading): string {

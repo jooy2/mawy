@@ -35,8 +35,13 @@ import {
   type MawyCommand
 } from '../../internal/commands.js';
 import type { MawyAim, MawyEdit } from '../../internal/editing.js';
-import { imageFilesIn, markdownForImage, pastedImagesIn } from '../../internal/images.js';
-import { markdownFromHtml } from '../../internal/markdown/paste.js';
+import {
+  fileFromDataUrl,
+  imageFilesIn,
+  markdownForImage,
+  pastedImagesIn
+} from '../../internal/images.js';
+import { markdownFromHtml, pasteFromHtml } from '../../internal/markdown/paste.js';
 import {
   difference,
   emptyHistory,
@@ -54,6 +59,12 @@ interface MawyUpload extends MawyPlace {
   order: number;
   /** What to write, once every file has answered. `null` until then. */
   markdown: string | null;
+  /**
+   * The document the place was counted in, when that is a paste still on its
+   * way in — a picture taken out of pasted markup stands at an offset into the
+   * document the paste is about to make. `null` once it has arrived.
+   */
+  waiting: string | null;
 }
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
@@ -149,7 +160,8 @@ export interface MawyEditorProps extends Omit<
    * Mawy has nowhere to put bytes and the place they belong is the
    * application's decision. `MawyImageUpload` has the rest of why. Nothing here
    * touches an image that is already on the web — one pasted as part of a page
-   * arrives as the URL it already had, upload or no upload — and nothing here
+   * arrives as the URL it already had, upload or no upload, and only a picture
+   * pasted as a `data:` address is uploaded like a file — and nothing here
    * touches the toolbar's image button, which writes `![](url)` for you to fill
    * in.
    */
@@ -812,7 +824,18 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     writing.current = null;
 
-    for (const place of places.current) {
+    for (const place of [...places.current]) {
+      if (place.waiting !== null) {
+        // A paste an application refused to take never made the document its
+        // pictures were counted in, and there is nowhere left for them to go.
+        if (place.waiting !== text) {
+          places.current.splice(places.current.indexOf(place), 1);
+        }
+
+        place.waiting = null;
+        continue;
+      }
+
       // An image written at the spot another is still waiting for goes in
       // front of it when it was pasted first, and behind it otherwise.
       Object.assign(place, movePlace(place, change, own !== null && place.order > own.order));
@@ -863,12 +886,13 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    */
   const putImage = (place: MawyUpload) => {
     const markdown = place.markdown;
+    const index = places.current.indexOf(place);
 
-    if (readOnly || markdown === null) {
+    if (readOnly || markdown === null || index === -1) {
       return;
     }
 
-    places.current.splice(places.current.indexOf(place), 1);
+    places.current.splice(index, 1);
 
     const value = shown.current;
     const start = Math.min(place.start, value.length);
@@ -926,7 +950,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * did, so it is one step to take back.
    */
   const addImages = React.useCallback(
-    async (files: readonly File[], at: MawyPlace) => {
+    async (files: readonly File[], at: MawyPlace, after: string | null = null) => {
       const hook = upload.current;
 
       if (!hook || readOnly || !files.length) {
@@ -935,7 +959,13 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       started.current += 1;
 
-      const place: MawyUpload = { ...at, order: started.current, markdown: null };
+      const place: MawyUpload = {
+        start: at.start,
+        end: at.end,
+        order: started.current,
+        markdown: null,
+        waiting: after
+      };
 
       places.current.push(place);
       setNote({ text: strings.uploading, failed: false });
@@ -961,7 +991,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       if (written.length) {
         place.markdown = written.join('\n\n');
         putLater.current(place);
-      } else {
+      } else if (places.current.includes(place)) {
         places.current.splice(places.current.indexOf(place), 1);
       }
 
@@ -1077,18 +1107,38 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
-      const markdown = markdownFromHtml(event.clipboardData.getData('text/html'));
+      const html = event.clipboardData.getData('text/html');
+      const { markdown, images: inline } = upload.current
+        ? pasteFromHtml(html)
+        : { markdown: markdownFromHtml(html), images: [] };
 
-      if (!markdown) {
+      if (!markdown && !inline.length) {
         return;
       }
 
       event.preventDefault();
-      run(state, {
+
+      const after = {
         value: state.value.slice(0, state.start) + markdown + state.value.slice(state.end),
         start: state.start + markdown.length,
         end: state.start + markdown.length
-      });
+      };
+
+      if (markdown) {
+        run(state, after);
+      }
+
+      for (const image of inline) {
+        const file = fileFromDataUrl(image.url, image.alt);
+        // Pictures and nothing else replace the selection, as a file would.
+        const place = markdown
+          ? { start: state.start + image.at, end: state.start + image.at }
+          : { start: state.start, end: state.end };
+
+        if (file) {
+          void addImages([file], place, markdown ? after.value : null);
+        }
+      }
     },
     [addImages, readOnly, run, stateNow]
   );

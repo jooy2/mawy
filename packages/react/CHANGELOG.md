@@ -8,6 +8,10 @@
 
 - **`MawyEditor` takes `anchorPrefix`, and uses it on the drawn document and in the preview.** Two editors on one page whose documents shared a heading gave both headings the same `id`, and a footnote reference in the second editor went to the first editor's note, with no way to say otherwise: the prop existed on `MawyViewer` and `MawyDocument` and the editor had nowhere to pass it. Unset, nothing changes, and the editor does not make a prefix up — which editors share a page is the application's knowledge, and a generated name is one it could not link to.
 
+### Changed
+
+- **A `data:` picture in pasted markup goes through `onUploadImage` where there is one.** It was written into the document as the `data:` address it arrived as, which is the picture's bytes — so a page copied with an inline image put megabytes of base64 into the document of an application that had said, by giving `onUploadImage`, that images belong somewhere else. It is uploaded like a file now and written where it stood once it has an address, and the words pasted with it go in straight away. Without `onUploadImage`, nothing changes.
+
 ### Fixed
 
 - **An image copied from a `blob:` address is uploaded rather than lost.** A clipboard carrying any HTML was read as markup and never as files, and Chromium copies an image as the file _and_ an `<img>` pointing at the address it was drawn from — which for an image a web application drew from a `blob:` URL is an address no other page can reach. The paste wrote the picture's description, usually a string of hex, and nothing was uploaded. Markup still wins when it has words in it or a picture at an address somebody can reach; when it has neither, the file on the clipboard goes through `onUploadImage`. A `file:` or `cid:` picture on its own is the same case.

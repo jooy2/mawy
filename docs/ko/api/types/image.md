@@ -62,7 +62,7 @@ import Image from 'next/image';
 type MawyImageUpload = (file: File) => MawyImageSource | null | Promise<MawyImageSource | null>;
 ```
 
-에디터에 떨어뜨리거나 붙여넣은 그림이 어디로 가고 어떤 URL을 쓸지. 파일을 어딘가에 보관하는 일은 텍스트 에디터가 혼자 정할 일이 아니므로, `onUploadImage`가 없으면 떨어뜨린 파일은 아무 일도 하지 않습니다. 이미 웹에 있는 이미지를 페이지째 붙여넣으면 원래 가지고 있던 URL 그대로 들어옵니다.
+에디터에 떨어뜨리거나 붙여넣은 그림이 어디로 가고 어떤 URL을 쓸지. 파일을 어딘가에 보관하는 일은 텍스트 에디터가 혼자 정할 일이 아니므로, `onUploadImage`가 없으면 떨어뜨린 파일은 아무 일도 하지 않습니다. 이미 웹에 있는 이미지를 페이지째 붙여넣으면 원래 가지고 있던 URL 그대로 들어옵니다. `data:` 주소로 붙여넣은 그림은 주소가 아니라 그림의 바이트 자체이므로, `onUploadImage`가 있으면 파일처럼 그것을 거칩니다.
 
 ```tsx
 <MawyEditor onUploadImage={async (file) => (await save(file)).url} />

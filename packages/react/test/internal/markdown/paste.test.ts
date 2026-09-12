@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { markdownFromHtml } from '../../../src/internal/markdown/paste.js';
+import {
+  markdownFromHtml,
+  markupHasContent,
+  pasteFromHtml
+} from '../../../src/internal/markdown/paste.js';
 
 /**
  * What arrives on the clipboard, read once for what can be made of it.
@@ -104,5 +108,42 @@ describe('HTML, read back as Markdown', () => {
   it('gives nothing back for nothing', () => {
     expect(markdownFromHtml('')).toBe('');
     expect(markdownFromHtml('<div>   </div>')).toBe('');
+  });
+});
+
+/**
+ * A `data:` picture is bytes rather than an address, and where there is an
+ * `onUploadImage` the paste takes it out to be uploaded and says where it stood.
+ */
+describe('pictures carried inline', () => {
+  const DOT = 'data:image/png;base64,iVBORw0KGgo=';
+
+  it('takes them out and says where each one stood', () => {
+    expect(
+      pasteFromHtml(
+        `<h2>Two</h2><p>A <img src="${DOT}" alt="dot"> and <img src="/b.png" alt="b"></p><p><img src="${DOT}"></p>`
+      )
+    ).toEqual({
+      markdown: '## Two\n\nA  and ![b](/b.png)\n\n',
+      images: [
+        { at: 10, url: DOT, alt: 'dot' },
+        { at: 29, url: DOT, alt: '' }
+      ]
+    });
+  });
+
+  it('leaves them in the Markdown when nobody asked for them to be taken out', () => {
+    expect(markdownFromHtml(`<p><img src="${DOT}" alt="dot"></p>`)).toBe(`![dot](${DOT})`);
+  });
+
+  it('does not mistake the character it marks them with for one of them', () => {
+    expect(pasteFromHtml('<p>a\uFFFCb</p>')).toEqual({ markdown: 'ab', images: [] });
+  });
+
+  it('does not count them, or a description with no picture, as something to paste', () => {
+    expect(markupHasContent(`<img src="${DOT}" alt="png (1×1)">`)).toBe(false);
+    expect(markupHasContent('<img src="blob:https://a.test/x" alt="x (1×1)">')).toBe(false);
+    expect(markupHasContent('<img src="https://a.test/x.png">')).toBe(true);
+    expect(markupHasContent('<p>words</p>')).toBe(true);
   });
 });

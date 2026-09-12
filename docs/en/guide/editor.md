@@ -245,6 +245,8 @@ There are three ways in, because an image can arrive with a URL already or witho
 
 Markup wins only where it has something to say. A browser copying an image puts the file on the clipboard along with an `<img>` pointing at the address the image was drawn from, and when that is a `blob:`, `file:` or `cid:` address, nobody else can reach it. Markup with no words in it and no picture at a reachable address is set aside, and the file beside it is uploaded instead.
 
+**A picture at a `data:` address is uploaded too**, when there is somewhere to upload it. A `data:` address is not somewhere on the web but the picture's own bytes, and whether those belong in the document is the question `onUploadImage` answers. The words pasted with it go in at once and the picture is written where it stood once the upload answers. Without `onUploadImage`, it is written as the `data:` address it arrived as, because that is what the page it came from said.
+
 **A file** is different. A screenshot on the clipboard or an image dragged in from the desktop needs somewhere for its bytes to go, and that is the one thing this library cannot decide. Whether an image belongs in an object store, behind an upload endpoint, or inline as a `data:` URI carries cost and policy, so the application decides. It is a prop:
 
 ```tsx

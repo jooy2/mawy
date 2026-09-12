@@ -15,6 +15,7 @@
 
 import type { MawyImageSource } from '../types.js';
 import { markupHasContent } from './markdown/paste.js';
+import { dataImageBytes } from './markdown/url.js';
 
 /** The image files on a transfer, in the order it lists them. */
 export function imageFilesIn(transfer: DataTransfer | null): File[] {
@@ -37,6 +38,24 @@ export function pastedImagesIn(clipboard: DataTransfer | null): File[] {
   const html = clipboard?.getData('text/html') ?? '';
 
   return files.length && !(html && markupHasContent(html)) ? files : [];
+}
+
+/**
+ * A `data:` picture, as the file it would have been had it arrived as one.
+ *
+ * Named after what the markup said it was, so the description written for it
+ * once it is uploaded is that rather than `image`. See `altFor`.
+ */
+export function fileFromDataUrl(url: string, alt: string): File | null {
+  const image = dataImageBytes(url);
+
+  if (!image) {
+    return null;
+  }
+
+  const extension = image.type.slice('image/'.length).replace('+xml', '').replace('jpeg', 'jpg');
+
+  return new File([image.bytes], `${alt.trim() || 'image'}.${extension}`, { type: image.type });
 }
 
 /** What a file is called, without the extension it is stored under. */

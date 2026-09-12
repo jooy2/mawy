@@ -62,7 +62,7 @@ Which pictures an application is willing to fetch is not a viewer's decision to 
 type MawyImageUpload = (file: File) => MawyImageSource | null | Promise<MawyImageSource | null>;
 ```
 
-Where a picture dropped or pasted into the editor goes, and what URL to write for it. Storing a file somewhere is not a decision a text editor should make on its own, so with no `onUploadImage` a dropped file does nothing. An image already on the web, pasted as part of a page, still arrives as the URL it already had.
+Where a picture dropped or pasted into the editor goes, and what URL to write for it. Storing a file somewhere is not a decision a text editor should make on its own, so with no `onUploadImage` a dropped file does nothing. An image already on the web, pasted as part of a page, still arrives as the URL it already had. A picture pasted at a `data:` address is its own bytes rather than an address, and goes through `onUploadImage` like a file when there is one.
 
 ```tsx
 <MawyEditor onUploadImage={async (file) => (await save(file)).url} />
