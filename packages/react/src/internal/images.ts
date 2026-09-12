@@ -14,6 +14,7 @@
  */
 
 import type { MawyImageSource } from '../types.js';
+import { markupHasContent } from './markdown/paste.js';
 
 /** The image files on a transfer, in the order it lists them. */
 export function imageFilesIn(transfer: DataTransfer | null): File[] {
@@ -23,14 +24,19 @@ export function imageFilesIn(transfer: DataTransfer | null): File[] {
 /**
  * The image files a clipboard is carrying *instead of* markup.
  *
- * Markup wins, and that is not a tie-break so much as the whole rule: an image
- * copied out of a web page comes with an `<img>` that already says where it
- * lives, and re-uploading a picture that is already on the web is work nobody
- * asked for. A screenshot has no markup at all, which is exactly what makes it
- * the case this is here for.
+ * Markup wins wherever it has something to say: an image copied out of a web
+ * page comes with an `<img>` that already says where it lives, and re-uploading
+ * a picture that is already on the web is work nobody asked for. A screenshot
+ * has no markup at all, which is exactly what makes it the case this is here
+ * for — and so does markup with no words in it and no picture at an address
+ * anybody can reach, which is what Chromium writes beside an image copied from a
+ * `blob:` address. See `markupHasContent`.
  */
 export function pastedImagesIn(clipboard: DataTransfer | null): File[] {
-  return clipboard && !clipboard.getData('text/html') ? imageFilesIn(clipboard) : [];
+  const files = imageFilesIn(clipboard);
+  const html = clipboard?.getData('text/html') ?? '';
+
+  return files.length && !(html && markupHasContent(html)) ? files : [];
 }
 
 /** What a file is called, without the extension it is stored under. */

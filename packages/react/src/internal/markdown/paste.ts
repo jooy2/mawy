@@ -20,6 +20,19 @@
 
 import { safeImageUrl, safeUrl } from './url.js';
 
+/**
+ * How a piece of markup is being read.
+ *
+ * `alts` is whether a picture with no address anybody can reach is written as
+ * its description. That is right for a paste, where a `javascript:` image is the
+ * words it was given, and wrong for the question `markupHasContent` asks, where
+ * a description Chromium wrote for a `blob:` image is not something the markup
+ * had to say.
+ */
+interface Reading {
+  alts: boolean;
+}
+
 /** Elements that stand on their own rather than sitting inside a sentence. */
 const BLOCKS = new Set(
   (
@@ -127,7 +140,7 @@ function wrap(marker: string, inside: string): string {
  * Inline
  * ---------------------------------------------------------------------- */
 
-function inlineOf(nodes: Iterable<Node>): string {
+function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
   let out = '';
 
   for (const node of nodes) {
@@ -143,7 +156,7 @@ function inlineOf(nodes: Iterable<Node>): string {
     }
 
     const element = node as HTMLElement;
-    const inside = () => inlineOf(element.childNodes);
+    const inside = () => inlineOf(element.childNodes, reading);
 
     switch (tagOf(element)) {
       case 'BR':
@@ -186,7 +199,7 @@ function inlineOf(nodes: Iterable<Node>): string {
         const url = safeImageUrl(element.getAttribute('src') ?? '');
         const alt = escapeText(element.getAttribute('alt') ?? '');
 
-        out += url ? `![${alt}](${url})` : alt;
+        out += url ? `![${alt}](${url})` : reading.alts ? alt : '';
         break;
       }
 
@@ -223,12 +236,12 @@ function prefix(text: string, marker: string): string {
  * Anything inline between two blocks is a paragraph of its own, which is what
  * a `<div>` with a sentence loose inside it turns out to be.
  */
-function blocksOf(parent: Node): string[] {
+function blocksOf(parent: Node, reading: Reading): string[] {
   const parts: string[] = [];
   let loose: Node[] = [];
 
   const flush = () => {
-    const text = guardStart(inlineOf(loose).trim());
+    const text = guardStart(inlineOf(loose, reading).trim());
 
     if (text) {
       parts.push(text);
@@ -241,7 +254,7 @@ function blocksOf(parent: Node): string[] {
     if (node.nodeType === 1 && BLOCKS.has(tagOf(node as HTMLElement))) {
       flush();
 
-      const block = blockOf(node as HTMLElement);
+      const block = blockOf(node as HTMLElement, reading);
 
       if (block) {
         parts.push(block);
@@ -267,7 +280,7 @@ function joinItem(parts: string[]): string {
   );
 }
 
-function listOf(element: HTMLElement): string {
+function listOf(element: HTMLElement, reading: Reading): string {
   const ordered = tagOf(element) === 'OL';
   const from = Number.parseInt(element.getAttribute('start') ?? '1', 10) || 1;
   const items = [...element.children].filter((child) => tagOf(child) === 'LI');
@@ -275,17 +288,17 @@ function listOf(element: HTMLElement): string {
   return items
     .map((item, index) => {
       const marker = ordered ? `${from + index}. ` : '- ';
-      const body = joinItem(blocksOf(item)) || '';
+      const body = joinItem(blocksOf(item, reading)) || '';
 
       return `${marker}${hang(body, ' '.repeat(marker.length))}`.trimEnd();
     })
     .join('\n');
 }
 
-function tableOf(element: HTMLElement): string {
+function tableOf(element: HTMLElement, reading: Reading): string {
   const rows = [...element.querySelectorAll('tr')].map((row) =>
     [...row.children].map((cell) =>
-      inlineOf(cell.childNodes).replace(/\n/g, ' ').replace(/\|/g, '\\|').trim()
+      inlineOf(cell.childNodes, reading).replace(/\n/g, ' ').replace(/\|/g, '\\|').trim()
     )
   );
 
@@ -314,7 +327,7 @@ function preOf(element: HTMLElement): string {
   return `${fence}${language}\n${value.replace(/\n+$/, '')}\n${fence}`;
 }
 
-function blockOf(element: HTMLElement): string {
+function blockOf(element: HTMLElement, reading: Reading): string {
   if (DROPPED.has(tagOf(element))) {
     return '';
   }
@@ -322,7 +335,7 @@ function blockOf(element: HTMLElement): string {
   const heading = /^H([1-6])$/.exec(tagOf(element));
 
   if (heading) {
-    const text = inlineOf(element.childNodes).replace(/\s+/g, ' ').trim();
+    const text = inlineOf(element.childNodes, reading).replace(/\s+/g, ' ').trim();
 
     return text ? `${'#'.repeat(Number(heading[1]))} ${text}` : '';
   }
@@ -336,23 +349,23 @@ function blockOf(element: HTMLElement): string {
 
     case 'UL':
     case 'OL':
-      return listOf(element);
+      return listOf(element, reading);
 
     case 'TABLE':
-      return tableOf(element);
+      return tableOf(element, reading);
 
     case 'BLOCKQUOTE':
-      return prefix(blocksOf(element).join('\n\n'), '> ');
+      return prefix(blocksOf(element, reading).join('\n\n'), '> ');
 
     case 'P':
     case 'DT':
-      return guardStart(inlineOf(element.childNodes).trim());
+      return guardStart(inlineOf(element.childNodes, reading).trim());
 
     case 'DD':
-      return prefix(blocksOf(element).join('\n\n'), '  ').trimStart();
+      return prefix(blocksOf(element, reading).join('\n\n'), '  ').trimStart();
 
     default:
-      return blocksOf(element).join('\n\n');
+      return blocksOf(element, reading).join('\n\n');
   }
 }
 
@@ -364,13 +377,34 @@ function blockOf(element: HTMLElement): string {
  * carried alongside, which is what it would have pasted anyway.
  */
 export function markdownFromHtml(html: string): string {
+  return read(html, { alts: true });
+}
+
+/**
+ * Whether markup has anything of its own to paste: words, or a picture it says
+ * where to find.
+ *
+ * What a clipboard carrying an image file *and* markup is asked, because the
+ * markup is usually the better answer and sometimes is no answer at all. An
+ * image copied out of a web page comes with an `<img>` that already says where
+ * it lives, and uploading it again is work nobody asked for. An image copied in
+ * Chromium from anywhere it was drawn from a `blob:` address comes with an
+ * `<img>` pointing at that address, which no other page can reach — and read as
+ * markup that is a picture's description and no picture, and the file that was
+ * on the clipboard the whole time is never uploaded.
+ */
+export function markupHasContent(html: string): boolean {
+  return read(html, { alts: false }) !== '';
+}
+
+function read(html: string, reading: Reading): string {
   if (typeof DOMParser === 'undefined' || !html.trim()) {
     return '';
   }
 
   const parsed = new DOMParser().parseFromString(html, 'text/html');
 
-  return blocksOf(parsed.body)
+  return blocksOf(parsed.body, reading)
     .join('\n\n')
     .replace(/[ \t]+$/gm, (spaces) => (spaces.length >= 2 ? '  ' : ''))
     .replace(/\n{3,}/g, '\n\n')

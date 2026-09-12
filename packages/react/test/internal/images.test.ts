@@ -62,6 +62,21 @@ describe('the files on a transfer', () => {
     expect(pastedImagesIn(withMarkup)).toEqual([]);
     expect(pastedImagesIn(transfer([file('a.png')])).map((each) => each.name)).toEqual(['a.png']);
   });
+
+  it('takes the file when the markup beside it has nothing a paste could use', () => {
+    const names = (html: string) =>
+      pastedImagesIn(transfer([file('image.png')], { 'text/html': html })).map((each) => each.name);
+
+    // Chromium's own copy of an image drawn from a `blob:` address, and the
+    // same with the pictures a mail client points at by content id.
+    expect(names('<img src="blob:https://example.test/f64e" alt="f64e (1×1)"/>')).toEqual([
+      'image.png'
+    ]);
+    expect(names('<p><img src="cid:part1"></p>')).toEqual(['image.png']);
+    expect(names('<meta charset="utf-8">')).toEqual(['image.png']);
+    // Words are something to paste, whatever became of the picture.
+    expect(names('<p>A caption <img src="file:///C:/clip.png"></p>')).toEqual([]);
+  });
 });
 
 describe('the Markdown an upload turns into', () => {

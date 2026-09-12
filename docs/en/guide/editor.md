@@ -243,6 +243,8 @@ There are three ways in, because an image can arrive with a URL already or witho
 
 **An image pasted or dropped as part of a web page** arrives as the URL it already had. That is not an image feature but markup, which [pasting](#pasting) reads. Nothing is uploaded, because the picture is already on the web.
 
+Markup wins only where it has something to say. A browser copying an image puts the file on the clipboard along with an `<img>` pointing at the address the image was drawn from, and when that is a `blob:`, `file:` or `cid:` address, nobody else can reach it. Markup with no words in it and no picture at a reachable address is set aside, and the file beside it is uploaded instead.
+
 **A file** is different. A screenshot on the clipboard or an image dragged in from the desktop needs somewhere for its bytes to go, and that is the one thing this library cannot decide. Whether an image belongs in an object store, behind an upload endpoint, or inline as a `data:` URI carries cost and policy, so the application decides. It is a prop:
 
 ```tsx

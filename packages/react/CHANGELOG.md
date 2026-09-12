@@ -10,6 +10,8 @@
 
 ### Fixed
 
+- **An image copied from a `blob:` address is uploaded rather than lost.** A clipboard carrying any HTML was read as markup and never as files, and Chromium copies an image as the file _and_ an `<img>` pointing at the address it was drawn from — which for an image a web application drew from a `blob:` URL is an address no other page can reach. The paste wrote the picture's description, usually a string of hex, and nothing was uploaded. Markup still wins when it has words in it or a picture at an address somebody can reach; when it has neither, the file on the clipboard goes through `onUploadImage`. A `file:` or `cid:` picture on its own is the same case.
+
 - **A failed upload is still said to have failed when another one finishes after it.** Every upload shares the note under the document, and the last one to finish took the note down — so a failure said a moment earlier disappeared as soon as a different file arrived safely, and nothing told the reader which image was missing. A failure now stays until the next upload starts or something else is said there.
 
 - **An image pasted over a selection replaces it, the way pasted text does.** The source surface put the image at the start of the selection and kept the words, and the drawn document put it at the selection's anchor, which is its end when it was made backwards — so the result depended on which way somebody had dragged. The selection is replaced when the upload answers rather than when the file is pasted, so an upload that fails leaves the words it would have replaced.

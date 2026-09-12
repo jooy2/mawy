@@ -2783,6 +2783,47 @@ describe('images', () => {
     expect(onUploadImage).not.toHaveBeenCalled();
   });
 
+  /*
+   * What Chromium puts on the clipboard when an image is copied: the file, and
+   * an `<img>` pointing at the address the image was drawn from. Measured with
+   * Playwright against an image opened at an `https:`, a `data:` and a `blob:`
+   * address. The last is an address nobody else can reach.
+   */
+  const DOT =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+
+  it('uploads the file when the markup beside it points nowhere it can be reached', async () => {
+    for (const modes of [['plain'], ['wysiwyg']] as const) {
+      const onChange = vi.fn();
+      const onUploadImage = vi.fn(async () => '/up.png');
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Before."
+          modes={modes}
+          onChange={onChange}
+          onUploadImage={onUploadImage}
+        />
+      );
+      const markup = {
+        'text/html': '<img src="blob:https://example.test/f64ef3b8" alt="f64ef3b8 (1×1)"/>'
+      };
+
+      if (modes[0] === 'plain') {
+        const input = sourceOf(screen);
+
+        input.focus();
+        input.setSelectionRange(7, 7);
+        pasteFiles(input, [png('image.png')], markup);
+      } else {
+        put(bodyOf(screen), 'Before.', 7);
+        pasteFiles(bodyOf(screen), [png('image.png')], markup);
+      }
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Before.![image](/up.png)'));
+      expect(onUploadImage).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it('says so while it is uploading, and says so when it could not', async () => {
     let settle: (url: string) => void = () => {};
     const screen = await render(
