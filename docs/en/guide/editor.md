@@ -256,7 +256,7 @@ There are three ways in, because an image can arrive with a URL already or witho
 />
 ```
 
-Answer with the URL to write, or with `{ url, alt, title }` to say what goes around it. Otherwise the file's own name, without its extension, becomes the description. Throw, or answer with nothing, and the editor says the image could not be added and writes nothing at all.
+Answer with the URL to write, or with `{ url, alt, title }` to say what goes around it. Otherwise the file's own name, without its extension, becomes the description. Throw, or answer with nothing, and the editor says the image could not be added and writes nothing at all. That stays on the line under the document until the next upload starts, however many others finish in the meantime.
 
 **Without `onUploadImage`, a dropped file is refused.** It is not half-inserted, and not handed back to the browser either: the editor takes the drop, writes nothing, and says so on the line under the document. That is the intended default. The only alternative is turning a two-megabyte screenshot into a `data:` URI inside somebody's document.
 

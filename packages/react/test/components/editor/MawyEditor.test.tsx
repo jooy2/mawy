@@ -2994,6 +2994,28 @@ describe('images', () => {
     }
   });
 
+  it('keeps saying an upload failed when another one finishes after it', async () => {
+    const upload = slowUpload();
+    const screen = await render(
+      <MawyEditor defaultValue="Two." modes={['plain']} onUploadImage={upload.hook} />
+    );
+    const input = sourceOf(screen);
+    const note = () => screen.container.querySelector('.mawy-editor-note');
+
+    input.focus();
+    input.setSelectionRange(4, 4);
+    pasteFiles(input, [png('a.png')]);
+    pasteFiles(input, [png('b.png')]);
+
+    await upload.settle(null);
+    await vi.waitFor(() => expect(note()?.textContent).toBe('That image could not be added.'));
+    await upload.settle('/b.png');
+    await vi.waitFor(() => expect(input.value).toBe('Two.![b](/b.png)'));
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(note()?.textContent).toBe('That image could not be added.');
+  });
+
   it('leaves the focus where the reader took it while the image uploaded', async () => {
     const upload = slowUpload();
     const screen = await render(

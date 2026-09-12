@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **A failed upload is still said to have failed when another one finishes after it.** Every upload shares the note under the document, and the last one to finish took the note down — so a failure said a moment earlier disappeared as soon as a different file arrived safely, and nothing told the reader which image was missing. A failure now stays until the next upload starts or something else is said there.
+
 - **An image pasted over a selection replaces it, the way pasted text does.** The source surface put the image at the start of the selection and kept the words, and the drawn document put it at the selection's anchor, which is its end when it was made backwards — so the result depended on which way somebody had dragged. The selection is replaced when the upload answers rather than when the file is pasted, so an upload that fails leaves the words it would have replaced.
 
 - **A document made read-only does not change when an upload finishes.** `readOnly` was read once, when the upload started, so an image that came back while an application had set it — which is what an application does while it saves — was written anyway, and was on the screen but missing from what was saved. A finished upload now waits, still counted as uploading, and is written where it was put as soon as the document can be changed again. Throwing it away would have lost a file the application had already stored.

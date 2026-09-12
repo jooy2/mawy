@@ -355,9 +355,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const drew = React.useRef<MawyStep>({ value: text, start: 0, end: 0 });
   /** Held in a ref because an upload finishes several renders after it began. */
   const upload = React.useRef(onUploadImage);
-  /** How many drops or pastes are still uploading, so one note covers them all. */
-  const running = React.useRef(0);
-  /** Enters and leaves counted, rather than trusted one at a time. */
   /**
    * The find bar, which is closed until somebody asks for it.
    *
@@ -803,6 +800,23 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   }, [text]);
 
   /**
+   * The note taken down once nothing is uploading, unless what it says is that
+   * something failed.
+   *
+   * Every upload shares the one line under the document, and an upload that
+   * succeeded has nothing to say about one that did not. Taking the note down
+   * whenever the last upload finished meant a failure said a moment earlier was
+   * wiped out by a different file arriving safely, and the reader was never told
+   * which image was missing. A failure stays until the next upload starts, which
+   * is the next attempt, or until something else is said there.
+   */
+  const settled = React.useCallback(() => {
+    if (!places.current.length) {
+      setNote((was) => (was?.failed ? was : null));
+    }
+  }, []);
+
+  /**
    * An image put into the document at the place its upload has been carried to,
    * or kept back while the document is read-only.
    *
@@ -859,10 +873,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     setRoom(null);
     setSelection(caret);
     write(next);
-
-    if (!places.current.length) {
-      setNote(null);
-    }
+    settled();
   };
 
   /**
@@ -907,7 +918,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       const place: MawyUpload = { ...at, order: started.current, markdown: null };
 
       places.current.push(place);
-      running.current += 1;
       setNote({ text: strings.uploading, failed: false });
 
       const written: string[] = [];
@@ -928,8 +938,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         }
       }
 
-      running.current -= 1;
-
       if (written.length) {
         place.markdown = written.join('\n\n');
         putLater.current(place);
@@ -939,11 +947,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       if (failed) {
         setNote({ text: strings.uploadFailed, failed: true });
-      } else if (!places.current.length) {
-        setNote(null);
+      } else {
+        settled();
       }
     },
-    [readOnly, strings]
+    [readOnly, settled, strings]
   );
 
   /**
