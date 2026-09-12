@@ -726,17 +726,17 @@ function arrangeSidebar<T extends GeneratedSidebarItem>(items: T[], lang: string
     liftIndexLink(api, labels.overview);
 
     /*
-     * The reference is one page per component, type and function, which is more
-     * rows than the rest of the site put together. Its subgroups are the one
-     * place on this site that folds: a reader looking up a type should not have
-     * to scroll past twenty of them to reach the group underneath. VitePress
-     * opens whichever group holds the page being read, so the one a reader is
-     * in is never the folded one.
+     * Open, like every other group on this site, and with no caret to close
+     * them by — `cleanUpItems` has already taken the key that would draw one.
+     * The reference is one page per component, type and function, so this is a
+     * long menu, and folding it was worse: a reader looking for a type has to
+     * know which of three groups it is in before the list will show it, and a
+     * page nobody can see is a page the browser's own find will not reach
+     * either.
      */
     for (const group of api.items) {
       if (group.items?.length) {
         liftIndexLink(group, labels.overview);
-        group.collapsed = true;
       }
     }
   }
