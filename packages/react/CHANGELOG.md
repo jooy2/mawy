@@ -6,6 +6,10 @@
 
 ### Fixed
 
+- **An image is written where it was put, however the document moved while it uploaded.** The offset was read when the file was pasted or dropped and only clamped to the document's length when the URL came back, so a word typed in front of it in the meantime pushed the image into the middle of another word: `Hello world` with an image pasted at the end and `ABC ` typed at the start came out as `ABC Hello w![…](…)orld`. The place is carried along by every change now, and two images waiting at the same spot come out in the order they were pasted.
+
+- **A finished upload no longer takes the focus.** On the source surface the image went in through the textarea, which focused it and moved its caret, so a reader who had gone on to another field on the page was pulled back into the editor. The caret is left where the reader put it, and moved along by the image where the image went in front of it.
+
 - **An image is written into the document whichever surface is showing when its upload finishes.** A file pasted or dropped on `plain` or `split` and still uploading when the reader switched to `wysiwyg` or `preview` was written through the textarea it arrived in, which was gone by then — so the upload succeeded, nothing was written, and the note saying it was uploading simply went away.
 
 - **The doc comment on `MawyMode` describes `wysiwyg` as it is.** It still said the surface could not reach an image or drawn raw HTML and was not on the default list, which stopped being true in 1.0.0. The comment ships in `dist/types.d.ts`, so it is what an editor showed on hover.

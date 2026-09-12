@@ -262,6 +262,8 @@ Answer with the URL to write, or with `{ url, alt, title }` to say what goes aro
 
 The image lands where it was put: a drop goes to the point the pointer let go of it, and a paste goes to the caret. Several files dropped together are uploaded one after another and then written as **one** edit, so a single `Mod`+`Z` takes back the whole drop.
 
+**Writing goes on while an image uploads.** The place it was put is carried along by every change made in the meantime, so an image pasted at the end of a sentence is still written at the end of that sentence after somebody has gone back and added a word at its start, and it is written whichever surface is showing when the URL comes back. Nothing takes the focus when it arrives: a reader who went on to another field on the page stays there, and a caret the image went in front of is moved along by it.
+
 ## Colour in the preview
 
 `highlight` is passed straight through to the viewer inside the preview, so a `split` or `preview` surface colours its code the way [the viewer does](./viewer#colouring-a-code-block). The lazy form works here too, and is the one to use:

@@ -46,6 +46,7 @@ import {
   type MawyStep
 } from '../../internal/history.js';
 import { FilePicker } from '../../internal/controls.js';
+import { movePlace, type MawyChange, type MawyPlace } from '../../internal/places.js';
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
@@ -754,57 +755,101 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * ------------------------------------------------------------------ */
 
   /**
-   * The document with something written into it at a place that was decided
-   * earlier — where a file was dropped, or where the caret was when it was
-   * pasted. An upload finishes several renders after it began, so the offset is
-   * clamped to whatever the document has become in the meantime rather than
-   * trusted.
-   */
-  const insertAt = React.useCallback(
-    (offset: number, markdown: string) => {
-      const value = drew.current.value;
-      const at = Math.max(0, Math.min(offset, value.length));
-      const after = {
-        value: value.slice(0, at) + markdown + value.slice(at),
-        start: at + markdown.length,
-        end: at + markdown.length
-      };
-
-      // `preview` has neither surface, and nothing to put a caret back into.
-      if (!showDocument && !source.current) {
-        write(after.value);
-
-        return;
-      }
-
-      run({ value, start: at, end: at }, after);
-    },
-    [run, showDocument, write]
-  );
-
-  /**
-   * `insertAt` as the latest render has it, for an upload to call when it
-   * finishes.
+   * Every upload still out, and the place in the document it is going to.
    *
-   * An upload finishes several renders after it began, and the `insertAt` it
-   * began with belongs to the surface that was showing then. Switched from
-   * `plain` to `wysiwyg` in between, that one reaches for a textarea that is no
-   * longer there and writes nothing, and the image the application stored is
-   * lost without anything having failed.
+   * The place is decided when the file arrives and used when the URL comes
+   * back, and in between the document goes on changing — so each one is moved
+   * with every change, below, rather than trusted as an offset. `order` is
+   * which of two uploads waiting at the same spot started first, so that the
+   * image pasted first comes out first.
    */
-  const insertLater = React.useRef(insertAt);
+  const places = React.useRef<(MawyPlace & { order: number })[]>([]);
+  const started = React.useRef(0);
+  /** The document the places were last moved to. */
+  const shown = React.useRef(text);
+  /**
+   * The change an upload is writing, said exactly rather than worked out again
+   * from the two documents. See `movePlace` for why that matters.
+   */
+  const writing = React.useRef<{ value: string; change: MawyChange; order: number } | null>(null);
 
   React.useLayoutEffect(() => {
-    insertLater.current = insertAt;
+    const was = shown.current;
+
+    if (was === text) {
+      return;
+    }
+
+    shown.current = text;
+
+    const own = writing.current?.value === text ? writing.current : null;
+    const change = own ? own.change : difference(was, text);
+
+    writing.current = null;
+
+    for (const place of places.current) {
+      // An image written at the spot another is still waiting for goes in
+      // front of it when it was pasted first, and behind it otherwise.
+      Object.assign(place, movePlace(place, change, own !== null && place.order > own.order));
+    }
+  }, [text]);
+
+  /**
+   * An image put into the document at the place its upload has been carried to.
+   *
+   * Written straight to the document rather than through whichever surface
+   * started it, which is the whole of three separate problems. The surface that
+   * started it may be gone: pasted on `plain` and answered on `wysiwyg`, the
+   * textarea it would have gone through is not there any more. The reader may
+   * have gone elsewhere: putting it in through the textarea focuses the textarea
+   * and moves its caret, which takes the focus back from whatever field on the
+   * page they went to in the meantime. And `preview` has no surface at all.
+   *
+   * The caret stays where the reader left it, moved along by the image if the
+   * image went in front of it, and is only put back on a surface that has the
+   * focus — a selection set on a surface that does not is a focus taken.
+   */
+  const putImage = (place: MawyPlace & { order: number }, markdown: string) => {
+    const value = shown.current;
+    const start = Math.min(place.start, value.length);
+    const end = Math.min(Math.max(place.end, start), value.length);
+    const change = { at: start, removed: end - start, inserted: markdown };
+    const next = value.slice(0, start) + markdown + value.slice(end);
+    const element = showDocument ? drawn.current : source.current;
+    const caret = movePlace(
+      element === source.current && source.current
+        ? { start: source.current.selectionStart, end: source.current.selectionEnd }
+        : selection,
+      change,
+      true
+    );
+
+    writing.current = { value: next, change, order: place.order };
+
+    if (element?.contains(element.ownerDocument.activeElement)) {
+      pending.current = [caret.start, caret.end];
+    }
+
+    setRoom(null);
+    setSelection(caret);
+    write(next);
+  };
+
+  /**
+   * `putImage` as the latest render has it, for an upload to call when it
+   * finishes. The one it began with belongs to whatever was showing then.
+   */
+  const putLater = React.useRef(putImage);
+
+  React.useLayoutEffect(() => {
+    putLater.current = putImage;
   });
 
   /**
    * Files put into the document as images, one upload at a time.
    *
    * One edit at the end rather than one per file: it is one thing the writer
-   * did, so it is one step to take back — and an offset that has to survive
-   * several awaits is an offset that goes wrong the moment anything else is
-   * typed.
+   * did, so it is one step to take back.
    */
   const addImages = React.useCallback(
     async (files: readonly File[], at: number) => {
@@ -814,6 +859,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
+      started.current += 1;
+
+      const place = { start: at, end: at, order: started.current };
+
+      places.current.push(place);
       running.current += 1;
       setNote({ text: strings.uploading, failed: false });
 
@@ -836,9 +886,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
 
       running.current -= 1;
+      places.current.splice(places.current.indexOf(place), 1);
 
       if (written.length) {
-        insertLater.current(at, written.join('\n\n'));
+        putLater.current(place, written.join('\n\n'));
       }
 
       if (failed) {

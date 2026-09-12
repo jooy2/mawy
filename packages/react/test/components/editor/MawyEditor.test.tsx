@@ -2818,10 +2818,10 @@ describe('images', () => {
 
     return {
       hook,
-      /** The oldest upload still out, answered. */
-      settle: async (answer: string | null) => {
-        await vi.waitFor(() => expect(waiting.length).toBeGreaterThan(0));
-        waiting.shift()?.(answer);
+      /** An upload still out, answered: the oldest, unless another is named. */
+      settle: async (answer: string | null, which = 0) => {
+        await vi.waitFor(() => expect(waiting.length).toBeGreaterThan(which));
+        waiting.splice(which, 1)[0]?.(answer);
       }
     };
   }
@@ -2856,6 +2856,88 @@ describe('images', () => {
         expect(onChange).toHaveBeenLastCalledWith('Before.![A photo](/a.png)')
       );
     }
+  });
+
+  it('writes an image where it was pasted, however the document moved meanwhile', async () => {
+    for (const modes of [['plain'], ['wysiwyg']] as const) {
+      const onChange = vi.fn();
+      const upload = slowUpload();
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Hello world"
+          modes={modes}
+          onChange={onChange}
+          onUploadImage={upload.hook}
+        />
+      );
+
+      if (modes[0] === 'plain') {
+        const input = sourceOf(screen);
+
+        input.focus();
+        input.setSelectionRange(11, 11);
+        pasteFiles(input, [png()]);
+        input.setSelectionRange(0, 0);
+        document.execCommand('insertText', false, 'ABC ');
+      } else {
+        put(bodyOf(screen), 'Hello world', 11);
+        pasteFiles(bodyOf(screen), [png()]);
+        put(bodyOf(screen), 'Hello world', 0);
+        type(bodyOf(screen), 'insertText', 'ABC ');
+      }
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('ABC Hello world'));
+      await upload.settle('/a.png');
+
+      // After `world`, which is where the caret was, rather than four characters
+      // into it, which is where the offset it was pasted at has come to point.
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith('ABC Hello world![A photo](/a.png)')
+      );
+    }
+  });
+
+  it('writes two images pasted at one spot in the order they were pasted', async () => {
+    const upload = slowUpload();
+    const screen = await render(
+      <MawyEditor defaultValue="Hello" modes={['plain']} onUploadImage={upload.hook} />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(5, 5);
+    pasteFiles(input, [png('first.png')]);
+    pasteFiles(input, [png('second.png')]);
+
+    // The second answers first, and still comes out second.
+    await upload.settle('/2.png', 1);
+    await vi.waitFor(() => expect(input.value).toBe('Hello![second](/2.png)'));
+    await upload.settle('/1.png');
+    await vi.waitFor(() => expect(input.value).toBe('Hello![first](/1.png)![second](/2.png)'));
+  });
+
+  it('leaves the focus where the reader took it while the image uploaded', async () => {
+    const upload = slowUpload();
+    const screen = await render(
+      <div>
+        <MawyEditor defaultValue="Hello" modes={['plain']} onUploadImage={upload.hook} />
+        <input aria-label="Elsewhere" />
+      </div>
+    );
+    const input = sourceOf(screen);
+    const elsewhere = screen.container.querySelector(
+      '[aria-label="Elsewhere"]'
+    ) as HTMLInputElement;
+
+    input.focus();
+    input.setSelectionRange(5, 5);
+    pasteFiles(input, [png()]);
+    elsewhere.focus();
+
+    await upload.settle('/a.png');
+    await vi.waitFor(() => expect(input.value).toBe('Hello![A photo](/a.png)'));
+
+    expect(document.activeElement).toBe(elsewhere);
   });
 });
 
