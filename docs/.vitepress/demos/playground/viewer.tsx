@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import { MAWY_SYSTEM_FONTS, MAWY_WEB_FONTS, MawyViewer } from 'mawy-react';
 import { DEMO_DIRECTIVES } from '../directives.js';
 import type { DemoProps } from '../types.js';
@@ -21,7 +22,8 @@ export default function PlaygroundViewer({
   colorScheme,
   onColorSchemeChange,
   locale,
-  height
+  height,
+  frame
 }: DemoProps) {
   return (
     <MawyViewer
@@ -29,11 +31,21 @@ export default function PlaygroundViewer({
       colorScheme={colorScheme}
       onColorSchemeChange={onColorSchemeChange}
       locale={locale}
+      frame={frame}
+      toolbarPlacement={frame === 'floating' ? 'bottom' : 'top'}
       fonts={[...MAWY_SYSTEM_FONTS, ...MAWY_WEB_FONTS]}
       highlight={() => import('mawy-react/highlight').then((module) => module.mawyHighlighter)}
       directives={DEMO_DIRECTIVES}
       defaultTypography={{ measure: 'wide' }}
-      style={{ height }}
+      // `floating` leaves the room around the prose to the page, and this page
+      // wants some — the same amount the Flutter half of this demo passes as
+      // its `padding`, so the two say the same thing.
+      style={
+        {
+          height,
+          ...(frame === 'floating' ? { '--mawy-doc-padding': '28px 24px 96px' } : {})
+        } as React.CSSProperties
+      }
     />
   );
 }

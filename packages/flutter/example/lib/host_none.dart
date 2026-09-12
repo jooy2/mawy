@@ -7,4 +7,7 @@ import 'package:mawy/mawy.dart';
 ///
 /// Returns null rather than a function that does nothing, so the caller can
 /// tell "not embedded" from "embedded and quiet" if it ever needs to.
-void Function()? listenToHostColorScheme(void Function(MawyColorScheme) onScheme) => null;
+void Function()? listenToHost({
+  required void Function(MawyColorScheme) onColorScheme,
+  required void Function(MawyFrame) onFrame,
+}) => null;

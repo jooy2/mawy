@@ -69,6 +69,12 @@ class _GalleryAppState extends State<GalleryApp> {
   /// putting it in the query string with `demo` and `locale`.
   MawyColorScheme _scheme = MawyColorScheme.system;
 
+  /// Whichever frame the page around the frame last asked for.
+  ///
+  /// Only the playground asks. Every other demo leaves it where it starts, and
+  /// the two samples that are *about* the frame set their own below.
+  MawyFrame _frame = MawyFrame.box;
+
   /// What stops listening to the page around the frame, where there is one.
   void Function()? _stopListening;
 
@@ -84,11 +90,21 @@ class _GalleryAppState extends State<GalleryApp> {
   void initState() {
     super.initState();
 
-    _stopListening = listenToHostColorScheme((MawyColorScheme next) {
-      if (mounted) {
-        setState(() => _scheme = next);
-      }
-    });
+    _stopListening = listenToHost(
+      onColorScheme: (MawyColorScheme next) {
+        if (mounted) {
+          setState(() => _scheme = next);
+        }
+      },
+      // The playground has a switch for this beside the light/dark one, and
+      // both halves of that page have to answer it or the switch is a control
+      // that does nothing to one of them.
+      onFrame: (MawyFrame next) {
+        if (mounted) {
+          setState(() => _frame = next);
+        }
+      },
+    );
   }
 
   @override
@@ -135,6 +151,11 @@ class _GalleryAppState extends State<GalleryApp> {
         // The samples that are not a document to read but a document to
         // write, so they are the editor rather than the viewer.
         if (sample.editor) {
+          // `editor/floating` is a sample about the frame and says what it is.
+          // The playground's is whatever the switch beside the frame last said.
+          final bool editorFloating =
+              sample.id == 'editor/floating' ||
+              (sample.id.startsWith('playground/') && _frame == MawyFrame.floating);
           final Widget editor = MawyEditor(
             key: ValueKey<String>('${sample.id}${_opened?.length ?? ''}'),
             defaultValue: _opened ?? sample.valueFor(locale),
@@ -145,8 +166,8 @@ class _GalleryAppState extends State<GalleryApp> {
             highlight: mawyHighlighter,
             onLinkTap: _open,
             onOpen: _chooseFile,
-            frame: sample.id == 'editor/floating' ? MawyFrame.floating : MawyFrame.box,
-            toolbarPlacement: sample.id == 'editor/floating'
+            frame: editorFloating ? MawyFrame.floating : MawyFrame.box,
+            toolbarPlacement: editorFloating
                 ? MawyToolbarPlacement.bottom
                 : MawyToolbarPlacement.top,
             toolbar: sample.id == 'editor/floating'
@@ -183,7 +204,11 @@ class _GalleryAppState extends State<GalleryApp> {
                 );
         }
 
-        final bool floating = sample.id == 'viewer/floating';
+        // `viewer/floating` is a sample about the frame and says what it is.
+        // The playground's is whatever the switch beside the frame last said.
+        final bool floating =
+            sample.id == 'viewer/floating' ||
+            (sample.id.startsWith('playground/') && _frame == MawyFrame.floating);
         final Widget viewer = MawyViewer(
           // A key on the document, so switching samples starts a fresh viewer
           // rather than one that remembers the last one's scroll position.

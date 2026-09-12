@@ -24,7 +24,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, useTemplateRef } from
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useData, withBase } from 'vitepress';
-import type { MawyColorScheme, MawyLocale } from 'mawy-react';
+import type { MawyColorScheme, MawyFrame, MawyLocale } from 'mawy-react';
 import type { DemoProps } from '../../demos/types.js';
 import { framework } from '../../data/framework';
 
@@ -40,8 +40,13 @@ const props = withDefaults(
     flutter?: string | false;
     /** How tall the frame is. A frame has no content of ours to measure. */
     height?: number;
+    /**
+     * Which `MawyFrame` to draw in, for the demos that take it from the page
+     * rather than deciding for themselves. The playground's switch.
+     */
+    frame?: MawyFrame;
   }>(),
-  { flutter: undefined, height: 480 }
+  { flutter: undefined, height: 480, frame: 'box' }
 );
 
 /**
@@ -118,6 +123,10 @@ function tellFrame() {
     { mawy: 'colorScheme', value: isDark.value ? 'dark' : 'light' },
     window.location.origin
   );
+  frame.value?.contentWindow?.postMessage(
+    { mawy: 'frame', value: props.frame },
+    window.location.origin
+  );
 }
 
 /**
@@ -174,7 +183,8 @@ function paint() {
         paint();
       },
       locale: demoLocale.value,
-      height: `${props.height}px`
+      height: `${props.height}px`,
+      frame: props.frame
     })
   );
 }
@@ -197,19 +207,16 @@ watch([isDark, lang, () => props.name], () => {
   paint();
 });
 
-// The frame's half of the same switch. Not folded into the watch above because
-// that one is about the React island's override, and this is about a window
-// that may not be there — `tellFrame` is a no-op until one is.
-watch(isDark, tellFrame);
+// The frame's half of the same two switches. Not folded into the watch above
+// because that one is about the React island's override, and this is about a
+// window that may not be there — `tellFrame` is a no-op until one is.
+watch([isDark, () => props.frame], tellFrame);
 
 // The height is a prop like any other and has to reach the island, and it moves
 // on its own: the playground measures it from the window. Kept out of the watch
 // above because a resize is not a reason to throw away the theme somebody chose
 // inside the demo.
-watch(
-  () => props.height,
-  () => paint()
-);
+watch([() => props.height, () => props.frame], () => paint());
 
 onBeforeUnmount(() => {
   window.removeEventListener('message', onFrameMessage);

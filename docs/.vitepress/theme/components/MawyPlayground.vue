@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useData } from 'vitepress';
+import type { MawyFrame } from 'mawy-react';
 import MawyDemo from './MawyDemo.vue';
 
 /**
@@ -41,9 +42,25 @@ const PANES: readonly Pane[] = [
   { id: 'viewer', name: 'playground/viewer', flutter: 'playground/viewer' }
 ];
 
+const FRAMES: readonly MawyFrame[] = ['box', 'floating'];
+
 const WORDS = {
-  en: { group: 'What to try', editor: 'Editor', viewer: 'Viewer' },
-  ko: { group: '컴포넌트 선택', editor: '에디터', viewer: '뷰어' }
+  en: {
+    group: 'What to try',
+    editor: 'Editor',
+    viewer: 'Viewer',
+    frame: 'Frame',
+    box: 'Box',
+    floating: 'Floating'
+  },
+  ko: {
+    group: '컴포넌트 선택',
+    editor: '에디터',
+    viewer: '뷰어',
+    frame: '프레임',
+    box: '박스',
+    floating: '플로팅'
+  }
 };
 
 const { lang, page } = useData();
@@ -61,6 +78,17 @@ const title = computed(() => page.value.title);
 
 const at = ref<Pane['id']>('editor');
 const opened = ref<Record<string, boolean>>({ editor: true });
+
+/**
+ * Which frame both panes are drawn in.
+ *
+ * One switch for the page rather than one per pane: the editor and the viewer
+ * are two views of one document here, and a reader who has just seen the
+ * editor with no frame around it comes to the viewer to see the same thing
+ * read. It reaches the React island as a prop and the Flutter frame as a
+ * message, so both halves answer it — see `MawyDemo`.
+ */
+const frame = ref<MawyFrame>('box');
 
 watch(at, (id) => {
   opened.value = { ...opened.value, [id]: true };
@@ -119,11 +147,28 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
           <span>{{ words[pane.id] }}</span>
         </label>
       </div>
+      <div class="mawy-play-track" role="radiogroup" :aria-label="words.frame">
+        <label
+          v-for="option in FRAMES"
+          :key="option"
+          class="mawy-play-option"
+          :data-on="frame === option ? '' : undefined"
+        >
+          <input
+            type="radio"
+            name="mawy-play-frame"
+            :value="option"
+            :checked="frame === option"
+            @change="frame = option"
+          />
+          <span>{{ words[option] }}</span>
+        </label>
+      </div>
     </div>
     <div ref="stage" class="mawy-play-stage">
       <template v-for="pane in PANES" :key="pane.id">
         <div v-if="opened[pane.id]" v-show="at === pane.id" class="mawy-play-pane">
-          <MawyDemo :name="pane.name" :flutter="pane.flutter" :height="height" />
+          <MawyDemo :name="pane.name" :flutter="pane.flutter" :height="height" :frame="frame" />
         </div>
       </template>
     </div>

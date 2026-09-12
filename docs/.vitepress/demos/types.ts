@@ -1,4 +1,4 @@
-import type { MawyColorScheme, MawyLocale } from 'mawy-react';
+import type { MawyColorScheme, MawyFrame, MawyLocale } from 'mawy-react';
 
 /**
  * What every demo is handed.
@@ -25,4 +25,14 @@ export interface DemoProps {
    * its height is measured from the window, so both halves have to take it.
    */
   height: string;
+  /**
+   * Which frame to draw in.
+   *
+   * `box` everywhere except the playground, which has a switch for it beside
+   * the one that picks the component. A demo that is *about* something else
+   * ignores this and a demo about the frame says what it is; the playground's
+   * two read it, because that is the page where a reader is meant to try the
+   * thing rather than be shown it.
+   */
+  frame: MawyFrame;
 }
