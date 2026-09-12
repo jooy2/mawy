@@ -2,6 +2,12 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
+## vNext
+
+### Changed
+
+- **A document drawn by `MawyDocument` writes no `data-mawy-range`.** Every element `MawyViewer` draws carries the offsets it came from, because a range is the only way back from a place on the page to the place in the document — the editor's preview scrolls by them and a click in it finds its word by them. A page built by `mawy-react/server` has no component on it to ask that question, and the attribute was a quarter of what such a page sends: this repository's own README came out at 16.8 kB and now comes out at 12.2 kB, and at 3.4 kB rather than 4.6 kB once gzip has had it. A coloured code block also stops counting every character of every token to work out where it was written, which was the most this renderer did per element. `MawyViewer` and `MawyEditor` are unchanged.
+
 ## 1.2.0 (2026-09-11)
 
 ### Breaking changes

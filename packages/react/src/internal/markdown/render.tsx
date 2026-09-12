@@ -50,6 +50,16 @@ import type { MawyFound } from './find.js';
 import type { MawyStrings } from '../i18n.js';
 import { CautionIcon, ImportantIcon, NoteIcon, TipIcon, WarningIcon } from '../icons.js';
 
+/**
+ * Where an element was written, ready to be spread onto it. See `origin`.
+ *
+ * Optional rather than always there, because a document drawn still carries no
+ * ranges at all and every element then spreads the same empty object.
+ */
+export interface MawyMarks {
+  'data-mawy-range'?: string;
+}
+
 export interface RenderContext {
   html: MawyHtmlPolicy;
   strings: MawyStrings;
@@ -116,7 +126,7 @@ export interface RenderContext {
       value: string;
       context: RenderContext;
       inline?: boolean;
-      marks?: { 'data-mawy-range': string };
+      marks?: MawyMarks;
       reveal?: boolean;
     }>;
   };
@@ -162,6 +172,21 @@ export interface RenderContext {
    */
   found?: MawyFound;
   currentMatch?: number;
+  /**
+   * Whether this document is being drawn once and left alone.
+   *
+   * `mawy-react/server` sets it and nothing else does. What it turns off is
+   * everything on the page that only a page can use: the `data-mawy-range` on
+   * every element, and the arithmetic that works out where each coloured token
+   * in a code block came from. Both exist so that a place on the page can be
+   * turned back into a place in the document, and a document with no component
+   * around it is never asked that question.
+   *
+   * Not the same thing as `live` being absent, though the two arrive together
+   * today. `live` is about what can hold state; this is about whether anything
+   * will ever read the drawing back.
+   */
+  still?: boolean;
 }
 
 /**
@@ -264,10 +289,25 @@ const resolved = (context: RenderContext, url: string, kind: MawyUrlKind) =>
  * Text is the one thing that cannot carry one, having no attributes to carry it
  * with. It does not need to: a run of text is bounded by the elements on either
  * side of it, which is enough to find it in the source between them.
+ *
+ * Nothing is written on a document drawn still. The way back is only ever
+ * walked by something on the page — the editor's preview scrolling by it, a
+ * click in that preview looking for the word it landed on — and a page built
+ * by `mawy-react/server` has none of that on it. Left in, it is a quarter of
+ * the HTML: this repository's own README comes out at 16.8 kB with the ranges
+ * and 12.2 kB without, and 4.6 kB against 3.4 kB once gzip has had it.
  */
-export function origin(node: { range: MdRange }): { 'data-mawy-range': string } {
-  return { 'data-mawy-range': `${node.range.start},${node.range.end}` };
+export function origin(node: { range: MdRange }, context: RenderContext): MawyMarks {
+  return context.still ? EMPTY : { 'data-mawy-range': `${node.range.start},${node.range.end}` };
 }
+
+/**
+ * One object for every element that carries no range, rather than one each.
+ *
+ * Spreading it writes nothing either way; the point is that a document of ten
+ * thousand elements does not allocate ten thousand objects to say so.
+ */
+const EMPTY: MawyMarks = {};
 
 /* -------------------------------------------------------------------------
  * Directives
@@ -314,7 +354,7 @@ function Directive({
     const Tag = kind === 'text' ? 'span' : 'div';
 
     return (
-      <Tag className="mawy-md-directive-source" {...origin(node)}>
+      <Tag className="mawy-md-directive-source" {...origin(node, context)}>
         {source}
       </Tag>
     );
@@ -346,35 +386,35 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
 
       case 'emphasis':
         return (
-          <em key={index} {...origin(node)}>
+          <em key={index} {...origin(node, context)}>
             {renderInline(node.children, context)}
           </em>
         );
 
       case 'strong':
         return (
-          <strong key={index} {...origin(node)}>
+          <strong key={index} {...origin(node, context)}>
             {renderInline(node.children, context)}
           </strong>
         );
 
       case 'delete':
         return (
-          <del key={index} {...origin(node)}>
+          <del key={index} {...origin(node, context)}>
             {renderInline(node.children, context)}
           </del>
         );
 
       case 'inlineCode':
         return (
-          <code key={index} className="mawy-md-code" {...origin(node)}>
+          <code key={index} className="mawy-md-code" {...origin(node, context)}>
             {marked(node, node.value, context)}
           </code>
         );
 
       case 'link':
         return revealed(node, context) ? (
-          <span key={index} className="mawy-md-source" {...origin(node)}>
+          <span key={index} className="mawy-md-source" {...origin(node, context)}>
             {context.source?.slice(node.range.start, node.range.end)}
           </span>
         ) : (
@@ -388,7 +428,7 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
             // has one without the other is a browser this has to say both to.
             target={context.linkTarget === 'self' ? undefined : '_blank'}
             rel={context.linkTarget === 'self' ? undefined : 'noopener noreferrer'}
-            {...origin(node)}
+            {...origin(node, context)}
           >
             {renderInline(node.children, context)}
           </a>
@@ -404,7 +444,7 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
         }
 
         return (
-          <sup key={index} className="mawy-md-footnote-ref" {...origin(node)}>
+          <sup key={index} className="mawy-md-footnote-ref" {...origin(node, context)}>
             <a
               href={`#${footnoteId(context, footnote.slug)}`}
               id={referenceId(context, footnote.slug, node.index)}
@@ -418,14 +458,14 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
 
       case 'image':
         return revealed(node, context) ? (
-          <span key={index} className="mawy-md-source" {...origin(node)}>
+          <span key={index} className="mawy-md-source" {...origin(node, context)}>
             {context.source?.slice(node.range.start, node.range.end)}
           </span>
         ) : context.image ? (
           // Handed over whole rather than fetched here. Which pictures are
           // worth fetching, and with what on the request, is the application's
           // answer.
-          <span key={index} className="mawy-md-image-slot" {...origin(node)}>
+          <span key={index} className="mawy-md-image-slot" {...origin(node, context)}>
             <context.image
               src={resolved(context, node.url, 'image')}
               alt={node.alt}
@@ -441,12 +481,12 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
             title={node.title ?? undefined}
             loading="lazy"
             decoding="async"
-            {...origin(node)}
+            {...origin(node, context)}
           />
         );
 
       case 'break':
-        return <br key={index} {...origin(node)} />;
+        return <br key={index} {...origin(node, context)} />;
 
       case 'textDirective':
         return <Directive key={index} node={node} kind="text" context={context} />;
@@ -460,7 +500,7 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
             value={node.value}
             context={context}
             inline
-            marks={origin(node)}
+            marks={origin(node, context)}
             reveal={revealed(node, context)}
           />
         );
@@ -489,7 +529,7 @@ function StillHtml(props: {
   value: string;
   context: RenderContext;
   inline?: boolean;
-  marks?: { 'data-mawy-range': string };
+  marks?: MawyMarks;
   reveal?: boolean;
 }): React.ReactElement {
   return drawnHtml(props, props.context.html === 'raw' ? props.value : null);
@@ -505,7 +545,7 @@ export function drawnHtml(
     value: string;
     context: RenderContext;
     inline?: boolean;
-    marks?: { 'data-mawy-range': string };
+    marks?: MawyMarks;
     reveal?: boolean;
   },
   html: string | null
@@ -622,30 +662,35 @@ function tokenRanges(tokens: MawyCodeToken[], lines: number[]): (MdRange | null)
 export function CodeText({
   tokens,
   code,
-  lines
+  lines,
+  context
 }: {
   tokens: MawyCodeToken[] | null;
   code: string;
   lines: number[];
+  context: RenderContext;
 }): React.ReactNode {
   if (!tokens) {
     return code;
   }
 
-  const ranges = tokenRanges(tokens, lines);
+  // Counting every character of every token to find out where it was written
+  // is the most this renderer does per element, and on a document nobody can
+  // click into it answers a question nobody asks.
+  const ranges = context.still ? null : tokenRanges(tokens, lines);
 
   return tokens.map((token, index) => {
     if (!token.kind || !CODE_TOKEN_KINDS.has(token.kind)) {
       return token.text;
     }
 
-    const range = ranges[index];
+    const range = ranges?.[index];
 
     return (
       <span
         key={index}
         className={`mawy-hl-${token.kind as MawyCodeTokenKind}`}
-        {...(range ? origin({ range }) : {})}
+        {...(range ? origin({ range }, context) : EMPTY)}
       >
         {token.text}
       </span>
@@ -669,7 +714,7 @@ export function drawnCode(
   const { value, lang } = block;
 
   return (
-    <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined} {...origin(block)}>
+    <div className="mawy-md-pre" data-mawy-lang={lang ?? undefined} {...origin(block, context)}>
       {/* A box that scrolls sideways and cannot be focused is content a
           keyboard cannot reach the right-hand end of, which is WCAG 2.1.1.
           A tab stop on every block rather than only on the ones that overflow:
@@ -682,9 +727,9 @@ export function drawnCode(
             empty block would otherwise have the backticks for an address. */}
         <code
           className={lang ? `mawy-md-lang language-${lang}` : 'mawy-md-lang'}
-          {...origin({ range: block.content })}
+          {...origin({ range: block.content }, context)}
         >
-          <CodeText tokens={tokens} code={value} lines={block.lines} />
+          <CodeText tokens={tokens} code={value} lines={block.lines} context={context} />
         </code>
       </pre>
       {copy}
@@ -759,7 +804,7 @@ function renderListItem(
   const task = item.checked !== null;
 
   return (
-    <li key={index} className={task ? 'mawy-md-task' : undefined} {...origin(item)}>
+    <li key={index} className={task ? 'mawy-md-task' : undefined} {...origin(item, context)}>
       {task ? (
         <input
           type="checkbox"
@@ -793,12 +838,12 @@ function renderRow(
   const Cell = row.header ? 'th' : 'td';
 
   return (
-    <tr key={index} {...origin(row)}>
+    <tr key={index} {...origin(row, context)}>
       {row.children.map((cell, column) => (
         <Cell
           key={column}
           scope={row.header ? 'col' : undefined}
-          {...origin(cell)}
+          {...origin(cell, context)}
           style={
             align[column] ? { textAlign: align[column] as 'left' | 'center' | 'right' } : undefined
           }
@@ -850,7 +895,7 @@ export function renderFootnotes(
             // is: following a link is moving the reader, and a reader whose
             // next Tab carries on from the sentence they left has not moved.
             tabIndex={-1}
-            {...origin(footnote)}
+            {...origin(footnote, context)}
           >
             {renderBlocks(footnote.children, context)}
             <a
@@ -880,7 +925,7 @@ export function renderBlocks(
     // does.
     if (revealed(block, context)) {
       return (
-        <p key={index} className="mawy-md-source" {...origin(block)}>
+        <p key={index} className="mawy-md-source" {...origin(block, context)}>
           {context.source?.slice(block.range.start, block.range.end)}
         </p>
       );
@@ -902,7 +947,7 @@ export function renderBlocks(
             // text they can already see is a stop that says nothing. This is
             // the Flutter package's `skipTraversal` said the other way round.
             tabIndex={-1}
-            {...origin(block)}
+            {...origin(block, context)}
           >
             {renderInline(block.children, context)}
           </Tag>
@@ -913,7 +958,7 @@ export function renderBlocks(
         return tight ? (
           <React.Fragment key={index}>{renderInline(block.children, context)}</React.Fragment>
         ) : (
-          <p key={index} {...origin(block)}>
+          <p key={index} {...origin(block, context)}>
             {renderInline(block.children, context)}
           </p>
         );
@@ -927,7 +972,7 @@ export function renderBlocks(
       case 'blockquote': {
         if (!block.alert) {
           return (
-            <blockquote key={index} {...origin(block)}>
+            <blockquote key={index} {...origin(block, context)}>
               {renderBlocks(block.children, context)}
             </blockquote>
           );
@@ -944,7 +989,7 @@ export function renderBlocks(
             key={index}
             className="mawy-md-alert"
             data-mawy-alert={block.alert}
-            {...origin(block)}
+            {...origin(block, context)}
           >
             <p className="mawy-md-alert-label">
               <Icon className="mawy-icon" aria-hidden="true" />
@@ -963,7 +1008,7 @@ export function renderBlocks(
             key={index}
             className={block.loose ? 'mawy-md-list' : 'mawy-md-list mawy-md-tight'}
             start={block.ordered && block.start !== 1 ? block.start : undefined}
-            {...origin(block)}
+            {...origin(block, context)}
           >
             {block.children.map((item, at) => renderListItem(item, at, context, !block.loose))}
           </Tag>
@@ -972,14 +1017,14 @@ export function renderBlocks(
 
       case 'definitionList':
         return (
-          <dl key={index} className="mawy-md-definitions" {...origin(block)}>
+          <dl key={index} className="mawy-md-definitions" {...origin(block, context)}>
             {block.children.map((child, at) =>
               child.type === 'definitionTerm' ? (
-                <dt key={at} {...origin(child)}>
+                <dt key={at} {...origin(child, context)}>
                   {renderInline(child.children, context)}
                 </dt>
               ) : (
-                <dd key={at} {...origin(child)}>
+                <dd key={at} {...origin(child, context)}>
                   {renderBlocks(child.children, context, !block.loose)}
                 </dd>
               )
@@ -994,7 +1039,12 @@ export function renderBlocks(
         return (
           // A wide table scrolls inside its own box rather than making the page
           // scroll sideways, which is the one thing a reader cannot undo.
-          <div key={index} className="mawy-md-table-scroll" tabIndex={0} {...origin(block)}>
+          <div
+            key={index}
+            className="mawy-md-table-scroll"
+            tabIndex={0}
+            {...origin(block, context)}
+          >
             <table className="mawy-md-table">
               {header.length ? (
                 <thead>{header.map((row, at) => renderRow(row, at, context, block.align))}</thead>
@@ -1006,7 +1056,7 @@ export function renderBlocks(
       }
 
       case 'thematicBreak':
-        return <hr key={index} className="mawy-md-rule" {...origin(block)} />;
+        return <hr key={index} className="mawy-md-rule" {...origin(block, context)} />;
 
       case 'containerDirective':
         return <Directive key={index} node={block} kind="container" context={context} />;
@@ -1022,7 +1072,7 @@ export function renderBlocks(
             key={index}
             value={block.value}
             context={context}
-            marks={origin(block)}
+            marks={origin(block, context)}
             reveal={revealed(block, context)}
           />
         );

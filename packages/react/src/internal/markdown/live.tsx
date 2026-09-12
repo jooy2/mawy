@@ -20,7 +20,13 @@ import type { MdCode } from './ast.js';
 import { sanitizeHtml } from './html.js';
 import { CheckIcon, CopyIcon } from '../icons.js';
 import { useCopy } from '../clipboard.js';
-import { checkedTokens, drawnCode, drawnHtml, type RenderContext } from './render.js';
+import {
+  checkedTokens,
+  drawnCode,
+  drawnHtml,
+  type MawyMarks,
+  type RenderContext
+} from './render.js';
 
 /* Nothing to subscribe to: what is being asked is which render this is, and
  * that answer does not change again once it has changed once. */
@@ -38,7 +44,7 @@ function RawHtml({
   value: string;
   context: RenderContext;
   inline?: boolean;
-  marks?: { 'data-mawy-range': string };
+  marks?: MawyMarks;
   /** Whether the caret is in it, so it is written out rather than drawn. */
   reveal?: boolean;
 }): React.ReactElement {

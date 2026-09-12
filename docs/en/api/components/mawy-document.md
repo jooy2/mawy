@@ -52,5 +52,6 @@ A React Server Component in a framework that has them, and an ordinary component
 - **No copy button on a code block**, for the same reason.
 - **`html="sanitize"` draws the markup as characters.** Sanitising needs a DOM to parse with, and a server has none. `MawyViewer` does the same on a server, except that there the elements arrive on the next render. Here there is no next render. `html="raw"` writes the markup out as the author wrote it, with everything [that means](../../guide/viewer#safety).
 - **A highlighter is used only if it answers synchronously.** A promise has no second render to arrive on. Pass `mawyHighlighter`, or any other synchronous highlighter, and the colour is in the HTML.
+- **No `data-mawy-range` on anything.** Every element `MawyViewer` draws carries the offsets it was drawn from, so that a place on the page can be turned back into a place in the document — see [mapping the page back to the source](../../guide/viewer#mapping-the-page-back-to-the-source). Nothing on a page built this way asks that question, and the attribute is a quarter of the HTML: this repository's own README comes out at 12.2 kB rather than 16.8 kB, and 3.4 kB rather than 4.6 kB gzipped.
 
 :::

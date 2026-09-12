@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MawyDocument } from '../../src/server.js';
+import { MawyViewer } from '../../src/index.js';
 import { mawyHighlighter } from '../../src/highlight.js';
 import { sources } from '../support/sources';
 
@@ -57,6 +58,31 @@ describe('a document rendered on a server', () => {
     expect(escaped).toContain('&lt;div&gt;hi&lt;/div&gt;');
     expect(sanitised).toContain('&lt;div&gt;hi&lt;/div&gt;');
     expect(raw).toContain('<div>hi</div>');
+  });
+
+  /**
+   * The way back from the page to the document is a quarter of the HTML, and
+   * nothing on a page built this way ever walks it. See `origin`.
+   */
+  it('writes no way back to the source it was drawn from', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument
+        value={'# Title\n\nA [link](/a) and `code`.\n\n- one\n- two\n\n```ts\nconst a = 1;\n```'}
+        highlight={mawyHighlighter}
+      />
+    );
+
+    expect(html).not.toContain('data-mawy-range');
+    // Everything the range would have been written on is still there.
+    expect(html).toContain('<h1 id="title"');
+    expect(html).toContain('<li>one</li>');
+    expect(html).toContain('mawy-hl-keyword');
+  });
+
+  it('is the only drawing that leaves them out', () => {
+    const html = renderToStaticMarkup(<MawyViewer value={'# Title'} toolbar={false} />);
+
+    expect(html).toContain('data-mawy-range');
   });
 
   it('reads the footnotes and the outline the way the viewer does', () => {

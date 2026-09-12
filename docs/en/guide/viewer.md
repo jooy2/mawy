@@ -674,6 +674,8 @@ A range is the only way back from a place on the page to the place in the docume
 
 Text nodes are the one thing on the page with no range, having no attributes to put one in. They do not need one. A run of text is bounded by the elements on either side, which is enough to locate it in the source between them: a `<strong>` drawn from `**bold**` contains `bold` at exactly one place inside those eight characters.
 
+A document drawn by [`MawyDocument`](../api/components/mawy-document) carries none of them. Nothing on such a page reads a range — there is no component on it to ask — and the attribute is a quarter of the HTML that page sends.
+
 :::
 
 ## Accessibility
