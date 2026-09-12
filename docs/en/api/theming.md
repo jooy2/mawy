@@ -30,7 +30,7 @@ The tokens are declared on **`.mawy-root`** rather than on `:root`. A component 
 | Group | Properties |
 | --- | --- |
 | Type | `--mawy-font-sans`, `--mawy-font-serif`, `--mawy-font-mono` |
-| The document | `--mawy-doc-font`, `--mawy-doc-size`, `--mawy-doc-line-height`, `--mawy-doc-letter-spacing`, `--mawy-doc-measure`, `--mawy-doc-image-aspect`, `--mawy-doc-image-fit` |
+| The document | `--mawy-doc-font`, `--mawy-doc-size`, `--mawy-doc-line-height`, `--mawy-doc-letter-spacing`, `--mawy-doc-measure`, `--mawy-doc-padding`, `--mawy-doc-image-aspect`, `--mawy-doc-image-fit` |
 | Surfaces | `--mawy-bg`, `--mawy-bg-sunken`, `--mawy-bg-raised`, `--mawy-chrome` |
 | Text | `--mawy-fg`, `--mawy-fg-muted`, `--mawy-fg-subtle` |
 | Lines | `--mawy-border`, `--mawy-border-strong` |

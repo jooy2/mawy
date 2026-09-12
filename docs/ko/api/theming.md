@@ -30,7 +30,7 @@ order: 4
 | 갈래 | 속성 |
 | --- | --- |
 | 서체 | `--mawy-font-sans`, `--mawy-font-serif`, `--mawy-font-mono` |
-| 문서 | `--mawy-doc-font`, `--mawy-doc-size`, `--mawy-doc-line-height`, `--mawy-doc-letter-spacing`, `--mawy-doc-measure`, `--mawy-doc-image-aspect`, `--mawy-doc-image-fit` |
+| 문서 | `--mawy-doc-font`, `--mawy-doc-size`, `--mawy-doc-line-height`, `--mawy-doc-letter-spacing`, `--mawy-doc-measure`, `--mawy-doc-padding`, `--mawy-doc-image-aspect`, `--mawy-doc-image-fit` |
 | 바탕 | `--mawy-bg`, `--mawy-bg-sunken`, `--mawy-bg-raised`, `--mawy-chrome` |
 | 글자 | `--mawy-fg`, `--mawy-fg-muted`, `--mawy-fg-subtle` |
 | 선 | `--mawy-border`, `--mawy-border-strong` |

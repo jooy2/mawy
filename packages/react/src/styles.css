@@ -795,10 +795,24 @@
  * be the weakest thing in the room.
  * ------------------------------------------------------------------------- */
 
+/* The room around the prose, and who decides how much of it there is.
+ *
+ * A viewer with a frame around it is a surface, and a surface needs a margin
+ * or the first line sits on the border. A document drawn into a page that
+ * already has its own gutters needs none, and the two cannot both be the
+ * default — so `--mawy-doc-padding` is the answer, unset here rather than
+ * declared, the way `--mawy-doc-image-aspect` is: nothing writes it, so a
+ * declaration on any wrapping element reaches it.
+ *
+ *     .my-docs { --mawy-doc-padding: 0; }
+ *
+ * The Flutter package has taken this as `MawyViewer.padding` since it had a
+ * viewer, and this is the same answer in the only form a stylesheet has.
+ */
 .mawy-root .mawy-md {
   max-width: var(--mawy-doc-measure);
   margin: 0 auto;
-  padding: 40px 28px 96px;
+  padding: var(--mawy-doc-padding, 40px 28px 96px);
   color: var(--mawy-fg);
   font-family: var(--mawy-doc-font);
   font-size: var(--mawy-doc-size);
@@ -810,7 +824,7 @@
 
 @media (max-width: 640px) {
   .mawy-root .mawy-md {
-    padding: 24px 18px 64px;
+    padding: var(--mawy-doc-padding, 24px 18px 64px);
   }
 }
 
