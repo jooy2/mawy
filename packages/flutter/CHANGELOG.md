@@ -2,6 +2,20 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
+## vNext
+
+### Added
+
+- **A viewer or an editor can float on the screen rather than sit in a box.** `frame` is which of the two a surface is, and it is on `MawyViewer` and `MawyEditor`. `MawyFrame.box` is what it always was: a surface with a background of its own and the toolbar barred across one end, so a reader can see where the widget starts and the screen around it stops. `MawyFrame.floating` wraps the document in nothing — no background, and the toolbar comes out of the column to hover over the text as a rounded bar, the way the platform puts its controls over what they act on. It is for a document that _is_ the screen, where a box around the prose is a box around everything and says nothing.
+
+  `MawyToolbarPlacement` is which end that toolbar is at, `top` or `bottom`, and the find bar travels with it: a find bar at one end with its toolbar at the other is a bar belonging to nothing. The outline stays a column beside the document rather than a card over it, because a card over the document covers the headings it points at, and the editor's status line stays the bottom edge of the editor because a count of words is not a control — a floating bar at the bottom of an editor hangs from the panes so the two do not sit on top of each other. Unset, both are what they were.
+
+### Changed
+
+- **`MawyViewer.padding` unset follows the frame.** It was `EdgeInsets.fromLTRB(28, 40, 28, 96)` and still is under `MawyFrame.box`; under `MawyFrame.floating` it is `EdgeInsets.zero`, because a screen that draws its own margins does not want a second set inside them. A padding that was passed is the padding either way, so nothing changes for an application that says what it wants — and nothing changes at all for one that has not asked for the new frame.
+
+  Worth knowing while reading a screen where this appears to do nothing: the column of prose is capped at the measure and centred in whatever is left, so on a wide screen taking the padding away only widens the gutters and the text lands in the same place. The padding is the padding once the measure has stopped binding.
+
 ## 1.2.0 (2026-09-11)
 
 ### Added
