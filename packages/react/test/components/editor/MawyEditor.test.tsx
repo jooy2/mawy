@@ -2916,6 +2916,51 @@ describe('images', () => {
     await vi.waitFor(() => expect(input.value).toBe('Hello![first](/1.png)![second](/2.png)'));
   });
 
+  it('keeps a finished upload out of a document made read-only, and writes it after', async () => {
+    for (const modes of [['plain'], ['wysiwyg']] as const) {
+      const onChange = vi.fn();
+      const upload = slowUpload();
+      const props = {
+        defaultValue: 'Saving.',
+        modes,
+        onChange,
+        onUploadImage: upload.hook
+      };
+      const screen = await render(<MawyEditor {...props} />);
+
+      if (modes[0] === 'plain') {
+        const input = sourceOf(screen);
+
+        input.focus();
+        input.setSelectionRange(7, 7);
+        pasteFiles(input, [png()]);
+      } else {
+        put(bodyOf(screen), 'Saving.', 7);
+        pasteFiles(bodyOf(screen), [png()]);
+      }
+
+      // What an application does while it saves: the document it has read is
+      // the one that has to stay on the screen.
+      await screen.rerender(<MawyEditor {...props} readOnly />);
+      await upload.settle('/a.png');
+      await new Promise((done) => setTimeout(done, 50));
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(screen.container.querySelector('.mawy-editor-note')?.textContent).toBe(
+        'Adding the image…'
+      );
+
+      await screen.rerender(<MawyEditor {...props} />);
+
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith('Saving.![A photo](/a.png)')
+      );
+      await vi.waitFor(() =>
+        expect(screen.container.querySelector('.mawy-editor-note')).toBe(null)
+      );
+    }
+  });
+
   it('leaves the focus where the reader took it while the image uploaded', async () => {
     const upload = slowUpload();
     const screen = await render(

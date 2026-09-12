@@ -47,6 +47,14 @@ import {
 } from '../../internal/history.js';
 import { FilePicker } from '../../internal/controls.js';
 import { movePlace, type MawyChange, type MawyPlace } from '../../internal/places.js';
+
+/** A file on its way into the document, and where it is going. */
+interface MawyUpload extends MawyPlace {
+  /** Which of two uploads waiting at the same spot started first. */
+  order: number;
+  /** What to write, once every file has answered. `null` until then. */
+  markdown: string | null;
+}
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
@@ -763,7 +771,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * which of two uploads waiting at the same spot started first, so that the
    * image pasted first comes out first.
    */
-  const places = React.useRef<(MawyPlace & { order: number })[]>([]);
+  const places = React.useRef<MawyUpload[]>([]);
   const started = React.useRef(0);
   /** The document the places were last moved to. */
   const shown = React.useRef(text);
@@ -795,7 +803,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   }, [text]);
 
   /**
-   * An image put into the document at the place its upload has been carried to.
+   * An image put into the document at the place its upload has been carried to,
+   * or kept back while the document is read-only.
    *
    * Written straight to the document rather than through whichever surface
    * started it, which is the whole of three separate problems. The surface that
@@ -808,8 +817,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * The caret stays where the reader left it, moved along by the image if the
    * image went in front of it, and is only put back on a surface that has the
    * focus — a selection set on a surface that does not is a focus taken.
+   *
+   * **A read-only document does not change**, and that includes an upload
+   * that finishes while it is one. `readOnly` is what an application sets while
+   * it saves, and an image written in the middle of a save is an image on the
+   * screen and missing from what was saved. So a finished upload waits, still
+   * counted as uploading, and is written the moment the document can be
+   * changed again — see the effect below. Throwing it away instead would lose a
+   * file the application has already stored, over something that was nobody's
+   * mistake.
    */
-  const putImage = (place: MawyPlace & { order: number }, markdown: string) => {
+  const putImage = (place: MawyUpload) => {
+    const markdown = place.markdown;
+
+    if (readOnly || markdown === null) {
+      return;
+    }
+
+    places.current.splice(places.current.indexOf(place), 1);
+
     const value = shown.current;
     const start = Math.min(place.start, value.length);
     const end = Math.min(Math.max(place.end, start), value.length);
@@ -833,7 +859,24 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     setRoom(null);
     setSelection(caret);
     write(next);
+
+    if (!places.current.length) {
+      setNote(null);
+    }
   };
+
+  /**
+   * The uploads that finished while the document was read-only, written once it
+   * is not. One per render, oldest first: each is written into the document the
+   * last one left, which is not on the screen until this has run again.
+   */
+  React.useLayoutEffect(() => {
+    const held = readOnly ? undefined : places.current.find((place) => place.markdown !== null);
+
+    if (held) {
+      putImage(held);
+    }
+  });
 
   /**
    * `putImage` as the latest render has it, for an upload to call when it
@@ -861,7 +904,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       started.current += 1;
 
-      const place = { start: at, end: at, order: started.current };
+      const place: MawyUpload = { start: at, end: at, order: started.current, markdown: null };
 
       places.current.push(place);
       running.current += 1;
@@ -886,15 +929,17 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
 
       running.current -= 1;
-      places.current.splice(places.current.indexOf(place), 1);
 
       if (written.length) {
-        putLater.current(place, written.join('\n\n'));
+        place.markdown = written.join('\n\n');
+        putLater.current(place);
+      } else {
+        places.current.splice(places.current.indexOf(place), 1);
       }
 
       if (failed) {
         setNote({ text: strings.uploadFailed, failed: true });
-      } else if (running.current === 0) {
+      } else if (!places.current.length) {
         setNote(null);
       }
     },

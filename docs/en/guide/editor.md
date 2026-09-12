@@ -264,6 +264,8 @@ The image lands where it was put: a drop goes to the point the pointer let go of
 
 **Writing goes on while an image uploads.** The place it was put is carried along by every change made in the meantime, so an image pasted at the end of a sentence is still written at the end of that sentence after somebody has gone back and added a word at its start, and it is written whichever surface is showing when the URL comes back. Nothing takes the focus when it arrives: a reader who went on to another field on the page stays there, and a caret the image went in front of is moved along by it.
 
+**A read-only document is not changed by an upload that finishes while it is one.** `readOnly` is what an application sets while it saves, and an image written in the middle of a save would be on the screen and missing from what was saved. So the image waits, the note under the document still says it is being added, and it is written where it was put as soon as `readOnly` is lifted.
+
 ## Colour in the preview
 
 `highlight` is passed straight through to the viewer inside the preview, so a `split` or `preview` surface colours its code the way [the viewer does](./viewer#colouring-a-code-block). The lazy form works here too, and is the one to use:

@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **A document made read-only does not change when an upload finishes.** `readOnly` was read once, when the upload started, so an image that came back while an application had set it — which is what an application does while it saves — was written anyway, and was on the screen but missing from what was saved. A finished upload now waits, still counted as uploading, and is written where it was put as soon as the document can be changed again. Throwing it away would have lost a file the application had already stored.
+
 - **An image is written where it was put, however the document moved while it uploaded.** The offset was read when the file was pasted or dropped and only clamped to the document's length when the URL came back, so a word typed in front of it in the meantime pushed the image into the middle of another word: `Hello world` with an image pasted at the end and `ABC ` typed at the start came out as `ABC Hello w![…](…)orld`. The place is carried along by every change now, and two images waiting at the same spot come out in the order they were pasted.
 
 - **A finished upload no longer takes the focus.** On the source surface the image went in through the textarea, which focused it and moved its caret, so a reader who had gone on to another field on the page was pulled back into the editor. The caret is left where the reader put it, and moved along by the image where the image went in front of it.
