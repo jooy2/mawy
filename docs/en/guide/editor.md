@@ -260,7 +260,7 @@ Answer with the URL to write, or with `{ url, alt, title }` to say what goes aro
 
 **Without `onUploadImage`, a dropped file is refused.** It is not half-inserted, and not handed back to the browser either: the editor takes the drop, writes nothing, and says so on the line under the document. That is the intended default. The only alternative is turning a two-megabyte screenshot into a `data:` URI inside somebody's document.
 
-The image lands where it was put: a drop goes to the point the pointer let go of it, and a paste goes to the caret. Several files dropped together are uploaded one after another and then written as **one** edit, so a single `Mod`+`Z` takes back the whole drop.
+The image lands where it was put: a drop goes to the point the pointer let go of it, and a paste goes to the caret, in place of whatever was selected. What is selected is replaced when the upload answers rather than when the file is pasted, so an upload that fails leaves those words where they were. Several files dropped together are uploaded one after another and then written as **one** edit, so a single `Mod`+`Z` takes back the whole drop.
 
 **Writing goes on while an image uploads.** The place it was put is carried along by every change made in the meantime, so an image pasted at the end of a sentence is still written at the end of that sentence after somebody has gone back and added a word at its start, and it is written whichever surface is showing when the URL comes back. Nothing takes the focus when it arrives: a reader who went on to another field on the page stays there, and a caret the image went in front of is moved along by it.
 

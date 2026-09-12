@@ -895,7 +895,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * did, so it is one step to take back.
    */
   const addImages = React.useCallback(
-    async (files: readonly File[], at: number) => {
+    async (files: readonly File[], at: MawyPlace) => {
       const hook = upload.current;
 
       if (!hook || readOnly || !files.length) {
@@ -904,7 +904,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       started.current += 1;
 
-      const place: MawyUpload = { start: at, end: at, order: started.current, markdown: null };
+      const place: MawyUpload = { ...at, order: started.current, markdown: null };
 
       places.current.push(place);
       running.current += 1;
@@ -997,7 +997,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       const files = takesImage() ? imageFilesIn(event.dataTransfer) : [];
 
       if (files.length) {
-        void addImages(files, dropPoint(event));
+        const point = dropPoint(event);
+
+        void addImages(files, { start: point, end: point });
 
         return;
       }
@@ -1038,8 +1040,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       const images = upload.current ? pastedImagesIn(event.clipboardData) : [];
 
       if (images.length) {
+        // In place of what was selected, the way pasting text would be. The
+        // selection is replaced when the upload answers rather than now, so an
+        // upload that fails leaves the words it would have replaced.
         event.preventDefault();
-        void addImages(images, state.start);
+        void addImages(images, { start: state.start, end: state.end });
 
         return;
       }

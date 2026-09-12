@@ -111,7 +111,7 @@ export interface MawyEditorDocumentProps {
    * not said where an image goes, which is when there is nothing to be done
    * with one — see `MawyImageUpload`.
    */
-  onImages?: (files: readonly File[], at: number) => void;
+  onImages?: (files: readonly File[], at: { start: number; end: number }) => void;
 }
 
 /**
@@ -470,11 +470,20 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           // A file on the clipboard with no markup beside it is a screenshot.
           // Inside a code block it is not one, because everything in there is
           // the characters it is.
-          const at = where
-            ? documentAt(element, where, selection?.anchorOffset ?? 0, now.value, aim.current)
-            : null;
+          //
+          // The range rather than the anchor, which is the end of a selection
+          // made backwards: what is selected is replaced, whichever way it was
+          // dragged.
+          const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+          const from =
+            range &&
+            documentAt(element, range.startContainer, range.startOffset, now.value, aim.current);
+          const to =
+            range &&
+            documentAt(element, range.endContainer, range.endOffset, now.value, aim.current);
+          const start = from ?? now.value.length;
 
-          now.onImages?.(images, at ?? now.value.length);
+          now.onImages?.(images, { start, end: Math.max(start, to ?? start) });
 
           return;
         }

@@ -2961,6 +2961,39 @@ describe('images', () => {
     }
   });
 
+  it('puts a pasted image in place of what was selected', async () => {
+    for (const modes of [['plain'], ['wysiwyg']] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Hello world"
+          modes={modes}
+          onChange={onChange}
+          onUploadImage={async () => '/a.png'}
+        />
+      );
+
+      if (modes[0] === 'plain') {
+        const input = sourceOf(screen);
+
+        input.focus();
+        input.setSelectionRange(6, 11);
+        pasteFiles(input, [png()]);
+      } else {
+        put(bodyOf(screen), 'Hello world', 6);
+
+        const text = bodyOf(screen).querySelector('p')?.firstChild as Text;
+
+        // Made backwards, from the end of `world` to its start, so the anchor
+        // is the end of the selection rather than the start of it.
+        document.getSelection()?.setBaseAndExtent(text, 11, text, 6);
+        pasteFiles(bodyOf(screen), [png()]);
+      }
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello ![A photo](/a.png)'));
+    }
+  });
+
   it('leaves the focus where the reader took it while the image uploaded', async () => {
     const upload = slowUpload();
     const screen = await render(

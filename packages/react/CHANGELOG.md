@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **An image pasted over a selection replaces it, the way pasted text does.** The source surface put the image at the start of the selection and kept the words, and the drawn document put it at the selection's anchor, which is its end when it was made backwards — so the result depended on which way somebody had dragged. The selection is replaced when the upload answers rather than when the file is pasted, so an upload that fails leaves the words it would have replaced.
+
 - **A document made read-only does not change when an upload finishes.** `readOnly` was read once, when the upload started, so an image that came back while an application had set it — which is what an application does while it saves — was written anyway, and was on the screen but missing from what was saved. A finished upload now waits, still counted as uploading, and is written where it was put as soon as the document can be changed again. Throwing it away would have lost a file the application had already stored.
 
 - **An image is written where it was put, however the document moved while it uploaded.** The offset was read when the file was pasted or dropped and only clamped to the document's length when the URL came back, so a word typed in front of it in the meantime pushed the image into the middle of another word: `Hello world` with an image pasted at the end and `ABC ` typed at the start came out as `ABC Hello w![…](…)orld`. The place is carried along by every change now, and two images waiting at the same spot come out in the order they were pasted.
