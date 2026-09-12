@@ -145,10 +145,11 @@ export interface MawyViewerProps extends Omit<
    *
    * `box` is a surface with a background of its own and a toolbar barred across
    * one end of it, which is what a document being looked at *inside* a larger
-   * page wants. `floating` has no background and no bar: the toolbar becomes a
+   * page wants. `floating` has no border and no bar: the toolbar becomes a
    * rounded group hovering over the text, the way a phone puts its controls
    * over what they act on, and the document's own padding goes to nothing so
-   * the page's gutters are the only ones. See `MawyFrame`.
+   * the page's gutters are the only ones. The ground stays either way; see
+   * `MawyFrame`.
    *
    * ```tsx
    * <MawyViewer value={post.body} frame="floating" toolbarPlacement="bottom" />

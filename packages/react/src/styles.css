@@ -606,9 +606,20 @@
  * rather than a dead strip.
  * -------------------------------------------------------------------------- */
 
-.mawy-root[data-mawy-frame='floating'] {
-  background: none;
-}
+/* The ground is not part of the frame.
+ *
+ * This used to be `background: none`, on the argument that a surface with no
+ * frame should show whatever the page drew behind it — and that is right up
+ * until the palette is Mawy's to choose. A reader who picks dark in the
+ * toolbar gets the dark palette's text, and with no ground under it that is
+ * light grey on the page's white. Half a palette is not a palette.
+ *
+ * So `floating` gives up the border, the bar across the end and the room
+ * around the prose, and keeps the ground. A page that means to have the
+ * document sit on its own says so with the token it already has:
+ *
+ *     .my-docs .mawy-root { --mawy-bg: transparent; }
+ */
 
 /* A floating bar in the editor hangs from the body rather than from the editor,
  * because the status line is the bottom edge and does not move — a bar hung

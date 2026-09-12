@@ -461,7 +461,9 @@ A viewer is either a surface with a frame around it or a document with the page 
 
 `box`, the default, is the surface: a background of its own, a toolbar barred across one end with a line under it, and room around the prose so the first line does not sit on the edge. A reader can see where the viewer starts and the page stops, which is what a document being looked at _inside_ a larger page wants.
 
-`floating` is the other one. Nothing wraps the document: the viewer has no background, the toolbar becomes a rounded group hovering over the text the way a phone puts its controls over what they act on, and [`--mawy-doc-padding`](../api/theming) goes to nothing so the page's own gutters are the only ones. This is for a document that _is_ the page — an article, a post, a README — where a box around the prose is a box around the whole screen and says nothing.
+`floating` is the other one. Nothing wraps the document: no border, no bar across the end, the toolbar becomes a rounded group hovering over the text the way a phone puts its controls over what they act on, and [`--mawy-doc-padding`](../api/theming) goes to nothing so the page's own gutters are the only ones. This is for a document that _is_ the page — an article, a post, a README — where a box around the prose is a box around the whole screen and says nothing.
+
+The ground under the document stays. A palette that reaches the text and not what it sits on is half a palette: a reader who picks dark in the toolbar would get light grey on the page's white. A page that means to have the document sit on its own ground says so with the token it already has, `--mawy-bg: transparent`.
 
 `toolbarPlacement` is which end that toolbar is at, `top` or `bottom`. The find bar goes with it, because a find bar at one end with its toolbar at the other is a bar belonging to nothing, and both are drawn in the order they are read so a keyboard walks the page the way the page looks.
 

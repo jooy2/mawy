@@ -602,6 +602,29 @@ describe('the two panes of split', () => {
   });
 });
 
+describe('the status line', () => {
+  /**
+   * It was hidden wherever neither the source nor the drawn document was on
+   * screen, which is `preview` and nothing else — so a count of words came and
+   * went with a change of view over the same document.
+   */
+  it('is drawn in every mode, `preview` included', async () => {
+    for (const mode of ['plain', 'preview', 'split'] as const) {
+      const screen = await render(
+        <MawyEditor defaultValue="# One" mode={mode} status={['words']} />
+      );
+
+      expect(screen.container.querySelector('.mawy-status'), mode).not.toBeNull();
+    }
+  });
+
+  it('is drawn in none of them where nothing was asked for', async () => {
+    const screen = await render(<MawyEditor defaultValue="# One" status={false} />);
+
+    expect(screen.container.querySelector('.mawy-status')).toBeNull();
+  });
+});
+
 describe('the frame', () => {
   it('says which frame it is and which end the toolbar is at', async () => {
     const screen = await render(<MawyEditor defaultValue="# One" />);

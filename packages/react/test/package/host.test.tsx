@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { MawyEditor, MawyViewer } from 'mawy-react';
@@ -289,6 +290,35 @@ describe('the document', () => {
         sheet.insertRule(text, index);
       }
     }
+  });
+
+  /**
+   * A palette that reaches the text and not what it sits on is half a palette.
+   *
+   * `floating` gives up the border, the bar across the end and the room around
+   * the prose. Not the ground: without it a reader who picks dark in the
+   * toolbar gets the dark palette's light grey on the page's white.
+   */
+  it('keeps the ground under the document whichever frame it is', async () => {
+    for (const frame of ['box', 'floating'] as const) {
+      const screen = await render(<MawyViewer value="# One" frame={frame} colorScheme="dark" />);
+      const root = screen.container.querySelector('.mawy-root');
+
+      expect(root && getComputedStyle(root).backgroundColor, frame).not.toBe('rgba(0, 0, 0, 0)');
+    }
+  });
+
+  it('gives the ground up where the page asks for it', async () => {
+    const screen = await render(
+      <MawyViewer
+        value="# One"
+        frame="floating"
+        style={{ '--mawy-bg': 'transparent' } as React.CSSProperties}
+      />
+    );
+    const root = screen.container.querySelector('.mawy-root');
+
+    expect(root && getComputedStyle(root).backgroundColor).toBe('rgba(0, 0, 0, 0)');
   });
 
   it('cannot be reached by a host page through its own element rules', async () => {

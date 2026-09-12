@@ -154,9 +154,15 @@ class MawyTypography {
 ///   own. A reader can see where the viewer starts and the screen around it
 ///   stops, which is what a document being looked at *inside* a larger screen
 ///   wants.
-/// - [floating] — nothing wraps the document. There is no background of its
-///   own, and the toolbar is a rounded bar over the top or the bottom of the
-///   text, the way the platform puts its controls over what they act on.
+/// - [floating] — nothing wraps the document. No border, no bar across the end,
+///   and the toolbar is a rounded group over the top or the bottom of the text,
+///   the way the platform puts its controls over what they act on.
+///
+/// The ground stays under the document either way, because a palette that
+/// reaches the text and not what it sits on is half a palette — a reader who
+/// picks dark would get light grey on whatever the application drew. Passing
+/// `tokens` with a transparent `background` is how an application says it wants
+/// the document on its own ground instead.
 ///
 /// The room around the prose follows. [MawyViewer.padding] unset is the usual
 /// `28, 40, 28, 96` under [box] and nothing at all under [floating], because a

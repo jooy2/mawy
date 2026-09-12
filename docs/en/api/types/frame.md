@@ -26,7 +26,9 @@ enum MawyFrame { box, floating }
 :::
 
 - `box` — the default. A surface with a background of its own and the toolbar barred across one end of it, so a reader can see where the viewer starts and the page stops. This is what a document being looked at _inside_ a larger page wants.
-- `floating` — nothing wraps the document. No background, and the toolbar becomes a rounded bar over the text, the way a phone puts its controls over what they act on. This is for a document that _is_ the page: an article, a post, a README, where a box around the prose is a box around the whole screen and says nothing.
+- `floating` — nothing wraps the document. No border and no bar across the end, and the toolbar becomes a rounded group over the text, the way a phone puts its controls over what they act on. This is for a document that _is_ the page: an article, a post, a README, where a box around the prose is a box around the whole screen and says nothing.
+
+The ground stays under the document either way. A palette that reaches the text and not what it sits on is half a palette, and <Fw react="--mawy-bg: transparent" flutter="copyWith(background: Colors.transparent)" code /> is how an application says it wants the document on its own.
 
 The room around the prose follows the frame, because a page that draws its own gutters does not want a second set inside them. <Fw react="--mawy-doc-padding" flutter="padding" code /> says how much, either way.
 

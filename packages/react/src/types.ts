@@ -456,11 +456,16 @@ export type MawyHtmlPolicy = 'escape' | 'sanitize' | 'raw';
  *   with a line under it, and the whole thing has a background of its own. A
  *   reader can see where the editor starts and the page stops, which is what a
  *   document being *worked on* inside a larger page wants.
- * - `floating` — nothing wraps the document. The surface has no background of
- *   its own, and the toolbar is a rounded bar over the top or the bottom of the
+ * - `floating` — nothing wraps the document. No border, no bar across the end,
+ *   and the toolbar becomes a rounded group over the top or the bottom of the
  *   text, the way a phone puts its controls over what they act on. This is for
  *   a document that *is* the page: an article, a post, a README, where a box
  *   around the prose is a box around the whole screen and says nothing.
+ *
+ * The ground stays under the document either way, because a palette that
+ * reaches the text and not what it sits on is half a palette — a reader who
+ * picks dark would get light grey on the page's white. `--mawy-bg: transparent`
+ * is how a page says it wants the document on its own ground instead.
  *
  * The document's own padding follows: `box` keeps the room a surface needs,
  * and `floating` has none, because a page that draws its own gutters does not

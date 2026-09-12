@@ -1520,7 +1520,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       <FilePicker ref={picker} accept={accept} onFile={(file) => void read(file)} />
 
-      {statusItems.length && (showSource || showDocument) ? (
+      {/* Whatever the mode. `preview` has no caret, so the position and the
+          selection report the one the source surface was left with — which is
+          the one it will have again when the reader switches back. Hiding the
+          whole line there meant the count of words came and went with a view
+          of the same document, and the Flutter package never did that. */}
+      {statusItems.length ? (
         <MawyEditorStatus
           value={text}
           selection={selection}

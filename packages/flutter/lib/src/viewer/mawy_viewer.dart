@@ -1285,9 +1285,15 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     );
 
     return Container(
-      // Nothing under a floating viewer: what is behind the document is
-      // whatever the application drew there, which is the whole point of it.
-      color: floating ? null : tokens.background,
+      // The ground is not part of the frame. `floating` gives up the border,
+      // the bar across the end and the room around the prose, and keeps this —
+      // a palette that reaches the text and not what it sits on is half a
+      // palette, and a reader who picks dark gets light grey on white. An
+      // application that means to have the document sit on its own ground says
+      // so with the tokens it already passes:
+      //
+      //     tokens: MawyTokens.of(brightness).copyWith(background: Colors.transparent)
+      color: tokens.background,
       child: mawyOverlay(
         context,
         floating
