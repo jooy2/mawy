@@ -172,9 +172,16 @@ class _GalleryAppState extends State<GalleryApp> {
           value: sample.valueFor(locale),
           colorScheme: _scheme,
           onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
-          toolbar: sample.id == 'viewer/minimal'
-              ? const <MawyViewerToolbarItem>[]
-              : kMawyViewerToolbar,
+          // The two demos the toolbar section of the guide is built around,
+          // and they have to show what the React half of the same demo shows.
+          toolbar: switch (sample.id) {
+            'viewer/bare' => const <MawyViewerToolbarItem>[],
+            'viewer/minimal' => const <MawyViewerToolbarItem>[
+              MawyViewerToolbarItem.fontSize,
+              MawyViewerToolbarItem.colorScheme,
+            ],
+            _ => kMawyViewerToolbar,
+          },
           locale: locale,
           directives: _directives(tokens),
           // The gallery is where the viewer is looked at, so it asks for the

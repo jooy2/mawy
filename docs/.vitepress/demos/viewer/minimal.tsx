@@ -1,17 +1,17 @@
 import { MawyViewer } from 'mawy-react';
 import type { DemoProps } from '../types.js';
 
-const DOCUMENT = `## A viewer with almost no chrome
+const DOCUMENT = `## Only the controls you picked
 
-The \`toolbar\` prop takes the controls to draw and the order to draw them in, so
-a viewer that only needs a text size gets a toolbar with a text size on it.
+\`toolbar\` takes the controls to draw and the order to draw them in. This one has
+a text size and a palette, and nothing else.
 
 \`\`\`tsx
-<MawyViewer value={document} toolbar={['fontSize']} />
+<MawyViewer value={document} toolbar={['fontSize', 'colorScheme']} />
 \`\`\`
 `;
 
-/** One control, and nothing else. */
+/** Two controls, and nothing else. */
 export default function ViewerMinimal({ colorScheme, onColorSchemeChange, locale }: DemoProps) {
   return (
     <MawyViewer
@@ -19,7 +19,7 @@ export default function ViewerMinimal({ colorScheme, onColorSchemeChange, locale
       colorScheme={colorScheme}
       onColorSchemeChange={onColorSchemeChange}
       locale={locale}
-      toolbar={['fontSize']}
+      toolbar={['fontSize', 'colorScheme']}
       style={{ height: '20rem' }}
     />
   );

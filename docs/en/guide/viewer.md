@@ -424,6 +424,7 @@ MawyViewer(
 | `'measure'`       | how wide the column of text may run                               |
 | `'colorScheme'`   | light, dark, or whatever the system says                          |
 | `'outline'`       | opens the headings panel                                          |
+| `'find'`          | a bar that searches the drawn document                            |
 | `'copy'`          | the Markdown source, to the clipboard                             |
 | `'open'`          | the file picker                                                   |
 | `'separator'`     | a hairline, for grouping a long list                              |
@@ -433,6 +434,10 @@ MawyViewer(
 Here they are the values of `MawyViewerToolbarItem`, so the second row is `MawyViewerToolbarItem.fontSize`. The list is the same except for `open`, because this package does not open files.
 
 :::
+
+<Fw react="toolbar={false}" flutter="toolbar: const []" code /> is the whole of it gone — no text size, no palette, no outline, no find bar, no copy button, and nothing at all above the document.
+
+<MawyDemo name="viewer/bare" flutter="viewer/bare" :height="300" />
 
 There is no way to add a control that is not on that list, and that is deliberate. A toolbar that takes arbitrary children is one the library can no longer keep keyboard-operable.
 

@@ -93,11 +93,29 @@ Definitions are resolved wherever they are written — this one is [at the botto
 ''';
 
 const String _minimal = '''
-# A quiet document
+## Only the controls you picked
 
-No toolbar, no outline, no controls at all — just the document, set the way the application asked for it.
+`toolbar` takes the controls to draw and the order to draw them in. This one has a text size and a palette, and nothing else.
 
-A viewer with `toolbar: const []` is a widget that draws Markdown and nothing else, which is most of what an application wants most of the time.
+```dart
+MawyViewer(
+  value: document,
+  toolbar: const <MawyViewerToolbarItem>[
+    MawyViewerToolbarItem.fontSize,
+    MawyViewerToolbarItem.colorScheme,
+  ],
+);
+```
+''';
+
+const String _bare = '''
+## Just the document
+
+Nothing but the Markdown, set the way the application asked for it — which is most of what an application wants most of the time.
+
+```dart
+MawyViewer(value: document, toolbar: const <MawyViewerToolbarItem>[]);
+```
 ''';
 
 const String _prose = '''
@@ -468,6 +486,7 @@ cells 2.9V
 const List<Sample> samples = <Sample>[
   Sample('viewer/basic', 'Everything', _everything),
   Sample('viewer/minimal', 'Minimal', _minimal),
+  Sample('viewer/bare', 'No toolbar', _bare),
   Sample('viewer/prose', '한국어', _prose),
   Sample('viewer/directives', 'Directives', _directives),
   Sample('editor/basic', 'Editor', _editor, editor: true),

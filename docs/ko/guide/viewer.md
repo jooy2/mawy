@@ -424,6 +424,7 @@ MawyViewer(
 | `'measure'`       | 본문이 뻗을 수 있는 폭               |
 | `'colorScheme'`   | 라이트, 다크, 또는 시스템 설정       |
 | `'outline'`       | 제목 목록 패널을 엽니다              |
+| `'find'`          | 그려진 문서를 찾는 바                |
 | `'copy'`          | 마크다운 원문을 클립보드로           |
 | `'open'`          | 파일 선택기                          |
 | `'separator'`     | 가는 구분선. 긴 목록을 묶을 때       |
@@ -433,6 +434,10 @@ MawyViewer(
 여기서 그것들은 `MawyViewerToolbarItem`의 값입니다. 둘째 줄이라면 `MawyViewerToolbarItem.fontSize`입니다. 목록은 `open` 하나가 빠진 것 말고는 같습니다. 이 패키지는 파일을 열지 않기 때문입니다.
 
 :::
+
+<Fw react="toolbar={false}" flutter="toolbar: const []" code />는 툴바를 통째로 없앱니다. 글자 크기도 팔레트도 목차도 찾기 바도 복사 버튼도 없고, 문서 위에 아무것도 없습니다.
+
+<MawyDemo name="viewer/bare" flutter="viewer/bare" :height="300" />
 
 목록에 없는 컨트롤을 추가하는 방법은 없으며, 이는 의도한 제약입니다. 임의의 자식을 받는 툴바는 라이브러리가 키보드 조작을 보장할 수 없습니다.
 
