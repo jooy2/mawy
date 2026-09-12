@@ -764,18 +764,39 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     (offset: number, markdown: string) => {
       const value = drew.current.value;
       const at = Math.max(0, Math.min(offset, value.length));
+      const after = {
+        value: value.slice(0, at) + markdown + value.slice(at),
+        start: at + markdown.length,
+        end: at + markdown.length
+      };
 
-      run(
-        { value, start: at, end: at },
-        {
-          value: value.slice(0, at) + markdown + value.slice(at),
-          start: at + markdown.length,
-          end: at + markdown.length
-        }
-      );
+      // `preview` has neither surface, and nothing to put a caret back into.
+      if (!showDocument && !source.current) {
+        write(after.value);
+
+        return;
+      }
+
+      run({ value, start: at, end: at }, after);
     },
-    [run]
+    [run, showDocument, write]
   );
+
+  /**
+   * `insertAt` as the latest render has it, for an upload to call when it
+   * finishes.
+   *
+   * An upload finishes several renders after it began, and the `insertAt` it
+   * began with belongs to the surface that was showing then. Switched from
+   * `plain` to `wysiwyg` in between, that one reaches for a textarea that is no
+   * longer there and writes nothing, and the image the application stored is
+   * lost without anything having failed.
+   */
+  const insertLater = React.useRef(insertAt);
+
+  React.useLayoutEffect(() => {
+    insertLater.current = insertAt;
+  });
 
   /**
    * Files put into the document as images, one upload at a time.
@@ -817,7 +838,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       running.current -= 1;
 
       if (written.length) {
-        insertAt(at, written.join('\n\n'));
+        insertLater.current(at, written.join('\n\n'));
       }
 
       if (failed) {
@@ -826,7 +847,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         setNote(null);
       }
     },
-    [insertAt, readOnly, strings]
+    [readOnly, strings]
   );
 
   /**

@@ -2804,6 +2804,59 @@ describe('images', () => {
 
     expect(onUploadImage).not.toHaveBeenCalled();
   });
+
+  /**
+   * An upload that answers when it is told to, one file at a time.
+   *
+   * What these check is everything that can happen to an editor between a file
+   * arriving and its URL coming back, and a promise the test settles is the only
+   * way to put something in that gap on purpose.
+   */
+  function slowUpload() {
+    const waiting: ((answer: string | null) => void)[] = [];
+    const hook = vi.fn(() => new Promise<string | null>((resolve) => waiting.push(resolve)));
+
+    return {
+      hook,
+      /** The oldest upload still out, answered. */
+      settle: async (answer: string | null) => {
+        await vi.waitFor(() => expect(waiting.length).toBeGreaterThan(0));
+        waiting.shift()?.(answer);
+      }
+    };
+  }
+
+  it('writes an image whose upload finished after the surface changed', async () => {
+    for (const other of ['wysiwyg', 'preview'] as const) {
+      const onChange = vi.fn();
+      const upload = slowUpload();
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Before."
+          modes={['plain', other]}
+          onChange={onChange}
+          onUploadImage={upload.hook}
+          style={WIDE}
+        />
+      );
+      const input = sourceOf(screen);
+
+      input.focus();
+      input.setSelectionRange(7, 7);
+      pasteFiles(input, [png()]);
+
+      await screen
+        .getByRole('radio', { name: other === 'wysiwyg' ? 'Formatted' : 'Preview' })
+        .click();
+      await upload.settle('/a.png');
+
+      // Whichever surface is showing when the URL comes back, the textarea the
+      // paste arrived in is gone by then, and the image is written anyway.
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith('Before.![A photo](/a.png)')
+      );
+    }
+  });
 });
 
 /**
