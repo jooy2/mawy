@@ -28,6 +28,8 @@ export default async function Page() {
 
 A React Server Component in a framework that has them, and an ordinary component to `renderToStaticMarkup` in one that does not. The markup is the same markup and the stylesheet is the same stylesheet, so a page built this way and a page with a viewer on it look alike.
 
+[Publishing](../../guide/publishing) is the whole of what a page needs around one of these when people are going to find it through a search engine.
+
 ## Props
 
 | Prop | Type | Default | What it does |
@@ -38,8 +40,10 @@ A React Server Component in a framework that has them, and an ordinary component
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | Where a link the document wrote opens. |
 | `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | What such a link declares about where it goes. Added to what it already declares. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | What draws the constructs this package does not know about. |
+| `image` | `ComponentType<`[`MawyImageProps`](../types/image)`>` | — | What draws a picture the document points at, and how a framework's own image component gets used. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | Where a relative URL in the document points. |
 | `headingBase` | `number` | `1` | Which of `h1` to `h6` the document's own `#` is drawn as. |
+| `anchorPrefix` | `string` | — | Put in front of every anchor this drawing gives a heading or a footnote, so two documents on one page stop colliding. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the few words this library writes itself. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | What colours a code block. |
 | `typography` | [`MawyTypography`](../types/typography) | — | How the document is set, as the same custom properties. |

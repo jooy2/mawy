@@ -1,6 +1,6 @@
 ---
 title: Playground
-order: 4
+order: 5
 description: The editor and the viewer running with nothing switched off, in whichever package you picked.
 aside: false
 outline: false

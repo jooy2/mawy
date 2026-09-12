@@ -28,6 +28,8 @@ export default async function Page() {
 
 React 서버 컴포넌트를 가진 프레임워크에서는 서버 컴포넌트로, 없는 곳에서는 `renderToStaticMarkup`에 넘길 평범한 컴포넌트로 씁니다. 마크업도 스타일시트도 같은 것이므로, 이렇게 만든 페이지와 뷰어를 올린 페이지는 똑같이 보입니다.
 
+검색 엔진을 거쳐 찾아오는 페이지라면 이 컴포넌트 둘레에 무엇이 있어야 하는지는 [게시하기](../../guide/publishing)가 전부 다룹니다.
+
 ## 프롭
 
 | 프롭 | 타입 | 기본값 | 하는 일 |
@@ -38,8 +40,10 @@ React 서버 컴포넌트를 가진 프레임워크에서는 서버 컴포넌트
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
 | `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | 그 링크가 가는 곳에 대해 무엇을 밝힐지. 이미 밝힌 것에 더합니다. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | 이 패키지가 모르는 구성물을 무엇으로 그릴지. |
+| `image` | `ComponentType<`[`MawyImageProps`](../types/image)`>` | — | 문서가 가리키는 그림을 무엇으로 그릴지. 프레임워크의 이미지 컴포넌트를 꽂는 자리입니다. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | 문서의 상대 URL이 어디를 가리키는지. |
 | `headingBase` | `number` | `1` | 문서의 `#`을 `h1`부터 `h6` 중 무엇으로 그릴지. |
+| `anchorPrefix` | `string` | — | 이 그림이 제목과 각주에 주는 앵커 앞에 붙일 것. 한 페이지에 문서가 둘일 때 이름이 부딪히지 않게 합니다. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 이 라이브러리가 직접 쓰는 몇 낱말의 언어. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | 코드 블록에 색을 입히는 것. |
 | `typography` | [`MawyTypography`](../types/typography) | — | 문서 조판. 같은 커스텀 속성으로 나갑니다. |
