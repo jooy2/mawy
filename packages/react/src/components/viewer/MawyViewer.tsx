@@ -867,6 +867,11 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       />
     ) : null
   ].filter(Boolean);
+  /**
+   * Where a floating group hangs from. See the editor, which decides the same
+   * thing for the same reason and with the same word.
+   */
+  const inside = frame === 'floating';
   const chrome = bars.length ? (
     <div className="mawy-chrome">{toolbarPlacement === 'bottom' ? [...bars].reverse() : bars}</div>
   ) : null;
@@ -886,7 +891,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       {...dragProps}
       onKeyDown={onKeyDown}
     >
-      {toolbarPlacement === 'top' ? chrome : null}
+      {!inside && toolbarPlacement === 'top' ? chrome : null}
 
       <div className="mawy-viewer-body">
         {outlineOpen && hasDocument ? (
@@ -905,25 +910,33 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
             `-1` rather than `0` because a reader Tabbing through a page is on
             their way somewhere, and a stop on the text they can already see is
             a stop that says nothing. */}
-        <div className="mawy-viewer-scroll" ref={scroller} tabIndex={-1} onClick={followAnchor}>
-          {hasDocument ? (
-            <article className="mawy-md" aria-label={fileName ?? strings.document}>
-              {content}
-            </article>
-          ) : (
-            (empty ?? (
-              <MawyViewerEmpty
-                strings={strings}
-                droppable={droppable}
-                error={readError}
-                onOpenFile={takesFile ? () => picker.current?.click() : undefined}
-              />
-            ))
-          )}
+        {/* The document and whatever hovers over it, and nothing else.
+            A floating group hung from the viewer would reach across the
+            outline as well, and a bar over a list of headings is a bar over
+            something it has nothing to do with. */}
+        <div className="mawy-viewer-pane">
+          {inside && toolbarPlacement === 'top' ? chrome : null}
+          <div className="mawy-viewer-scroll" ref={scroller} tabIndex={-1} onClick={followAnchor}>
+            {hasDocument ? (
+              <article className="mawy-md" aria-label={fileName ?? strings.document}>
+                {content}
+              </article>
+            ) : (
+              (empty ?? (
+                <MawyViewerEmpty
+                  strings={strings}
+                  droppable={droppable}
+                  error={readError}
+                  onOpenFile={takesFile ? () => picker.current?.click() : undefined}
+                />
+              ))
+            )}
+          </div>
+          {inside && toolbarPlacement === 'bottom' ? chrome : null}
         </div>
       </div>
 
-      {toolbarPlacement === 'bottom' ? chrome : null}
+      {!inside && toolbarPlacement === 'bottom' ? chrome : null}
 
       {dragging ? (
         <div className="mawy-drop-veil" aria-hidden="true">

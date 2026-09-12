@@ -388,6 +388,33 @@ describe('images', () => {
     );
   });
 
+  /**
+   * The outline is a column beside the document, not chrome, so a floating
+   * group must not reach across it — a bar over a list of headings is a bar
+   * over something it has nothing to do with.
+   */
+  it('hangs a floating group from the document rather than from the viewer', async () => {
+    const screen = await render(
+      <MawyViewer value={'# One\n\n## Two'} frame="floating" toolbar={['outline']} />
+    );
+
+    await screen.getByRole('button', { name: 'Contents' }).click();
+
+    const chrome = screen.container.querySelector('.mawy-chrome');
+
+    expect(screen.container.querySelector('.mawy-outline')).not.toBeNull();
+    expect(chrome?.closest('.mawy-viewer-pane')).not.toBeNull();
+    // Which is a sibling of the outline rather than a parent of it.
+    expect(chrome?.closest('.mawy-outline')).toBeNull();
+  });
+
+  it('leaves a boxed group outside the body entirely', async () => {
+    const screen = await render(<MawyViewer value="# One" toolbar={['outline']} />);
+    const chrome = screen.container.querySelector('.mawy-chrome');
+
+    expect(chrome?.closest('.mawy-viewer-body')).toBeNull();
+  });
+
   it('keeps the toolbar and the find bar together in one group', async () => {
     const screen = await render(<MawyViewer value="# One" frame="floating" />);
     const chrome = screen.container.querySelector('.mawy-chrome');

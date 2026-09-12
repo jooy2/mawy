@@ -1099,12 +1099,36 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       chrome.setAll(0, chrome.reversed.toList());
     }
 
+    /// The floating group, over the document's column and no wider.
+    ///
+    /// Hung from the viewer it would reach across the outline as well, and a
+    /// bar over a list of headings is a bar over something it has nothing to
+    /// do with.
+    Widget hovering(Widget document) => floating && chrome.isNotEmpty
+        ? Stack(
+            children: <Widget>[
+              Positioned.fill(child: document),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: widget.toolbarPlacement == MawyToolbarPlacement.top ? 0 : null,
+                bottom: widget.toolbarPlacement == MawyToolbarPlacement.bottom ? 0 : null,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(mainAxisSize: MainAxisSize.min, spacing: 8, children: chrome),
+                ),
+              ),
+            ],
+          )
+        : document;
+
     final Widget pane = Expanded(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (_outlineOpen)
             MawyViewerOutline(
+              frame: widget.frame,
               entries: document.outline,
               tokens: tokens,
               strings: strings,
@@ -1112,140 +1136,142 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
               onSelected: _goTo,
             ),
           Expanded(
-            child: Semantics(
-              label: strings.document,
-              container: true,
-              child: Listener(
-                // A wheel or a hand on the document is the reader
-                // saying they have gone somewhere of their own, and the
-                // entry they pressed stops being the answer.
-                onPointerDown: (PointerDownEvent event) {
-                  _chosen = null;
-                  _pressed = event.position;
-                  _followed = false;
-                },
-                onPointerUp: _release,
-                onPointerSignal: (PointerSignalEvent _) => _chosen = null,
-                child: Shortcuts(
-                  // What copies a selection. A browser does this without
-                  // being asked and here only a `WidgetsApp` does, which
-                  // this package does not require — the same reason
-                  // `mawyActivate` writes out Enter and the space bar.
-                  shortcuts: const <ShortcutActivator, Intent>{
-                    SingleActivator(LogicalKeyboardKey.keyC, control: true):
-                        CopySelectionTextIntent.copy,
-                    SingleActivator(LogicalKeyboardKey.keyC, meta: true):
-                        CopySelectionTextIntent.copy,
-                    SingleActivator(LogicalKeyboardKey.keyF, control: true): _FindIntent(),
-                    SingleActivator(LogicalKeyboardKey.keyF, meta: true): _FindIntent(),
-                    // A document somebody has clicked into scrolls with
-                    // the keyboard. A browser does this without being
-                    // asked and here only a `WidgetsApp` does, which
+            child: hovering(
+              Semantics(
+                label: strings.document,
+                container: true,
+                child: Listener(
+                  // A wheel or a hand on the document is the reader
+                  // saying they have gone somewhere of their own, and the
+                  // entry they pressed stops being the answer.
+                  onPointerDown: (PointerDownEvent event) {
+                    _chosen = null;
+                    _pressed = event.position;
+                    _followed = false;
+                  },
+                  onPointerUp: _release,
+                  onPointerSignal: (PointerSignalEvent _) => _chosen = null,
+                  child: Shortcuts(
+                    // What copies a selection. A browser does this without
+                    // being asked and here only a `WidgetsApp` does, which
                     // this package does not require — the same reason
                     // `mawyActivate` writes out Enter and the space bar.
-                    SingleActivator(LogicalKeyboardKey.arrowUp): ScrollIntent(
-                      direction: AxisDirection.up,
-                    ),
-                    SingleActivator(LogicalKeyboardKey.arrowDown): ScrollIntent(
-                      direction: AxisDirection.down,
-                    ),
-                    SingleActivator(LogicalKeyboardKey.pageUp): ScrollIntent(
-                      direction: AxisDirection.up,
-                      type: ScrollIncrementType.page,
-                    ),
-                    SingleActivator(LogicalKeyboardKey.pageDown): ScrollIntent(
-                      direction: AxisDirection.down,
-                      type: ScrollIncrementType.page,
-                    ),
-                  },
-                  child: Actions(
-                    actions: <Type, Action<Intent>>{
-                      ScrollIntent: CallbackAction<ScrollIntent>(onInvoke: _scrollBy),
-                      _FindIntent: CallbackAction<_FindIntent>(
-                        onInvoke: (_FindIntent _) {
-                          if (_searchable) {
-                            _openFind();
-                          }
-
-                          return null;
-                        },
+                    shortcuts: const <ShortcutActivator, Intent>{
+                      SingleActivator(LogicalKeyboardKey.keyC, control: true):
+                          CopySelectionTextIntent.copy,
+                      SingleActivator(LogicalKeyboardKey.keyC, meta: true):
+                          CopySelectionTextIntent.copy,
+                      SingleActivator(LogicalKeyboardKey.keyF, control: true): _FindIntent(),
+                      SingleActivator(LogicalKeyboardKey.keyF, meta: true): _FindIntent(),
+                      // A document somebody has clicked into scrolls with
+                      // the keyboard. A browser does this without being
+                      // asked and here only a `WidgetsApp` does, which
+                      // this package does not require — the same reason
+                      // `mawyActivate` writes out Enter and the space bar.
+                      SingleActivator(LogicalKeyboardKey.arrowUp): ScrollIntent(
+                        direction: AxisDirection.up,
+                      ),
+                      SingleActivator(LogicalKeyboardKey.arrowDown): ScrollIntent(
+                        direction: AxisDirection.down,
+                      ),
+                      SingleActivator(LogicalKeyboardKey.pageUp): ScrollIntent(
+                        direction: AxisDirection.up,
+                        type: ScrollIncrementType.page,
+                      ),
+                      SingleActivator(LogicalKeyboardKey.pageDown): ScrollIntent(
+                        direction: AxisDirection.down,
+                        type: ScrollIncrementType.page,
                       ),
                     },
-                    child: SelectableRegion(
-                      focusNode: _selection,
-                      // No handles and no context menu: both of those are
-                      // Material's or Cupertino's, and a package that draws
-                      // its own everything else should not pull in a
-                      // toolbar it did not design. Dragging selects, a
-                      // double tap takes the word, and the keys above copy.
-                      selectionControls: emptyTextSelectionControls,
-                      child: LayoutBuilder(
-                        builder: (BuildContext context, BoxConstraints box) {
-                          // The column of prose is centred by padding
-                          // rather than by a `Center` around it: what
-                          // scrolls is a list of slivers now, and a
-                          // sliver is laid out across the whole width
-                          // it is given.
-                          final double inside = box.maxWidth - lead.horizontal;
-                          final double side = measure == null || inside <= measure
-                              ? 0
-                              : (inside - measure) / 2;
+                    child: Actions(
+                      actions: <Type, Action<Intent>>{
+                        ScrollIntent: CallbackAction<ScrollIntent>(onInvoke: _scrollBy),
+                        _FindIntent: CallbackAction<_FindIntent>(
+                          onInvoke: (_FindIntent _) {
+                            if (_searchable) {
+                              _openFind();
+                            }
 
-                          return Stack(
-                            children: <Widget>[
-                              CustomScrollView(
-                                controller: _scroller,
-                                // Three screens either way stay built.
-                                // What that buys is a selection dragged
-                                // past the edge of the view: a lazy
-                                // list can only give up the text it is
-                                // holding, and this is how much of the
-                                // document it holds.
-                                scrollCacheExtent: const ScrollCacheExtent.viewport(3),
-                                slivers: <Widget>[
-                                  SliverPadding(
-                                    padding: lead + EdgeInsets.symmetric(horizontal: side),
-                                    sliver: drawn.length < kMawyViewerLazyFrom
-                                        // One box holding all of it, so
-                                        // every block is built and a
-                                        // selection can take the whole
-                                        // document. See
-                                        // [kMawyViewerLazyFrom].
-                                        ? SliverToBoxAdapter(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: drawn,
-                                            ),
-                                          )
-                                        : SliverList(
-                                            delegate: SliverChildBuilderDelegate(
-                                              (BuildContext _, int index) => drawn[index],
-                                              childCount: drawn.length,
-                                            ),
-                                          ),
-                                  ),
-                                ],
-                              ),
-                              // The wheel has to be met before the
-                              // scroll view registers for the same
-                              // signal, since the resolver hands it to
-                              // whoever registered first — and a signal
-                              // is offered from the innermost target
-                              // outwards. Inside the content is where
-                              // that was; over the whole view is where
-                              // it goes now that the content is a
-                              // sliver. It is translucent and listens
-                              // for nothing else, so everything under
-                              // it is hit exactly as it was.
-                              Positioned.fill(
-                                child: MawyWheelScroll(
+                            return null;
+                          },
+                        ),
+                      },
+                      child: SelectableRegion(
+                        focusNode: _selection,
+                        // No handles and no context menu: both of those are
+                        // Material's or Cupertino's, and a package that draws
+                        // its own everything else should not pull in a
+                        // toolbar it did not design. Dragging selects, a
+                        // double tap takes the word, and the keys above copy.
+                        selectionControls: emptyTextSelectionControls,
+                        child: LayoutBuilder(
+                          builder: (BuildContext context, BoxConstraints box) {
+                            // The column of prose is centred by padding
+                            // rather than by a `Center` around it: what
+                            // scrolls is a list of slivers now, and a
+                            // sliver is laid out across the whole width
+                            // it is given.
+                            final double inside = box.maxWidth - lead.horizontal;
+                            final double side = measure == null || inside <= measure
+                                ? 0
+                                : (inside - measure) / 2;
+
+                            return Stack(
+                              children: <Widget>[
+                                CustomScrollView(
                                   controller: _scroller,
-                                  child: const SizedBox.expand(),
+                                  // Three screens either way stay built.
+                                  // What that buys is a selection dragged
+                                  // past the edge of the view: a lazy
+                                  // list can only give up the text it is
+                                  // holding, and this is how much of the
+                                  // document it holds.
+                                  scrollCacheExtent: const ScrollCacheExtent.viewport(3),
+                                  slivers: <Widget>[
+                                    SliverPadding(
+                                      padding: lead + EdgeInsets.symmetric(horizontal: side),
+                                      sliver: drawn.length < kMawyViewerLazyFrom
+                                          // One box holding all of it, so
+                                          // every block is built and a
+                                          // selection can take the whole
+                                          // document. See
+                                          // [kMawyViewerLazyFrom].
+                                          ? SliverToBoxAdapter(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: drawn,
+                                              ),
+                                            )
+                                          : SliverList(
+                                              delegate: SliverChildBuilderDelegate(
+                                                (BuildContext _, int index) => drawn[index],
+                                                childCount: drawn.length,
+                                              ),
+                                            ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          );
-                        },
+                                // The wheel has to be met before the
+                                // scroll view registers for the same
+                                // signal, since the resolver hands it to
+                                // whoever registered first — and a signal
+                                // is offered from the innermost target
+                                // outwards. Inside the content is where
+                                // that was; over the whole view is where
+                                // it goes now that the content is a
+                                // sliver. It is translucent and listens
+                                // for nothing else, so everything under
+                                // it is hit exactly as it was.
+                                Positioned.fill(
+                                  child: MawyWheelScroll(
+                                    controller: _scroller,
+                                    child: const SizedBox.expand(),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -1264,25 +1290,9 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       child: mawyOverlay(
         context,
         floating
-            // The chrome comes out of the column and hovers over the document.
-            // `Stack` rather than an overlay entry, so it is clipped by the
-            // viewer and scrolls with nothing.
-            ? Stack(
-                children: <Widget>[
-                  Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[pane]),
-                  if (chrome.isNotEmpty)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: widget.toolbarPlacement == MawyToolbarPlacement.top ? 0 : null,
-                      bottom: widget.toolbarPlacement == MawyToolbarPlacement.bottom ? 0 : null,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(mainAxisSize: MainAxisSize.min, spacing: 8, children: chrome),
-                      ),
-                    ),
-                ],
-              )
+            // The chrome is already over the document, put there by
+            // `hovering` so that it does not reach across the outline too.
+            ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[pane])
             : Column(
                 // The toolbar is the width of the viewer, not the width of its
                 // buttons. A `Column` centres its children unless it is told

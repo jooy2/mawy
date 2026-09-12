@@ -78,6 +78,30 @@ void main() {
       expect(documentText(tester), contains('A paragraph with strong text'));
     });
 
+    testWidgets('keeps a floating bar off the outline beside the document', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const MawyViewer(
+            value: sample,
+            frame: MawyFrame.floating,
+            toolbar: <MawyViewerToolbarItem>[MawyViewerToolbarItem.outline],
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(LucideIcons.listTree));
+      await tester.pumpAndSettle();
+
+      final Rect outline = tester.getRect(find.byType(MawyViewerOutline));
+      final Rect bar = tester.getRect(find.byType(MawyViewerToolbar));
+
+      // A bar over a list of headings is a bar over something it has nothing
+      // to do with, so it starts where the outline stops.
+      expect(bar.left, greaterThanOrEqualTo(outline.right));
+    });
+
     testWidgets('gives the prose no room of its own where it floats', (WidgetTester tester) async {
       // Narrow on purpose. The column of prose is capped at the measure and
       // centred in whatever is left, so on a wide screen taking the padding

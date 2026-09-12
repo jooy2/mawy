@@ -681,13 +681,18 @@
   padding: var(--mawy-doc-padding, 0);
 }
 
-/* The outline is a second column of content rather than chrome, so it does not
- * float: a card over the document would cover the headings it points at. It
- * gives up the line and the shade that divided it from a surface there no
- * longer is, and keeps its width. */
+/* The outline is a second column of content rather than chrome, so it stays
+ * beside the document rather than hovering over it — a card over the document
+ * would cover the headings it points at. What it does give up is the line down
+ * its edge, which divided it from a surface there no longer is. A card of its
+ * own instead, so it is still plainly a panel and not the first two inches of
+ * the prose. */
 .mawy-root[data-mawy-frame='floating'] .mawy-outline {
-  border-inline-end: 0;
-  background: none;
+  margin: 12px 0 12px 12px;
+  border: 1px solid var(--mawy-border);
+  border-radius: var(--mawy-radius-lg);
+  background: var(--mawy-bg-raised);
+  box-shadow: var(--mawy-shadow-2);
 }
 
 /* A surface inside another surface obeys its own frame -----------------------
@@ -761,6 +766,22 @@
 /* Scrolls inside itself when the viewer has been given a height, and lets the
  * page scroll when it has not. Both come from the same declaration: an
  * auto-height box with `overflow: auto` simply grows. */
+/* The document's column of the body, and what hovers over it.
+ *
+ * The scroller used to be this column itself. It is wrapped now so that a
+ * floating group has something to hang from that is the document and not the
+ * whole viewer — hung from the viewer it reached across the outline too, and a
+ * bar over a list of headings is a bar over something it has nothing to do
+ * with. Under `box` the wrapper is a flex column with one child in it. */
+.mawy-root .mawy-viewer-pane {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 .mawy-root .mawy-viewer-scroll {
   flex: 1 1 auto;
   min-width: 0;

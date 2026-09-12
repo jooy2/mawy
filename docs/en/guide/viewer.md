@@ -478,7 +478,9 @@ The document's padding is the one thing `floating` changes that is not chrome, a
 />
 ```
 
-What does not move: the outline stays a column beside the document rather than a card over it, because a card over the document covers the headings it points at. The editor's status line is not a toolbar and is the bottom edge of the editor either way.
+The outline stays a column beside the document rather than a card over it, because a card over the document covers the headings it points at — but with no surface to be divided from it grows a card of its own, so it still reads as a panel rather than as the first two inches of the prose. The toolbar keeps off it: a bar over a list of headings is a bar over something it has nothing to do with, so a floating group hangs from the document's own column.
+
+The editor's status line is not a toolbar and is the bottom edge of the editor either way.
 
 :::
 

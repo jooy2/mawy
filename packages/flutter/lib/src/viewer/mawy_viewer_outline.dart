@@ -10,6 +10,7 @@ import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/theme/tokens.dart';
+import 'package:mawy/src/types.dart';
 
 /// The panel beside the document.
 ///
@@ -27,6 +28,7 @@ class MawyViewerOutline extends StatelessWidget {
     required this.strings,
     required this.active,
     required this.onSelected,
+    this.frame = MawyFrame.box,
     super.key,
   });
 
@@ -45,13 +47,35 @@ class MawyViewerOutline extends StatelessWidget {
   /// Called with the slug of whichever entry was chosen.
   final ValueChanged<String> onSelected;
 
+  /// Whether the viewer around it has a frame. With none, the panel grows one
+  /// of its own: it stays beside the document rather than hovering over it — a
+  /// card over the document would cover the headings it points at — and
+  /// without the line down its edge it would read as the first two inches of
+  /// the prose.
+  final MawyFrame frame;
+
   @override
   Widget build(BuildContext context) {
+    final bool floating = frame == MawyFrame.floating;
+
     return Container(
       width: 240,
+      margin: floating ? const EdgeInsetsDirectional.fromSTEB(12, 12, 0, 12) : null,
       decoration: BoxDecoration(
-        color: tokens.backgroundSunken,
-        border: Border(right: BorderSide(color: tokens.border)),
+        color: floating ? tokens.backgroundRaised : tokens.backgroundSunken,
+        border: floating
+            ? Border.all(color: tokens.border)
+            : Border(right: BorderSide(color: tokens.border)),
+        borderRadius: floating ? BorderRadius.circular(MawyRadius.large) : null,
+        boxShadow: floating
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: const Color(0xFF101018).withValues(alpha: 0.14),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ]
+            : null,
       ),
       child: Semantics(
         container: true,
