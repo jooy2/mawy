@@ -1134,6 +1134,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
               strings: strings,
               active: _active,
               onSelected: _goTo,
+              onClose: () => setState(() => _outlineOpen = false),
             ),
           Expanded(
             child: hovering(

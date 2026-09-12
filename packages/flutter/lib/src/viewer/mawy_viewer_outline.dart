@@ -5,9 +5,11 @@
 library;
 
 import 'package:flutter/widgets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/internal/focus_visible.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/roving.dart';
+import 'package:mawy/src/internal/toolbar.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
@@ -28,6 +30,7 @@ class MawyViewerOutline extends StatelessWidget {
     required this.strings,
     required this.active,
     required this.onSelected,
+    required this.onClose,
     this.frame = MawyFrame.box,
     super.key,
   });
@@ -46,6 +49,15 @@ class MawyViewerOutline extends StatelessWidget {
 
   /// Called with the slug of whichever entry was chosen.
   final ValueChanged<String> onSelected;
+
+  /// Called when the panel is asked to go away from inside it.
+  ///
+  /// The toolbar's button is a toggle and closes it too. This is the second
+  /// way, and it is the React package's: a panel a reader opened is a panel
+  /// they should be able to shut without going back to the control that
+  /// opened it, and on a narrow screen that control may be off the end of a
+  /// toolbar they would have to scroll.
+  final VoidCallback onClose;
 
   /// Whether the viewer around it has a frame. With none, the panel grows one
   /// of its own: it stays beside the document rather than hovering over it — a
@@ -80,28 +92,66 @@ class MawyViewerOutline extends StatelessWidget {
       child: Semantics(
         container: true,
         label: strings.outline,
-        child: entries.isEmpty
-            ? Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  strings.outlineEmpty,
-                  style: TextStyle(color: tokens.foregroundSubtle, fontSize: 13),
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                itemCount: entries.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final MdOutlineEntry entry = entries[index];
-
-                  return _Entry(
-                    entry: entry,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            // What the panel is, and the way out of it. The React package
+            // writes the same two, in the same order and the same words —
+            // there the name is an `h2`, which is a thing this package has no
+            // equivalent of, so it is a line of text with the panel's own
+            // `Semantics` label carrying the name to a screen reader.
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(18, 10, 8, 0),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: ExcludeSemantics(
+                      child: Text(
+                        strings.outline.toUpperCase(),
+                        style: TextStyle(
+                          color: tokens.foregroundSubtle,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.66,
+                        ),
+                      ),
+                    ),
+                  ),
+                  MawyToolbarButton(
+                    icon: LucideIcons.x,
+                    label: strings.close,
                     tokens: tokens,
-                    current: entry.slug == active,
-                    onTap: () => onSelected(entry.slug),
-                  );
-                },
+                    onPressed: onClose,
+                  ),
+                ],
               ),
+            ),
+            Expanded(
+              child: entries.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        strings.outlineEmpty,
+                        style: TextStyle(color: tokens.foregroundSubtle, fontSize: 13),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                      itemCount: entries.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final MdOutlineEntry entry = entries[index];
+
+                        return _Entry(
+                          entry: entry,
+                          tokens: tokens,
+                          current: entry.slug == active,
+                          onTap: () => onSelected(entry.slug),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

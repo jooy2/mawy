@@ -1198,6 +1198,24 @@ void main() {
       expect(marked('Chapter 1'), isFalse);
     });
 
+    testWidgets('names itself and can be shut from inside', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: sample)));
+
+      await tester.tap(toolbarButton('Contents'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MawyViewerOutline), findsOneWidget);
+      // The React package's words, upper-cased the way its stylesheet does.
+      expect(find.text('CONTENTS'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(of: find.byType(MawyViewerOutline), matching: find.byIcon(LucideIcons.x)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MawyViewerOutline), findsNothing);
+    });
+
     /// The one at the top of the view, found by halving the list rather than
     /// counted to from the first — walking it meant asking the render tree
     /// where every heading above the view was, on every scroll notification.
@@ -1232,6 +1250,13 @@ void main() {
       scroller.jumpTo(scroller.position.maxScrollExtent);
       await tester.pumpAndSettle();
 
+      // The panel is a lazy list and the marked entry is now well down it, so
+      // it has to be scrolled to before there is a widget to read the colour
+      // off. The panel does not follow the document on its own — neither
+      // package's does — and that is what this drag stands in for.
+      await tester.drag(panel, const Offset(0, -400));
+      await tester.pumpAndSettle();
+
       // Whichever heading the top of the view has reached — the last one is
       // still below it, because the document ends a screen after it starts.
       final int? at = int.tryParse(marked()?.split(' ').last ?? '');
@@ -1240,6 +1265,7 @@ void main() {
       expect(at, greaterThan(10));
 
       scroller.jumpTo(0);
+      await tester.drag(panel, const Offset(0, 400));
       await tester.pumpAndSettle();
 
       expect(marked(), 'Chapter 1');
