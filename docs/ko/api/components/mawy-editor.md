@@ -94,6 +94,8 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | 툴바에 둘 컨트롤과 그 순서. |
+| `frame` | [`MawyFrame`](../types/frame) | `'box'` | 에디터가 테두리를 두를지, 페이지 위에 뜰지. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | 툴바와 찾기 바가 어느 끝에 있을지. 상태 표시줄은 움직이지 않습니다. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | 상태 표시줄이 셀 것. |
 | `lineNumbers` | `boolean` | `true` | 원문 왼쪽의 줄 번호. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 에디터 인터페이스가 쓰는 언어. 툴바 이름표, 메뉴 항목, 상태 표시줄의 낱말, 스크린 리더에 주는 글입니다. 미리보기에도 함께 건넵니다. 문서와는 무관합니다. |
@@ -105,6 +107,8 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | 인자 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
 | `toolbar` | `List<`[`MawyEditorToolbarItem`](../types/editor-toolbar-item)`>` | `kMawyEditorToolbar` | 툴바에 둘 컨트롤과 그 순서. 없애려면 `const []`. |
+| `frame` | [`MawyFrame`](../types/frame) | `MawyFrame.box` | 에디터가 테두리를 두를지, 화면 위에 뜰지. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `MawyToolbarPlacement.top` | 툴바와 찾기 바가 어느 끝에 있을지. 상태 표시줄은 움직이지 않습니다. |
 | `status` | `List<`[`MawyEditorStatusItem`](../types/editor-status-item)`>` | `kMawyEditorStatus` | 상태 표시줄이 셀 것. 없애려면 `const []`. |
 | `lineNumbers` | `bool` | `true` | 원문 앞쪽 가장자리의 줄 번호. |
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | 에디터 인터페이스가 쓰는 언어. 툴바 이름표, 메뉴 항목, 상태 표시줄의 낱말, 스크린 리더에 주는 글입니다. 미리보기에도 함께 건넵니다. 문서와는 무관합니다. |

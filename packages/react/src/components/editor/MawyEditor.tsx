@@ -9,6 +9,7 @@ import type {
   MawyEditorToolbarItem,
   MawyEditorToolbarOption,
   MawyFont,
+  MawyFrame,
   MawyHighlight,
   MawyHtmlPolicy,
   MawyImageProps,
@@ -18,6 +19,7 @@ import type {
   MawyLocale,
   MawyMode,
   MawyParseOptions,
+  MawyToolbarPlacement,
   MawyTypography,
   MawyUrlResolver
 } from '../../types.js';
@@ -225,6 +227,30 @@ export interface MawyEditorProps extends Omit<
   defaultColorScheme?: MawyColorScheme;
   onColorSchemeChange?: (colorScheme: MawyColorScheme) => void;
 
+  /**
+   * Whether the editor has a frame around it, or floats in the page.
+   *
+   * `box` is a surface with a background of its own and the toolbar barred
+   * across one end, which is what an editor usually wants: somebody typing can
+   * see where the thing they are typing into starts and the page stops.
+   * `floating` gives that up and puts the toolbar over the document as a
+   * rounded bar, for a writing surface that is the page. See `MawyFrame`.
+   *
+   * The status line is not a toolbar and does not move. It is the bottom edge
+   * of the editor either way.
+   *
+   * @default 'box'
+   */
+  frame?: MawyFrame;
+
+  /**
+   * Which end of the editor the toolbar is at, and with it the find bar. The
+   * status line stays where it is.
+   *
+   * @default 'top'
+   */
+  toolbarPlacement?: MawyToolbarPlacement;
+
   /** @default 'en' */
   locale?: MawyLocale;
 }
@@ -270,6 +296,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     colorScheme,
     defaultColorScheme,
     onColorSchemeChange,
+    frame = 'box',
+    toolbarPlacement = 'top',
     locale = 'en',
     className,
     ...rest
@@ -1239,12 +1267,106 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * Drawing
    * ------------------------------------------------------------------ */
 
+  /**
+   * The toolbar and the find bar, which travel together.
+   *
+   * One group rather than two siblings: both move to the other end under
+   * `toolbarPlacement="bottom"`, and both come out of the column to hover
+   * over the document under `frame="floating"`. The status line is not in
+   * here and does not move — it is the bottom edge of the editor either way,
+   * and a count of words is not a control.
+   */
+  /**
+   * Where a floating bar hangs from.
+   *
+   * The status line is the bottom edge of the editor and does not move, so a
+   * bar hung from the bottom of the *editor* would cover it. Hung from the
+   * body instead it sits over the last line of the document, which is where a
+   * bar over the document belongs — and the count of words goes on being
+   * readable under it. A box hangs from nothing and stays a sibling.
+   */
+  const inside = frame === 'floating';
+  const chrome =
+    items.length || (finding && showSource) ? (
+      <div className="mawy-chrome">
+        {items.length ? (
+          <MawyEditorToolbar
+            items={items}
+            strings={strings}
+            mode={current}
+            modes={modes}
+            onModeChange={setMode}
+            colorScheme={scheme}
+            onColorSchemeChange={setScheme}
+            onCommand={command}
+            active={(name) => commandActive(name, { value: text, ...selection })}
+            editable={editable}
+            onFind={showSource ? openFind : undefined}
+            finding={finding && showSource}
+            onOpen={readOnly ? undefined : openFile}
+            onSave={save}
+          />
+        ) : null}
+
+        {finding && showSource ? (
+          <FindBar
+            query={query}
+            onQueryChange={setQuery}
+            replacement={replacement}
+            onReplacementChange={setReplacement}
+            matchCase={matchCase}
+            onMatchCaseChange={setMatchCase}
+            total={matches.length}
+            current={currentMatch}
+            onStep={step}
+            onReplace={() => {
+              const match = matches[currentMatch];
+
+              if (!match) {
+                return;
+              }
+
+              const next = replaceMatch(text, match, replacement);
+
+              apply(
+                { value: text, ...selection },
+                {
+                  value: next.value,
+                  start: match.start,
+                  end: next.caret
+                }
+              );
+            }}
+            onReplaceAll={() => {
+              const next = replaceAll(text, query, replacement, matchCase);
+
+              if (next.count) {
+                apply(
+                  { value: text, ...selection },
+                  {
+                    value: next.value,
+                    start: selection.start,
+                    end: selection.start
+                  }
+                );
+              }
+            }}
+            onClose={closeFind}
+            editable={editable}
+            strings={strings}
+          />
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <div
       {...rest}
       ref={ref}
       className={['mawy-root', 'mawy-editor', className].filter(Boolean).join(' ')}
       data-mawy-color-scheme={scheme}
+      data-mawy-frame={frame}
+      data-mawy-toolbar={toolbarPlacement}
       data-mawy-mode={current}
       data-mawy-dragging={dragging ? 'true' : undefined}
       data-mawy-tips={tips.off ? 'off' : undefined}
@@ -1260,73 +1382,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         }
       }}
     >
-      {items.length ? (
-        <MawyEditorToolbar
-          items={items}
-          strings={strings}
-          mode={current}
-          modes={modes}
-          onModeChange={setMode}
-          colorScheme={scheme}
-          onColorSchemeChange={setScheme}
-          onCommand={command}
-          active={(name) => commandActive(name, { value: text, ...selection })}
-          editable={editable}
-          onFind={showSource ? openFind : undefined}
-          finding={finding && showSource}
-          onOpen={readOnly ? undefined : openFile}
-          onSave={save}
-        />
-      ) : null}
-
-      {finding && showSource ? (
-        <FindBar
-          query={query}
-          onQueryChange={setQuery}
-          replacement={replacement}
-          onReplacementChange={setReplacement}
-          matchCase={matchCase}
-          onMatchCaseChange={setMatchCase}
-          total={matches.length}
-          current={currentMatch}
-          onStep={step}
-          onReplace={() => {
-            const match = matches[currentMatch];
-
-            if (!match) {
-              return;
-            }
-
-            const next = replaceMatch(text, match, replacement);
-
-            apply(
-              { value: text, ...selection },
-              {
-                value: next.value,
-                start: match.start,
-                end: next.caret
-              }
-            );
-          }}
-          onReplaceAll={() => {
-            const next = replaceAll(text, query, replacement, matchCase);
-
-            if (next.count) {
-              apply(
-                { value: text, ...selection },
-                {
-                  value: next.value,
-                  start: selection.start,
-                  end: selection.start
-                }
-              );
-            }
-          }}
-          onClose={closeFind}
-          editable={editable}
-          strings={strings}
-        />
-      ) : null}
+      {!inside && toolbarPlacement === 'top' ? chrome : null}
 
       <div
         className="mawy-editor-body"
@@ -1334,6 +1390,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         style={splitting ? ({ '--mawy-split': share } as React.CSSProperties) : undefined}
         data-mawy-split={splitting || undefined}
       >
+        {inside && toolbarPlacement === 'top' ? chrome : null}
         {showSource ? (
           <div className="mawy-editor-pane">
             <MawyEditorSource
@@ -1437,7 +1494,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             />
           </div>
         ) : null}
+
+        {inside && toolbarPlacement === 'bottom' ? chrome : null}
       </div>
+
+      {!inside && toolbarPlacement === 'bottom' ? chrome : null}
 
       {note ? (
         // `status` rather than `alert`: an upload finishing is not an

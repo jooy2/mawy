@@ -62,6 +62,52 @@ Future<void> pressInBar(WidgetTester tester, String label) async {
 }
 
 void main() {
+  /// The frame, and what stays put under it.
+  ///
+  /// The status line is the reason the editor's floating bar is not simply the
+  /// viewer's: a bar hung from the bottom of the editor would cover the count
+  /// of words, so it hangs from the panes instead.
+  group('the frame', () {
+    testWidgets('bars the toolbar across the editor by default', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyEditor(defaultValue: document)));
+
+      expect(find.byType(MawyToolbarButton), findsWidgets);
+      expect(
+        find.ancestor(of: find.byType(MawyToolbarButton).first, matching: find.byType(Stack)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('lifts it over the panes where it floats, and leaves the count under it', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: document,
+            frame: MawyFrame.floating,
+            toolbarPlacement: MawyToolbarPlacement.bottom,
+            status: <MawyEditorStatusItem>[MawyEditorStatusItem.words],
+          ),
+        ),
+      );
+
+      expect(
+        find.ancestor(of: find.byType(MawyToolbarButton).first, matching: find.byType(Stack)),
+        findsWidgets,
+      );
+
+      // The bar is over the document and the count is under the bar, so the
+      // count's top edge is below the bar's.
+      final double bar = tester.getRect(find.byType(MawyToolbarButton).first).bottom;
+      // The status cell rather than the word "words" wherever it appears in
+      // the document the editor happens to be holding.
+      final double count = tester.getRect(find.textContaining(RegExp(r'^\d+ words$'))).top;
+
+      expect(count, greaterThan(bar));
+    });
+  });
+
   group('the surfaces', () {
     testWidgets('shows the source and the preview side by side', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyEditor(defaultValue: document)));

@@ -195,6 +195,8 @@ class MawyEditor extends StatefulWidget {
     this.modes = kMawyEditorModes,
     this.onModeChange,
     this.toolbar = kMawyEditorToolbar,
+    this.frame = MawyFrame.box,
+    this.toolbarPlacement = MawyToolbarPlacement.top,
     this.status = kMawyEditorStatus,
     this.parse = const MawyParseOptions(),
     this.colorScheme,
@@ -240,6 +242,24 @@ class MawyEditor extends StatefulWidget {
 
   /// The controls to draw, in the order to draw them. `const []` for none.
   final List<MawyEditorToolbarItem> toolbar;
+
+  /// Whether the editor has a frame around it, or floats on the screen.
+  ///
+  /// [MawyFrame.box] is a surface with a background of its own and the toolbar
+  /// barred across one end, which is what an editor usually wants: somebody
+  /// typing can see where the thing they are typing into starts and the screen
+  /// stops. [MawyFrame.floating] gives that up and puts the toolbar over the
+  /// document as a rounded bar. See [MawyFrame].
+  ///
+  /// The status line is not a toolbar and does not move. It is the bottom edge
+  /// of the editor either way, and a floating bar at the bottom hangs from the
+  /// document rather than from the editor so the two do not sit on top of each
+  /// other.
+  final MawyFrame frame;
+
+  /// Which end of the editor the toolbar is at, and with it the find bar. The
+  /// status line stays where it is.
+  final MawyToolbarPlacement toolbarPlacement;
 
   /// The counts to show along the bottom. `const []` for none.
   final List<MawyEditorStatusItem> status;
@@ -839,8 +859,83 @@ class _MawyEditorState extends State<MawyEditor> {
 
     final Widget preview = _previewOf(tokens, strings);
 
+    final bool floating = widget.frame == MawyFrame.floating;
+
+    // The toolbar and the find bar, which travel together. Both move to the
+    // other end under `bottom`, and both come out of the column to hover over
+    // the document under `floating` — a find bar at one end with its toolbar at
+    // the other is a bar belonging to nothing. The status line is not in here
+    // and does not move: a count of words is not a control.
+    final List<Widget> chrome = <Widget>[
+      if (widget.toolbar.isNotEmpty)
+        _Toolbar(
+          frame: widget.frame,
+          placement: widget.toolbarPlacement,
+          items: widget.toolbar,
+          tokens: tokens,
+          strings: strings,
+          state: _state,
+          mode: _current,
+          modes: widget.modes,
+          onMode: _setMode,
+          colorScheme: _scheme,
+          onColorScheme: widget.onColorSchemeChange == null ? null : _setScheme,
+          onCommand: widget.readOnly ? null : _run,
+          finding: _finding && showSource,
+          onFind: showSource ? _openFind : null,
+          onOpen: widget.readOnly ? null : widget.onOpen,
+        ),
+      if (_finding && showSource)
+        MawyFindBar(
+          tokens: tokens,
+          strings: strings,
+          query: _query,
+          onQueryChange: (String query) => setState(() => _query = query),
+          replacement: _replacement,
+          onReplacementChange: (String value) => setState(() => _replacement = value),
+          matchCase: _matchCase,
+          onMatchCaseChange: (bool on) => setState(() => _matchCase = on),
+          total: matches.length,
+          current: _currentMatch(matches),
+          onStep: (bool forwards) => _step(matches, forwards: forwards),
+          onReplace: () => _replaceOne(matches),
+          onReplaceAll: _replaceEvery,
+          onClose: _closeFind,
+          editable: !widget.readOnly,
+        ),
+    ];
+
+    final Widget panes = Expanded(
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints room) => Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (showSource)
+              // A flex of a thousandth, so the share is a whole number of
+              // them and the two panes always add up to the width. A
+              // fractional `flex` is not a thing a `Row` has.
+              Flexible(flex: (_share * 1000).round(), child: source),
+            if (showSource && showPreview)
+              _Divider(
+                tokens: tokens,
+                strings: strings,
+                share: _share,
+                width: room.maxWidth,
+                onChange: (double next) => setState(() => _share = _clampShare(next)),
+              )
+            else if (showSource || showPreview)
+              const SizedBox.shrink(),
+            if (showPreview)
+              Flexible(flex: showSource ? 1000 - (_share * 1000).round() : 1000, child: preview),
+          ],
+        ),
+      ),
+    );
+
     final Widget editor = Container(
-      color: tokens.background,
+      // Nothing under a floating editor: what is behind the document is
+      // whatever the application drew there.
+      color: floating ? null : tokens.background,
       child: mawyOverlay(
         context,
         Column(
@@ -850,69 +945,39 @@ class _MawyEditorState extends State<MawyEditor> {
           // — with the rule under it stopping where the buttons stopped.
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            if (widget.toolbar.isNotEmpty)
-              _Toolbar(
-                items: widget.toolbar,
-                tokens: tokens,
-                strings: strings,
-                state: _state,
-                mode: _current,
-                modes: widget.modes,
-                onMode: _setMode,
-                colorScheme: _scheme,
-                onColorScheme: widget.onColorSchemeChange == null ? null : _setScheme,
-                onCommand: widget.readOnly ? null : _run,
-                finding: _finding && showSource,
-                onFind: showSource ? _openFind : null,
-                onOpen: widget.readOnly ? null : widget.onOpen,
-              ),
-            if (_finding && showSource)
-              MawyFindBar(
-                tokens: tokens,
-                strings: strings,
-                query: _query,
-                onQueryChange: (String query) => setState(() => _query = query),
-                replacement: _replacement,
-                onReplacementChange: (String value) => setState(() => _replacement = value),
-                matchCase: _matchCase,
-                onMatchCaseChange: (bool on) => setState(() => _matchCase = on),
-                total: matches.length,
-                current: _currentMatch(matches),
-                onStep: (bool forwards) => _step(matches, forwards: forwards),
-                onReplace: () => _replaceOne(matches),
-                onReplaceAll: _replaceEvery,
-                onClose: _closeFind,
-                editable: !widget.readOnly,
-              ),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints room) => Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+            if (!floating && widget.toolbarPlacement == MawyToolbarPlacement.top) ...chrome,
+            if (floating)
+              // Hung from the panes rather than from the editor, so a bar at
+              // the bottom sits over the last line of the document instead of
+              // over the status line.
+              Expanded(
+                child: Stack(
                   children: <Widget>[
-                    if (showSource)
-                      // A flex of a thousandth, so the share is a whole number of
-                      // them and the two panes always add up to the width. A
-                      // fractional `flex` is not a thing a `Row` has.
-                      Flexible(flex: (_share * 1000).round(), child: source),
-                    if (showSource && showPreview)
-                      _Divider(
-                        tokens: tokens,
-                        strings: strings,
-                        share: _share,
-                        width: room.maxWidth,
-                        onChange: (double next) => setState(() => _share = _clampShare(next)),
-                      )
-                    else if (showSource || showPreview)
-                      const SizedBox.shrink(),
-                    if (showPreview)
-                      Flexible(
-                        flex: showSource ? 1000 - (_share * 1000).round() : 1000,
-                        child: preview,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[panes],
+                    ),
+                    if (chrome.isNotEmpty)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: widget.toolbarPlacement == MawyToolbarPlacement.top ? 0 : null,
+                        bottom: widget.toolbarPlacement == MawyToolbarPlacement.bottom ? 0 : null,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 8,
+                            children: chrome,
+                          ),
+                        ),
                       ),
                   ],
                 ),
-              ),
-            ),
+              )
+            else
+              panes,
+            if (!floating && widget.toolbarPlacement == MawyToolbarPlacement.bottom) ...chrome,
             if (widget.status.isNotEmpty)
               _Status(items: widget.status, tokens: tokens, strings: strings, state: _state),
           ],
@@ -983,6 +1048,8 @@ class _Toolbar extends StatefulWidget {
     required this.finding,
     required this.onFind,
     required this.onOpen,
+    required this.frame,
+    required this.placement,
   });
 
   final List<MawyEditorToolbarItem> items;
@@ -998,6 +1065,8 @@ class _Toolbar extends StatefulWidget {
   final bool finding;
   final VoidCallback? onFind;
   final VoidCallback? onOpen;
+  final MawyFrame frame;
+  final MawyToolbarPlacement placement;
 
   @override
   State<_Toolbar> createState() => _ToolbarState();
@@ -1270,12 +1339,32 @@ class _ToolbarState extends State<_Toolbar> {
       );
     }
 
+    final bool floating = widget.frame == MawyFrame.floating;
+    final BorderSide line = BorderSide(color: widget.tokens.border);
+
     return Container(
       constraints: const BoxConstraints(minHeight: 44),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: widget.tokens.chrome,
-        border: Border(bottom: BorderSide(color: widget.tokens.border)),
+        color: floating ? widget.tokens.backgroundRaised : widget.tokens.chrome,
+        border: floating
+            ? Border.all(color: widget.tokens.border)
+            : Border(
+                bottom: widget.placement == MawyToolbarPlacement.top ? line : BorderSide.none,
+                top: widget.placement == MawyToolbarPlacement.bottom ? line : BorderSide.none,
+              ),
+        // A row of round buttons and nothing else, so the box around them is
+        // round too. The editor's toolbar has no line of text in it either.
+        borderRadius: floating ? BorderRadius.circular(999) : null,
+        boxShadow: floating
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: const Color(0xFF101018).withValues(alpha: 0.14),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ]
+            : null,
       ),
       child: Semantics(
         container: true,
@@ -1284,7 +1373,12 @@ class _ToolbarState extends State<_Toolbar> {
           roving: _roving,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(children: children),
+            // Barred across the editor the row is the width of the editor;
+            // floating it is the width of its own buttons.
+            child: Row(
+              mainAxisSize: floating ? MainAxisSize.min : MainAxisSize.max,
+              children: children,
+            ),
           ),
         ),
       ),

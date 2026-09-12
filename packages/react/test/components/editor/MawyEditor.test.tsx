@@ -602,6 +602,52 @@ describe('the two panes of split', () => {
   });
 });
 
+describe('the frame', () => {
+  it('says which frame it is and which end the toolbar is at', async () => {
+    const screen = await render(<MawyEditor defaultValue="# One" />);
+    const root = screen.container.querySelector('.mawy-root');
+
+    expect(root?.getAttribute('data-mawy-frame')).toBe('box');
+    expect(root?.getAttribute('data-mawy-toolbar')).toBe('top');
+  });
+
+  it('hangs a floating bar from the panes rather than from the editor', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue="# One" frame="floating" toolbarPlacement="bottom" />
+    );
+    const chrome = screen.container.querySelector('.mawy-chrome');
+
+    // Inside the body, so the status line — which does not move — stays under
+    // it rather than beneath it.
+    expect(chrome?.closest('.mawy-editor-body')).not.toBeNull();
+    expect(screen.container.querySelector('.mawy-status')).not.toBeNull();
+  });
+
+  it('leaves a boxed bar a sibling of the panes, at whichever end', async () => {
+    const screen = await render(<MawyEditor defaultValue="# One" toolbarPlacement="bottom" />);
+    const chrome = screen.container.querySelector('.mawy-chrome');
+
+    expect(chrome?.closest('.mawy-editor-body')).toBeNull();
+    expect(chrome?.previousElementSibling?.className).toContain('mawy-editor-body');
+  });
+
+  /**
+   * The preview is a `box` viewer drawn inside the editor, so a floating editor
+   * has another root in the middle of it — and a descendant selector cannot
+   * tell that the nearer root is the one that counts. See the stylesheet.
+   */
+  it('leaves a viewer nested inside it obeying its own frame', async () => {
+    const screen = await render(<MawyEditor defaultValue="# One" mode="split" frame="floating" />);
+    const inner = screen.container.querySelector('.mawy-editor-preview > .mawy-root');
+
+    expect(inner?.getAttribute('data-mawy-frame')).toBe('box');
+
+    const md = inner?.querySelector('.mawy-md');
+
+    expect(md && getComputedStyle(md).paddingTop).not.toBe('0px');
+  });
+});
+
 describe('the toolbar and the keyboard', () => {
   it('runs a command on the selection, and draws itself as pressed once it has', async () => {
     const screen = await render(<MawyEditor defaultValue="one two three" modes={['plain']} />);

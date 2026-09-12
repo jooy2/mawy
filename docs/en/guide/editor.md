@@ -386,6 +386,16 @@ This section applies to the React package only. A clipboard here holds what the 
 
 :::
 
+## The frame
+
+The editor takes the same `frame` and `toolbarPlacement` the viewer does, and they mean the same thing — see [the frame](./viewer#the-frame).
+
+`box`, the default, is a surface with a background of its own and the toolbar barred across one end. That is what an editor usually wants: somebody typing can see where the thing they are typing into starts and the page stops. `floating` gives that up, for a writing surface that _is_ the page.
+
+<MawyDemo name="editor/floating" flutter="editor/floating" :height="460" />
+
+One thing does not move. The status line is the bottom edge of the editor either way, because a count of words is not a control and nothing is decided by it. A floating toolbar at the bottom hangs from the document rather than from the editor, so the two do not sit on top of each other.
+
 ## The status bar
 
 ```tsx

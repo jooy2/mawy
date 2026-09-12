@@ -501,6 +501,22 @@ cells 2.9V
 [^workshop]: 2024년 가을 구청 워크숍입니다. 유인물은 창고 영수증 폴더에 있습니다.
 ''';
 
+const String _editorFloating = '''
+## Writing with nothing around it
+
+The toolbar is over the text rather than barred across the top, and the editor has no surface of its own. The status line stays where it is — it is the bottom edge of the editor and a count of words is not a control.
+
+```dart
+MawyEditor(
+  value: draft,
+  frame: MawyFrame.floating,
+  toolbarPlacement: MawyToolbarPlacement.bottom,
+);
+```
+
+Type, and the bar stays where it is.
+''';
+
 /// Everything the gallery can show.
 const List<Sample> samples = <Sample>[
   Sample('viewer/basic', 'Everything', _everything),
@@ -510,6 +526,7 @@ const List<Sample> samples = <Sample>[
   Sample('viewer/prose', '한국어', _prose),
   Sample('viewer/directives', 'Directives', _directives),
   Sample('editor/basic', 'Editor', _editor, editor: true),
+  Sample('editor/floating', 'Floating editor', _editorFloating, editor: true),
   Sample(
     'playground/editor',
     'Playground editor',

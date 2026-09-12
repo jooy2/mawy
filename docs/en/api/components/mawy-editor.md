@@ -94,6 +94,8 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | Which controls the toolbar has, and in what order. |
+| `frame` | [`MawyFrame`](../types/frame) | `'box'` | Whether the editor has a frame around it, or floats in the page. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | Which end the toolbar and the find bar are at. The status bar does not move. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | What the status bar counts. |
 | `lineNumbers` | `boolean` | `true` | The gutter down the left of the source. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the editor's own interface — toolbar labels, menu entries, the words along the status bar, the text a screen reader is given. Handed to the preview as well. Nothing to do with the document. |
@@ -105,6 +107,8 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | Argument | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `toolbar` | `List<`[`MawyEditorToolbarItem`](../types/editor-toolbar-item)`>` | `kMawyEditorToolbar` | Which controls the toolbar has, and in what order. `const []` for none. |
+| `frame` | [`MawyFrame`](../types/frame) | `MawyFrame.box` | Whether the editor has a frame around it, or floats on the screen. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `MawyToolbarPlacement.top` | Which end the toolbar and the find bar are at. The status bar does not move. |
 | `status` | `List<`[`MawyEditorStatusItem`](../types/editor-status-item)`>` | `kMawyEditorStatus` | What the status bar counts. `const []` for none. |
 | `lineNumbers` | `bool` | `true` | The gutter down the leading edge of the source. |
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | The language of the editor's own interface — toolbar labels, menu entries, the words along the status bar, the text a screen reader is given. Handed to the preview as well. Nothing to do with the document. |

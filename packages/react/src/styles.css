@@ -583,6 +583,14 @@
   background: none;
 }
 
+/* A floating bar in the editor hangs from the body rather than from the editor,
+ * because the status line is the bottom edge and does not move — a bar hung
+ * from the bottom of the whole thing would cover the count of words. In the
+ * viewer the two are the same box. */
+.mawy-root[data-mawy-frame='floating'] .mawy-editor-body {
+  position: relative;
+}
+
 .mawy-root[data-mawy-frame='floating'] .mawy-chrome {
   position: absolute;
   inset-inline: 0;
@@ -665,6 +673,33 @@
 .mawy-root[data-mawy-frame='floating'] .mawy-outline {
   border-inline-end: 0;
   background: none;
+}
+
+/* A surface inside another surface obeys its own frame -----------------------
+ *
+ * The editor's preview is a `box` viewer drawn inside the editor, so a floating
+ * editor has a `.mawy-root[data-mawy-frame='box']` in the middle of it — and a
+ * descendant selector cannot tell that the nearer root is the one that counts.
+ * Without these the preview loses the room around its prose because the editor
+ * around it has none.
+ *
+ * Written after the floating rules and at the specificity they carry, so the
+ * nearer root wins on source order where both match, and neither matches at all
+ * where a surface is not nested.
+ * -------------------------------------------------------------------------- */
+
+.mawy-root[data-mawy-frame='box'] .mawy-md {
+  padding: var(--mawy-doc-padding, 40px 28px 96px);
+}
+
+@media (max-width: 640px) {
+  .mawy-root[data-mawy-frame='box'] .mawy-md {
+    padding: var(--mawy-doc-padding, 24px 18px 64px);
+  }
+}
+
+.mawy-root[data-mawy-frame='box'][data-mawy-toolbar] .mawy-viewer-scroll {
+  --mawy-float-room: 0;
 }
 
 .mawy-root .mawy-toolbar-title {

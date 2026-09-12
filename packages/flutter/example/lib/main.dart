@@ -145,6 +145,24 @@ class _GalleryAppState extends State<GalleryApp> {
             highlight: mawyHighlighter,
             onLinkTap: _open,
             onOpen: _chooseFile,
+            frame: sample.id == 'editor/floating' ? MawyFrame.floating : MawyFrame.box,
+            toolbarPlacement: sample.id == 'editor/floating'
+                ? MawyToolbarPlacement.bottom
+                : MawyToolbarPlacement.top,
+            toolbar: sample.id == 'editor/floating'
+                ? const <MawyEditorToolbarItem>[
+                    MawyEditorToolbarItem.mode,
+                    MawyEditorToolbarItem.separator,
+                    MawyEditorToolbarItem.bold,
+                    MawyEditorToolbarItem.italic,
+                    MawyEditorToolbarItem.link,
+                    MawyEditorToolbarItem.separator,
+                    MawyEditorToolbarItem.find,
+                  ]
+                : kMawyEditorToolbar,
+            status: sample.id == 'editor/floating'
+                ? const <MawyEditorStatusItem>[MawyEditorStatusItem.words]
+                : kMawyEditorStatus,
           );
 
           // A file dropped on the window opens in the editor, which is the
