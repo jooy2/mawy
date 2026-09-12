@@ -2,7 +2,7 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
-## vNext
+## 1.3.0 (2026-09-12)
 
 ### Added
 
