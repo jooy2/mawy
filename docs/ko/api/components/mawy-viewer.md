@@ -65,6 +65,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `parse` | [`MawyParseOptions`](../types/parse-options) | `{ gfm: true, breaks: false, definitionLists: true }` | 마크다운을 어떻게 읽을지. |
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | 문서 안에 쓰인 날 HTML을 어떻게 할지. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
+| `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | 그 링크가 가는 곳에 대해 무엇을 밝힐지. 이미 밝힌 것에 더합니다. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 뷰어 인터페이스가 쓰는 언어. 문서와는 무관합니다. |
 | `highlight` | [`MawyHighlight`](../types/highlighter) | — | 펜스 코드 블록에 색을 입히는 것. 기본은 아무것도 하지 않습니다. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | 이 패키지가 모르는 구성물을 무엇으로 그릴지. |

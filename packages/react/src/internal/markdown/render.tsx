@@ -28,6 +28,7 @@ import type {
   MawyDirectives,
   MawyHighlighter,
   MawyHtmlPolicy,
+  MawyLinkRel,
   MawyLinkTarget,
   MawyUrlKind,
   MawyUrlResolver
@@ -151,6 +152,8 @@ export interface RenderContext {
   source?: string;
   /** Where a link the document wrote opens. @default 'blank' */
   linkTarget?: MawyLinkTarget;
+  /** What such a link declares about where it goes. See `relationship`. */
+  linkRel?: MawyLinkRel;
   /**
    * A run of the document to draw as the characters it was written with rather
    * than as what it means.
@@ -332,6 +335,42 @@ const destination = (context: RenderContext, url: string) => {
 };
 
 /**
+ * What goes in a link's `rel`, or nothing.
+ *
+ * Two answers put together rather than one replacing the other. `noopener` is
+ * what makes a new tab safe and `noreferrer` is what keeps the document's own
+ * address out of it — a browser that has one without the other is a browser
+ * this has to say both to — so a link opening in a new tab keeps them whatever
+ * the application says. What `linkRel` answers is added to that.
+ *
+ * Which is the whole reason it adds rather than replaces: an application
+ * reaching for `nofollow ugc` on a page of documents somebody else wrote is
+ * reaching for one more precaution, and taking two away to add one is not what
+ * it asked for.
+ *
+ * Only the links the document wrote. A footnote's reference and the arrow back
+ * from it point at this same page and have no relationship to declare.
+ */
+function relationship(context: RenderContext, href: string): string | undefined {
+  const opens = context.linkTarget !== 'self' ? ['noopener', 'noreferrer'] : [];
+  const asked = typeof context.linkRel === 'function' ? context.linkRel(href) : context.linkRel;
+
+  if (!asked) {
+    return opens.length ? opens.join(' ') : undefined;
+  }
+
+  const out = [...opens];
+
+  for (const token of asked.split(/\s+/)) {
+    if (token && !out.includes(token)) {
+      out.push(token);
+    }
+  }
+
+  return out.length ? out.join(' ') : undefined;
+}
+
+/**
  * A URL the application has had its say about.
  *
  * Only the relative ones reach the resolver, and only when there is one: a
@@ -477,27 +516,31 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
           </code>
         );
 
-      case 'link':
-        return revealed(node, context) ? (
-          <span key={index} className="mawy-md-source" {...origin(node, context)}>
-            {context.source?.slice(node.range.start, node.range.end)}
-          </span>
-        ) : (
+      case 'link': {
+        if (revealed(node, context)) {
+          return (
+            <span key={index} className="mawy-md-source" {...origin(node, context)}>
+              {context.source?.slice(node.range.start, node.range.end)}
+            </span>
+          );
+        }
+
+        const href = destination(context, node.url);
+
+        return (
           <a
             key={index}
             className="mawy-md-link"
-            href={destination(context, node.url)}
+            href={href}
             title={node.title ?? undefined}
-            // `noopener` is what makes the new tab safe and `noreferrer` is
-            // what keeps the document's own address out of it; a browser that
-            // has one without the other is a browser this has to say both to.
             target={context.linkTarget === 'self' ? undefined : '_blank'}
-            rel={context.linkTarget === 'self' ? undefined : 'noopener noreferrer'}
+            rel={relationship(context, href)}
             {...origin(node, context)}
           >
             {renderInline(node.children, context)}
           </a>
         );
+      }
 
       case 'footnoteReference': {
         const footnote = context.footnotes?.get(node.label);

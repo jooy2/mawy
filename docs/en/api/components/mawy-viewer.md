@@ -65,6 +65,7 @@ With neither `value` nor `defaultValue`, the viewer becomes the file picker. Tha
 | `parse` | [`MawyParseOptions`](../types/parse-options) | `{ gfm: true, breaks: false, definitionLists: true }` | How the Markdown is read. |
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | What becomes of raw HTML written inside the document. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | Where a link the document wrote opens. |
+| `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | What such a link declares about where it goes. Added to what it already declares. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the viewer's own interface. Nothing to do with the document. |
 | `highlight` | [`MawyHighlight`](../types/highlighter) | — | What colours a fenced code block. Nothing by default. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | What draws the constructs this package does not know about. |

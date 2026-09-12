@@ -177,7 +177,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`는 그려진 문서에도 닿습니다.
+`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`는 그려진 문서에도 닿습니다.
 
 :::
 

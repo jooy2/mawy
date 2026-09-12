@@ -45,7 +45,7 @@ Everything here exists and runs in whichever package the switch above the menu i
 | [`MawyParseOptions`](./types/parse-options) | `MawyParseOptions` |
 | [`MdDocument`](./types/md-document) | `MdDocument` and every node type under it |
 | [`MawyHtmlPolicy`](./types/html-policy) | `MawyHtmlPolicy` |
-| [`MawyLinkTarget`](./types/link-target) | `MawyLinkTarget` |
+| [Links](./types/link-target) | `MawyLinkTarget`, `MawyLinkRel` |
 | [`MawyUrlResolver`](./types/url-resolver) | `MawyUrlResolver`, `MawyUrlKind` |
 | [`MawyTypography`](./types/typography) | `MawyTypography` |
 | [`MawyFontFamily`](./types/font-family) | `MawyFontFamily` |

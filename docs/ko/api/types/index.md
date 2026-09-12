@@ -44,11 +44,12 @@ order: 2
 
 ::: fw react
 
-| 페이지                            | 다루는 것                             |
-| --------------------------------- | ------------------------------------- |
-| [`MawyHtmlPolicy`](./html-policy) | 문서 안에 쓰인 날 HTML을 어떻게 할지. |
-| [`MawyLinkTarget`](./link-target) | 문서가 쓴 링크가 어디에서 열릴지.     |
-| [`MawyRange`](./range)            | 문서의 한 조각이 쓰인 자리를 두 수로. |
+| 페이지                                     | 다루는 것                               |
+| ------------------------------------------ | --------------------------------------- |
+| [`MawyHtmlPolicy`](./html-policy)          | 문서 안에 쓰인 날 HTML을 어떻게 할지.   |
+| [`MawyLinkTarget`](./link-target)          | 문서가 쓴 링크가 어디에서 열릴지.       |
+| [`MawyLinkRel`](./link-target#mawylinkrel) | 그 링크가 가는 곳에 대해 무엇을 밝힐지. |
+| [`MawyRange`](./range)                     | 문서의 한 조각이 쓰인 자리를 두 수로.   |
 
 :::
 

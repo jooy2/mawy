@@ -44,11 +44,12 @@ Exported from `package:mawy/mawy.dart`, which is this package's entire public su
 
 ::: fw react
 
-| Page                              | What it covers                                           |
-| --------------------------------- | -------------------------------------------------------- |
-| [`MawyHtmlPolicy`](./html-policy) | What becomes of raw HTML written inside a document.      |
-| [`MawyLinkTarget`](./link-target) | Where a link the document wrote opens.                   |
-| [`MawyRange`](./range)            | Where a piece of a document was written, as two offsets. |
+| Page | What it covers |
+| --- | --- |
+| [`MawyHtmlPolicy`](./html-policy) | What becomes of raw HTML written inside a document. |
+| [`MawyLinkTarget`](./link-target) | Where a link the document wrote opens. |
+| [`MawyLinkRel`](./link-target#mawylinkrel) | What such a link declares about where it goes. |
+| [`MawyRange`](./range) | Where a piece of a document was written, as two offsets. |
 
 :::
 

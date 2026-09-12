@@ -36,6 +36,7 @@ React 서버 컴포넌트를 가진 프레임워크에서는 서버 컴포넌트
 | `parse` | [`MawyParseOptions`](../types/parse-options) | `{ gfm: true, breaks: false, definitionLists: true }` | 어떻게 읽을지. |
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | 안에 쓰인 날 HTML을 어떻게 할지. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
+| `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | 그 링크가 가는 곳에 대해 무엇을 밝힐지. 이미 밝힌 것에 더합니다. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | 이 패키지가 모르는 구성물을 무엇으로 그릴지. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | 문서의 상대 URL이 어디를 가리키는지. |
 | `headingBase` | `number` | `1` | 문서의 `#`을 `h1`부터 `h6` 중 무엇으로 그릴지. |

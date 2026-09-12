@@ -451,6 +451,39 @@ export type MawyHtmlPolicy = 'escape' | 'sanitize' | 'raw';
  */
 export type MawyLinkTarget = 'blank' | 'self';
 
+/**
+ * What a link the document wrote declares about where it goes.
+ *
+ * A string for every link, or a function asked about each one. A document
+ * somebody else wrote has somebody else's links in it, and what a page is
+ * willing to say about them is the page's answer rather than a viewer's:
+ *
+ *     <MawyViewer
+ *       value={post.body}
+ *       linkRel={(href) => (href.startsWith('/') ? null : 'nofollow ugc')}
+ *     />
+ *
+ * `nofollow` is a page saying it does not vouch for where the link goes and
+ * `ugc` is it saying who wrote the link, which together are what a search
+ * engine expects of a page carrying documents its readers wrote. Neither is a
+ * reason to hide the link, and neither stops a reader following it.
+ *
+ * **Added to what the link already declares, rather than replacing it.** A
+ * link opening in a new tab keeps its `noopener noreferrer` whatever this
+ * answers: `noopener` is what makes that tab safe and `noreferrer` is what
+ * keeps the document's own address out of it, and an application asking for
+ * one more precaution did not ask to lose two. A token already there is not
+ * written twice.
+ *
+ * The function is given the address as it will appear in the `href`, after
+ * `resolveUrl` has had its say, so the answer is about the link the reader
+ * will actually follow. Answering nothing leaves the link as it was.
+ *
+ * Only the links the document wrote. A footnote's reference and the arrow back
+ * from it point at this same page and are never asked about.
+ */
+export type MawyLinkRel = string | ((href: string) => string | null | undefined);
+
 /** How the Markdown itself is read. */
 export interface MawyParseOptions {
   /**

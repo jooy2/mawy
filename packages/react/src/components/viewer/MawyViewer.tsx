@@ -8,6 +8,7 @@ import type {
   MawyHighlight,
   MawyHtmlPolicy,
   MawyImageProps,
+  MawyLinkRel,
   MawyLinkTarget,
   MawyLocale,
   MawyParseOptions,
@@ -120,6 +121,22 @@ export interface MawyViewerProps extends Omit<
    * @default 'blank'
    */
   linkTarget?: MawyLinkTarget;
+
+  /**
+   * What a link the document wrote declares about where it goes.
+   *
+   * A string for every link, or a function asked about each one. A page
+   * carrying documents its readers wrote is the case this exists for:
+   *
+   * ```tsx
+   * <MawyViewer value={post.body} linkRel={(href) => (href.startsWith('/') ? null : 'nofollow ugc')} />
+   * ```
+   *
+   * Added to what the link already declares rather than replacing it, so a
+   * link opening in a new tab keeps its `noopener noreferrer`. See
+   * `MawyLinkRel`.
+   */
+  linkRel?: MawyLinkRel;
 
   /** The language of the viewer's own interface. @default 'en' */
   locale?: MawyLocale;
@@ -283,6 +300,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     parse,
     html = 'escape',
     linkTarget = 'blank',
+    linkRel,
     locale = 'en',
     fileDrop,
     accept = MAWY_ACCEPT,
@@ -417,6 +435,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       footnotes,
       directives,
       linkTarget,
+      linkRel,
       image,
       resolveUrl,
       anchorPrefix,
@@ -434,6 +453,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       footnotes,
       directives,
       linkTarget,
+      linkRel,
       image,
       resolveUrl,
       anchorPrefix,

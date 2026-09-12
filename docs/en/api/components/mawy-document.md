@@ -36,6 +36,7 @@ A React Server Component in a framework that has them, and an ordinary component
 | `parse` | [`MawyParseOptions`](../types/parse-options) | `{ gfm: true, breaks: false, definitionLists: true }` | How it is read. |
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | What becomes of raw HTML written inside it. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | Where a link the document wrote opens. |
+| `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | What such a link declares about where it goes. Added to what it already declares. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | What draws the constructs this package does not know about. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | Where a relative URL in the document points. |
 | `headingBase` | `number` | `1` | Which of `h1` to `h6` the document's own `#` is drawn as. |

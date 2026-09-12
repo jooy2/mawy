@@ -45,7 +45,7 @@ order: 2
 | [`MawyParseOptions`](./types/parse-options) | `MawyParseOptions` |
 | [`MdDocument`](./types/md-document) | `MdDocument`와 그 아래 모든 노드 타입 |
 | [`MawyHtmlPolicy`](./types/html-policy) | `MawyHtmlPolicy` |
-| [`MawyLinkTarget`](./types/link-target) | `MawyLinkTarget` |
+| [링크](./types/link-target) | `MawyLinkTarget`, `MawyLinkRel` |
 | [`MawyUrlResolver`](./types/url-resolver) | `MawyUrlResolver`, `MawyUrlKind` |
 | [`MawyTypography`](./types/typography) | `MawyTypography` |
 | [`MawyFontFamily`](./types/font-family) | `MawyFontFamily` |

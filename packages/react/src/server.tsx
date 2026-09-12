@@ -50,6 +50,7 @@ import type {
   MawyHighlighter,
   MawyHtmlPolicy,
   MawyImageProps,
+  MawyLinkRel,
   MawyLocale,
   MawyParseOptions,
   MawyTypography,
@@ -84,6 +85,22 @@ export interface MawyDocumentProps {
 
   /** Where a link the document wrote opens. */
   linkTarget?: 'blank' | 'self';
+
+  /**
+   * What a link the document wrote declares about where it goes.
+   *
+   * A string for every link, or a function asked about each one. A page
+   * carrying documents its readers wrote is the case this exists for:
+   *
+   * ```tsx
+   * <MawyDocument value={post.body} linkRel={(href) => (href.startsWith('/') ? null : 'nofollow ugc')} />
+   * ```
+   *
+   * Added to what the link already declares rather than replacing it, so a
+   * link opening in a new tab keeps its `noopener noreferrer`. See
+   * `MawyLinkRel`.
+   */
+  linkRel?: MawyLinkRel;
 
   /** What draws the constructs this package does not know about. */
   directives?: MawyDirectives;
@@ -178,6 +195,7 @@ export function MawyDocument({
   parse,
   html = 'escape',
   linkTarget = 'blank',
+  linkRel,
   directives,
   image,
   resolveUrl,
@@ -208,6 +226,7 @@ export function MawyDocument({
     anchorPrefix,
     headingBase,
     linkTarget,
+    linkRel,
     source: value,
     highlighter: highlight ?? null,
     firstImage: firstImage(document_.root.children),

@@ -120,6 +120,78 @@ describe('a document rendered on a server', () => {
     expect(renderToStaticMarkup(<MawyDocument value="# One" headingBase={9} />)).toContain('<h6');
   });
 
+  /**
+   * A page carrying documents its readers wrote is a page that has to say what
+   * it does and does not vouch for. See `MawyLinkRel`.
+   */
+  it('adds what the application declares about a link to what it already said', () => {
+    const value = '[out](https://example.com) and [in](/a)';
+    const html = renderToStaticMarkup(
+      <MawyDocument
+        value={value}
+        linkRel={(href) => (href.startsWith('/') ? null : 'nofollow ugc')}
+      />
+    );
+
+    // The two that make a new tab safe are not given up to add one more.
+    expect(html).toContain('rel="noopener noreferrer nofollow ugc"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  it('takes a string for every link, and writes no token twice', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument value="[a](https://example.com)" linkRel="noopener nofollow" />
+    );
+
+    expect(html).toContain('rel="noopener noreferrer nofollow"');
+  });
+
+  it('says only what the application asked for where nothing opens a new tab', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument value="[a](https://example.com)" linkTarget="self" linkRel="nofollow" />
+    );
+
+    expect(html).toContain('rel="nofollow"');
+    expect(html).not.toContain('noopener');
+    expect(html).not.toContain('target=');
+  });
+
+  it('asks about the address the reader will actually follow', () => {
+    const asked: string[] = [];
+
+    renderToStaticMarkup(
+      <MawyDocument
+        value="[a](./b.md)"
+        resolveUrl={(url) => new URL(url, 'https://example.com/docs/').href}
+        linkRel={(href) => {
+          asked.push(href);
+
+          return null;
+        }}
+      />
+    );
+
+    expect(asked).toEqual(['https://example.com/docs/b.md']);
+  });
+
+  it('never asks about a link this library wrote itself', () => {
+    const asked: string[] = [];
+    const html = renderToStaticMarkup(
+      <MawyDocument
+        value={'A sentence.[^a]\n\n[^a]: The note.'}
+        linkRel={(href) => {
+          asked.push(href);
+
+          return 'nofollow';
+        }}
+      />
+    );
+
+    // A footnote's reference and the arrow back point at this same page.
+    expect(asked).toEqual([]);
+    expect(html).not.toContain('nofollow');
+  });
+
   it('reads the footnotes and the outline the way the viewer does', () => {
     const html = renderToStaticMarkup(
       <MawyDocument value={'A sentence.[^a]\n\n[^a]: The note.'} />

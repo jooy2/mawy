@@ -13,6 +13,7 @@ import type {
   MawyHtmlPolicy,
   MawyImageProps,
   MawyImageUpload,
+  MawyLinkRel,
   MawyLinkTarget,
   MawyLocale,
   MawyMode,
@@ -183,6 +184,12 @@ export interface MawyEditorProps extends Omit<
    */
   linkTarget?: MawyLinkTarget;
   /**
+   * What such a link declares about where it goes, in the preview and on the
+   * drawn surface. Both are showing the same document, so both say the same
+   * thing about it. See `MawyLinkRel`.
+   */
+  linkRel?: MawyLinkRel;
+  /**
    * What colours a fenced code block in the preview. The drawn document is not
    * coloured and will not be: an editing surface where the caret has to find
    * its way back into the source is not the place for a second opinion about
@@ -249,6 +256,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     parse,
     html = 'escape',
     linkTarget = 'blank',
+    linkRel,
     highlight,
     directives,
     image,
@@ -1364,6 +1372,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               parse={parse}
               html={html}
               linkTarget={linkTarget}
+              linkRel={linkRel}
               directives={directives}
               image={image}
               resolveUrl={resolveUrl}
@@ -1415,6 +1424,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               parse={parse}
               html={html}
               linkTarget={linkTarget}
+              linkRel={linkRel}
               highlight={highlight}
               directives={directives}
               image={image}

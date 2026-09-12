@@ -331,6 +331,21 @@ describe('images', () => {
     expect(screen.container.querySelector('h1')).toBeNull();
   });
 
+  it('declares what the application says about a link, on top of what it said', async () => {
+    const screen = await render(
+      <MawyViewer
+        value={'[out](https://example.com) [in](/a)'}
+        linkRel={(href) => (href.startsWith('/') ? null : 'nofollow ugc')}
+      />
+    );
+    const links = [...screen.container.querySelectorAll('.mawy-md-link')];
+
+    expect(links.map((link) => link.getAttribute('rel'))).toEqual([
+      'noopener noreferrer nofollow ugc',
+      'noopener noreferrer'
+    ]);
+  });
+
   it('never hands over a URL the scheme allowlist refused', async () => {
     const asked: string[] = [];
     const Mine = ({ src }: { src: string }) => {
