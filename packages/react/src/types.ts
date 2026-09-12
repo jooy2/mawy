@@ -16,9 +16,10 @@ import type * as React from 'react';
  * change of view, and the value underneath does not round-trip through a second
  * implementation on the way.
  *
- * - `wysiwyg` — the rendered document, edited in place. Partly built: anywhere
- *   there is text to type in, and not an image or raw HTML being drawn rather
- *   than shown. Not on the default list.
+ * - `wysiwyg` — the rendered document, edited in place. Anywhere there is text
+ *   to type in, and a link, an image or drawn raw HTML is written out as its
+ *   own characters while the caret is inside it, so there is nowhere a caret
+ *   cannot go. First on the default list.
  * - `plain` — the Markdown source, edited as text.
  * - `preview` — the rendered document, read-only.
  * - `split` — the source on one side and the preview on the other, at once.

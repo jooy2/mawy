@@ -213,9 +213,9 @@ function revealedIn(nodes: readonly MdNode[], start: number, end: number): MdRan
  * paragraph, a heading, a list item, a quotation, a table cell, a code block —
  * along with the shorthands that turn into formatting as they are typed.
  * `internal/rules.ts` holds the two of those that are not simply the parser
- * keeping up. What is refused rather than half-done is an image, which has
- * nowhere for its bytes to go yet, and raw HTML being *drawn* rather than
- * shown, which React did not put on the page and could not put back.
+ * keeping up. A link, an image and raw HTML being *drawn* rather than shown
+ * have nothing on the page a caret can sit in, so the one the caret is inside is
+ * written out as its own characters instead. See `revealedIn`.
  *
  * An input method is the one thing that cannot be refused, and it is handled
  * the other way round: the browser is left alone for the length of a

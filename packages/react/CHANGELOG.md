@@ -2,6 +2,12 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
+## vNext
+
+### Fixed
+
+- **The doc comment on `MawyMode` describes `wysiwyg` as it is.** It still said the surface could not reach an image or drawn raw HTML and was not on the default list, which stopped being true in 1.0.0. The comment ships in `dist/types.d.ts`, so it is what an editor showed on hover.
+
 ## 1.3.0 (2026-09-12)
 
 ### Added
