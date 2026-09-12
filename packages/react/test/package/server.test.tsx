@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MawyDocument } from '../../src/server.js';
-import { MawyViewer } from '../../src/index.js';
+import { MawyDocument, type MawyDocumentProps } from '../../src/server.js';
+import { MawyViewer, type MawyViewerProps } from '../../src/index.js';
 import { mawyHighlighter } from '../../src/highlight.js';
 import { sources } from '../support/sources';
 
@@ -199,6 +199,59 @@ describe('a document rendered on a server', () => {
 
     expect(html).toContain('mawy-md-footnotes');
     expect(html).toContain('The note.');
+  });
+
+  /**
+   * What `MawyViewer` takes about how a document is drawn, `MawyDocument`
+   * takes too — so moving a page from one to the other is deleting the props
+   * that were behaviour, and not rewriting the ones that were not.
+   *
+   * A compile-time claim as much as a runtime one: `satisfies` checks this
+   * object against both, so the two disagreeing fails `npm run typecheck`
+   * before it reaches an expectation.
+   *
+   * Two props are deliberately not shared and are not in here. `value` is
+   * optional on the viewer, because a viewer with no document is the file
+   * picker, and required here, because a document with no document is
+   * nothing. `highlight` takes a function that fetches one on the viewer and
+   * only a highlighter here, because a promise has no second render to arrive
+   * on — a type error is a better answer than accepting one and ignoring it.
+   */
+  it('takes what the viewer takes about how a document is drawn', () => {
+    const shared = {
+      value: '# Post',
+      colorScheme: 'system',
+      typography: { fontSize: 18 },
+      linkTarget: 'blank'
+    } satisfies MawyViewerProps & MawyDocumentProps;
+
+    const onAPage = renderToStaticMarkup(<MawyViewer {...shared} toolbar={false} />);
+    const onAServer = renderToStaticMarkup(<MawyDocument {...shared} />);
+
+    for (const html of [onAPage, onAServer]) {
+      expect(html).toContain('data-mawy-color-scheme="system"');
+      expect(html).toContain('--mawy-doc-size:18px');
+      // The four the partial left out are the defaults rather than nothing.
+      expect(html).toContain('--mawy-doc-line-height:1.7');
+    }
+  });
+
+  /**
+   * The stylesheet turns a document dark under `prefers-color-scheme` only
+   * where the attribute says `system`, so a document that writes no attribute
+   * is light on a dark screen. That is the right default for a page with a
+   * palette of its own and has to be sayable otherwise.
+   */
+  it('leaves the palette to the page unless asked, and can follow the reader', () => {
+    const left = renderToStaticMarkup(<MawyDocument value="# A" />);
+
+    expect(left).not.toContain('data-mawy-color-scheme');
+    expect(renderToStaticMarkup(<MawyDocument value="# A" colorScheme="system" />)).toContain(
+      'data-mawy-color-scheme="system"'
+    );
+    expect(renderToStaticMarkup(<MawyDocument value="# A" colorScheme="dark" />)).toContain(
+      'data-mawy-color-scheme="dark"'
+    );
   });
 
   /**

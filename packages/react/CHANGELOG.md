@@ -14,6 +14,12 @@
 
 ### Changed
 
+- **`MawyDocument` takes what `MawyViewer` takes about how a document is drawn.** Three props were narrower here than on the viewer, for no reason any of them could give, so a page moving from one to the other had to rewrite props that describe the same thing. `typography` is `Partial<MawyTypography>`, which is what the code always did with it — it merges over the defaults — and only the type said otherwise. `linkTarget` is `MawyLinkTarget`, which is the same two values under the name they already have. And `colorScheme` takes `'system'`.
+
+  **That last one is a document that can follow the reader.** The stylesheet turns a document dark under `prefers-color-scheme` only where the attribute says `system`, and `MawyDocument` had no way to write it: a document drawn on a server was light on a dark screen, and the only way out was `'dark'`, which is wrong for everybody else. `null` is still the default, because a page setting the `--mawy-*` tokens itself does not want a palette declared under them.
+
+  Two props stay narrower on purpose. `value` is required, because a viewer with no document is the file picker and a document with no document is nothing; and `highlight` takes only a highlighter, not a function that fetches one, because a promise has no second render to arrive on. All three changes widen what is accepted, so nothing that compiled stops compiling.
+
 - **A document drawn by `MawyDocument` writes no `data-mawy-range`.** Every element `MawyViewer` draws carries the offsets it came from, because a range is the only way back from a place on the page to the place in the document — the editor's preview scrolls by them and a click in it finds its word by them. A page built by `mawy-react/server` has no component on it to ask that question, and the attribute was a quarter of what such a page sends: this repository's own README came out at 16.8 kB and now comes out at 12.2 kB, and at 3.4 kB rather than 4.6 kB once gzip has had it. A coloured code block also stops counting every character of every token to work out where it was written, which was the most this renderer did per element. `MawyViewer` and `MawyEditor` are unchanged.
 
 ## 1.2.0 (2026-09-11)

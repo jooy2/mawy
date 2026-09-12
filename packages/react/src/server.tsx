@@ -45,12 +45,14 @@
 
 import * as React from 'react';
 import type {
+  MawyColorScheme,
   MawyDirectives,
   MawyFont,
   MawyHighlighter,
   MawyHtmlPolicy,
   MawyImageProps,
   MawyLinkRel,
+  MawyLinkTarget,
   MawyLocale,
   MawyParseOptions,
   MawyTypography,
@@ -84,7 +86,7 @@ export interface MawyDocumentProps {
   html?: MawyHtmlPolicy;
 
   /** Where a link the document wrote opens. */
-  linkTarget?: 'blank' | 'self';
+  linkTarget?: MawyLinkTarget;
 
   /**
    * What a link the document wrote declares about where it goes.
@@ -174,14 +176,33 @@ export interface MawyDocumentProps {
    */
   highlight?: MawyHighlighter;
 
-  /** How the document is set. Written out as the same custom properties. */
-  typography?: MawyTypography;
+  /**
+   * How the document is set. Written out as the same custom properties.
+   *
+   * Anything left out keeps its default, so `{ fontSize: 18 }` is a whole
+   * answer — which is what the code has always done with it.
+   */
+  typography?: Partial<MawyTypography>;
 
   /** The typefaces those properties may name. */
   fonts?: readonly MawyFont[];
 
-  /** Which palette to draw in. `null` leaves it to the page. */
-  colorScheme?: 'light' | 'dark' | null;
+  /**
+   * Which palette to draw in.
+   *
+   * `null` — the default — writes nothing and leaves it to the page, which is
+   * what an application that themes the `--mawy-*` tokens itself wants: a
+   * palette declared here would be one more thing for its own to argue with.
+   *
+   * `'system'` follows `prefers-color-scheme`, the way `MawyViewer` does by
+   * default. It is the answer for a page that has no palette of its own and a
+   * reader whose machine does — without it a document drawn on a server was
+   * light on a dark screen and there was no way to say otherwise short of
+   * `'dark'`, which is wrong for everybody else.
+   *
+   * @default null
+   */
+  colorScheme?: MawyColorScheme | null;
 
   /** Put on the outermost element, after this library's own names. */
   className?: string;

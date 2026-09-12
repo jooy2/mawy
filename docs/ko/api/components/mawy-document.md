@@ -46,11 +46,32 @@ React 서버 컴포넌트를 가진 프레임워크에서는 서버 컴포넌트
 | `anchorPrefix` | `string` | — | 이 그림이 제목과 각주에 주는 앵커 앞에 붙일 것. 한 페이지에 문서가 둘일 때 이름이 부딪히지 않게 합니다. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 이 라이브러리가 직접 쓰는 몇 낱말의 언어. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | 코드 블록에 색을 입히는 것. |
-| `typography` | [`MawyTypography`](../types/typography) | — | 문서 조판. 같은 커스텀 속성으로 나갑니다. |
+| `typography` | `Partial<`[`MawyTypography`](../types/typography)`>` | — | 문서 조판. 같은 커스텀 속성으로 나갑니다. 빠뜨린 값은 기본값을 씁니다. |
 | `fonts` | [`MawyFont`](../types/font)`[]` | `MAWY_SYSTEM_FONTS` | 그 속성이 이름 댈 수 있는 글꼴. |
-| `colorScheme` | `'light' \| 'dark' \| null` | `null` | 어느 팔레트로 그릴지. `null`은 페이지에 맡깁니다. |
+| `colorScheme` | [`MawyColorScheme`](../types/color-scheme)` \| null` | `null` | 어느 팔레트로 그릴지. `null`은 아무것도 쓰지 않고 페이지에 맡깁니다. |
 | `className` | `string` | — | 가장 바깥 엘리먼트에, 이 라이브러리의 이름 뒤에 붙습니다. |
 | `style` | `CSSProperties` | — | 조판이 쓴 커스텀 속성 위에 병합됩니다. |
+
+## 독자의 팔레트 따라가기
+
+`colorScheme`의 기본값은 `null`이고, 그러면 속성을 아예 쓰지 않습니다. `--mawy-*` 토큰을 직접 정하는 애플리케이션이 원하는 값입니다. 여기서 팔레트를 선언하면 그쪽 팔레트와 다툴 것이 하나 늘어날 뿐입니다.
+
+동시에 어두운 화면에서도 문서가 밝다는 뜻이기도 합니다. 스타일시트가 `prefers-color-scheme`으로 문서를 어둡게 하는 것은 속성이 `system`이라고 말한 경우뿐이기 때문입니다. 자기 팔레트가 없는 페이지는 그렇다고 말하면 됩니다.
+
+```tsx
+<MawyDocument value={post.body} colorScheme="system" />
+```
+
+[`MawyViewer`](./mawy-viewer)가 기본으로 하는 일입니다. 기본값이 다른 것은 의도한 것입니다. 뷰어는 독자가 바라보는 화면이고, 이쪽은 남의 페이지에 놓인 한 조각입니다.
+
+## `MawyViewer`에서 옮겨 오기
+
+문서를 _어떻게_ 그릴지에 대한 것은 둘 다 같은 이름에 같은 타입입니다. 그래서 페이지를 옮기는 일은 동작에 해당하던 prop을 지우는 것이 전부입니다. `toolbar`, `empty`, `fileDrop`, `accept`, 그리고 제어와 비제어 짝들입니다. 나머지는 다시 쓸 것이 없습니다.
+
+일부러 공유하지 않는 것이 둘 있고, 컴파일러가 둘 다 짚어 줍니다.
+
+- **`value`는 여기서 필수입니다.** 문서가 없는 뷰어는 파일 선택기입니다. 문서가 없는 문서는 아무것도 아닙니다.
+- **`highlight`는 하이라이터만 받습니다.** 뷰어는 하이라이터를 가져오는 함수도 받습니다. 프로미스가 도착할 두 번째 렌더가 없으니, 받아 놓고 무시하는 것보다 거절하는 편이 낫습니다.
 
 ## 없는 것과 그 이유
 

@@ -46,11 +46,32 @@ A React Server Component in a framework that has them, and an ordinary component
 | `anchorPrefix` | `string` | — | Put in front of every anchor this drawing gives a heading or a footnote, so two documents on one page stop colliding. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the few words this library writes itself. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | What colours a code block. |
-| `typography` | [`MawyTypography`](../types/typography) | — | How the document is set, as the same custom properties. |
+| `typography` | `Partial<`[`MawyTypography`](../types/typography)`>` | — | How the document is set, as the same custom properties. Anything left out keeps its default. |
 | `fonts` | [`MawyFont`](../types/font)`[]` | `MAWY_SYSTEM_FONTS` | The typefaces those properties may name. |
-| `colorScheme` | `'light' \| 'dark' \| null` | `null` | Which palette to draw in. `null` leaves it to the page. |
+| `colorScheme` | [`MawyColorScheme`](../types/color-scheme)` \| null` | `null` | Which palette to draw in. `null` writes nothing and leaves it to the page. |
 | `className` | `string` | — | Put on the outermost element, after this library's own names. |
 | `style` | `CSSProperties` | — | Merged over the custom properties the typography writes. |
+
+## Following the reader's palette
+
+`colorScheme` is `null` by default, which writes no attribute at all. That is what an application setting the `--mawy-*` tokens itself wants: a palette declared here would be one more thing for its own to argue with.
+
+It also means the document is light on a dark screen, because the stylesheet turns a document dark under `prefers-color-scheme` only where the attribute says `system`. A page with no palette of its own says so:
+
+```tsx
+<MawyDocument value={post.body} colorScheme="system" />
+```
+
+Which is what [`MawyViewer`](./mawy-viewer) does by default. The difference in default is deliberate — a viewer is a surface a reader is looking at, and this is a piece of somebody's page.
+
+## Moving a page from `MawyViewer`
+
+Everything either of them takes about _how_ a document is drawn is the same prop with the same type, so moving a page is deleting the props that were behaviour — `toolbar`, `empty`, `fileDrop`, `accept`, and the controlled and uncontrolled pairs — and rewriting none of the rest.
+
+Two are deliberately not shared, and the compiler names both:
+
+- **`value` is required here.** A viewer with no document is the file picker. A document with no document is nothing.
+- **`highlight` takes only a highlighter**, where the viewer also takes a function that fetches one. A promise has no second render to arrive on, so accepting one and ignoring it would be worse than refusing it.
 
 ## What is not there, and why
 
