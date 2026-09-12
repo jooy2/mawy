@@ -27,6 +27,7 @@ order: 2
 | [`MawyEditorToolbarItem`](./editor-toolbar-item) | 에디터 툴바의 컨트롤 하나와 고르는 방법. |
 | [`MawyEditorStatusItem`](./editor-status-item) | 에디터가 아래쪽 가장자리에서 세는 것. |
 | [`MawyViewerToolbarItem`](./viewer-toolbar-item) | 뷰어 툴바의 컨트롤 하나와 고르는 방법. |
+| [프레임](./frame) | 표면이 테두리를 두를지, 툴바가 어느 끝에 있을지. |
 | [`MawyColorScheme`](./color-scheme) | 어느 팔레트로 그릴지. |
 | [`MawyLocale`](./locale) | 인터페이스가 쓰는 언어. 문서의 언어가 아닙니다. |
 

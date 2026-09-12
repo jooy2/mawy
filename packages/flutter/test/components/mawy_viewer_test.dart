@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
 import 'package:mawy/src/viewer/mawy_viewer_outline.dart';
+import 'package:mawy/src/viewer/mawy_viewer_toolbar.dart' show MawyViewerToolbar;
 import 'package:mawy/src/viewer/offsets.dart' show MawyMeasured;
 
 import '../support/host.dart';
@@ -45,6 +46,84 @@ Noted.[^n]
 ''';
 
 void main() {
+  /// The frame, and where the toolbar goes with it.
+  ///
+  /// What `floating` does is mostly colour and shape, which a widget test is
+  /// the wrong tool for. What it can say is the two things that are structure:
+  /// the chrome comes out of the column and into a `Stack`, and the room around
+  /// the prose goes to nothing unless a padding was passed.
+  group('the frame', () {
+    testWidgets('draws a surface under the document, and a bar across it', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: sample)));
+
+      expect(find.byType(MawyViewerToolbar), findsOneWidget);
+      // A box is a column of chrome and document, with nothing stacked.
+      expect(
+        find.ancestor(of: find.byType(MawyViewerToolbar), matching: find.byType(Stack)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('lifts the chrome over the document where it floats', (WidgetTester tester) async {
+      await tester.pumpWidget(host(const MawyViewer(value: sample, frame: MawyFrame.floating)));
+
+      expect(find.byType(MawyViewerToolbar), findsOneWidget);
+      expect(
+        find.ancestor(of: find.byType(MawyViewerToolbar), matching: find.byType(Stack)),
+        findsWidgets,
+      );
+      // The document is still the document.
+      expect(documentText(tester), contains('A paragraph with strong text'));
+    });
+
+    testWidgets('gives the prose no room of its own where it floats', (WidgetTester tester) async {
+      // Narrow on purpose. The column of prose is capped at the measure and
+      // centred in whatever is left, so on a wide screen taking the padding
+      // away only widens the gutters and the text lands in the same place. The
+      // padding is only the padding once the measure has stopped binding.
+      await tester.binding.setSurfaceSize(const Size(400, 600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      Future<double> leftOf(MawyFrame frame) async {
+        await tester.pumpWidget(
+          host(MawyViewer(value: sample, frame: frame, toolbar: const <MawyViewerToolbarItem>[])),
+        );
+
+        return tester.getRect(find.text('Title', findRichText: true).first).left;
+      }
+
+      expect(await leftOf(MawyFrame.floating), lessThan(await leftOf(MawyFrame.box)));
+    });
+
+    testWidgets('keeps a padding that was asked for, whichever frame it is', (
+      WidgetTester tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(400, 600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final MawyFrame frame in MawyFrame.values) {
+        await tester.pumpWidget(
+          host(
+            MawyViewer(
+              value: sample,
+              frame: frame,
+              padding: const EdgeInsets.all(40),
+              toolbar: const <MawyViewerToolbarItem>[],
+            ),
+          ),
+        );
+
+        expect(
+          tester.getRect(find.text('Title', findRichText: true).first).left,
+          greaterThanOrEqualTo(40),
+          reason: 'a padding that was asked for is the padding, under $frame',
+        );
+      }
+    });
+  });
+
   group('the document', () {
     testWidgets('draws what the Markdown says', (WidgetTester tester) async {
       await tester.pumpWidget(host(const MawyViewer(value: sample)));

@@ -453,6 +453,52 @@ Every control is a named `Semantics` button that exposes its pressed state, so a
 
 :::
 
+## The frame
+
+::: fw react
+
+A viewer is either a surface with a frame around it or a document with the page around it, and `frame` is which.
+
+`box`, the default, is the surface: a background of its own, a toolbar barred across one end with a line under it, and room around the prose so the first line does not sit on the edge. A reader can see where the viewer starts and the page stops, which is what a document being looked at _inside_ a larger page wants.
+
+`floating` is the other one. Nothing wraps the document: the viewer has no background, the toolbar becomes a rounded group hovering over the text the way a phone puts its controls over what they act on, and [`--mawy-doc-padding`](../api/theming) goes to nothing so the page's own gutters are the only ones. This is for a document that _is_ the page — an article, a post, a README — where a box around the prose is a box around the whole screen and says nothing.
+
+`toolbarPlacement` is which end that toolbar is at, `top` or `bottom`. The find bar goes with it, because a find bar at one end with its toolbar at the other is a bar belonging to nothing, and both are drawn in the order they are read so a keyboard walks the page the way the page looks.
+
+<MawyDemo name="viewer/floating" flutter="viewer/floating" :height="420" />
+
+The document's padding is the one thing `floating` changes that is not chrome, and it is a custom property rather than a prop so a page can put some back:
+
+```tsx
+<MawyViewer
+  value={post.body}
+  frame="floating"
+  toolbarPlacement="bottom"
+  style={{ '--mawy-doc-padding': '28px 24px 96px' }}
+/>
+```
+
+What does not move: the outline stays a column beside the document rather than a card over it, because a card over the document covers the headings it points at. The editor's status line is not a toolbar and is the bottom edge of the editor either way.
+
+:::
+
+::: fw flutter
+
+The same two, `frame` and `toolbarPlacement`, with the same values. `MawyFrame.box` is a surface with the toolbar barred across one end, and `MawyFrame.floating` draws the document with no surface under it and the toolbar as a rounded bar over the text.
+
+```dart
+MawyViewer(
+  value: document,
+  frame: MawyFrame.floating,
+  toolbarPlacement: MawyToolbarPlacement.bottom,
+  padding: EdgeInsets.zero,
+);
+```
+
+`padding` is where the room around the prose comes from here, and it is already a prop rather than a token — under `floating` it defaults to nothing, the same as the React package's.
+
+:::
+
 ## Typefaces
 
 By default the menu offers three, and they are roles rather than font names: `sans`, `serif` and `mono`, drawn with whatever is already on the reader's machine. Nothing is downloaded and nothing can fail.

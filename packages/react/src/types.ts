@@ -449,6 +449,38 @@ export type MawyHtmlPolicy = 'escape' | 'sanitize' | 'raw';
  * Only the links the document wrote. A footnote's reference and the arrow back
  * from it point at the same page and are unaffected.
  */
+/**
+ * Whether the surface has a frame around it, or floats in the page.
+ *
+ * - `box` — the default. The toolbar is a bar across the top of the surface
+ *   with a line under it, and the whole thing has a background of its own. A
+ *   reader can see where the editor starts and the page stops, which is what a
+ *   document being *worked on* inside a larger page wants.
+ * - `floating` — nothing wraps the document. The surface has no background of
+ *   its own, and the toolbar is a rounded bar over the top or the bottom of the
+ *   text, the way a phone puts its controls over what they act on. This is for
+ *   a document that *is* the page: an article, a post, a README, where a box
+ *   around the prose is a box around the whole screen and says nothing.
+ *
+ * The document's own padding follows: `box` keeps the room a surface needs,
+ * and `floating` has none, because a page that draws its own gutters does not
+ * want a second set inside them. `--mawy-doc-padding` overrides either.
+ */
+export type MawyFrame = 'box' | 'floating';
+
+/**
+ * Which end of the surface the toolbar is at.
+ *
+ * `top` under `box` is a bar with a line under it, and `bottom` is the same bar
+ * with the line above it. Under `floating` it is which edge the rounded bar
+ * hovers over — `bottom` is where a thumb is on a phone, and `top` is where a
+ * pointer expects a toolbar on a page.
+ *
+ * The editor's status line is not a toolbar and does not move; it is the bottom
+ * edge of the editor either way.
+ */
+export type MawyToolbarPlacement = 'top' | 'bottom';
+
 export type MawyLinkTarget = 'blank' | 'self';
 
 /**

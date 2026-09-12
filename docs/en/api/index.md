@@ -40,6 +40,7 @@ Everything here exists and runs in whichever package the switch above the menu i
 | [`MawyEditorToolbarItem`](./types/editor-toolbar-item) | `MawyEditorToolbarItem`, `MawyEditorToolbarOption` |
 | [`MawyEditorStatusItem`](./types/editor-status-item) | `MawyEditorStatusItem`, `MawyEditorStatusOption` |
 | [`MawyViewerToolbarItem`](./types/viewer-toolbar-item) | `MawyViewerToolbarItem`, `MawyViewerToolbarOption` |
+| [Frame](./types/frame) | `MawyFrame`, `MawyToolbarPlacement` |
 | [`MawyColorScheme`](./types/color-scheme) | `MawyColorScheme` |
 | [`MawyLocale`](./types/locale) | `MawyLocale` |
 | [`MawyParseOptions`](./types/parse-options) | `MawyParseOptions` |

@@ -520,6 +520,25 @@
  * the modes whose body does not. Three pixels, and they moved every time the
  * surface switch was pressed. The interface around a document is not what a
  * layout should take its room from. */
+/* The chrome: the toolbar and the find bar, which travel together -----------
+ *
+ * One box around the two rather than two siblings, because both of them move
+ * at once. `toolbarPlacement="bottom"` puts them at the other end — a find bar
+ * left at the top with its toolbar at the bottom is a bar belonging to nothing
+ * — and `frame="floating"` lifts them off the surface together.
+ *
+ * Under `box` the group is nothing: a plain block whose children are the bars
+ * they always were, so a viewer that says nothing about either prop draws what
+ * it drew before.
+ * -------------------------------------------------------------------------- */
+
+.mawy-root .mawy-chrome {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .mawy-root .mawy-toolbar {
   position: sticky;
   top: 0;
@@ -533,6 +552,119 @@
   border-bottom: 1px solid var(--mawy-border);
   background: var(--mawy-chrome);
   backdrop-filter: blur(12px);
+}
+
+/* A toolbar at the other end has its line on the other side, and stops being
+ * sticky: it is already at the bottom of a box the document scrolls inside. */
+.mawy-root[data-mawy-toolbar='bottom'] .mawy-toolbar {
+  position: static;
+  border-top: 1px solid var(--mawy-border);
+  border-bottom: 0;
+}
+
+.mawy-root[data-mawy-toolbar='bottom'] .mawy-find {
+  border-top: 1px solid var(--mawy-border);
+  border-bottom: 0;
+}
+
+/* Floating -----------------------------------------------------------------
+ *
+ * Nothing wraps the document: the surface gives up its own background, and the
+ * chrome comes out of the column and hovers over the text. `absolute` rather
+ * than `sticky`, because sticky still takes a row of the layout and what this
+ * is for is a document with the page's own margins around it and nothing else.
+ *
+ * The group lets the pointer through and each bar takes it back, so the gap
+ * between a floating toolbar and the edge is document a reader can click into
+ * rather than a dead strip.
+ * -------------------------------------------------------------------------- */
+
+.mawy-root[data-mawy-frame='floating'] {
+  background: none;
+}
+
+.mawy-root[data-mawy-frame='floating'] .mawy-chrome {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 20;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  pointer-events: none;
+}
+
+.mawy-root[data-mawy-frame='floating'][data-mawy-toolbar='top'] .mawy-chrome {
+  top: 0;
+}
+
+.mawy-root[data-mawy-frame='floating'][data-mawy-toolbar='bottom'] .mawy-chrome {
+  bottom: 0;
+}
+
+.mawy-root[data-mawy-frame='floating'] .mawy-toolbar,
+.mawy-root[data-mawy-frame='floating'] .mawy-find {
+  position: static;
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid var(--mawy-border);
+  border-radius: var(--mawy-radius-lg);
+  box-shadow: var(--mawy-shadow-2);
+  pointer-events: auto;
+}
+
+/* A bar of controls with nothing else in it is a row of round buttons, so the
+ * box around them is round too. With a file name in it there is a line of text
+ * as well, and a pill around a line of text is a lozenge nobody wants. */
+.mawy-root[data-mawy-frame='floating'] .mawy-toolbar:not(:has(.mawy-toolbar-title)) {
+  border-radius: 999px;
+}
+
+/* More controls than a narrow screen has room for scroll under a finger rather
+ * than squashing. The bar is the width of the screen at that point, so it is
+ * the one place a floating toolbar stops being the width of its contents. */
+.mawy-root[data-mawy-frame='floating'] .mawy-toolbar {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mawy-root[data-mawy-frame='floating'] .mawy-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Room for the bar to hover over, so the first or last line of the document is
+ * not under it. Only where there is a bar: a floating viewer with no toolbar is
+ * the document and the page's own margins, which is the whole point of it.
+ *
+ * 44 for the bar and 12 either side of it, which is the group's padding. */
+.mawy-root[data-mawy-frame='floating']:has(.mawy-chrome) .mawy-viewer-scroll,
+.mawy-root[data-mawy-frame='floating']:has(.mawy-chrome) .mawy-editor-pane {
+  --mawy-float-room: 68px;
+}
+
+.mawy-root[data-mawy-frame='floating'][data-mawy-toolbar='top'] .mawy-viewer-scroll {
+  padding-top: var(--mawy-float-room, 0);
+  scroll-padding-top: var(--mawy-float-room, 0);
+}
+
+.mawy-root[data-mawy-frame='floating'][data-mawy-toolbar='bottom'] .mawy-viewer-scroll {
+  padding-bottom: var(--mawy-float-room, 0);
+  scroll-padding-bottom: var(--mawy-float-room, 0);
+}
+
+/* The document has none of its own room under `floating` — a page that draws
+ * its own gutters does not want a second set inside them. `--mawy-doc-padding`
+ * still wins, so an application that wants some says how much. */
+.mawy-root[data-mawy-frame='floating'] .mawy-md {
+  padding: var(--mawy-doc-padding, 0);
+}
+
+/* The outline is a second column of content rather than chrome, so it does not
+ * float: a card over the document would cover the headings it points at. It
+ * gives up the line and the shade that divided it from a surface there no
+ * longer is, and keeps its width. */
+.mawy-root[data-mawy-frame='floating'] .mawy-outline {
+  border-inline-end: 0;
+  background: none;
 }
 
 .mawy-root .mawy-toolbar-title {

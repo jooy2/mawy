@@ -118,6 +118,25 @@ MawyViewer(value: document, toolbar: const <MawyViewerToolbarItem>[]);
 ```
 ''';
 
+const String _floating = '''
+## A document that is the page
+
+Nothing wraps this. The viewer has no surface under it and no bar across the top — the toolbar is a rounded group over the text, the way the platform puts its controls over what they act on.
+
+```dart
+MawyViewer(
+  value: document,
+  frame: MawyFrame.floating,
+  toolbarPlacement: MawyToolbarPlacement.bottom,
+  padding: const EdgeInsets.fromLTRB(24, 28, 24, 96),
+);
+```
+
+The room around the prose is nothing under `floating`, because a screen that draws its own margins does not want a second set inside them. This one asks for some, which is what `padding` is for.
+
+Scroll, and the bar stays where it is.
+''';
+
 const String _prose = '''
 # 한글도 그대로
 
@@ -487,6 +506,7 @@ const List<Sample> samples = <Sample>[
   Sample('viewer/basic', 'Everything', _everything),
   Sample('viewer/minimal', 'Minimal', _minimal),
   Sample('viewer/bare', 'No toolbar', _bare),
+  Sample('viewer/floating', 'Floating', _floating),
   Sample('viewer/prose', '한국어', _prose),
   Sample('viewer/directives', 'Directives', _directives),
   Sample('editor/basic', 'Editor', _editor, editor: true),

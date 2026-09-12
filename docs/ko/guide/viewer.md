@@ -453,6 +453,52 @@ MawyViewer(
 
 :::
 
+## 프레임
+
+::: fw react
+
+뷰어는 테두리 안의 표면이거나 페이지에 놓인 문서 둘 중 하나이고, `frame`이 그것을 정합니다.
+
+기본값 `box`가 표면입니다. 자기 배경이 있고, 한쪽 끝에 아래로 선이 그어진 툴바가 가로지르고, 첫 줄이 가장자리에 붙지 않도록 본문 둘레에 여백이 있습니다. 뷰어가 어디서 시작하고 페이지가 어디서 끝나는지 보입니다. 더 큰 페이지 _안에서_ 들여다보는 문서가 원하는 모습입니다.
+
+`floating`은 반대입니다. 문서를 감싸는 것이 없습니다. 뷰어에 배경이 없고, 툴바는 글 위에 떠 있는 둥근 묶음이 되며, 휴대폰이 컨트롤을 대상 위에 올려놓는 방식과 같습니다. [`--mawy-doc-padding`](../api/theming)도 0이 되어 페이지가 가진 여백만 남습니다. 문서가 곧 페이지인 경우를 위한 값입니다. 글, 게시물, README처럼 본문을 감싼 상자가 화면 전체를 감싼 상자가 되어 아무 말도 하지 않는 자리입니다.
+
+`toolbarPlacement`는 그 툴바가 어느 끝에 있을지로, `top` 또는 `bottom`입니다. 찾기 바도 함께 갑니다. 한쪽 끝의 찾기 바와 반대쪽 끝의 툴바는 아무것에도 속하지 않는 바이기 때문입니다. 둘 다 읽히는 순서대로 그려지므로 키보드도 화면과 같은 순서로 지나갑니다.
+
+<MawyDemo name="viewer/floating" flutter="viewer/floating" :height="420" />
+
+`floating`이 바꾸는 것 중 크롬이 아닌 것은 문서의 여백 하나뿐이고, prop이 아니라 커스텀 속성이라서 페이지가 다시 넣을 수 있습니다.
+
+```tsx
+<MawyViewer
+  value={post.body}
+  frame="floating"
+  toolbarPlacement="bottom"
+  style={{ '--mawy-doc-padding': '28px 24px 96px' }}
+/>
+```
+
+움직이지 않는 것도 있습니다. 목차는 문서 위에 뜬 카드가 아니라 옆에 선 열로 남습니다. 문서 위에 뜬 카드는 자기가 가리키는 제목을 가리기 때문입니다. 에디터의 상태 줄은 툴바가 아니고, 어느 쪽이든 에디터의 아래 가장자리입니다.
+
+:::
+
+::: fw flutter
+
+`frame`과 `toolbarPlacement` 둘 다 같은 이름에 같은 값입니다. `MawyFrame.box`는 한쪽 끝을 툴바가 가로지르는 표면이고, `MawyFrame.floating`은 아래에 표면 없이 문서를 그리고 툴바를 글 위의 둥근 바로 올립니다.
+
+```dart
+MawyViewer(
+  value: document,
+  frame: MawyFrame.floating,
+  toolbarPlacement: MawyToolbarPlacement.bottom,
+  padding: EdgeInsets.zero,
+);
+```
+
+본문 둘레의 여백은 여기서 `padding`이 정하고, 토큰이 아니라 이미 prop입니다. `floating`에서는 기본이 0이 되어 React 패키지와 같습니다.
+
+:::
+
 ## 글꼴
 
 기본으로 제공하는 값은 셋이며, 특정 글꼴 이름이 아니라 역할입니다. `sans`·`serif`·`mono`를 독자의 기기에 이미 있는 글꼴로 그립니다. 내려받는 파일이 없어서 로딩에 실패할 일도 없습니다.

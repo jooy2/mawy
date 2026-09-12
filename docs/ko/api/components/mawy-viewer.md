@@ -109,6 +109,8 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `defaultTypography` | `Partial<MawyTypography>` | 아래 참고 | 처음 조판 값. |
 | `onTypographyChange` | `(typography: MawyTypography) => void` | — | 바뀔 때마다 호출됩니다. 제어 여부와 무관하게. |
 | `toolbar` | [`MawyViewerToolbarOption`](../types/viewer-toolbar-item) | `true` | 툴바에 둘 컨트롤과 그 순서. |
+| `frame` | [`MawyFrame`](../types/frame) | `'box'` | 뷰어가 테두리를 두를지, 페이지 위에 뜰지. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | 툴바와 찾기 바가 어느 끝에 있을지. |
 | `fonts` | `readonly `[`MawyFont`](../types/font)`[]` | `MAWY_SYSTEM_FONTS` | 툴바가 제시할 글꼴과 나열 순서. |
 
 `typography`와 `defaultTypography`에서 빠뜨린 항목은 기본값을 지키므로 `{ fontSize: 18 }` 하나로 답이 됩니다. 기본값은 `sans`, 16px, 줄 간격 1.7, 추가 자간 없음, `normal` 단 너비입니다.
@@ -126,6 +128,8 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `defaultTypography` | `MawyTypography` | `MawyTypography()` | 뷰어가 직접 가질 때의 처음 조판 값. |
 | `onTypographyChange` | `ValueChanged<MawyTypography>?` | — | `typography`를 넘겼든 아니든 호출됩니다. |
 | `toolbar` | `List<`[`MawyViewerToolbarItem`](../types/viewer-toolbar-item)`>` | `kMawyViewerToolbar` | 그릴 컨트롤과 그 순서. 없애려면 `const []`. |
+| `frame` | [`MawyFrame`](../types/frame) | `MawyFrame.box` | 뷰어가 테두리를 두를지, 화면 위에 뜰지. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `MawyToolbarPlacement.top` | 툴바와 찾기 바가 어느 끝에 있을지. |
 
 색 팔레트는 조판처럼 제어 쌍을 이루지 않고 인자 하나입니다. `light`나 `dark`를 건네면 뷰어는 거기에 머물고, `system` 그대로 두면 플랫폼을 따릅니다. `onColorSchemeChange`는 독자가 툴바에서 고른 값을 알려 주므로, 그 선택을 기억하려는 애플리케이션은 기억한 값을 다시 넘기면 됩니다.
 

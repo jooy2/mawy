@@ -27,6 +27,7 @@ Exported from `package:mawy/mawy.dart`, which is this package's entire public su
 | [`MawyEditorToolbarItem`](./editor-toolbar-item) | One control on the editor's toolbar, and how to pick them. |
 | [`MawyEditorStatusItem`](./editor-status-item) | What the editor counts along its bottom edge. |
 | [`MawyViewerToolbarItem`](./viewer-toolbar-item) | One control on the viewer's toolbar, and how to pick them. |
+| [Frame](./frame) | Whether the surface has a frame around it, and which end its toolbar is at. |
 | [`MawyColorScheme`](./color-scheme) | Which palette to draw in. |
 | [`MawyLocale`](./locale) | The language of the interface, which is not the language of the document. |
 

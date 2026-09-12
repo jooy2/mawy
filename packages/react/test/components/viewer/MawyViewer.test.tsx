@@ -35,6 +35,17 @@ const SAMPLE = [
   '```'
 ].join('\n');
 
+/**
+ * The chrome and the document, in the order they are written.
+ *
+ * A keyboard walks the DOM, so `toolbarPlacement` has to move the elements
+ * rather than only move them on screen.
+ */
+const chromeOrder = (container: HTMLElement): string[] =>
+  [...container.querySelectorAll('.mawy-chrome, .mawy-viewer-body')].map((element) =>
+    element.classList.contains('mawy-chrome') ? 'chrome' : 'body'
+  );
+
 describe('the document', () => {
   it('renders headings, prose and a table', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} />);
@@ -344,6 +355,56 @@ describe('images', () => {
       'noopener noreferrer nofollow ugc',
       'noopener noreferrer'
     ]);
+  });
+
+  /**
+   * What `floating` does is mostly colour and shape, which the stylesheet owns
+   * and a component test is the wrong tool for. What this can say is the two
+   * things that are structure: the attributes the stylesheet keys off, and the
+   * chrome moving to the other end of the DOM rather than being moved there by
+   * CSS — a keyboard walks the DOM, so the order it is written in has to be the
+   * order it is read in.
+   */
+  it('says which frame it is and which end the toolbar is at', async () => {
+    const screen = await render(<MawyViewer value="# One" />);
+    const root = screen.container.querySelector('.mawy-root');
+
+    expect(root?.getAttribute('data-mawy-frame')).toBe('box');
+    expect(root?.getAttribute('data-mawy-toolbar')).toBe('top');
+  });
+
+  it('writes the chrome before the document where the toolbar is at the top', async () => {
+    const screen = await render(<MawyViewer value="# One" toolbarPlacement="top" />);
+
+    expect(chromeOrder(screen.container)).toEqual(['chrome', 'body']);
+  });
+
+  it('writes the chrome after the document where the toolbar is at the bottom', async () => {
+    const screen = await render(<MawyViewer value="# One" toolbarPlacement="bottom" />);
+
+    expect(chromeOrder(screen.container)).toEqual(['body', 'chrome']);
+    expect(screen.container.querySelector('.mawy-root')?.getAttribute('data-mawy-toolbar')).toBe(
+      'bottom'
+    );
+  });
+
+  it('keeps the toolbar and the find bar together in one group', async () => {
+    const screen = await render(<MawyViewer value="# One" frame="floating" />);
+    const chrome = screen.container.querySelector('.mawy-chrome');
+
+    expect(chrome?.querySelector('[role="toolbar"]')).not.toBeNull();
+    expect(screen.container.querySelector('.mawy-root')?.getAttribute('data-mawy-frame')).toBe(
+      'floating'
+    );
+  });
+
+  it('draws no chrome at all where there is neither a toolbar nor a find bar', async () => {
+    const screen = await render(<MawyViewer value="# One" toolbar={false} frame="floating" />);
+
+    // An empty box with a padding would be a strip of nothing over the
+    // document, and the room the stylesheet keeps for a floating bar is kept
+    // for a bar that is there.
+    expect(screen.container.querySelector('.mawy-chrome')).toBeNull();
   });
 
   it('never hands over a URL the scheme allowlist refused', async () => {

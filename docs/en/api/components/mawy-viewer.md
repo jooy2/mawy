@@ -109,6 +109,8 @@ There is no `html` argument, and there will not be one: raw HTML written inside 
 | `defaultTypography` | `Partial<MawyTypography>` | see below | What it is set as to begin with. |
 | `onTypographyChange` | `(typography: MawyTypography) => void` | — | Called whenever it changes, controlled or not. |
 | `toolbar` | [`MawyViewerToolbarOption`](../types/viewer-toolbar-item) | `true` | Which controls the toolbar has, and in what order. |
+| `frame` | [`MawyFrame`](../types/frame) | `'box'` | Whether the viewer has a frame around it, or floats in the page. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | Which end the toolbar and the find bar are at. |
 | `fonts` | `readonly `[`MawyFont`](../types/font)`[]` | `MAWY_SYSTEM_FONTS` | The typefaces the toolbar offers, in the order it lists them. |
 
 Anything left out of `typography` or `defaultTypography` keeps its default, so `{ fontSize: 18 }` is a whole answer. The defaults are `sans`, 16px, a line height of 1.7, no extra letter spacing and the `normal` measure.
@@ -126,6 +128,8 @@ Anything left out of `typography` or `defaultTypography` keeps its default, so `
 | `defaultTypography` | `MawyTypography` | `MawyTypography()` | How it is set to begin with, when the viewer keeps it itself. |
 | `onTypographyChange` | `ValueChanged<MawyTypography>?` | — | Called whether or not `typography` is being passed. |
 | `toolbar` | `List<`[`MawyViewerToolbarItem`](../types/viewer-toolbar-item)`>` | `kMawyViewerToolbar` | The controls to draw and the order to draw them in. `const []` for none. |
+| `frame` | [`MawyFrame`](../types/frame) | `MawyFrame.box` | Whether the viewer has a frame around it, or floats on the screen. |
+| `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `MawyToolbarPlacement.top` | Which end the toolbar and the find bar are at. |
 
 The colour scheme is one argument rather than the controlled pair the typography uses. Hand the viewer a `light` or a `dark` and it stays there; leave it at `system` and it follows the platform. `onColorSchemeChange` reports what the reader picked from the toolbar, so an application that wants to remember the choice passes the remembered value back in.
 

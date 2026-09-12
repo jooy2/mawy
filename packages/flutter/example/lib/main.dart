@@ -165,6 +165,7 @@ class _GalleryAppState extends State<GalleryApp> {
                 );
         }
 
+        final bool floating = sample.id == 'viewer/floating';
         final Widget viewer = MawyViewer(
           // A key on the document, so switching samples starts a fresh viewer
           // rather than one that remembers the last one's scroll position.
@@ -174,8 +175,16 @@ class _GalleryAppState extends State<GalleryApp> {
           onColorSchemeChange: (MawyColorScheme next) => setState(() => _scheme = next),
           // The two demos the toolbar section of the guide is built around,
           // and they have to show what the React half of the same demo shows.
+          frame: floating ? MawyFrame.floating : MawyFrame.box,
+          toolbarPlacement: floating ? MawyToolbarPlacement.bottom : MawyToolbarPlacement.top,
+          padding: floating ? const EdgeInsets.fromLTRB(24, 28, 24, 96) : null,
           toolbar: switch (sample.id) {
             'viewer/bare' => const <MawyViewerToolbarItem>[],
+            'viewer/floating' => const <MawyViewerToolbarItem>[
+              MawyViewerToolbarItem.fontSize,
+              MawyViewerToolbarItem.colorScheme,
+              MawyViewerToolbarItem.find,
+            ],
             'viewer/minimal' => const <MawyViewerToolbarItem>[
               MawyViewerToolbarItem.fontSize,
               MawyViewerToolbarItem.colorScheme,

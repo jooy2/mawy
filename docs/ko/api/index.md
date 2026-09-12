@@ -40,6 +40,7 @@ order: 2
 | [`MawyEditorToolbarItem`](./types/editor-toolbar-item) | `MawyEditorToolbarItem`, `MawyEditorToolbarOption` |
 | [`MawyEditorStatusItem`](./types/editor-status-item) | `MawyEditorStatusItem`, `MawyEditorStatusOption` |
 | [`MawyViewerToolbarItem`](./types/viewer-toolbar-item) | `MawyViewerToolbarItem`, `MawyViewerToolbarOption` |
+| [프레임](./types/frame) | `MawyFrame`, `MawyToolbarPlacement` |
 | [`MawyColorScheme`](./types/color-scheme) | `MawyColorScheme` |
 | [`MawyLocale`](./types/locale) | `MawyLocale` |
 | [`MawyParseOptions`](./types/parse-options) | `MawyParseOptions` |

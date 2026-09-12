@@ -147,6 +147,46 @@ class MawyTypography {
       Object.hash(fontFamily, fontFamilyName, fontSize, lineHeight, letterSpacing, measure);
 }
 
+/// Whether the surface has a frame around it, or floats in the page.
+///
+/// - [box] — the default. The toolbar is a bar across one end of the surface
+///   with a line under it, and the whole thing is drawn on a background of its
+///   own. A reader can see where the viewer starts and the screen around it
+///   stops, which is what a document being looked at *inside* a larger screen
+///   wants.
+/// - [floating] — nothing wraps the document. There is no background of its
+///   own, and the toolbar is a rounded bar over the top or the bottom of the
+///   text, the way the platform puts its controls over what they act on.
+///
+/// The room around the prose follows. [MawyViewer.padding] unset is the usual
+/// `28, 40, 28, 96` under [box] and nothing at all under [floating], because a
+/// screen that draws its own margins does not want a second set inside them.
+/// Passing a padding says which, either way.
+enum MawyFrame {
+  /// A surface, with the toolbar barred across one end of it.
+  box,
+
+  /// The document, with the toolbar over it.
+  floating,
+}
+
+/// Which end of the surface the toolbar is at.
+///
+/// Under [MawyFrame.box] it is a bar with its line on the other side. Under
+/// [MawyFrame.floating] it is which edge the rounded bar hovers over —
+/// [bottom] is where a thumb is on a phone, and [top] is where a pointer
+/// expects a toolbar.
+///
+/// The editor's status line is not a toolbar and does not move; it is the
+/// bottom edge of the editor either way.
+enum MawyToolbarPlacement {
+  /// Above the document.
+  top,
+
+  /// Below it.
+  bottom,
+}
+
 /// One control on the viewer's toolbar.
 enum MawyViewerToolbarItem {
   /// The typeface menu.

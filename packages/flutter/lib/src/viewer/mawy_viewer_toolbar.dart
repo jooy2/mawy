@@ -63,11 +63,19 @@ class MawyViewerToolbar extends StatefulWidget {
     required this.onCopy,
     required this.finding,
     this.onFind,
+    this.frame = MawyFrame.box,
+    this.placement = MawyToolbarPlacement.top,
     super.key,
   });
 
   /// Which controls to draw, in order.
   final List<MawyViewerToolbarItem> items;
+
+  /// Whether the bar is barred across the surface or floating over it.
+  final MawyFrame frame;
+
+  /// Which end of the surface it is at, which is which side its line is on.
+  final MawyToolbarPlacement placement;
 
   /// The palette.
   final MawyTokens tokens;
@@ -147,22 +155,61 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
       }
     }
 
+    final bool floating = widget.frame == MawyFrame.floating;
+    final BorderSide line = BorderSide(color: widget.tokens.border);
+
+    // Barred across the surface, the bar is the width of the surface and its
+    // line is on whichever side the document is. Floating, it is the width of
+    // its own buttons, so a `Row` that takes all it is offered would be a bar
+    // the width of the screen with the buttons pushed to one end of it.
+    final Widget row = MawyRovingRow(
+      roving: _roving,
+      child: Row(
+        mainAxisSize: floating ? MainAxisSize.min : MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: drawn,
+      ),
+    );
+
     return Semantics(
       container: true,
       label: widget.strings.toolbar,
       child: Container(
         decoration: BoxDecoration(
-          color: widget.tokens.chrome,
-          border: Border(bottom: BorderSide(color: widget.tokens.border)),
+          color: floating ? widget.tokens.backgroundRaised : widget.tokens.chrome,
+          border: floating
+              ? Border.all(color: widget.tokens.border)
+              : Border(
+                  bottom: widget.placement == MawyToolbarPlacement.top ? line : BorderSide.none,
+                  top: widget.placement == MawyToolbarPlacement.bottom ? line : BorderSide.none,
+                ),
+          borderRadius: floating ? BorderRadius.circular(_floatingRadius(drawn)) : null,
+          boxShadow: floating
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: const Color(0xFF101018).withValues(alpha: 0.14),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                ]
+              : null,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: MawyRovingRow(
-          roving: _roving,
-          child: Row(mainAxisAlignment: MainAxisAlignment.end, children: drawn),
-        ),
+        // More controls than a narrow screen has room for scroll under a
+        // finger rather than squashing, which is what this package's toolbars
+        // already do. A bar the width of its buttons has to say so itself.
+        child: floating ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: row) : row,
       ),
     );
   }
+
+  /// How round a floating bar's ends are.
+  ///
+  /// A row of round buttons and nothing else is a row of round buttons, so the
+  /// bar around them is round too. There is nothing else in a viewer's toolbar
+  /// to make it otherwise, but the number is worked out rather than written so
+  /// that a bar which grows a line of text does not become a lozenge.
+  double _floatingRadius(List<Widget> drawn) => drawn.isEmpty ? MawyRadius.large : 999;
 
   Widget? _control(MawyViewerToolbarItem item, FocusNode node) {
     switch (item) {

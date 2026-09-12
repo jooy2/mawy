@@ -5,6 +5,7 @@ import type {
   MawyColorScheme,
   MawyDirectives,
   MawyFont,
+  MawyFrame,
   MawyHighlight,
   MawyHtmlPolicy,
   MawyImageProps,
@@ -12,6 +13,7 @@ import type {
   MawyLinkTarget,
   MawyLocale,
   MawyParseOptions,
+  MawyToolbarPlacement,
   MawyTypography,
   MawyUrlResolver,
   MawyViewerToolbarItem,
@@ -137,6 +139,35 @@ export interface MawyViewerProps extends Omit<
    * `MawyLinkRel`.
    */
   linkRel?: MawyLinkRel;
+
+  /**
+   * Whether the viewer has a frame around it, or floats in the page.
+   *
+   * `box` is a surface with a background of its own and a toolbar barred across
+   * one end of it, which is what a document being looked at *inside* a larger
+   * page wants. `floating` has no background and no bar: the toolbar becomes a
+   * rounded group hovering over the text, the way a phone puts its controls
+   * over what they act on, and the document's own padding goes to nothing so
+   * the page's gutters are the only ones. See `MawyFrame`.
+   *
+   * ```tsx
+   * <MawyViewer value={post.body} frame="floating" toolbarPlacement="bottom" />
+   * ```
+   *
+   * @default 'box'
+   */
+  frame?: MawyFrame;
+
+  /**
+   * Which end of the viewer the toolbar is at, and with it the find bar.
+   *
+   * The two travel together: a find bar at the top with its toolbar at the
+   * bottom is a bar belonging to nothing. Drawn in the order they are read, so
+   * a keyboard walks the page the way the page looks.
+   *
+   * @default 'top'
+   */
+  toolbarPlacement?: MawyToolbarPlacement;
 
   /** The language of the viewer's own interface. @default 'en' */
   locale?: MawyLocale;
@@ -301,6 +332,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     html = 'escape',
     linkTarget = 'blank',
     linkRel,
+    frame = 'box',
+    toolbarPlacement = 'top',
     locale = 'en',
     fileDrop,
     accept = MAWY_ACCEPT,
@@ -779,12 +812,64 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
   const hasDocument = text.trim().length > 0;
 
+  /**
+   * The toolbar and the find bar, which travel together.
+   *
+   * One group rather than two siblings, for two reasons. Under `floating` they
+   * are stacked in one box that hovers over the document, and under `box` with
+   * `toolbarPlacement="bottom"` they both have to move to the other end — a
+   * find bar left at the top with its toolbar at the bottom is a bar belonging
+   * to nothing. Rendered in the order they are read, so the DOM says what the
+   * screen says and a keyboard walks it in that order.
+   */
+  const chrome =
+    items.length || (finding && searchable) ? (
+      <div className="mawy-chrome">
+        {items.length ? (
+          <MawyViewerToolbar
+            items={items}
+            strings={strings}
+            typography={type}
+            onTypographyChange={setType}
+            fonts={fonts}
+            colorScheme={scheme}
+            onColorSchemeChange={setScheme}
+            outlineOpen={outlineOpen}
+            onOutlineToggle={() => setOutlineOpen((was) => !was)}
+            onFind={hasDocument ? openFind : undefined}
+            finding={finding}
+            onOpenFile={takesFile ? () => picker.current?.click() : undefined}
+            onCopy={() => copy(text)}
+            copyState={copyState}
+            fileName={fileName}
+            hasDocument={hasDocument}
+          />
+        ) : null}
+
+        {finding && searchable ? (
+          <FindBar
+            query={query}
+            onQueryChange={setQuery}
+            matchCase={matchCase}
+            onMatchCaseChange={setMatchCase}
+            total={found.total}
+            current={currentMatch}
+            onStep={step}
+            onClose={() => setFinding(false)}
+            strings={strings}
+          />
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <div
       {...rest}
       ref={ref}
       className={['mawy-root', 'mawy-viewer', className].filter(Boolean).join(' ')}
       data-mawy-color-scheme={scheme}
+      data-mawy-frame={frame}
+      data-mawy-toolbar={toolbarPlacement}
       data-mawy-dragging={dragging ? 'true' : undefined}
       data-mawy-tips={tips.off ? 'off' : undefined}
       style={{ ...typographyStyle(type, fonts), ...style } as React.CSSProperties}
@@ -792,40 +877,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       {...dragProps}
       onKeyDown={onKeyDown}
     >
-      {items.length ? (
-        <MawyViewerToolbar
-          items={items}
-          strings={strings}
-          typography={type}
-          onTypographyChange={setType}
-          fonts={fonts}
-          colorScheme={scheme}
-          onColorSchemeChange={setScheme}
-          outlineOpen={outlineOpen}
-          onOutlineToggle={() => setOutlineOpen((was) => !was)}
-          onFind={hasDocument ? openFind : undefined}
-          finding={finding}
-          onOpenFile={takesFile ? () => picker.current?.click() : undefined}
-          onCopy={() => copy(text)}
-          copyState={copyState}
-          fileName={fileName}
-          hasDocument={hasDocument}
-        />
-      ) : null}
-
-      {finding && searchable ? (
-        <FindBar
-          query={query}
-          onQueryChange={setQuery}
-          matchCase={matchCase}
-          onMatchCaseChange={setMatchCase}
-          total={found.total}
-          current={currentMatch}
-          onStep={step}
-          onClose={() => setFinding(false)}
-          strings={strings}
-        />
-      ) : null}
+      {toolbarPlacement === 'top' ? chrome : null}
 
       <div className="mawy-viewer-body">
         {outlineOpen && hasDocument ? (
@@ -861,6 +913,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
           )}
         </div>
       </div>
+
+      {toolbarPlacement === 'bottom' ? chrome : null}
 
       {dragging ? (
         <div className="mawy-drop-veil" aria-hidden="true">
