@@ -259,10 +259,30 @@ class _CommandIntent extends Intent {
 /// pointer for.
 ///
 /// Both spellings of the modifier, because which one a platform means by it is
-/// the platform's business rather than something to sniff for. Undo is not here
-/// and is Flutter's own, which is the decision written down in the guide; there
-/// is nothing here for `Mod`+`S` to save to, and `Mod`+`F` is the editor's.
+/// the platform's business rather than something to sniff for. There is nothing
+/// here for `Mod`+`S` to save to, and `Mod`+`F` is the editor's.
+///
+/// Undo is Flutter's own history, which is the decision written down in the
+/// guide, and the keys for it are here all the same. A `WidgetsApp` binds them
+/// to every text field under it, and this package does not require one, so
+/// without these a field outside one had a history and no way to walk it from a
+/// keyboard. Under one they name the same intents its own keys do.
 const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.keyZ, control: true): UndoTextIntent(
+    SelectionChangedCause.keyboard,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyZ, meta: true): UndoTextIntent(
+    SelectionChangedCause.keyboard,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true): RedoTextIntent(
+    SelectionChangedCause.keyboard,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyZ, meta: true, shift: true): RedoTextIntent(
+    SelectionChangedCause.keyboard,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyY, control: true): RedoTextIntent(
+    SelectionChangedCause.keyboard,
+  ),
   SingleActivator(LogicalKeyboardKey.keyB, control: true): _CommandIntent(MawyCommand.bold),
   SingleActivator(LogicalKeyboardKey.keyB, meta: true): _CommandIntent(MawyCommand.bold),
   SingleActivator(LogicalKeyboardKey.keyI, control: true): _CommandIntent(MawyCommand.italic),

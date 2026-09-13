@@ -471,6 +471,8 @@ A run of typing is **one step**, not one per keystroke, because an undo that giv
 
 So undo is Flutter's rather than this package's, and it behaves the way it does in every other text field in your application, which is what somebody typing expects. How it treats a change made by a toolbar button rather than a keystroke is also Flutter's to decide, and it matches any other `TextEditingController` written to from outside.
 
+The keys are bound on the source itself as well as by a `WidgetsApp`. This package does not require one, and a text field outside one has a history and no key to walk it with.
+
 :::
 
 ## Pasting

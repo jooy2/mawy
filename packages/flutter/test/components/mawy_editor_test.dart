@@ -1076,6 +1076,45 @@ void main() {
       }
     });
 
+    testWidgets('steps back and forward with the keys every text field uses', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two',
+            mode: MawyEditorMode.plain,
+            toolbar: const <MawyEditorToolbarItem>[],
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(find.byType(EditableText));
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection(baseOffset: 4, extentOffset: 7);
+      await tester.pump(const Duration(seconds: 1));
+      await chord(tester, LogicalKeyboardKey.keyB);
+      await tester.pump(const Duration(seconds: 1));
+      expect(seen.last, 'one **two**');
+
+      // No `WidgetsApp` here, which is what binds these to a text field
+      // everywhere else — and this package does not require one.
+      await chord(tester, LogicalKeyboardKey.keyZ);
+      expect(seen.last, 'one two');
+
+      await chord(tester, LogicalKeyboardKey.keyZ, shift: true);
+      expect(seen.last, 'one **two**');
+
+      await chord(tester, LogicalKeyboardKey.keyZ);
+      await chord(tester, LogicalKeyboardKey.keyY);
+      expect(seen.last, 'one **two**');
+    });
+
     testWidgets('runs no command while the document is read only', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

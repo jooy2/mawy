@@ -10,6 +10,10 @@
 
 - **The quotation, the three lists, the code block, the divider and the image have keyboard shortcuts.** The guide said every formatting command had one, and seven of them could only be reached from the toolbar. `Mod`+`Shift`+`.` quotes, `Mod`+`Shift`+`8`, `7` and `9` make a bulleted, numbered and task list, `Mod`+`Shift`+`E` fences a code block, `Mod`+`Shift`+`K` writes an image and `Mod`+`Shift`+`,` a divider. They are the React package's keys, and the reasons for each are in its guide.
 
+### Fixed
+
+- **`Mod`+`Z`, `Mod`+`Shift`+`Z` and `Ctrl`+`Y` walk the source's history outside a `WidgetsApp`.** A `WidgetsApp` binds those keys to every text field under it, and this package does not require one, so an editor put under a bare `Directionality` kept a history and gave no key to walk it with. The keys are bound on the source itself now, and under a `WidgetsApp` they name the same intents its own do.
+
 ## 1.3.0 (2026-09-12)
 
 ### Added
