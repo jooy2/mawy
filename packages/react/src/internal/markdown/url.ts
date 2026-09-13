@@ -153,6 +153,11 @@ export function dataImageBytes(
   }
 
   const comma = trimmed.indexOf(',');
+
+  // No comma is no payload, and what would be read as one is the address.
+  if (comma === -1) {
+    return null;
+  }
   const head = trimmed.slice(5, comma).replace(IGNORED, '');
   const payload = trimmed.slice(comma + 1);
   const type = head.split(';')[0].toLowerCase();

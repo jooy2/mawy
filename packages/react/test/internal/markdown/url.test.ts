@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isRelativeUrl } from '../../../src/internal/markdown/url.js';
+import { dataImageBytes, isRelativeUrl } from '../../../src/internal/markdown/url.js';
 
 /**
  * Which addresses a document writes that mean nothing on their own.
@@ -54,5 +54,18 @@ describe('telling a relative URL from one that says where it is', () => {
     // fragment, which `schemeOf` is written to notice.
     expect(isRelativeUrl('README.md#a:b')).toBe(true);
     expect(isRelativeUrl('a/b:c.png')).toBe(true);
+  });
+});
+
+describe('the bytes a `data:` picture carries', () => {
+  it('reads base64 and percent-encoded payloads', () => {
+    expect([...(dataImageBytes('data:image/png;base64,AQID')?.bytes ?? [])]).toEqual([1, 2, 3]);
+    expect(dataImageBytes('data:image/svg+xml,%3Csvg%3E')?.type).toBe('image/svg+xml');
+  });
+
+  it('has none for an address with no payload, or a payload it cannot read', () => {
+    expect(dataImageBytes('data:image/svg+xml;utf8')).toBe(null);
+    expect(dataImageBytes('data:image/png;base64,%%%')).toBe(null);
+    expect(dataImageBytes('data:text/html,<b>x</b>')).toBe(null);
   });
 });

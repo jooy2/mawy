@@ -63,9 +63,13 @@ export function altFor(file: File): string {
   return file.name.replace(/\.[^.]+$/, '').trim();
 }
 
-/** `[` and `]` inside the description, which would end it early. */
+/**
+ * `[` and `]` inside the description, which would end it early, and `|` and a
+ * line ending, which would end the table cell a pasted picture can be written
+ * into. A backslash before a `|` is a `|` anywhere else too.
+ */
 function escapeAlt(text: string): string {
-  return text.replace(/[\\[\]]/g, '\\$&');
+  return text.replace(/\s+/g, ' ').replace(/[\\[\]|]/g, '\\$&');
 }
 
 /**
@@ -83,7 +87,9 @@ function destination(url: string): string {
 export function markdownForImage(source: MawyImageSource, file: File): string {
   const image = typeof source === 'string' ? { url: source } : source;
   const alt = escapeAlt(image.alt ?? altFor(file));
-  const title = image.title ? ` "${image.title.replace(/["\\]/g, '\\$&')}"` : '';
+  const title = image.title
+    ? ` "${image.title.replace(/\s+/g, ' ').replace(/["\\|]/g, '\\$&')}"`
+    : '';
 
   return `![${alt}](${destination(image.url)}${title})`;
 }

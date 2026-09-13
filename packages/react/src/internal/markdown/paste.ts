@@ -46,9 +46,13 @@ interface Reading {
  * here that is not text. Offsets into the Markdown cannot be counted while it is
  * being built, because the whitespace is tidied once it is whole — so the place
  * is marked in the string and read off at the end. The same character arriving
- * as text is dropped where the text is read, so every one left is one of these.
+ * in the markup — as text, in code, in an address or a description — is dropped
+ * wherever the markup is read, so every one left is one of these.
  */
 const STOOD = '\uFFFC';
+
+/** What the markup said, with the marker taken out of it wherever it was written. */
+const unmarked = (text: string | null): string => (text ?? '').replaceAll(STOOD, '');
 
 /** A `data:` picture taken out of pasted markup, and where it stood in the Markdown. */
 export interface MawyInlineImage {
@@ -171,7 +175,7 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
     if (node.nodeType === 3) {
       // HTML collapses its whitespace and so does this: the line breaks in the
       // markup are the author's typing, not the document's.
-      out += escapeText((node as Text).data.replace(/\s+/g, ' ').replaceAll(STOOD, ''));
+      out += escapeText(unmarked((node as Text).data).replace(/\s+/g, ' '));
       continue;
     }
 
@@ -206,11 +210,11 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
       case 'CODE':
       case 'KBD':
       case 'SAMP':
-        out += codeSpan(element.textContent ?? '');
+        out += codeSpan(unmarked(element.textContent));
         break;
 
       case 'A': {
-        const url = safeUrl(element.getAttribute('href') ?? '');
+        const url = safeUrl(unmarked(element.getAttribute('href')));
         const label = inside();
 
         // A link nobody may follow is the words it was written with. That is
@@ -220,11 +224,11 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
       }
 
       case 'IMG': {
-        const url = safeImageUrl(element.getAttribute('src') ?? '');
-        const alt = escapeText(element.getAttribute('alt') ?? '');
+        const url = safeImageUrl(unmarked(element.getAttribute('src')));
+        const alt = escapeText(unmarked(element.getAttribute('alt')));
 
         if (url && reading.inline && dataImageBytes(url)) {
-          reading.inline.push({ url, alt: element.getAttribute('alt') ?? '' });
+          reading.inline.push({ url, alt: unmarked(element.getAttribute('alt')) });
           out += STOOD;
           break;
         }
@@ -349,7 +353,7 @@ function tableOf(element: HTMLElement, reading: Reading): string {
 
 function preOf(element: HTMLElement): string {
   const inner = element.querySelector('code');
-  const value = (inner ?? element).textContent ?? '';
+  const value = unmarked((inner ?? element).textContent);
   const language =
     /(?:language|lang|highlight)-([\w+#.-]+)/.exec(inner?.className ?? '')?.[1] ?? '';
   const fence = '`'.repeat(Math.max(3, longestRun(value, '`') + 1));

@@ -138,6 +138,18 @@ describe('pictures carried inline', () => {
 
   it('does not mistake the character it marks them with for one of them', () => {
     expect(pasteFromHtml('<p>a\uFFFCb</p>')).toEqual({ markdown: 'ab', images: [] });
+    // Nor where it arrives in code, or in another picture's description.
+    expect(pasteFromHtml(`<p><code>a\uFFFCb</code> then <img src="${DOT}" alt="d"></p>`)).toEqual({
+      markdown: '`ab` then ',
+      images: [{ at: 10, url: DOT, alt: 'd' }]
+    });
+    expect(
+      pasteFromHtml(`<p><img src="/a.png" alt="x\uFFFCy"> <img src="${DOT}" alt="d"></p>`)
+    ).toEqual({ markdown: '![xy](/a.png) ', images: [{ at: 14, url: DOT, alt: 'd' }] });
+    expect(pasteFromHtml(`<pre><code>a\uFFFCb</code></pre><p><img src="${DOT}"></p>`)).toEqual({
+      markdown: '```\nab\n```\n\n',
+      images: [{ at: 12, url: DOT, alt: '' }]
+    });
   });
 
   it('does not count them, or a description with no picture, as something to paste', () => {

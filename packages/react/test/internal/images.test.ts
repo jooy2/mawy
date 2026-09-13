@@ -33,6 +33,16 @@ const transfer = (files: File[], kinds: Record<string, string> = {}): DataTransf
   return data;
 };
 
+describe('what goes around the address', () => {
+  it('cannot end a table cell or a line', () => {
+    // A picture pasted into a table cell is written into that cell's line.
+    expect(markdownForImage('/a.png', file('a|b.png'))).toBe('![a\\|b](/a.png)');
+    expect(markdownForImage({ url: '/a.png', alt: 'one\ntwo', title: 'x\ny' }, file('a.png'))).toBe(
+      '![one two](/a.png "x y")'
+    );
+  });
+});
+
 describe('what a file is called', () => {
   it('is the name without the extension it is stored under', () => {
     expect(altFor(file('Screenshot 2026-08-31.png'))).toBe('Screenshot 2026-08-31');
