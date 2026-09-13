@@ -144,6 +144,162 @@ export type MawyColorScheme = 'light' | 'dark' | 'system';
 export type MawyLocale = 'en' | 'ko';
 
 /**
+ * Every word the library's own interface says, by name.
+ *
+ * What `strings` on `MawyEditor`, `MawyViewer` and `MawyDocument` takes some or
+ * all of, for an application whose translations live in a catalogue of its own:
+ * anything it leaves out comes from `locale`.
+ *
+ * ```tsx
+ * <MawyEditor locale="en" strings={{ lang: 'de', bold: t('editor.bold') }} />
+ * ```
+ *
+ * A few carry a value, and mark where it goes with `%` and a capital letter:
+ * `%N`, `%T`, `%L` and `%C`, each explained on the string that uses it. Every
+ * place a placeholder is written is filled, so a language that wants the count
+ * twice can have it twice, and one this interface does not name for that string
+ * is left as written.
+ *
+ * Keys are added in minor versions as the interface grows, and one is only ever
+ * renamed or taken away in a major — so a `Partial` of this is a type an
+ * application can keep.
+ */
+export interface MawyStrings {
+  /**
+   * The language these words are in, for a `lang` attribute.
+   *
+   * It goes on what this library says and never on the document: a Korean
+   * interface around an English document is an ordinary thing, and the
+   * document's language is the author's and unknown here. Without it a screen
+   * reader reads the toolbar's Korean in whatever voice the page around it
+   * declared.
+   */
+  lang: string;
+  toolbar: string;
+  fontFamily: string;
+  fontFamilySans: string;
+  fontFamilySerif: string;
+  fontFamilyMono: string;
+  fontSize: string;
+  lineHeight: string;
+  letterSpacing: string;
+  measure: string;
+  measureNarrow: string;
+  measureNormal: string;
+  measureWide: string;
+  measureFull: string;
+  colorScheme: string;
+  colorSchemeLight: string;
+  colorSchemeDark: string;
+  colorSchemeSystem: string;
+  outline: string;
+  outlineEmpty: string;
+  copy: string;
+  copied: string;
+  copyFailed: string;
+  copyCode: string;
+  open: string;
+  close: string;
+  document: string;
+  emptyTitle: string;
+  emptyHint: string;
+  emptyAction: string;
+  /** What a viewer with no document says when it cannot be given one. */
+  emptyNothing: string;
+  dropHere: string;
+  readFailed: string;
+  fileTooLarge: string;
+  reset: string;
+  footnotes: string;
+  footnoteBack: string;
+  task: string;
+  alertNote: string;
+  alertTip: string;
+  alertImportant: string;
+  alertWarning: string;
+  alertCaution: string;
+  editor: string;
+  undo: string;
+  redo: string;
+  /** The toolbar's overflow menu, where what did not fit is kept. */
+  more: string;
+  /** The bar between the two panes of `split`, which is draggable. */
+  divider: string;
+  source: string;
+  mode: string;
+  modeWysiwyg: string;
+  modePlain: string;
+  modePreview: string;
+  modeSplit: string;
+  bold: string;
+  italic: string;
+  strikethrough: string;
+  codeSpan: string;
+  link: string;
+  image: string;
+  /** The image menu's entry that chooses a file, where an upload is possible. */
+  imageUpload: string;
+  /** And the one that writes `![](url)` for an address to be typed in. */
+  imageLink: string;
+  heading: string;
+  heading1: string;
+  heading2: string;
+  heading3: string;
+  paragraph: string;
+  quote: string;
+  bulletList: string;
+  orderedList: string;
+  taskList: string;
+  codeBlock: string;
+  table: string;
+  tableInsert: string;
+  tableRowBelow: string;
+  tableRowAbove: string;
+  tableColumnAfter: string;
+  tableColumnBefore: string;
+  tableRowRemove: string;
+  tableColumnRemove: string;
+  thematicBreak: string;
+  status: string;
+  /** `%L` is the line and `%C` the column, both counted from one. */
+  statusPosition: string;
+  /** `%N` is how many characters are selected. */
+  statusSelected: string;
+  statusLines: string;
+  statusWords: string;
+  statusCharacters: string;
+  editorPlaceholder: string;
+  /**
+   * How to get out, said to a screen reader beside the surface.
+   *
+   * `Tab` indents here, which makes this a keyboard trap unless somebody is
+   * told the way out — and a rule nobody is told about is a rule that does not
+   * exist for the person who needed it.
+   */
+  sourceEscape: string;
+  find: string;
+  replace: string;
+  findMatchCase: string;
+  findPrevious: string;
+  findNext: string;
+  findClose: string;
+  /** `%N` is the match the caret is on, counted from one, and `%T` how many there are. */
+  findMatches: string;
+  findNoMatches: string;
+  replaceOne: string;
+  replaceAll: string;
+  openFile: string;
+  saveFile: string;
+  /** `%N` is the name the document was saved under. */
+  saved: string;
+  dropImage: string;
+  /** Said when a file was dropped on the editor and was not an image. */
+  dropNotDocument: string;
+  uploading: string;
+  uploadFailed: string;
+}
+
+/**
  * Which typeface the document is set in — the `id` of one of the fonts the
  * viewer was given.
  *

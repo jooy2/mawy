@@ -26,6 +26,14 @@ describe('a document rendered on a server', () => {
     expect(html).not.toContain('data-reactroot');
   });
 
+  it('says what the application tells it to', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument value="Words." strings={{ document: 'Dokument' }} />
+    );
+
+    expect(html).toContain('aria-label="Dokument"');
+  });
+
   it('leaves out the controls that would have nothing behind them', () => {
     const html = renderToStaticMarkup(<MawyDocument value={'```ts\nconst a = 1;\n```'} />);
 

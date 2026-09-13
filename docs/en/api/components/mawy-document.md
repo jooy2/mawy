@@ -45,6 +45,7 @@ A React Server Component in a framework that has them, and an ordinary component
 | `headingBase` | `number` | `1` | Which of `h1` to `h6` the document's own `#` is drawn as. |
 | `anchorPrefix` | `string` | — | Put in front of every anchor this drawing gives a heading or a footnote, so two documents on one page stop colliding. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the few words this library writes itself. |
+| `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | The interface's words, some or all of them, over the ones `locale` has. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | What colours a code block. |
 | `typography` | `Partial<`[`MawyTypography`](../types/typography)`>` | — | How the document is set, as the same custom properties. Anything left out keeps its default. |
 | `fonts` | [`MawyFont`](../types/font)`[]` | `MAWY_SYSTEM_FONTS` | The typefaces those properties may name. |

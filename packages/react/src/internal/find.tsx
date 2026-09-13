@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { MawyStrings } from './i18n.js';
+import { fill, type MawyStrings } from './i18n.js';
 import { IconButton } from './controls.js';
 import {
   CaseSensitiveIcon,
@@ -81,7 +81,7 @@ export function FindBar({
   const count = query
     ? total === 0
       ? strings.findNoMatches
-      : strings.findMatches.replace('%N', String(current + 1)).replace('%T', String(total))
+      : fill(strings.findMatches, { N: String(current + 1), T: String(total) })
     : '';
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {

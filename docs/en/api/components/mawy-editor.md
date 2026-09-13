@@ -99,6 +99,7 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | What the status bar counts. |
 | `lineNumbers` | `boolean` | `true` | The gutter down the left of the source. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the editor's own interface — toolbar labels, menu entries, the words along the status bar, the text a screen reader is given. Handed to the preview as well. Nothing to do with the document. |
+| `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | The interface's words, some or all of them, over the ones `locale` has. |
 
 :::
 

@@ -530,6 +530,23 @@ describe('the toolbar', () => {
     await expect.element(screen.getByRole('button', { name: '목차' })).toBeInTheDocument();
   });
 
+  it('says what the application tells it to, and the locale says the rest', async () => {
+    const screen = await render(
+      <MawyViewer
+        value={SAMPLE}
+        locale="en"
+        strings={{ lang: 'de', outline: 'Inhalt' }}
+        toolbar={['outline', 'copy']}
+      />
+    );
+
+    await expect.element(screen.getByRole('button', { name: 'Inhalt' })).toBeInTheDocument();
+    await expect
+      .element(screen.getByRole('button', { name: 'Copy the Markdown' }))
+      .toBeInTheDocument();
+    expect(screen.container.querySelector('.mawy-toolbar')?.getAttribute('lang')).toBe('de');
+  });
+
   it('is one tab stop, with the arrows moving inside it', async () => {
     const screen = await render(
       <MawyViewer value={SAMPLE} toolbar={['colorScheme', 'outline', 'copy']} />

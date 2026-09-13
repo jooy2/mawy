@@ -24,3 +24,46 @@ enum MawyLocale { en, ko }
 :::
 
 **English and Korean**, and `en` is the default. It sets the toolbar labels, the menu entries and the text a screen reader is given. It has nothing to do with the language a document is written in. Both packages ship the same words under the same names, and a locale that exists in only one of them is not one this library offers.
+
+## `MawyStrings`
+
+::: fw react
+
+```ts
+interface MawyStrings {
+  lang: string;
+  bold: string;
+  statusPosition: string; // 'Ln %L, Col %C'
+  // …every word the interface says, by name
+}
+```
+
+Every word the interface says, and what `strings` on `MawyEditor`, `MawyViewer` and `MawyDocument` takes some or all of. It is for an application whose translations live in a catalogue of its own, which is a better answer than this library carrying every language that catalogue has:
+
+```tsx
+<MawyEditor
+  locale="en"
+  strings={{ lang: 'de', bold: t('editor.bold'), statusPosition: t('editor.position') }}
+/>
+```
+
+Anything left out comes from `locale`. That includes `lang`, which goes on the interface's elements as their `lang` attribute so a screen reader reads the words in the right voice, so give `lang` too when the words are in a language `locale` is not. The editor hands its `strings` to its preview. Passing a new object on every render costs nothing: the words are compared, not the object.
+
+**A few strings carry a value.** They mark where it goes with `%` and one capital letter, and every place a placeholder is written is filled, so a language that wants a value twice can have it twice. A placeholder a string does not name is left as it was written, and what is filled in is never read again, so a file named `%T.md` is saved as `%T.md`.
+
+| String | Placeholders | English |
+| --- | --- | --- |
+| `statusPosition` | `%L` the line and `%C` the column, both counted from one | `Ln %L, Col %C` |
+| `statusSelected` | `%N` how many characters are selected | `%N selected` |
+| `findMatches` | `%N` the match the caret is on, counted from one; `%T` how many | `%N of %T` |
+| `saved` | `%N` the name the document was saved under | `Saved as %N` |
+
+The names are the ones in `src/internal/i18n.ts`, and the type lists every one. Keys are added in minor versions as the interface grows, and a key is renamed or removed only in a major version, so a `Partial<MawyStrings>` is a type an application can keep.
+
+:::
+
+::: fw flutter
+
+There is no way to hand this package words of its own yet. `locale` is the whole of it.
+
+:::

@@ -658,6 +658,16 @@ MawyViewer(value: document, locale: MawyLocale.ko)
 
 Both packages ship the same set of words under the same names, so a screen that reads one way in a browser reads the same way in an app. Adding a language means writing a table in `src/internal/i18n.ts` and its counterpart in `lib/src/internal/i18n.dart`. Both are required, and a locale that exists in only one package is not one this library offers.
 
+::: fw react
+
+**An application with translations of its own passes them as `strings`** rather than waiting for a locale: some or all of the words, by name, over the ones `locale` has. Give `lang` with them when they are in another language, so the `lang` attribute on the interface says so. See [`MawyStrings`](../api/types/locale#mawystrings) for the names and for the placeholders a few of them carry.
+
+```tsx
+<MawyViewer value={document} strings={{ lang: 'de', outline: t('viewer.outline') }} />
+```
+
+:::
+
 ## Theming
 
 ::: fw flutter

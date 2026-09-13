@@ -658,6 +658,16 @@ MawyViewer(value: document, locale: MawyLocale.ko)
 
 두 패키지가 같은 이름으로 같은 문장을 싣습니다. 브라우저에서 이렇게 읽히는 화면은 앱에서도 똑같이 읽힙니다. 언어를 하나 더하려면 `src/internal/i18n.ts`의 표와 `lib/src/internal/i18n.dart`의 짝을 함께 채워야 하고, 한쪽에만 있는 언어는 지원 언어로 보지 않습니다.
 
+::: fw react
+
+**번역을 직접 가진 애플리케이션은 로케일을 기다리지 않고 `strings`로 건넵니다.** 낱말의 일부나 전부를 이름별로 주면 `locale`의 낱말 위에 덮어씁니다. 다른 언어라면 `lang`도 함께 주어 인터페이스의 `lang` 속성이 그 언어를 말하게 하세요. 이름과, 몇 문자열에 들어가는 자리 표시는 [`MawyStrings`](../api/types/locale#mawystrings)에 있습니다.
+
+```tsx
+<MawyViewer value={document} strings={{ lang: 'de', outline: t('viewer.outline') }} />
+```
+
+:::
+
 ## 테마
 
 ::: fw flutter

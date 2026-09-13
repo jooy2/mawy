@@ -19,13 +19,15 @@ import type {
   MawyLocale,
   MawyMode,
   MawyParseOptions,
+  MawyStrings,
   MawyToolbarPlacement,
   MawyTypography,
   MawyUrlResolver
 } from '../../types.js';
 import { MAWY_SYSTEM_FONTS } from '../../fonts.js';
 import { useControlled } from '../../internal/controlled.js';
-import { stringsFor } from '../../internal/i18n.js';
+import { fill } from '../../internal/i18n.js';
+import { useStrings } from '../../internal/strings.js';
 import {
   commandActive,
   continueList,
@@ -331,6 +333,18 @@ export interface MawyEditorProps extends Omit<
 
   /** @default 'en' */
   locale?: MawyLocale;
+
+  /**
+   * The interface's words, some or all of them, over the ones `locale` has.
+   *
+   * For an application whose translations live in a catalogue of its own,
+   * which is a better answer than this library carrying every language that
+   * catalogue does. Anything left out comes from `locale`, `lang` included, so
+   * give `lang` too when the words are in a language `locale` is not. See
+   * `MawyStrings` for the names and for the placeholders a few of them carry.
+   * Handed to the preview as well.
+   */
+  strings?: Partial<MawyStrings>;
 }
 
 /**
@@ -378,12 +392,13 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     frame = 'box',
     toolbarPlacement = 'top',
     locale = 'en',
+    strings: overrides,
     className,
     ...rest
   },
   ref
 ) {
-  const strings = stringsFor(locale);
+  const strings = useStrings(locale, overrides);
 
   const controlled = value !== undefined;
   const [held, setHeld] = React.useState(defaultValue ?? '');
@@ -1605,7 +1620,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     }
 
     saveTextFile(text, name);
-    setNote({ text: strings.saved.replace('%N', name), failed: false });
+    setNote({ text: fill(strings.saved, { N: name }), failed: false });
   }, [fileName, onSave, strings, text]);
 
   /* ---------------------------------------------------------------------
@@ -1843,6 +1858,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               anchorPrefix={anchorPrefix}
               fonts={fonts}
               locale={locale}
+              strings={overrides}
               colorScheme={scheme}
               typography={typography}
               defaultTypography={defaultTypography}

@@ -99,6 +99,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | 상태 표시줄이 셀 것. |
 | `lineNumbers` | `boolean` | `true` | 원문 왼쪽의 줄 번호. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 에디터 인터페이스가 쓰는 언어. 툴바 이름표, 메뉴 항목, 상태 표시줄의 낱말, 스크린 리더에 주는 글입니다. 미리보기에도 함께 건넵니다. 문서와는 무관합니다. |
+| `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | 인터페이스의 낱말 일부나 전부. 나머지는 `locale`에서 가져옵니다. |
 
 :::
 

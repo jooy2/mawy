@@ -704,6 +704,40 @@ describe('the frame', () => {
 });
 
 describe('the toolbar and the keyboard', () => {
+  it('says what the application tells it to, placeholders and all', async () => {
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'one\ntwo'}
+        modes={['plain', 'split']}
+        locale="en"
+        strings={{
+          lang: 'de',
+          bold: 'Fett',
+          statusPosition: 'Zeile %L, Spalte %C (Zeile %L)',
+          document: 'Dokument'
+        }}
+        style={WIDE}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(5, 5);
+
+    await expect.element(screen.getByRole('button', { name: 'Fett' })).toBeInTheDocument();
+    await expect.element(screen.getByRole('button', { name: 'Italic' })).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-status')?.textContent).toContain(
+        'Zeile 2, Spalte 2 (Zeile 2)'
+      )
+    );
+    expect(screen.container.querySelector('.mawy-toolbar')?.getAttribute('lang')).toBe('de');
+
+    // The preview is handed the same words.
+    await screen.getByRole('radio', { name: 'Side by side' }).click();
+    await expect.element(screen.getByRole('article', { name: 'Dokument' })).toBeInTheDocument();
+  });
+
   it('runs a command on the selection, and draws itself as pressed once it has', async () => {
     const screen = await render(<MawyEditor defaultValue="one two three" modes={['plain']} />);
     const input = sourceOf(screen);

@@ -13,6 +13,7 @@ import type {
   MawyLinkTarget,
   MawyLocale,
   MawyParseOptions,
+  MawyStrings,
   MawyToolbarPlacement,
   MawyTypography,
   MawyUrlResolver,
@@ -25,7 +26,7 @@ import { useCopy } from '../../internal/clipboard.js';
 import { useControlled } from '../../internal/controlled.js';
 import { FilePicker } from '../../internal/controls.js';
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
-import { stringsFor } from '../../internal/i18n.js';
+import { useStrings } from '../../internal/strings.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import { LIVE } from '../../internal/markdown/live.js';
 import { firstImage, renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
@@ -172,6 +173,15 @@ export interface MawyViewerProps extends Omit<
 
   /** The language of the viewer's own interface. @default 'en' */
   locale?: MawyLocale;
+
+  /**
+   * The interface's words, some or all of them, over the ones `locale` has.
+   *
+   * For an application whose translations live in a catalogue of its own.
+   * Anything left out comes from `locale`, `lang` included, so give `lang` too
+   * when the words are in a language `locale` is not. See `MawyStrings`.
+   */
+  strings?: Partial<MawyStrings>;
 
   /**
    * Whether a file dropped onto the viewer opens in it.
@@ -336,6 +346,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     frame = 'box',
     toolbarPlacement = 'top',
     locale = 'en',
+    strings: overrides,
     fileDrop,
     accept = MAWY_ACCEPT,
     highlight,
@@ -351,7 +362,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   },
   ref
 ) {
-  const strings = stringsFor(locale);
+  const strings = useStrings(locale, overrides);
   const gfm = parse?.gfm ?? true;
   const breaks = parse?.breaks ?? false;
   const definitionLists = parse?.definitionLists ?? true;

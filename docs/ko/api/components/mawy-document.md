@@ -45,6 +45,7 @@ React 서버 컴포넌트를 가진 프레임워크에서는 서버 컴포넌트
 | `headingBase` | `number` | `1` | 문서의 `#`을 `h1`부터 `h6` 중 무엇으로 그릴지. |
 | `anchorPrefix` | `string` | — | 이 그림이 제목과 각주에 주는 앵커 앞에 붙일 것. 한 페이지에 문서가 둘일 때 이름이 부딪히지 않게 합니다. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 이 라이브러리가 직접 쓰는 몇 낱말의 언어. |
+| `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | 인터페이스의 낱말 일부나 전부. 나머지는 `locale`에서 가져옵니다. |
 | `highlight` | [`MawyHighlighter`](../types/highlighter) | — | 코드 블록에 색을 입히는 것. |
 | `typography` | `Partial<`[`MawyTypography`](../types/typography)`>` | — | 문서 조판. 같은 커스텀 속성으로 나갑니다. 빠뜨린 값은 기본값을 씁니다. |
 | `fonts` | [`MawyFont`](../types/font)`[]` | `MAWY_SYSTEM_FONTS` | 그 속성이 이름 댈 수 있는 글꼴. |

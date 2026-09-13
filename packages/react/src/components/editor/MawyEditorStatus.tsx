@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { MawyEditorStatusItem, MawyLocale } from '../../types.js';
-import type { MawyStrings } from '../../internal/i18n.js';
+import { fill, type MawyStrings } from '../../internal/i18n.js';
 import {
   caretAt,
   countBytes,
@@ -46,7 +46,16 @@ export function MawyEditorStatus({
   strings,
   locale
 }: MawyEditorStatusProps): React.ReactElement {
-  const format = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  // In the language of the words around the numbers, which is `strings.lang`
+  // and is `locale` unless an application said otherwise. A tag no engine
+  // knows is a `RangeError` here, and a count of words is not worth a crash.
+  const format = React.useMemo(() => {
+    try {
+      return new Intl.NumberFormat(strings.lang || locale);
+    } catch {
+      return new Intl.NumberFormat(locale);
+    }
+  }, [locale, strings.lang]);
 
   const counts = React.useMemo(
     () => ({
@@ -69,14 +78,15 @@ export function MawyEditorStatus({
     switch (item) {
       case 'position':
         cells.push(
-          strings.statusPosition
-            .replace('%L', format.format(at.line))
-            .replace('%C', format.format(at.column))
+          fill(strings.statusPosition, {
+            L: format.format(at.line),
+            C: format.format(at.column)
+          })
         );
         break;
       case 'selection':
         if (at.selected > 0) {
-          cells.push(strings.statusSelected.replace('%N', format.format(at.selected)));
+          cells.push(fill(strings.statusSelected, { N: format.format(at.selected) }));
         }
 
         break;

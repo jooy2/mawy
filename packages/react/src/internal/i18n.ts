@@ -8,143 +8,14 @@
  * author wrote.
  *
  * A flat record rather than a message format: every string is a whole sentence
- * or a whole label, none of them interpolate, and a formatting library for that
+ * or a whole label, and the few that carry a number or a name mark where it goes
+ * with `%` and one capital letter — see `fill`. A formatting library for that
  * would be a dependency to save nothing.
  */
 
-import type { MawyLocale } from '../types.js';
+import type { MawyLocale, MawyStrings } from '../types.js';
 
-export interface MawyStrings {
-  /**
-   * The language these words are in, for a `lang` attribute.
-   *
-   * It goes on what this library says and never on the document: a Korean
-   * interface around an English document is an ordinary thing, and the
-   * document's language is the author's and unknown here. Without it a screen
-   * reader reads the toolbar's Korean in whatever voice the page around it
-   * declared.
-   */
-  lang: string;
-  toolbar: string;
-  fontFamily: string;
-  fontFamilySans: string;
-  fontFamilySerif: string;
-  fontFamilyMono: string;
-  fontSize: string;
-  lineHeight: string;
-  letterSpacing: string;
-  measure: string;
-  measureNarrow: string;
-  measureNormal: string;
-  measureWide: string;
-  measureFull: string;
-  colorScheme: string;
-  colorSchemeLight: string;
-  colorSchemeDark: string;
-  colorSchemeSystem: string;
-  outline: string;
-  outlineEmpty: string;
-  copy: string;
-  copied: string;
-  copyFailed: string;
-  copyCode: string;
-  open: string;
-  close: string;
-  document: string;
-  emptyTitle: string;
-  emptyHint: string;
-  emptyAction: string;
-  /** What a viewer with no document says when it cannot be given one. */
-  emptyNothing: string;
-  dropHere: string;
-  readFailed: string;
-  fileTooLarge: string;
-  reset: string;
-  footnotes: string;
-  footnoteBack: string;
-  task: string;
-  alertNote: string;
-  alertTip: string;
-  alertImportant: string;
-  alertWarning: string;
-  alertCaution: string;
-  editor: string;
-  undo: string;
-  redo: string;
-  /** The toolbar's overflow menu, where what did not fit is kept. */
-  more: string;
-  /** The bar between the two panes of `split`, which is draggable. */
-  divider: string;
-  source: string;
-  mode: string;
-  modeWysiwyg: string;
-  modePlain: string;
-  modePreview: string;
-  modeSplit: string;
-  bold: string;
-  italic: string;
-  strikethrough: string;
-  codeSpan: string;
-  link: string;
-  image: string;
-  /** The image menu's entry that chooses a file, where an upload is possible. */
-  imageUpload: string;
-  /** And the one that writes `![](url)` for an address to be typed in. */
-  imageLink: string;
-  heading: string;
-  heading1: string;
-  heading2: string;
-  heading3: string;
-  paragraph: string;
-  quote: string;
-  bulletList: string;
-  orderedList: string;
-  taskList: string;
-  codeBlock: string;
-  table: string;
-  tableInsert: string;
-  tableRowBelow: string;
-  tableRowAbove: string;
-  tableColumnAfter: string;
-  tableColumnBefore: string;
-  tableRowRemove: string;
-  tableColumnRemove: string;
-  thematicBreak: string;
-  status: string;
-  statusPosition: string;
-  statusSelected: string;
-  statusLines: string;
-  statusWords: string;
-  statusCharacters: string;
-  editorPlaceholder: string;
-  /**
-   * How to get out, said to a screen reader beside the surface.
-   *
-   * `Tab` indents here, which makes this a keyboard trap unless somebody is
-   * told the way out — and a rule nobody is told about is a rule that does not
-   * exist for the person who needed it.
-   */
-  sourceEscape: string;
-  find: string;
-  replace: string;
-  findMatchCase: string;
-  findPrevious: string;
-  findNext: string;
-  findClose: string;
-  /** `%N` of `%T`, which is the count and the one the caret is on. */
-  findMatches: string;
-  findNoMatches: string;
-  replaceOne: string;
-  replaceAll: string;
-  openFile: string;
-  saveFile: string;
-  saved: string;
-  dropImage: string;
-  /** Said when a file was dropped on the editor and was not an image. */
-  dropNotDocument: string;
-  uploading: string;
-  uploadFailed: string;
-}
+export type { MawyStrings };
 
 const en: MawyStrings = {
   lang: 'en',
@@ -369,4 +240,29 @@ const STRINGS: Record<MawyLocale, MawyStrings> = { en, ko };
 /** The strings for a locale, falling back to English for anything unknown. */
 export function stringsFor(locale: MawyLocale | undefined): MawyStrings {
   return STRINGS[locale as MawyLocale] ?? en;
+}
+
+/**
+ * The strings for a locale with an application's own words over them.
+ *
+ * Only the keys the application gave are replaced, so a catalogue that has
+ * translated half of them still gets a whole interface — the other half in the
+ * locale's words, and `lang` with them unless it was given too.
+ */
+export function withStrings(
+  locale: MawyLocale | undefined,
+  overrides: Partial<MawyStrings> | undefined
+): MawyStrings {
+  return overrides ? { ...stringsFor(locale), ...overrides } : stringsFor(locale);
+}
+
+/**
+ * A string with its placeholders filled in: `%N` for `N`, and so on.
+ *
+ * One pass over the template, so every place a placeholder is written is filled
+ * and nothing that was put in is read again — a file called `%T.md` is saved as
+ * `%T.md`. A placeholder the string does not name is left as it was written.
+ */
+export function fill(template: string, values: Readonly<Record<string, string>>): string {
+  return template.replace(/%([A-Z])/g, (whole, letter: string) => values[letter] ?? whole);
 }

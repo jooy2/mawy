@@ -55,11 +55,12 @@ import type {
   MawyLinkTarget,
   MawyLocale,
   MawyParseOptions,
+  MawyStrings,
   MawyTypography,
   MawyUrlResolver
 } from './types.js';
 import { MAWY_SYSTEM_FONTS } from './fonts.js';
-import { stringsFor } from './internal/i18n.js';
+import { withStrings } from './internal/i18n.js';
 import { parseMarkdown } from './internal/markdown/parse.js';
 import {
   firstImage,
@@ -171,6 +172,12 @@ export interface MawyDocumentProps {
   locale?: MawyLocale;
 
   /**
+   * Those words, some or all of them, over the ones `locale` has. See
+   * `MawyStrings`, and `MawyViewer`'s own `strings`.
+   */
+  strings?: Partial<MawyStrings>;
+
+  /**
    * What colours a code block. Only a highlighter that answers at once is
    * used, since there is no second render for a promise to arrive on.
    */
@@ -223,6 +230,7 @@ export function MawyDocument({
   anchorPrefix,
   headingBase,
   locale = 'en',
+  strings: overrides,
   highlight,
   typography,
   fonts = MAWY_SYSTEM_FONTS,
@@ -230,7 +238,7 @@ export function MawyDocument({
   className,
   style
 }: MawyDocumentProps): React.ReactElement {
-  const strings = stringsFor(locale);
+  const strings = withStrings(locale, overrides);
   const document_ = parseMarkdown(value, {
     gfm: parse?.gfm ?? true,
     breaks: parse?.breaks ?? false,
