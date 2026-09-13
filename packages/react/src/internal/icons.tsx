@@ -42,6 +42,8 @@ export {
   Strikethrough as StrikethroughIcon,
   Table as TableIcon,
   Trash2 as RemoveIcon,
+  Redo2 as RedoIcon,
+  Undo2 as UndoIcon,
   TextQuote as QuoteIcon,
   Check as CheckIcon,
   ChevronDown as ChevronDownIcon,

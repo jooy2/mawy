@@ -212,6 +212,7 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | Item |  |
 | --- | --- |
 | `'mode'` | The surface switch |
+| `'undo'`, `'redo'` | A step back through the history and forward again, disabled while there is none. React only |
 | `'heading'` | A menu of heading 1, 2, 3 and body text |
 | `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
@@ -401,6 +402,12 @@ The drawn document does not capture `Tab` at all. It is one focusable element, s
 ## Undo
 
 `Mod`+`Z` goes back, `Mod`+`Shift`+`Z` comes forward again, and `Ctrl`+`Y` is the Windows spelling of the same command. The history is **one list for the whole editor** rather than one per surface.
+
+::: fw react
+
+The toolbar's `undo` and `redo` buttons do the same, and are on the default toolbar right after the surface switch, where a narrow bar keeps them. On a phone they are the only undo there is. Each is disabled while there is no step to take back or put back.
+
+:::
 
 On its own, the source surface could have used the browser's own stack, which a `<textarea>` keeps well. But the drawn document is a `contenteditable` that refuses every input, so nothing is ever recorded on the browser's stack. With two stacks, an edit made in `wysiwyg` and taken back in `plain` would step through half of what happened and then stop.
 

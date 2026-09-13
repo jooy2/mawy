@@ -462,6 +462,19 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     drew.current = { value: text, start: selection.start, end: selection.end };
   }, [text, selection.start, selection.end]);
 
+  /**
+   * Whether there is a step to take back or to put back, for the toolbar's two
+   * buttons. Two booleans rather than one object, so that a keystroke that
+   * leaves both where they were is not a render of the toolbar.
+   */
+  const [canUndo, setCanUndo] = React.useState(false);
+  const [canRedo, setCanRedo] = React.useState(false);
+
+  const counted = React.useCallback(() => {
+    setCanUndo(history.current.past.length > 0);
+    setCanRedo(history.current.future.length > 0);
+  }, []);
+
   const write = React.useCallback(
     (next: string) => {
       // Everything that changes the document comes through here, which is what
@@ -469,6 +482,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // own footsteps while it is putting a step back.
       if (!restoring.current) {
         record(history.current, drew.current, next, Date.now());
+        counted();
       }
 
       if (!controlled) {
@@ -477,7 +491,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       notify.current?.(next);
     },
-    [controlled]
+    [controlled, counted]
   );
 
   /* ---------------------------------------------------------------------
@@ -810,8 +824,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       setRoom(null);
       write(step.value);
       restoring.current = false;
+      counted();
     },
-    [readOnly, stateNow, write]
+    [counted, readOnly, stateNow, write]
   );
 
   const command = React.useCallback(
@@ -1635,6 +1650,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           onOpen={readOnly ? undefined : openFile}
           onPickImage={onUploadImage ? pickImage : undefined}
           onTable={tableCommand}
+          onUndo={canUndo ? () => travel(true) : undefined}
+          onRedo={canRedo ? () => travel(false) : undefined}
           tableAvailable={(name) => tableAfter(name) !== null}
           onSave={save}
         />

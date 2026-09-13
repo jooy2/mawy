@@ -12,6 +12,8 @@ One control on the editor's toolbar.
 ```ts
 type MawyEditorToolbarItem =
   | 'mode'
+  | 'undo'
+  | 'redo'
   | 'bold'
   | 'italic'
   | 'strikethrough'
@@ -64,6 +66,8 @@ enum MawyEditorToolbarItem {
 Everything except `mode`, `find`, `colorScheme` and `separator` is a formatting command, and every one of those also has a keyboard shortcut. `find` has one too, `Mod`+`F`, and it works whether or not the button is drawn. `separator` draws a hairline rather than a control.
 
 ::: fw react
+
+`undo` and `redo` are the history, `Mod`+`Z` and `Mod`+`Shift`+`Z`, drawn disabled while there is nothing to take back or put back. `table` is a menu of the seven commands that insert a table and change its shape, each with a shortcut of its own; see [tables](../../guide/editor#tables).
 
 `open` and `save` are here as well. `Mod`+`S` saves whether the button is drawn or not; `open` has no shortcut, because the browser's own `Mod`+`O` is a reasonable thing to leave alone and opening a file is a rare and deliberate act rather than one done mid-flow.
 

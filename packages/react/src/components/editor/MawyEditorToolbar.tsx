@@ -40,6 +40,8 @@ import {
   StrikethroughIcon,
   SystemThemeIcon,
   TableIcon,
+  RedoIcon,
+  UndoIcon,
   TaskListIcon,
   WysiwygIcon
 } from '../../internal/icons.js';
@@ -67,6 +69,10 @@ export interface MawyEditorToolbarProps {
    * said where an image goes, and then `image` is a menu of that and the link.
    */
   onPickImage?: () => void;
+  /** A step back through the history. Absent when there is none to take. */
+  onUndo?: () => void;
+  /** A step forward again. Absent when there is none to put back. */
+  onRedo?: () => void;
   /** Runs a table command. */
   onTable: (command: MawyTableCommand) => void;
   /** Whether a table command has anything to act on where the caret is. */
@@ -296,6 +302,8 @@ export function MawyEditorToolbar({
   finding,
   onOpen,
   onPickImage,
+  onUndo,
+  onRedo,
   onTable,
   tableAvailable,
   onSave
@@ -480,6 +488,27 @@ export function MawyEditorToolbar({
       );
     }
 
+    if (item === 'undo' || item === 'redo') {
+      const back = item === 'undo';
+      const Icon = back ? UndoIcon : RedoIcon;
+      const onPress = back ? onUndo : onRedo;
+
+      // Here for a reader with no keyboard, which on a phone is every reader:
+      // `Mod`+`Z` is the whole of undo otherwise.
+      return (
+        <IconButton
+          key={key}
+          label={back ? strings.undo : strings.redo}
+          icon={<Icon className="mawy-icon" aria-hidden="true" />}
+          aria-keyshortcuts={back ? 'Control+Z Meta+Z' : 'Control+Shift+Z Meta+Shift+Z Control+Y'}
+          disabled={!editable || !onPress}
+          data-mawy-toolbar-item=""
+          onClick={onPress}
+          {...itemProps(at)}
+        />
+      );
+    }
+
     if (item === 'find') {
       return (
         <IconButton
@@ -641,6 +670,9 @@ export function MawyEditorToolbar({
 /** Every control, in the order they are drawn when `toolbar` is just `true`. */
 export const DEFAULT_EDITOR_TOOLBAR: readonly MawyEditorToolbarItem[] = [
   'mode',
+  'separator',
+  'undo',
+  'redo',
   'separator',
   'heading',
   'bold',

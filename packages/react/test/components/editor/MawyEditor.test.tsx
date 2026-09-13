@@ -3503,6 +3503,43 @@ describe('undo', () => {
     await vi.waitFor(() => expect(input.value).toBe('One two.'));
   });
 
+  it('has buttons for a reader with no keyboard, which say when there is nothing to do', async () => {
+    for (const mode of ['plain', 'wysiwyg'] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue="one two" mode={mode} onChange={onChange} style={WIDE} />
+      );
+      const back = screen.getByRole('button', { name: 'Undo' });
+      const forward = screen.getByRole('button', { name: 'Redo' });
+
+      await expect.element(back).toBeDisabled();
+      await expect.element(forward).toBeDisabled();
+
+      if (mode === 'plain') {
+        sourceOf(screen).focus();
+        sourceOf(screen).setSelectionRange(4, 7);
+      } else {
+        put(bodyOf(screen), 'one two', 4, 7);
+        await new Promise((done) => setTimeout(done, 30));
+      }
+
+      await screen.getByRole('button', { name: 'Bold' }).click();
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one **two**'));
+      await expect.element(back).toBeEnabled();
+
+      await back.click();
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one two'));
+      await expect.element(back).toBeDisabled();
+      await expect.element(forward).toBeEnabled();
+
+      await forward.click();
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one **two**'));
+      await expect.element(forward).toBeDisabled();
+
+      await screen.unmount();
+    }
+  });
+
   it('leaves a read-only document alone', async () => {
     const screen = await render(<MawyEditor defaultValue="one" modes={['plain']} readOnly />);
     const input = sourceOf(screen);

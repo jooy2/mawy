@@ -69,6 +69,8 @@ export interface MawyStrings {
   alertWarning: string;
   alertCaution: string;
   editor: string;
+  undo: string;
+  redo: string;
   /** The toolbar's overflow menu, where what did not fit is kept. */
   more: string;
   /** The bar between the two panes of `split`, which is draggable. */
@@ -189,6 +191,8 @@ const en: MawyStrings = {
   alertWarning: 'Warning',
   alertCaution: 'Caution',
   editor: 'Document',
+  undo: 'Undo',
+  redo: 'Redo',
   more: 'More controls',
   divider: 'Resize the panes',
   source: 'Markdown source',
@@ -296,6 +300,8 @@ const ko: MawyStrings = {
   alertWarning: '주의',
   alertCaution: '경고',
   editor: '문서',
+  undo: '실행 취소',
+  redo: '다시 실행',
   more: '더 보기',
   divider: '창 크기 조절',
   source: '마크다운 원문',
