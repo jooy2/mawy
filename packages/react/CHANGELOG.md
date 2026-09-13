@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.4.0 (2026-09-13)
+
 ### Added
 
 - **The quotation, the three lists, the code block, the divider and the image have keyboard shortcuts.** The guide and the doc comment on `MawyEditorToolbarItem` said every formatting command had one, and seven of them could only be reached from the toolbar. `Mod`+`Shift`+`.` quotes, `Mod`+`Shift`+`8`, `7` and `9` make a bulleted, numbered and task list, `Mod`+`Shift`+`E` fences a code block, `Mod`+`Shift`+`K` writes an image and `Mod`+`Shift`+`,` a divider. The lists and the quotation are the keys GitHub's comment box uses, and the image and the code block are the link and the code span with `Shift`. The divider is not on `-` because `Mod`+`Shift`+`-` zooms the page out in Chromium and Firefox. Digits and punctuation are read by the key rather than by the character, which `Shift` changes from one keyboard to the next. The Flutter package has the same keys.
