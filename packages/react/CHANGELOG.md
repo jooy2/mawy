@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.5.0 (2026-09-13)
+
 ### Added
 
 - **`links` and `images` say how a link and a picture the document wrote are drawn.** A page carrying documents its readers wrote had no way to keep a comment from sending a reader wherever it pointed or from fetching whatever picture it named, short of drawing every picture itself through `image`, and there was nothing to do about a link at all. `show` is what was drawn before and is the default. `text` draws a link as its words, formatting kept, with nothing to follow, and a picture as its description. `source` draws either as the characters it was written with, the way the editor writes out the link the caret is in, and `hide` draws nothing, words and all. Nothing is followed or fetched under any of the three, and `image` is never asked. A footnote's number and the way back from a note are this library's own and stay, and a heading's anchor does not move. The find bar searches what is drawn, so a hidden link's words are not found and a link drawn as its source is found by its address. A link or a picture in raw HTML gets the same answers under `html="sanitize"`, on a server too for the `<img>` drawn there without a DOM, and under `raw` nothing changes. On `MawyViewer`, `MawyDocument` and `MawyEditor`, where they reach the preview and the drawn document both; on the drawn document the link or picture the caret is in is still written out as its source, since that is where it is edited. `MawyLinkPolicy` and `MawyImagePolicy` are the types. The Flutter package has the same two, and the parity check compares what both find bars find under them. This and the press handling below move `MawyViewer` from 29.6 kB to 30.1 kB and `MawyEditor` from 54.3 kB to 55.1 kB gzipped.
