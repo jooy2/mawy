@@ -209,14 +209,6 @@ describe('safety', () => {
 });
 
 /**
- * A picture the document points at, and who fetches it.
- *
- * Which URLs an application is willing to reach for is not a viewer's decision
- * to make — a document from somewhere else has somebody else's URLs in it, and
- * fetching them all without asking tells whoever wrote them which documents are
- * being read.
- */
-/**
  * Two viewers on one page both give their own `# Introduction` the anchor
  * `introduction`, and two elements with one `id` is a link that lands on
  * whichever the browser met first.
@@ -279,6 +271,14 @@ describe('anchors', () => {
   });
 });
 
+/**
+ * A picture the document points at, and who fetches it.
+ *
+ * Which URLs an application is willing to reach for is not a viewer's decision
+ * to make — a document from somewhere else has somebody else's URLs in it, and
+ * fetching them all without asking tells whoever wrote them which documents are
+ * being read.
+ */
 describe('images', () => {
   it('writes an `img` on its own, with what the document said about it', async () => {
     const screen = await render(<MawyViewer value={'![a cat](/c.png "Mine")'} />);

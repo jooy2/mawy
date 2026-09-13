@@ -407,15 +407,6 @@ function breakAt(
 }
 
 /**
- * What an input event does to the document, or `null` for "not this one yet".
- *
- * `null` is refused rather than allowed: the event has already been prevented
- * by the time this is called, so an input type nothing here understands changes
- * nothing at all. That is the right way round — a surface that let the browser
- * have its way with the tree whenever it met something new would be a surface
- * whose document and drawing quietly stopped being the same thing.
- */
-/**
  * Where a place on the page is in the document, preferring the caret's own
  * answer over the page's wherever it has one. See `MawyAim`.
  */
@@ -541,6 +532,15 @@ export function editForText(
   return place && text ? splice(value, place.start, place.end, text) : null;
 }
 
+/**
+ * What an input event does to the document, or `null` for "not this one yet".
+ *
+ * `null` is refused rather than allowed: the event has already been prevented
+ * by the time this is called, so an input type nothing here understands changes
+ * nothing at all. That is the right way round — a surface that let the browser
+ * have its way with the tree whenever it met something new would be a surface
+ * whose document and drawing quietly stopped being the same thing.
+ */
 export function editFor(
   event: InputEvent,
   root: HTMLElement,

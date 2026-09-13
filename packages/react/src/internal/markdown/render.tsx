@@ -207,17 +207,6 @@ export interface RenderContext {
 }
 
 /**
- * The first picture in the document, in the order a reader meets them.
- *
- * A tree walk rather than a flag the parser sets, because the parser's trees
- * are the one thing both packages have to produce identically and which
- * picture arrives first is a question about a page.
- *
- * Only the pictures the document itself asks for. A picture inside raw HTML is
- * a string until something draws it and there is no node here to be first, and
- * a footnote's is not looked at because a footnote is read at the bottom.
- */
-/**
  * Which of `h1` to `h6` a heading of this depth is drawn as.
  *
  * The document's own depths, moved down together so that the shallowest one
@@ -234,6 +223,17 @@ function headingLevel(depth: number, context: RenderContext): number {
   return Math.min(6, depth + Math.min(6, Math.max(1, context.headingBase ?? 1)) - 1);
 }
 
+/**
+ * The first picture in the document, in the order a reader meets them.
+ *
+ * A tree walk rather than a flag the parser sets, because the parser's trees
+ * are the one thing both packages have to produce identically and which
+ * picture arrives first is a question about a page.
+ *
+ * Only the pictures the document itself asks for. A picture inside raw HTML is
+ * a string until something draws it and there is no node here to be first, and
+ * a footnote's is not looked at because a footnote is read at the bottom.
+ */
 export function firstImage(nodes: readonly { type: string }[]): MdImage | null {
   for (const node of nodes) {
     if (node.type === 'image') {
@@ -1241,13 +1241,6 @@ function renderRow(
 }
 
 /**
- * @param tight Whether these are the contents of a tight list item, whose
- *   paragraphs are not paragraphs. That is Markdown's own rule rather than a
- *   styling choice — a `<p>` here would put a task list's checkbox on the line
- *   above its own label — and it applies to this level only: a list nested
- *   inside decides its own looseness.
- */
-/**
  * The footnotes, drawn under the document.
  *
  * Not part of `renderBlocks`, because they are not part of the block flow: a
@@ -1297,6 +1290,13 @@ export function renderFootnotes(
   );
 }
 
+/**
+ * @param tight Whether these are the contents of a tight list item, whose
+ *   paragraphs are not paragraphs. That is Markdown's own rule rather than a
+ *   styling choice — a `<p>` here would put a task list's checkbox on the line
+ *   above its own label — and it applies to this level only: a list nested
+ *   inside decides its own looseness.
+ */
 export function renderBlocks(
   blocks: MdBlock[],
   context: RenderContext,

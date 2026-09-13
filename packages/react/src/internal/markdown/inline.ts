@@ -442,7 +442,6 @@ interface Destination {
   end: number;
 }
 
-/** `(url "title")` — the parenthesised half of an inline link. */
 /**
  * Where a destination read from each place could first stop, or `-1` for the
  * places a read from which runs off the end of the text.
@@ -506,6 +505,7 @@ interface Reach {
   stop: Int32Array | null;
 }
 
+/** `(url "title")` — the parenthesised half of an inline link. */
 function readInlineDestination(source: string, start: number, reach: Reach): Destination | null {
   let at = start + 1;
 

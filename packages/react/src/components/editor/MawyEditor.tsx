@@ -1907,15 +1907,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * ------------------------------------------------------------------ */
 
   /**
-   * The toolbar and the find bar, which travel together.
-   *
-   * One group rather than two siblings: both move to the other end under
-   * `toolbarPlacement="bottom"`, and both come out of the column to hover
-   * over the document under `frame="floating"`. The status line is not in
-   * here and does not move — it is the bottom edge of the editor either way,
-   * and a count of words is not a control.
-   */
-  /**
    * Where a floating bar hangs from.
    *
    * The status line is the bottom edge of the editor and does not move, so a
@@ -1925,6 +1916,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * readable under it. A box hangs from nothing and stays a sibling.
    */
   const inside = frame === 'floating';
+
+  /**
+   * The toolbar and the find bar, which travel together.
+   *
+   * One group rather than two siblings: both move to the other end under
+   * `toolbarPlacement="bottom"`, and both come out of the column to hover
+   * over the document under `frame="floating"`. The status line is not in
+   * here and does not move — it is the bottom edge of the editor either way,
+   * and a count of words is not a control.
+   */
   const bars = [
     items.length ? (
       <React.Fragment key="toolbar">

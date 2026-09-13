@@ -642,20 +642,6 @@ export type MawyUrlResolver = (url: string, kind: MawyUrlKind) => string;
 export type MawyHtmlPolicy = 'escape' | 'sanitize' | 'raw';
 
 /**
- * Where a link in the document opens.
- *
- * - `blank` — in a new tab, with `rel="noopener noreferrer"` on it. The
- *   default, because a viewer is usually a piece of a page rather than the
- *   page: a reader who follows a link out of a document and comes back should
- *   find the document where they left it, and in an editor there is unsaved
- *   work behind that link.
- * - `self` — in the tab the document is in, which is what an application
- *   showing a document *as* its page wants.
- *
- * Only the links the document wrote. A footnote's reference and the arrow back
- * from it point at the same page and are unaffected.
- */
-/**
  * Whether the surface has a frame around it, or floats in the page.
  *
  * - `box` — the default. The toolbar is a bar across the top of the surface
@@ -692,6 +678,20 @@ export type MawyFrame = 'box' | 'floating';
  */
 export type MawyToolbarPlacement = 'top' | 'bottom';
 
+/**
+ * Where a link in the document opens.
+ *
+ * - `blank` — in a new tab, with `rel="noopener noreferrer"` on it. The
+ *   default, because a viewer is usually a piece of a page rather than the
+ *   page: a reader who follows a link out of a document and comes back should
+ *   find the document where they left it, and in an editor there is unsaved
+ *   work behind that link.
+ * - `self` — in the tab the document is in, which is what an application
+ *   showing a document *as* its page wants.
+ *
+ * Only the links the document wrote. A footnote's reference and the arrow back
+ * from it point at the same page and are unaffected.
+ */
 export type MawyLinkTarget = 'blank' | 'self';
 
 /**

@@ -433,7 +433,6 @@ export function Slider({
   );
 }
 
-/** The caret a menu button carries, so a reader knows it opens something. */
 /**
  * The file picker a button opens, drawn where it can be reached and not seen.
  *
@@ -478,6 +477,7 @@ export const FilePicker = React.forwardRef<
   );
 });
 
+/** The caret a menu button carries, so a reader knows it opens something. */
 export function MenuCaret(): React.ReactElement {
   return <ChevronDownIcon className="mawy-icon mawy-caret" aria-hidden="true" />;
 }
