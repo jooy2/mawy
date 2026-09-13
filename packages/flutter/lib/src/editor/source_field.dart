@@ -251,6 +251,35 @@ class _CommandIntent extends Intent {
   final MawyCommand command;
 }
 
+/// A heading level, on its way from `Mod` and a digit to [MawySourceField].
+class _HeadingIntent extends Intent {
+  const _HeadingIntent(this.depth);
+
+  final int depth;
+}
+
+/// What `Mod` and a digit does: the level, where the editor offers it.
+///
+/// Disabled for a level the `heading` menu does not list, which hands the key
+/// on, so the keys and the menu cannot disagree about what a document here may
+/// be written with.
+class _HeadingAction extends Action<_HeadingIntent> {
+  _HeadingAction(this.field);
+
+  final MawySourceField field;
+
+  @override
+  bool isEnabled(_HeadingIntent intent) =>
+      field.onHeading != null && field.headingLevels.contains(intent.depth);
+
+  @override
+  Object? invoke(_HeadingIntent intent) {
+    field.onHeading?.call(intent.depth);
+
+    return null;
+  }
+}
+
 /// One table command, on its way from a chord to [MawySourceField].
 class _TableIntent extends Intent {
   const _TableIntent(this.command);
@@ -362,12 +391,18 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
     MawyTableCommand.removeColumn,
   ),
   SingleActivator(LogicalKeyboardKey.keyE, meta: true): _CommandIntent(MawyCommand.code),
-  SingleActivator(LogicalKeyboardKey.digit1, control: true): _CommandIntent(MawyCommand.heading1),
-  SingleActivator(LogicalKeyboardKey.digit1, meta: true): _CommandIntent(MawyCommand.heading1),
-  SingleActivator(LogicalKeyboardKey.digit2, control: true): _CommandIntent(MawyCommand.heading2),
-  SingleActivator(LogicalKeyboardKey.digit2, meta: true): _CommandIntent(MawyCommand.heading2),
-  SingleActivator(LogicalKeyboardKey.digit3, control: true): _CommandIntent(MawyCommand.heading3),
-  SingleActivator(LogicalKeyboardKey.digit3, meta: true): _CommandIntent(MawyCommand.heading3),
+  SingleActivator(LogicalKeyboardKey.digit1, control: true): _HeadingIntent(1),
+  SingleActivator(LogicalKeyboardKey.digit1, meta: true): _HeadingIntent(1),
+  SingleActivator(LogicalKeyboardKey.digit2, control: true): _HeadingIntent(2),
+  SingleActivator(LogicalKeyboardKey.digit2, meta: true): _HeadingIntent(2),
+  SingleActivator(LogicalKeyboardKey.digit3, control: true): _HeadingIntent(3),
+  SingleActivator(LogicalKeyboardKey.digit3, meta: true): _HeadingIntent(3),
+  SingleActivator(LogicalKeyboardKey.digit4, control: true): _HeadingIntent(4),
+  SingleActivator(LogicalKeyboardKey.digit4, meta: true): _HeadingIntent(4),
+  SingleActivator(LogicalKeyboardKey.digit5, control: true): _HeadingIntent(5),
+  SingleActivator(LogicalKeyboardKey.digit5, meta: true): _HeadingIntent(5),
+  SingleActivator(LogicalKeyboardKey.digit6, control: true): _HeadingIntent(6),
+  SingleActivator(LogicalKeyboardKey.digit6, meta: true): _HeadingIntent(6),
   SingleActivator(LogicalKeyboardKey.digit0, control: true): _CommandIntent(MawyCommand.paragraph),
   SingleActivator(LogicalKeyboardKey.digit0, meta: true): _CommandIntent(MawyCommand.paragraph),
   SingleActivator(LogicalKeyboardKey.keyX, control: true, shift: true): _CommandIntent(
@@ -450,6 +485,8 @@ class MawySourceField extends StatefulWidget {
     required this.onCommand,
     this.onTable,
     this.tableAvailable,
+    this.headingLevels = const <int>[1, 2, 3],
+    this.onHeading,
     this.undoController,
     this.scrollController,
     this.editableKey,
@@ -495,6 +532,12 @@ class MawySourceField extends StatefulWidget {
   /// Whether a table shortcut has anything to act on, which is what decides
   /// whether its key is taken or handed on.
   final bool Function(MawyTableCommand)? tableAvailable;
+
+  /// Which heading levels `Mod` and a digit reach.
+  final List<int> headingLevels;
+
+  /// What `Mod` and a digit runs. Absent while the document is read only.
+  final ValueChanged<int>? onHeading;
 
   /// The field's history, where somebody outside wants to read it and walk it.
   final UndoHistoryController? undoController;
@@ -789,6 +832,7 @@ class _MawySourceFieldState extends State<MawySourceField>
                 },
               ),
               _TableIntent: _TableAction(widget),
+              _HeadingIntent: _HeadingAction(widget),
             },
             child: Focus(
               onKeyEvent: _onKey,

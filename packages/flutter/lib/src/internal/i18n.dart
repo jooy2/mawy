@@ -86,6 +86,9 @@ final class MawyStrings {
     required this.heading1,
     required this.heading2,
     required this.heading3,
+    required this.heading4,
+    required this.heading5,
+    required this.heading6,
     required this.paragraph,
     required this.quote,
     required this.bulletList,
@@ -276,6 +279,15 @@ final class MawyStrings {
   /// The editor: Heading 3.
   final String heading3;
 
+  /// The editor: Heading 4.
+  final String heading4;
+
+  /// The editor: Heading 5.
+  final String heading5;
+
+  /// The editor: Heading 6.
+  final String heading6;
+
   /// The editor: Body text.
   final String paragraph;
 
@@ -449,6 +461,9 @@ final class MawyStrings {
     String? heading1,
     String? heading2,
     String? heading3,
+    String? heading4,
+    String? heading5,
+    String? heading6,
     String? paragraph,
     String? quote,
     String? bulletList,
@@ -540,6 +555,9 @@ final class MawyStrings {
       heading1: heading1 ?? this.heading1,
       heading2: heading2 ?? this.heading2,
       heading3: heading3 ?? this.heading3,
+      heading4: heading4 ?? this.heading4,
+      heading5: heading5 ?? this.heading5,
+      heading6: heading6 ?? this.heading6,
       paragraph: paragraph ?? this.paragraph,
       quote: quote ?? this.quote,
       bulletList: bulletList ?? this.bulletList,
@@ -637,6 +655,9 @@ final class MawyStrings {
       other.heading1 == heading1 &&
       other.heading2 == heading2 &&
       other.heading3 == heading3 &&
+      other.heading4 == heading4 &&
+      other.heading5 == heading5 &&
+      other.heading6 == heading6 &&
       other.paragraph == paragraph &&
       other.quote == quote &&
       other.bulletList == bulletList &&
@@ -729,6 +750,9 @@ final class MawyStrings {
     heading1,
     heading2,
     heading3,
+    heading4,
+    heading5,
+    heading6,
     paragraph,
     quote,
     bulletList,
@@ -822,6 +846,9 @@ const MawyStrings _en = MawyStrings._(
   heading1: 'Heading 1',
   heading2: 'Heading 2',
   heading3: 'Heading 3',
+  heading4: 'Heading 4',
+  heading5: 'Heading 5',
+  heading6: 'Heading 6',
   paragraph: 'Body text',
   quote: 'Quotation',
   bulletList: 'Bulleted list',
@@ -914,6 +941,9 @@ const MawyStrings _ko = MawyStrings._(
   heading1: '제목 1',
   heading2: '제목 2',
   heading3: '제목 3',
+  heading4: '제목 4',
+  heading5: '제목 5',
+  heading6: '제목 6',
   paragraph: '본문',
   quote: '인용',
   bulletList: '순서 없는 목록',

@@ -1301,6 +1301,55 @@ void main() {
       expect(seen.last, 'one **two**');
     });
 
+    testWidgets('offers the heading levels it is given, in the menu and on the keys', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'Words.',
+            mode: MawyEditorMode.plain,
+            headingLevels: const <int>[2, 3, 4],
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pump();
+
+      await press(tester, 'Heading');
+
+      expect(find.text('Heading 1'), findsNothing);
+      expect(find.text('Heading 4'), findsOneWidget);
+      expect(find.text('Body text'), findsOneWidget);
+
+      await tester.tap(find.text('Heading 4'));
+      await tester.pumpAndSettle();
+      expect(seen.last, '#### Words.');
+
+      // A menu gives the focus back to its button when it shuts.
+      field.focusNode.requestFocus();
+      await tester.pump();
+      await chord(tester, LogicalKeyboardKey.digit2);
+      expect(seen.last, '## Words.');
+
+      final int count = seen.length;
+
+      // Not offered, so not reachable from the keyboard either.
+      await chord(tester, LogicalKeyboardKey.digit1);
+      expect(seen.length, count);
+
+      await chord(tester, LogicalKeyboardKey.digit0);
+      expect(seen.last, 'Words.');
+    });
+
     testWidgets('runs no command while the document is read only', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

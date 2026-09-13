@@ -84,7 +84,7 @@ enum MawyEditorToolbarItem {
   /// `![description](url)`.
   image,
 
-  /// The three heading levels, and body text.
+  /// The heading levels in [MawyEditor.headingLevels], and body text.
   heading,
 
   /// `> `.
@@ -217,6 +217,7 @@ class MawyEditor extends StatefulWidget {
     this.modes = kMawyEditorModes,
     this.onModeChange,
     this.toolbar = kMawyEditorToolbar,
+    this.headingLevels = const <int>[1, 2, 3],
     this.frame = MawyFrame.box,
     this.toolbarPlacement = MawyToolbarPlacement.top,
     this.status = kMawyEditorStatus,
@@ -265,6 +266,16 @@ class MawyEditor extends StatefulWidget {
 
   /// The controls to draw, in the order to draw them. `const []` for none.
   final List<MawyEditorToolbarItem> toolbar;
+
+  /// Which headings the `heading` menu offers, as the number of `#` each is
+  /// written with, in the order the menu lists them.
+  ///
+  /// For an application whose screens write the title themselves and whose
+  /// documents start at `##`: `const [2, 3, 4]` offers those three and body
+  /// text, and `Mod`+`2` to `Mod`+`4` toggle them, while `Mod`+`1` is handed on
+  /// to whatever else answers it. The keys reach only what the menu offers, so
+  /// the two cannot disagree. A number outside one to six is left out.
+  final List<int> headingLevels;
 
   /// Whether the editor has a frame around it, or floats on the screen.
   ///
@@ -729,6 +740,19 @@ class _MawyEditorState extends State<MawyEditor> {
 
   void _run(MawyCommand command) => _apply(runCommand(command, _state));
 
+  /// The heading levels the menu and the keys offer, with anything that is not
+  /// one of the six left out.
+  List<int> get _headingLevels =>
+      widget.headingLevels.where((int depth) => depth >= 1 && depth <= 6).toList();
+
+  /// A heading of this depth on the lines the selection touches, or off them;
+  /// `0` is body text.
+  void _heading(int depth) {
+    if (!widget.readOnly) {
+      _apply(toggleHeading(_state, depth));
+    }
+  }
+
   /// A table command, where it has something to act on.
   void _runTable(MawyTableCommand command) {
     final EditState? after = runTableCommand(command, _state);
@@ -928,6 +952,8 @@ class _MawyEditorState extends State<MawyEditor> {
       onCommand: widget.readOnly ? null : _run,
       onTable: _runTable,
       tableAvailable: _tableAvailable,
+      headingLevels: _headingLevels,
+      onHeading: widget.readOnly ? null : _heading,
       undoController: _history,
       scrollController: _sourceScroll,
       editableKey: _editable,
@@ -965,6 +991,8 @@ class _MawyEditorState extends State<MawyEditor> {
           onTravel: _travel,
           onTable: _runTable,
           tableAvailable: _tableAvailable,
+          headingLevels: _headingLevels,
+          onHeading: _heading,
           finding: _finding && showSource,
           onFind: showSource ? _openFind : null,
           onOpen: widget.readOnly ? null : widget.onOpen,
@@ -1151,6 +1179,8 @@ class _Toolbar extends StatefulWidget {
     required this.onTravel,
     required this.onTable,
     required this.tableAvailable,
+    required this.headingLevels,
+    required this.onHeading,
     required this.finding,
     required this.onFind,
     required this.onOpen,
@@ -1173,6 +1203,8 @@ class _Toolbar extends StatefulWidget {
   final void Function({required bool back}) onTravel;
   final ValueChanged<MawyTableCommand> onTable;
   final bool Function(MawyTableCommand) tableAvailable;
+  final List<int> headingLevels;
+  final ValueChanged<int> onHeading;
   final bool finding;
   final VoidCallback? onFind;
   final VoidCallback? onOpen;
@@ -1241,6 +1273,24 @@ class _ToolbarState extends State<_Toolbar> {
     MawyEditorToolbarItem.rule => widget.strings.thematicBreak,
     _ => '',
   };
+
+  String _headingLabel(int depth) => switch (depth) {
+    1 => widget.strings.heading1,
+    2 => widget.strings.heading2,
+    3 => widget.strings.heading3,
+    4 => widget.strings.heading4,
+    5 => widget.strings.heading5,
+    _ => widget.strings.heading6,
+  };
+
+  static const List<IconData> _headingIcons = <IconData>[
+    LucideIcons.heading1,
+    LucideIcons.heading2,
+    LucideIcons.heading3,
+    LucideIcons.heading4,
+    LucideIcons.heading5,
+    LucideIcons.heading6,
+  ];
 
   String _modeLabel(MawyEditorMode value) => switch (value) {
     MawyEditorMode.plain => widget.strings.modePlain,
@@ -1462,51 +1512,32 @@ class _ToolbarState extends State<_Toolbar> {
       }
 
       if (item == MawyEditorToolbarItem.heading) {
-        // One menu rather than three buttons, which is what the React
-        // package's toolbar does: the three levels and body text are four
-        // answers to one question, and four buttons in a row is four questions.
-        const List<MawyCommand> levels = <MawyCommand>[
-          MawyCommand.heading1,
-          MawyCommand.heading2,
-          MawyCommand.heading3,
-        ];
-
+        // One menu rather than a button a level, which is what the React
+        // package's toolbar does: the levels and body text are answers to one
+        // question, and a button each is that many questions.
         children.add(
           MawyToolbarMenu(
             icon: LucideIcons.heading,
             label: widget.strings.heading,
             tokens: widget.tokens,
             focusNode: next(),
-            builder: (VoidCallback close) => MawyToolbarChoice<MawyCommand>(
+            builder: (VoidCallback close) => MawyToolbarChoice<int>(
               tokens: widget.tokens,
-              value: levels.firstWhere(
-                (MawyCommand level) => commandActive(level, widget.state),
-                orElse: () => MawyCommand.paragraph,
+              value: widget.headingLevels.firstWhere(
+                (int depth) => headingActive(widget.state, depth),
+                orElse: () => 0,
               ),
-              options: <MawyToolbarOption<MawyCommand>>[
-                MawyToolbarOption<MawyCommand>(
-                  MawyCommand.heading1,
-                  widget.strings.heading1,
-                  icon: LucideIcons.heading1,
-                ),
-                MawyToolbarOption<MawyCommand>(
-                  MawyCommand.heading2,
-                  widget.strings.heading2,
-                  icon: LucideIcons.heading2,
-                ),
-                MawyToolbarOption<MawyCommand>(
-                  MawyCommand.heading3,
-                  widget.strings.heading3,
-                  icon: LucideIcons.heading3,
-                ),
-                MawyToolbarOption<MawyCommand>(
-                  MawyCommand.paragraph,
-                  widget.strings.paragraph,
-                  icon: LucideIcons.pilcrow,
-                ),
+              options: <MawyToolbarOption<int>>[
+                for (final int depth in widget.headingLevels)
+                  MawyToolbarOption<int>(
+                    depth,
+                    _headingLabel(depth),
+                    icon: _headingIcons[depth - 1],
+                  ),
+                MawyToolbarOption<int>(0, widget.strings.paragraph, icon: LucideIcons.pilcrow),
               ],
-              onChanged: (MawyCommand chosen) {
-                widget.onCommand?.call(chosen);
+              onChanged: (int chosen) {
+                widget.onHeading(chosen);
                 close();
               },
             ),

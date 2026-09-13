@@ -206,13 +206,25 @@ The lists and the quotation use the keys GitHub's comment box gives them, and th
 
 :::
 
-::: fw react
+**`headingLevels` says which headings the menu offers**, for an application whose pages write the title as their own `h1` and whose documents start at `##`. Given heading 2, 3 and 4, the menu offers those and body text, and `Mod`+`2`, `Mod`+`3` and `Mod`+`4` toggle them, while `Mod`+`1` is handed on to whatever else answers it. The levels are the document's own depths, the number of `#` written.
 
-**`headingLevels` says which headings the menu offers**, for an application whose pages write the title as their own `h1` and whose documents start at `##`. `headingLevels={[2, 3, 4]}` offers heading 2, 3 and 4 and body text, and `Mod`+`2`, `Mod`+`3` and `Mod`+`4` toggle those, while `Mod`+`1` is left to the browser. The levels are the document's own depths, the number of `#` written. `headingBase` is the other half and moves nothing in the document: it is what the drawn document and the preview draw a `#` as, with the same meaning it has on [the viewer](./viewer#heading-levels), so an editor beside such a page draws what the page will.
+::: fw react
 
 ```tsx
 <MawyEditor value={post.body} onChange={setBody} headingLevels={[2, 3, 4]} />
 ```
+
+`headingBase` is the other half and moves nothing in the document: it is what the drawn document and the preview draw a `#` as, with the same meaning it has on [the viewer](./viewer#heading-levels), so an editor beside such a page draws what the page will.
+
+:::
+
+::: fw flutter
+
+```dart
+MawyEditor(value: post.body, onChange: setBody, headingLevels: const [2, 3, 4]);
+```
+
+A number outside one to six is left out.
 
 :::
 
