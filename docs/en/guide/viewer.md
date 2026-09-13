@@ -610,7 +610,7 @@ The document's line height and letter spacing are declared on the text itself, n
 }
 ```
 
-The box is reserved before the image arrives, and `--mawy-doc-image-fit` is `contain`, so a picture of a different shape is letter-boxed rather than cut. Unset is the default, and then no box is reserved. Writing the dimensions in the document itself is the other approach, and it is not a syntax this parser reads today.
+The box is reserved before the image arrives, and `--mawy-doc-image-fit` is `contain`, so a picture of a different shape is letter-boxed rather than cut. Unset is the default, and then no box is reserved. Writing the dimensions in the document itself is the other approach. The way that means the same thing wherever the file is read is HTML, `<img src="…" width="800" height="600">`, which is drawn under `sanitize` in the browser and on a server, and which GitHub draws as well. A Markdown syntax for it, such as `![alt](url =800x600)`, is not something this parser reads: CommonMark and GitHub both read that run as text rather than as a picture, so a document written that way would lose its pictures everywhere but here.
 
 :::
 

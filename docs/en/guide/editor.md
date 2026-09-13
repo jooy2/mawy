@@ -197,6 +197,8 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 
 :::
 
+**There is no underline.** Markdown has no way to write one, and the only way a document can is `<u>`, which is raw HTML: drawn as its characters under the default `html="escape"`, and in the Flutter package, which has no HTML to draw at all. A button that wrote it would make documents that read one way in a viewer set to `sanitize` and another everywhere else the same file is read. A `<u>` already in a document is drawn as an underline under `sanitize` and `raw`.
+
 Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and the toolbar button shows which are in force. Markers replace each other rather than stacking, so turning a numbered list into a bulleted one gives a bulleted list and not `- 1. item`.
 
 `Enter` at the end of a list item carries the marker down and counts an ordered list on. Pressing it again on the item that is still empty takes the marker away instead of making another. Without that, leaving a list would mean deleting the bullet the editor had just added.
