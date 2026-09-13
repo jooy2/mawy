@@ -7,15 +7,37 @@
 /// author wrote.
 ///
 /// The same strings as the React package's `internal/i18n.ts`, under the same
-/// names, minus the ones only an editor needs.
+/// names, minus the ones for what only the React package has.
 library;
 
 import 'package:mawy/src/types.dart';
 
-/// Every string the viewer draws.
-class MawyStrings {
-  /// Creates a set of strings.
-  const MawyStrings({
+/// Every word the interface says, by name.
+///
+/// What `strings` on `MawyEditor` and `MawyViewer` takes. It is for an
+/// application whose translations live in a catalogue of its own, which is a
+/// better answer than this library carrying every language that catalogue has.
+/// Start from a locale's words and change the ones that differ:
+///
+/// ```dart
+/// MawyEditor(
+///   strings: MawyStrings.of(MawyLocale.en).copyWith(bold: t.bold, statusPosition: t.position),
+/// )
+/// ```
+///
+/// There is no public constructor, and nothing outside this package can extend
+/// the class or implement it. Both are what let a word be added in a minor
+/// version: an application that had built a set from nothing would otherwise
+/// have to be changed every time the interface gained a label.
+///
+/// A few strings carry a value, marked with `%` and one capital letter:
+/// [statusPosition] has `%L` for the line and `%C` for the column,
+/// [statusSelected] has `%N` for how many characters, and [findMatches] has
+/// `%N` for the match the caret is on and `%T` for how many there are. Every
+/// place one is written is filled, so a language that wants a value twice can
+/// have it twice.
+final class MawyStrings {
+  const MawyStrings._({
     required this.toolbar,
     required this.fontFamily,
     required this.fontFamilySans,
@@ -96,6 +118,9 @@ class MawyStrings {
     required this.alertWarning,
     required this.alertCaution,
   });
+
+  /// The words a locale has, which are where an application's own start from.
+  static MawyStrings of(MawyLocale locale) => stringsFor(locale);
 
   /// The toolbar's own name.
   final String toolbar;
@@ -333,9 +358,342 @@ class MawyStrings {
 
   /// `> [!CAUTION]`.
   final String alertCaution;
+
+  /// The same words, with whichever are named here changed.
+  MawyStrings copyWith({
+    String? toolbar,
+    String? fontFamily,
+    String? fontFamilySans,
+    String? fontFamilySerif,
+    String? fontFamilyMono,
+    String? fontSize,
+    String? lineHeight,
+    String? letterSpacing,
+    String? measure,
+    String? measureNarrow,
+    String? measureNormal,
+    String? measureWide,
+    String? measureFull,
+    String? colorScheme,
+    String? colorSchemeLight,
+    String? colorSchemeDark,
+    String? colorSchemeSystem,
+    String? divider,
+    String? outline,
+    String? outlineEmpty,
+    String? copy,
+    String? copied,
+    String? copyFailed,
+    String? copyCode,
+    String? close,
+    String? document,
+    String? reset,
+    String? footnotes,
+    String? footnoteBack,
+    String? editor,
+    String? source,
+    String? sourceEscape,
+    String? mode,
+    String? modePlain,
+    String? modePreview,
+    String? modeSplit,
+    String? bold,
+    String? italic,
+    String? strikethrough,
+    String? codeSpan,
+    String? link,
+    String? image,
+    String? heading,
+    String? heading1,
+    String? heading2,
+    String? heading3,
+    String? paragraph,
+    String? quote,
+    String? bulletList,
+    String? orderedList,
+    String? taskList,
+    String? codeBlock,
+    String? thematicBreak,
+    String? status,
+    String? statusPosition,
+    String? statusSelected,
+    String? statusLines,
+    String? statusWords,
+    String? statusCharacters,
+    String? editorPlaceholder,
+    String? openFile,
+    String? emptyTitle,
+    String? emptyHint,
+    String? emptyAction,
+    String? find,
+    String? replace,
+    String? findMatchCase,
+    String? findPrevious,
+    String? findNext,
+    String? findClose,
+    String? findMatches,
+    String? findNoMatches,
+    String? replaceOne,
+    String? replaceAll,
+    String? alertNote,
+    String? alertTip,
+    String? alertImportant,
+    String? alertWarning,
+    String? alertCaution,
+  }) {
+    return MawyStrings._(
+      toolbar: toolbar ?? this.toolbar,
+      fontFamily: fontFamily ?? this.fontFamily,
+      fontFamilySans: fontFamilySans ?? this.fontFamilySans,
+      fontFamilySerif: fontFamilySerif ?? this.fontFamilySerif,
+      fontFamilyMono: fontFamilyMono ?? this.fontFamilyMono,
+      fontSize: fontSize ?? this.fontSize,
+      lineHeight: lineHeight ?? this.lineHeight,
+      letterSpacing: letterSpacing ?? this.letterSpacing,
+      measure: measure ?? this.measure,
+      measureNarrow: measureNarrow ?? this.measureNarrow,
+      measureNormal: measureNormal ?? this.measureNormal,
+      measureWide: measureWide ?? this.measureWide,
+      measureFull: measureFull ?? this.measureFull,
+      colorScheme: colorScheme ?? this.colorScheme,
+      colorSchemeLight: colorSchemeLight ?? this.colorSchemeLight,
+      colorSchemeDark: colorSchemeDark ?? this.colorSchemeDark,
+      colorSchemeSystem: colorSchemeSystem ?? this.colorSchemeSystem,
+      divider: divider ?? this.divider,
+      outline: outline ?? this.outline,
+      outlineEmpty: outlineEmpty ?? this.outlineEmpty,
+      copy: copy ?? this.copy,
+      copied: copied ?? this.copied,
+      copyFailed: copyFailed ?? this.copyFailed,
+      copyCode: copyCode ?? this.copyCode,
+      close: close ?? this.close,
+      document: document ?? this.document,
+      reset: reset ?? this.reset,
+      footnotes: footnotes ?? this.footnotes,
+      footnoteBack: footnoteBack ?? this.footnoteBack,
+      editor: editor ?? this.editor,
+      source: source ?? this.source,
+      sourceEscape: sourceEscape ?? this.sourceEscape,
+      mode: mode ?? this.mode,
+      modePlain: modePlain ?? this.modePlain,
+      modePreview: modePreview ?? this.modePreview,
+      modeSplit: modeSplit ?? this.modeSplit,
+      bold: bold ?? this.bold,
+      italic: italic ?? this.italic,
+      strikethrough: strikethrough ?? this.strikethrough,
+      codeSpan: codeSpan ?? this.codeSpan,
+      link: link ?? this.link,
+      image: image ?? this.image,
+      heading: heading ?? this.heading,
+      heading1: heading1 ?? this.heading1,
+      heading2: heading2 ?? this.heading2,
+      heading3: heading3 ?? this.heading3,
+      paragraph: paragraph ?? this.paragraph,
+      quote: quote ?? this.quote,
+      bulletList: bulletList ?? this.bulletList,
+      orderedList: orderedList ?? this.orderedList,
+      taskList: taskList ?? this.taskList,
+      codeBlock: codeBlock ?? this.codeBlock,
+      thematicBreak: thematicBreak ?? this.thematicBreak,
+      status: status ?? this.status,
+      statusPosition: statusPosition ?? this.statusPosition,
+      statusSelected: statusSelected ?? this.statusSelected,
+      statusLines: statusLines ?? this.statusLines,
+      statusWords: statusWords ?? this.statusWords,
+      statusCharacters: statusCharacters ?? this.statusCharacters,
+      editorPlaceholder: editorPlaceholder ?? this.editorPlaceholder,
+      openFile: openFile ?? this.openFile,
+      emptyTitle: emptyTitle ?? this.emptyTitle,
+      emptyHint: emptyHint ?? this.emptyHint,
+      emptyAction: emptyAction ?? this.emptyAction,
+      find: find ?? this.find,
+      replace: replace ?? this.replace,
+      findMatchCase: findMatchCase ?? this.findMatchCase,
+      findPrevious: findPrevious ?? this.findPrevious,
+      findNext: findNext ?? this.findNext,
+      findClose: findClose ?? this.findClose,
+      findMatches: findMatches ?? this.findMatches,
+      findNoMatches: findNoMatches ?? this.findNoMatches,
+      replaceOne: replaceOne ?? this.replaceOne,
+      replaceAll: replaceAll ?? this.replaceAll,
+      alertNote: alertNote ?? this.alertNote,
+      alertTip: alertTip ?? this.alertTip,
+      alertImportant: alertImportant ?? this.alertImportant,
+      alertWarning: alertWarning ?? this.alertWarning,
+      alertCaution: alertCaution ?? this.alertCaution,
+    );
+  }
+
+  /// Compared by the words, so an application that builds a new set on every
+  /// build with the same words in it redraws nothing for it.
+  @override
+  bool operator ==(Object other) =>
+      other is MawyStrings &&
+      other.toolbar == toolbar &&
+      other.fontFamily == fontFamily &&
+      other.fontFamilySans == fontFamilySans &&
+      other.fontFamilySerif == fontFamilySerif &&
+      other.fontFamilyMono == fontFamilyMono &&
+      other.fontSize == fontSize &&
+      other.lineHeight == lineHeight &&
+      other.letterSpacing == letterSpacing &&
+      other.measure == measure &&
+      other.measureNarrow == measureNarrow &&
+      other.measureNormal == measureNormal &&
+      other.measureWide == measureWide &&
+      other.measureFull == measureFull &&
+      other.colorScheme == colorScheme &&
+      other.colorSchemeLight == colorSchemeLight &&
+      other.colorSchemeDark == colorSchemeDark &&
+      other.colorSchemeSystem == colorSchemeSystem &&
+      other.divider == divider &&
+      other.outline == outline &&
+      other.outlineEmpty == outlineEmpty &&
+      other.copy == copy &&
+      other.copied == copied &&
+      other.copyFailed == copyFailed &&
+      other.copyCode == copyCode &&
+      other.close == close &&
+      other.document == document &&
+      other.reset == reset &&
+      other.footnotes == footnotes &&
+      other.footnoteBack == footnoteBack &&
+      other.editor == editor &&
+      other.source == source &&
+      other.sourceEscape == sourceEscape &&
+      other.mode == mode &&
+      other.modePlain == modePlain &&
+      other.modePreview == modePreview &&
+      other.modeSplit == modeSplit &&
+      other.bold == bold &&
+      other.italic == italic &&
+      other.strikethrough == strikethrough &&
+      other.codeSpan == codeSpan &&
+      other.link == link &&
+      other.image == image &&
+      other.heading == heading &&
+      other.heading1 == heading1 &&
+      other.heading2 == heading2 &&
+      other.heading3 == heading3 &&
+      other.paragraph == paragraph &&
+      other.quote == quote &&
+      other.bulletList == bulletList &&
+      other.orderedList == orderedList &&
+      other.taskList == taskList &&
+      other.codeBlock == codeBlock &&
+      other.thematicBreak == thematicBreak &&
+      other.status == status &&
+      other.statusPosition == statusPosition &&
+      other.statusSelected == statusSelected &&
+      other.statusLines == statusLines &&
+      other.statusWords == statusWords &&
+      other.statusCharacters == statusCharacters &&
+      other.editorPlaceholder == editorPlaceholder &&
+      other.openFile == openFile &&
+      other.emptyTitle == emptyTitle &&
+      other.emptyHint == emptyHint &&
+      other.emptyAction == emptyAction &&
+      other.find == find &&
+      other.replace == replace &&
+      other.findMatchCase == findMatchCase &&
+      other.findPrevious == findPrevious &&
+      other.findNext == findNext &&
+      other.findClose == findClose &&
+      other.findMatches == findMatches &&
+      other.findNoMatches == findNoMatches &&
+      other.replaceOne == replaceOne &&
+      other.replaceAll == replaceAll &&
+      other.alertNote == alertNote &&
+      other.alertTip == alertTip &&
+      other.alertImportant == alertImportant &&
+      other.alertWarning == alertWarning &&
+      other.alertCaution == alertCaution;
+
+  @override
+  int get hashCode => Object.hashAll(<Object>[
+    toolbar,
+    fontFamily,
+    fontFamilySans,
+    fontFamilySerif,
+    fontFamilyMono,
+    fontSize,
+    lineHeight,
+    letterSpacing,
+    measure,
+    measureNarrow,
+    measureNormal,
+    measureWide,
+    measureFull,
+    colorScheme,
+    colorSchemeLight,
+    colorSchemeDark,
+    colorSchemeSystem,
+    divider,
+    outline,
+    outlineEmpty,
+    copy,
+    copied,
+    copyFailed,
+    copyCode,
+    close,
+    document,
+    reset,
+    footnotes,
+    footnoteBack,
+    editor,
+    source,
+    sourceEscape,
+    mode,
+    modePlain,
+    modePreview,
+    modeSplit,
+    bold,
+    italic,
+    strikethrough,
+    codeSpan,
+    link,
+    image,
+    heading,
+    heading1,
+    heading2,
+    heading3,
+    paragraph,
+    quote,
+    bulletList,
+    orderedList,
+    taskList,
+    codeBlock,
+    thematicBreak,
+    status,
+    statusPosition,
+    statusSelected,
+    statusLines,
+    statusWords,
+    statusCharacters,
+    editorPlaceholder,
+    openFile,
+    emptyTitle,
+    emptyHint,
+    emptyAction,
+    find,
+    replace,
+    findMatchCase,
+    findPrevious,
+    findNext,
+    findClose,
+    findMatches,
+    findNoMatches,
+    replaceOne,
+    replaceAll,
+    alertNote,
+    alertTip,
+    alertImportant,
+    alertWarning,
+    alertCaution,
+  ]);
 }
 
-const MawyStrings _en = MawyStrings(
+const MawyStrings _en = MawyStrings._(
   toolbar: 'Document settings',
   fontFamily: 'Typeface',
   fontFamilySans: 'Sans serif',
@@ -417,7 +775,7 @@ const MawyStrings _en = MawyStrings(
   alertCaution: 'Caution',
 );
 
-const MawyStrings _ko = MawyStrings(
+const MawyStrings _ko = MawyStrings._(
   toolbar: '문서 설정',
   fontFamily: '글꼴',
   fontFamilySans: '고딕',

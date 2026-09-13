@@ -83,6 +83,7 @@ With neither `value` nor `defaultValue`, the viewer becomes the file picker. Tha
 | --- | --- | --- | --- |
 | `parse` | [`MawyParseOptions`](../types/parse-options) | `MawyParseOptions()` | How the Markdown is read. |
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | The language of the viewer's own interface. Nothing to do with the document. |
+| `strings` | [`MawyStrings?`](../types/locale#mawystrings) | — | The interface's words, where the application has its own. Given, `locale` says nothing. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | What a tapped link does. |
 | `highlight` | [`MawyHighlighter?`](../types/highlighter) | — | What colours a fenced code block. Nothing by default. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](../types/directives)`>?` | — | What draws the constructs this package does not know about. |

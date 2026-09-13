@@ -672,6 +672,19 @@ Both packages ship the same set of words under the same names, so a screen that 
 
 :::
 
+::: fw flutter
+
+**An application with translations of its own passes them as `strings`** rather than waiting for a locale. A set is a locale's words with the ones that differ changed, and once it is given `locale` says nothing. See [`MawyStrings`](../api/types/locale#mawystrings) for the names and for the placeholders a few of them carry.
+
+```dart
+MawyViewer(
+  value: document,
+  strings: MawyStrings.of(MawyLocale.en).copyWith(outline: t.contents),
+)
+```
+
+:::
+
 ## Theming
 
 ::: fw flutter

@@ -83,6 +83,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | --- | --- | --- | --- |
 | `parse` | [`MawyParseOptions`](../types/parse-options) | `MawyParseOptions()` | 마크다운을 어떻게 읽을지. |
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | 뷰어 인터페이스가 쓰는 언어. 문서와는 무관합니다. |
+| `strings` | [`MawyStrings?`](../types/locale#mawystrings) | — | 애플리케이션이 직접 가진 인터페이스 낱말. 주면 `locale`은 쓰이지 않습니다. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | 링크를 눌렀을 때 무엇을 할지. |
 | `highlight` | [`MawyHighlighter?`](../types/highlighter) | — | 펜스 코드 블록에 색을 입히는 것. 기본은 아무것도 하지 않습니다. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](../types/directives)`>?` | — | 이 패키지가 모르는 구성물을 무엇으로 그릴지. |

@@ -1286,6 +1286,37 @@ void main() {
       expect(toolbarButton('목차'), findsOneWidget);
       expect(documentText(tester), contains('참고'));
     });
+
+    testWidgets('says the words an application hands it, and the locale says the rest', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: sample,
+            locale: MawyLocale.ko,
+            strings: MawyStrings.of(
+              MawyLocale.ko,
+            ).copyWith(outline: 'Inhalt', alertNote: 'Hinweis'),
+          ),
+        ),
+      );
+
+      expect(toolbarButton('Inhalt'), findsOneWidget);
+      expect(documentText(tester), contains('Hinweis'));
+      // What was not handed over is still the locale's.
+      expect(toolbarButton('찾기'), findsOneWidget);
+    });
+
+    test('compares a set of words by the words in it', () {
+      final MawyStrings one = MawyStrings.of(MawyLocale.en).copyWith(bold: 'Fett');
+      final MawyStrings two = MawyStrings.of(MawyLocale.en).copyWith(bold: 'Fett');
+
+      expect(one, two);
+      expect(one.hashCode, two.hashCode);
+      expect(one, isNot(MawyStrings.of(MawyLocale.en)));
+      expect(MawyStrings.of(MawyLocale.ko).bold, '굵게');
+    });
   });
 
   group('directives', () {

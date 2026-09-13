@@ -87,6 +87,7 @@ class MawyViewer extends StatefulWidget {
     this.frame = MawyFrame.box,
     this.toolbarPlacement = MawyToolbarPlacement.top,
     this.locale = MawyLocale.en,
+    this.strings,
     this.onLinkTap,
     this.directives,
     this.imageBuilder,
@@ -149,6 +150,15 @@ class MawyViewer extends StatefulWidget {
 
   /// The language of the viewer's own interface.
   final MawyLocale locale;
+
+  /// The words the interface says, where the application has its own.
+  ///
+  /// Start from a locale's and change what differs, which is the only way to
+  /// make a set: `MawyStrings.of(MawyLocale.en).copyWith(outline: t.contents)`.
+  /// Given, it is every word, and [locale] says nothing. A new set with the
+  /// same words in it on every build redraws nothing: the words are compared,
+  /// not the object. See [MawyStrings].
+  final MawyStrings? strings;
 
   /// What a tapped link does.
   ///
@@ -961,7 +971,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   Widget build(BuildContext context) {
     final Brightness brightness = _brightness(context);
     final MawyTokens tokens = widget.tokens?.call(brightness) ?? MawyTokens.of(brightness);
-    final MawyStrings strings = stringsFor(widget.locale);
+    final MawyStrings strings = widget.strings ?? stringsFor(widget.locale);
     final MawyTypography type = _typography;
     final MdDocument document = _document;
     final MawyFound found = _foundIn(document);

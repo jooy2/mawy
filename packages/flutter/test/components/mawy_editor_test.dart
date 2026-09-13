@@ -324,6 +324,27 @@ void main() {
 
       expect(find.bySemanticsLabel('굵게'), findsOneWidget);
     });
+
+    testWidgets('says the words an application hands it, placeholders and all', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '> [!NOTE]\n> Words.',
+            strings: MawyStrings.of(
+              MawyLocale.en,
+            ).copyWith(bold: 'Fett', statusPosition: 'Z. %L, S. %C (%L)', alertNote: 'Hinweis'),
+          ),
+        ),
+      );
+
+      expect(find.bySemanticsLabel('Fett'), findsOneWidget);
+      // At the end of the second line, where a caret nobody has placed is.
+      expect(find.text('Z. 2, S. 9 (2)'), findsOneWidget);
+      // The preview is handed the same words.
+      expect(documentText(tester), contains('Hinweis'));
+    });
   });
 
   group('finding', () {

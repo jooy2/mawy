@@ -114,6 +114,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | `status` | `List<`[`MawyEditorStatusItem`](../types/editor-status-item)`>` | `kMawyEditorStatus` | 상태 표시줄이 셀 것. 없애려면 `const []`. |
 | `lineNumbers` | `bool` | `true` | 원문 앞쪽 가장자리의 줄 번호. |
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | 에디터 인터페이스가 쓰는 언어. 툴바 이름표, 메뉴 항목, 상태 표시줄의 낱말, 스크린 리더에 주는 글입니다. 미리보기에도 함께 건넵니다. 문서와는 무관합니다. |
+| `strings` | [`MawyStrings?`](../types/locale#mawystrings) | — | 애플리케이션이 직접 가진 인터페이스 낱말. 주면 `locale`은 쓰이지 않습니다. 미리보기에도 함께 건넵니다. |
 
 `true`가 아니라 목록인 이유는 뷰어의 `toolbar`가 목록인 이유와 같습니다.
 

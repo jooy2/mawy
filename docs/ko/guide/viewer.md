@@ -672,6 +672,19 @@ MawyViewer(value: document, locale: MawyLocale.ko)
 
 :::
 
+::: fw flutter
+
+**번역을 직접 가진 애플리케이션은 로케일을 기다리지 않고 `strings`로 건넵니다.** 로케일의 낱말에서 다른 것만 바꿔 만들고, 이것을 주면 `locale`은 쓰이지 않습니다. 이름과, 몇 문자열에 들어가는 자리 표시는 [`MawyStrings`](../api/types/locale#mawystrings)에 있습니다.
+
+```dart
+MawyViewer(
+  value: document,
+  strings: MawyStrings.of(MawyLocale.en).copyWith(outline: t.contents),
+)
+```
+
+:::
+
 ## 테마
 
 ::: fw flutter

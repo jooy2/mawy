@@ -64,6 +64,37 @@ interface MawyStrings {
 
 ::: fw flutter
 
-이 패키지에는 아직 낱말을 따로 건넬 방법이 없습니다. `locale`이 전부입니다.
+```dart
+final class MawyStrings {
+  static MawyStrings of(MawyLocale locale);
+  MawyStrings copyWith({String? bold, String? statusPosition /* …모든 낱말, 이름별로 */});
+
+  final String bold;
+  final String statusPosition; // 'Ln %L, Col %C'
+  // …인터페이스가 쓰는 모든 낱말, 이름별로
+}
+```
+
+인터페이스가 쓰는 모든 낱말이고, `MawyEditor`와 `MawyViewer`의 `strings`가 받는 값입니다. 번역을 자기 메시지 카탈로그에 두는 애플리케이션을 위한 것입니다. 그 카탈로그에 있는 언어를 이 라이브러리가 모두 싣는 것보다 이쪽이 맞는 답입니다. 로케일의 낱말에서 시작해 다른 것만 바꿔 만듭니다.
+
+```dart
+MawyEditor(
+  strings: MawyStrings.of(MawyLocale.en).copyWith(bold: t.bold, statusPosition: t.position),
+);
+```
+
+주면 모든 낱말이 여기서 오고 `locale`은 쓰이지 않습니다. 에디터는 받은 낱말을 미리보기에도 건넵니다. 빌드마다 새로 만들어 넘겨도 비용은 없습니다. 낱말이 같으면 같은 값으로 비교하기 때문입니다.
+
+공개 생성자가 없고, 클래스를 상속하거나 구현할 수도 없습니다. 둘 다 부 버전에서 낱말을 더할 수 있게 하려는 것입니다. 애플리케이션이 처음부터 직접 만들었거나 자기 클래스를 썼다면, 인터페이스에 이름표가 하나 늘 때마다 코드를 고쳐야 합니다.
+
+**값이 들어가는 문자열이 몇 개 있습니다.** 값이 들어갈 자리를 `%`와 대문자 하나로 표시하고, 표시한 자리마다 모두 채웁니다.
+
+| 문자열           | 자리 표시                                             | 영어            |
+| ---------------- | ----------------------------------------------------- | --------------- |
+| `statusPosition` | `%L`은 줄, `%C`는 열. 둘 다 1부터 셉니다              | `Ln %L, Col %C` |
+| `statusSelected` | `%N`은 선택한 글자 수                                 | `%N selected`   |
+| `findMatches`    | `%N`은 커서가 있는 결과의 순번(1부터), `%T`는 결과 수 | `%N of %T`      |
+
+이름은 React 패키지와 같고, 저장이나 이미지 붙여넣기처럼 그 패키지에만 있는 기능의 낱말은 없습니다.
 
 :::

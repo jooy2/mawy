@@ -64,6 +64,37 @@ The names are the ones in `src/internal/i18n.ts`, and the type lists every one. 
 
 ::: fw flutter
 
-There is no way to hand this package words of its own yet. `locale` is the whole of it.
+```dart
+final class MawyStrings {
+  static MawyStrings of(MawyLocale locale);
+  MawyStrings copyWith({String? bold, String? statusPosition /* …every word, by name */});
+
+  final String bold;
+  final String statusPosition; // 'Ln %L, Col %C'
+  // …every word the interface says, by name
+}
+```
+
+Every word the interface says, and what `strings` on `MawyEditor` and `MawyViewer` takes. It is for an application whose translations live in a catalogue of its own, which is a better answer than this library carrying every language that catalogue has. A set is made from a locale's words, with the ones that differ changed:
+
+```dart
+MawyEditor(
+  strings: MawyStrings.of(MawyLocale.en).copyWith(bold: t.bold, statusPosition: t.position),
+);
+```
+
+Given, it is every word and `locale` says nothing. The editor hands its set to its preview. A new set built on every build costs nothing, because two sets are equal when their words are.
+
+There is no public constructor, and the class cannot be extended or implemented. Both are what let a word be added in a minor version: an application that had built a set from nothing, or written a class of its own, would have to change every time the interface gained a label.
+
+**A few strings carry a value**, marked with `%` and one capital letter, and every place one is written is filled.
+
+| String | Placeholders | English |
+| --- | --- | --- |
+| `statusPosition` | `%L` the line and `%C` the column, both counted from one | `Ln %L, Col %C` |
+| `statusSelected` | `%N` how many characters are selected | `%N selected` |
+| `findMatches` | `%N` the match the caret is on, counted from one; `%T` how many | `%N of %T` |
+
+The names are the React package's names, less the words for what only that package has, such as saving and pasting an image.
 
 :::

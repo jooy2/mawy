@@ -206,6 +206,7 @@ class MawyEditor extends StatefulWidget {
     this.typography,
     this.defaultTypography = const MawyTypography(),
     this.locale = MawyLocale.en,
+    this.strings,
     this.directives,
     this.highlight,
     this.onLinkTap,
@@ -294,6 +295,15 @@ class MawyEditor extends StatefulWidget {
 
   /// The language the editor's own interface is written in.
   final MawyLocale locale;
+
+  /// The words the interface says, where the application has its own.
+  ///
+  /// Start from a locale's and change what differs, which is the only way to
+  /// make a set: `MawyStrings.of(MawyLocale.en).copyWith(bold: t.bold)`. Given,
+  /// it is every word, [locale] says nothing, and the preview is handed the
+  /// same set. A new set with the same words in it on every build redraws
+  /// nothing: the words are compared, not the object. See [MawyStrings].
+  final MawyStrings? strings;
 
   /// What draws the constructs this package does not know about, in the
   /// preview.
@@ -434,6 +444,7 @@ class _MawyEditorState extends State<MawyEditor> {
             typography: _type,
             toolbar: const <MawyViewerToolbarItem>[],
             locale: widget.locale,
+            strings: strings,
             directives: widget.directives,
             highlight: widget.highlight,
             onLinkTap: widget.onLinkTap,
@@ -834,7 +845,7 @@ class _MawyEditorState extends State<MawyEditor> {
   Widget build(BuildContext context) {
     final Brightness brightness = _brightness(context);
     final MawyTokens tokens = widget.tokens?.call(brightness) ?? MawyTokens.of(brightness);
-    final MawyStrings strings = stringsFor(widget.locale);
+    final MawyStrings strings = widget.strings ?? stringsFor(widget.locale);
     final bool showSource = _current != MawyEditorMode.preview;
     final bool showPreview = _current != MawyEditorMode.plain;
     final List<MawyMatch> matches = _matches;

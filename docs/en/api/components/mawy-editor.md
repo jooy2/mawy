@@ -114,6 +114,7 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | `status` | `List<`[`MawyEditorStatusItem`](../types/editor-status-item)`>` | `kMawyEditorStatus` | What the status bar counts. `const []` for none. |
 | `lineNumbers` | `bool` | `true` | The gutter down the leading edge of the source. |
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | The language of the editor's own interface — toolbar labels, menu entries, the words along the status bar, the text a screen reader is given. Handed to the preview as well. Nothing to do with the document. |
+| `strings` | [`MawyStrings?`](../types/locale#mawystrings) | — | The interface's words, where the application has its own. Given, `locale` says nothing. Handed to the preview as well. |
 
 A list rather than a `true`, for the same reason the viewer's `toolbar` is one.
 
