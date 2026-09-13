@@ -27,6 +27,7 @@
  */
 
 import type { MdBlock, MdInline } from './ast.js';
+import type { MawyImagePolicy, MawyLinkPolicy } from '../../types.js';
 import { findMatches, type MawyMatch } from '../search.js';
 
 /** A match, and which number it is in the document. */
@@ -46,11 +47,29 @@ export interface MawyFound {
 /** Nothing found, for a document nobody is searching. */
 export const NOTHING_FOUND: MawyFound = { total: 0, at: new Map() };
 
+/**
+ * How the document being searched was drawn, where that is not the default.
+ *
+ * A link or a picture drawn as its source is the characters in `source`
+ * between its two ends, and a picture drawn as text is its description. What
+ * is not drawn is not searched: a count that includes words nobody can see is a
+ * count a reader can check and find wrong. See `MawyLinkPolicy`.
+ */
+export interface MawyFindDrawing {
+  /** The Markdown the blocks were parsed from. */
+  source: string;
+  links?: MawyLinkPolicy;
+  images?: MawyImagePolicy;
+}
+
+const DRAWN_AS_IT_IS: MawyFindDrawing = { source: '' };
+
 /** Every match in what [blocks] draw, numbered in reading order. */
 export function findInDocument(
   blocks: readonly MdBlock[],
   query: string,
-  matchCase: boolean
+  matchCase: boolean,
+  drawing: MawyFindDrawing = DRAWN_AS_IT_IS
 ): MawyFound {
   if (!query) {
     return NOTHING_FOUND;
@@ -58,7 +77,7 @@ export function findInDocument(
 
   const found: MawyFound = { total: 0, at: new Map() };
 
-  searchBlocks(blocks, query, matchCase, found);
+  searchBlocks(blocks, query, matchCase, drawing, found);
 
   return found;
 }
@@ -67,23 +86,24 @@ function searchBlocks(
   blocks: readonly MdBlock[],
   query: string,
   matchCase: boolean,
+  drawing: MawyFindDrawing,
   into: MawyFound
 ): void {
   for (const block of blocks) {
     switch (block.type) {
       case 'heading':
       case 'paragraph':
-        searchInline(block.children, query, matchCase, into);
+        searchInline(block.children, query, matchCase, drawing, into);
         break;
 
       case 'blockquote':
       case 'containerDirective':
-        searchBlocks(block.children, query, matchCase, into);
+        searchBlocks(block.children, query, matchCase, drawing, into);
         break;
 
       case 'list':
         for (const item of block.children) {
-          searchBlocks(item.children, query, matchCase, into);
+          searchBlocks(item.children, query, matchCase, drawing, into);
         }
 
         break;
@@ -91,7 +111,7 @@ function searchBlocks(
       case 'table':
         for (const row of block.children) {
           for (const cell of row.children) {
-            searchInline(cell.children, query, matchCase, into);
+            searchInline(cell.children, query, matchCase, drawing, into);
           }
         }
 
@@ -100,16 +120,16 @@ function searchBlocks(
       case 'definitionList':
         for (const entry of block.children) {
           if (entry.type === 'definitionTerm') {
-            searchInline(entry.children, query, matchCase, into);
+            searchInline(entry.children, query, matchCase, drawing, into);
           } else {
-            searchBlocks(entry.children, query, matchCase, into);
+            searchBlocks(entry.children, query, matchCase, drawing, into);
           }
         }
 
         break;
 
       case 'leafDirective':
-        searchInline(block.children, query, matchCase, into);
+        searchInline(block.children, query, matchCase, drawing, into);
         break;
 
       // A code block is left out on purpose: it is drawn by the highlighter as
@@ -126,37 +146,69 @@ function searchInline(
   nodes: readonly MdInline[],
   query: string,
   matchCase: boolean,
+  drawing: MawyFindDrawing,
   into: MawyFound
 ): void {
   for (const node of nodes) {
     switch (node.type) {
       case 'text':
-      case 'inlineCode': {
-        const matches = findMatches(node.value, query, matchCase);
+      case 'inlineCode':
+        searchRun(node, node.value, query, matchCase, into);
+        break;
 
-        if (matches.length) {
-          into.at.set(
-            node,
-            matches.map((match, at) => ({ ...match, index: into.total + at }))
-          );
-          into.total += matches.length;
+      case 'link':
+        if (drawing.links === 'source') {
+          searchRun(node, sourceOf(node, drawing), query, matchCase, into);
+        } else if (drawing.links !== 'hide') {
+          searchInline(node.children, query, matchCase, drawing, into);
         }
 
         break;
-      }
+
+      case 'image':
+        if (drawing.images === 'source') {
+          searchRun(node, sourceOf(node, drawing), query, matchCase, into);
+        } else if (drawing.images === 'text') {
+          searchRun(node, node.alt, query, matchCase, into);
+        }
+
+        break;
 
       case 'emphasis':
       case 'strong':
       case 'delete':
-      case 'link':
       case 'textDirective':
-        searchInline(node.children, query, matchCase, into);
+        searchInline(node.children, query, matchCase, drawing, into);
         break;
 
-      // An image's alt text, a footnote's number, a piece of raw inline HTML:
-      // none of them is prose the reader is reading.
+      // A picture drawn as a picture, a footnote's number, a piece of raw inline
+      // HTML: none of them is prose the reader is reading.
       default:
         break;
     }
+  }
+}
+
+/** The characters a node was written with. */
+function sourceOf(node: MdInline, drawing: MawyFindDrawing): string {
+  return drawing.source.slice(node.range.start, node.range.end);
+}
+
+/** The matches in one run the renderer draws whole, keyed by the node that draws it. */
+function searchRun(
+  node: MdInline,
+  value: string,
+  query: string,
+  matchCase: boolean,
+  into: MawyFound
+): void {
+  const matches = findMatches(value, query, matchCase);
+
+  if (matches.length) {
+    into.at.set(
+      node,
+      matches.map((match, at) => ({ ...match, index: into.total + at }))
+    );
+    into.total += matches.length;
   }
 }

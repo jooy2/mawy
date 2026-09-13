@@ -22,6 +22,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:mawy/src/code.dart';
+import 'package:mawy/src/drawing.dart';
 import 'package:mawy/src/editor/commands.dart';
 import 'package:mawy/src/editor/scroll.dart';
 import 'package:mawy/src/editor/search.dart';
@@ -553,6 +554,10 @@ Map<String, Object?> _scrolls() {
 /// different numbers of matches for the same page, and that number is the one
 /// part of a find bar a reader can check.
 ///
+/// A query may say how links and pictures are drawn, as a third and a fourth
+/// entry, and then what is searched is what that draws: a link's source, a
+/// picture's description, or nothing.
+///
 /// The matches are printed in the order the traversal found them, which is the
 /// order both halves put them into the map. `inBlock` is not printed: it is
 /// which block to scroll to, the React package has no equivalent because a
@@ -569,7 +574,20 @@ List<Object?> _found() {
 
     return queries.map((Object? entry) {
       final List<Object?> pair = entry! as List<Object?>;
-      final MawyFound found = findInDocument(blocks, pair[0]! as String, pair[1]! as bool);
+      final MawyFound found = findInDocument(
+        blocks,
+        pair[0]! as String,
+        pair[1]! as bool,
+        drawing: MawyFindDrawing(
+          source: document,
+          links: pair.length > 2
+              ? MawyLinkPolicy.values.byName(pair[2]! as String)
+              : MawyLinkPolicy.show,
+          images: pair.length > 3
+              ? MawyImagePolicy.values.byName(pair[3]! as String)
+              : MawyImagePolicy.show,
+        ),
+      );
 
       return <Object?>[
         found.total,

@@ -266,6 +266,8 @@ class MawyEditor extends StatefulWidget {
     this.directives,
     this.highlight,
     this.onLinkTap,
+    this.links = MawyLinkPolicy.show,
+    this.images = MawyImagePolicy.show,
     this.resolveUrl,
     this.readOnly = false,
     this.onOpen,
@@ -381,6 +383,14 @@ class MawyEditor extends StatefulWidget {
 
   /// What tapping a link in the preview does.
   final void Function(String url, String? title)? onLinkTap;
+
+  /// How a link the document wrote is drawn in the preview. The source pane is
+  /// the document's characters and is not changed. See [MawyLinkPolicy].
+  final MawyLinkPolicy links;
+
+  /// How a picture the document asks for is drawn in the preview. See
+  /// [MawyImagePolicy].
+  final MawyImagePolicy images;
 
   /// Where a relative URL points. See [MawyUrlResolver].
   ///
@@ -499,6 +509,8 @@ class _MawyEditorState extends State<MawyEditor> {
       widget.directives,
       widget.highlight,
       widget.onLinkTap,
+      widget.links,
+      widget.images,
       widget.resolveUrl,
       widget.onOpen,
       widget.readOnly,
@@ -523,6 +535,8 @@ class _MawyEditorState extends State<MawyEditor> {
             directives: widget.directives,
             highlight: widget.highlight,
             onLinkTap: widget.onLinkTap,
+            links: widget.links,
+            images: widget.images,
             resolveUrl: widget.resolveUrl,
             scrollController: _previewScroll,
             // Where each block of the drawn document ended up, which is half of

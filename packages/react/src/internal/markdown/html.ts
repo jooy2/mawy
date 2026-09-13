@@ -16,7 +16,13 @@
  */
 
 import { isRelativeUrl, safeImageUrl, safeUrl } from './url.js';
-import type { MawyUrlResolver } from '../../types.js';
+import type { MawyImagePolicy, MawyLinkPolicy, MawyUrlResolver } from '../../types.js';
+
+/** How the links and the pictures in the markup are drawn. See `MawyLinkPolicy`. */
+export interface MawyHtmlDrawing {
+  links?: MawyLinkPolicy;
+  images?: MawyImagePolicy;
+}
 
 /** Elements a document may draw. Nothing that loads, frames or scripts. */
 const ELEMENTS = new Set(
@@ -180,7 +186,53 @@ function relink(root: Element, named: Set<string>): void {
   }
 }
 
-function walk(node: Node, named: Set<string>): void {
+/**
+ * What a link or a picture the application asked not to have drawn becomes, or
+ * `undefined` for one drawn as it is.
+ *
+ * The answers a link or a picture written in Markdown gets. `source` is the
+ * element as the browser read it rather than the characters it was written
+ * with, which are gone once there is a tree: `<a href=x>` comes out as
+ * `<a href="x">`. A link is an `<a>` with somewhere to go; one with only a
+ * `name` is a place to go to, and is left alone.
+ */
+function withheld(
+  element: Element,
+  tag: string,
+  drawing: MawyHtmlDrawing
+): Node | null | undefined {
+  const policy =
+    tag === 'img'
+      ? drawing.images
+      : tag === 'a' && element.hasAttribute('href')
+        ? drawing.links
+        : undefined;
+
+  if (!policy || policy === 'show') {
+    return undefined;
+  }
+
+  if (policy === 'hide') {
+    return null;
+  }
+
+  const span = element.ownerDocument.createElement('span');
+
+  if (policy === 'source') {
+    span.className = 'mawy-md-source';
+    span.textContent = element.outerHTML;
+  } else if (tag === 'img') {
+    span.className = 'mawy-md-image-text';
+    span.textContent = element.getAttribute('alt') ?? '';
+  } else {
+    span.className = 'mawy-md-link-text';
+    span.append(...element.childNodes);
+  }
+
+  return span;
+}
+
+function walk(node: Node, named: Set<string>, drawing: MawyHtmlDrawing): void {
   for (const child of [...node.childNodes]) {
     if (child.nodeType === Node.TEXT_NODE) {
       continue;
@@ -199,6 +251,21 @@ function walk(node: Node, named: Set<string>): void {
       continue;
     }
 
+    const instead = withheld(element, tag, drawing);
+
+    if (instead === null) {
+      element.remove();
+      continue;
+    }
+
+    if (instead) {
+      // Cleaned after it is moved, for the link's words: they went into the
+      // new element and nothing else is going to visit them there.
+      element.replaceWith(instead);
+      walk(instead, named, drawing);
+      continue;
+    }
+
     if (!ELEMENTS.has(tag)) {
       // The element goes; what the author wrote *inside* it stays. Dropping the
       // subtree with it would lose a paragraph to one unknown wrapper.
@@ -207,13 +274,13 @@ function walk(node: Node, named: Set<string>): void {
       // this loop walks a snapshot of the children taken on the way in, so
       // anything moved up into it afterwards is never visited. Unwrapping
       // first would let `<unknown><script>…</script></unknown>` through.
-      walk(element, named);
+      walk(element, named, drawing);
       element.replaceWith(...element.childNodes);
       continue;
     }
 
     scrub(element, named);
-    walk(element, named);
+    walk(element, named, drawing);
   }
 }
 
@@ -276,7 +343,11 @@ function resolvedHtml(html: string, resolveUrl: MawyUrlResolver): string {
  * be made safe" as much as to "this cannot be read here": a sanitiser that
  * falls back to passing it through is not a sanitiser.
  */
-export function sanitizeHtml(html: string, resolveUrl?: MawyUrlResolver): string | null {
+export function sanitizeHtml(
+  html: string,
+  resolveUrl?: MawyUrlResolver,
+  drawing: MawyHtmlDrawing = {}
+): string | null {
   if (typeof DOMParser === 'undefined') {
     return null;
   }
@@ -288,7 +359,7 @@ export function sanitizeHtml(html: string, resolveUrl?: MawyUrlResolver): string
     const named = new Set<string>();
 
     // Two passes, because a link may be written above the name it points at.
-    walk(parsed.body, named);
+    walk(parsed.body, named, drawing);
     relink(parsed.body, named);
 
     const out = parsed.body.innerHTML;

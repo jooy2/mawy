@@ -33,6 +33,8 @@ class MawyRenderContext {
     required this.body,
     required this.footnotes,
     this.onLinkTap,
+    this.links = MawyLinkPolicy.show,
+    this.images = MawyImagePolicy.show,
     this.imageBuilder,
     this.resolveUrl,
     this.directives,
@@ -73,6 +75,12 @@ class MawyRenderContext {
   /// What a tapped link does. Nothing at all without one — this package opens
   /// no URLs on anybody's behalf.
   final void Function(String url, String? title)? onLinkTap;
+
+  /// How a link the document wrote is drawn. See [MawyLinkPolicy].
+  final MawyLinkPolicy links;
+
+  /// How a picture the document asks for is drawn. See [MawyImagePolicy].
+  final MawyImagePolicy images;
 
   /// What draws a picture, where the application would rather draw it itself.
   /// See [MawyImageBuilder].
@@ -177,6 +185,8 @@ class MawyRenderContext {
     body: body,
     footnotes: footnotes,
     onLinkTap: onLinkTap,
+    links: links,
+    images: images,
     imageBuilder: imageBuilder,
     resolveUrl: resolveUrl,
     directives: directives,
@@ -215,7 +225,8 @@ class _Directive extends StatelessWidget {
   Widget build(BuildContext buildContext) => builder(buildContext, directive);
 }
 
-/// The characters a directive was written with, in the document.
+/// The characters a node was written with, in the document: a directive nobody
+/// claimed, or a link or a picture an application asked to see as its source.
 String _sourceOf(MdRange range, MawyRenderContext context) {
   final String? source = context.source;
 
@@ -412,6 +423,22 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
   }
 
   if (node is MdLink) {
+    switch (context.links) {
+      case MawyLinkPolicy.source:
+        return _marked(
+          node,
+          _sourceOf(node.range, context),
+          context,
+          _unclaimedStyle(context, style),
+        );
+      case MawyLinkPolicy.hide:
+        return const TextSpan(text: '');
+      case MawyLinkPolicy.text:
+        return renderInline(node.children, context, style);
+      case MawyLinkPolicy.show:
+        break;
+    }
+
     final TextStyle linked = style.copyWith(
       color: context.tokens.accent,
       decoration: TextDecoration.underline,
@@ -440,6 +467,22 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
   }
 
   if (node is MdImage) {
+    switch (context.images) {
+      case MawyImagePolicy.source:
+        return _marked(
+          node,
+          _sourceOf(node.range, context),
+          context,
+          _unclaimedStyle(context, style),
+        );
+      case MawyImagePolicy.hide:
+        return const TextSpan(text: '');
+      case MawyImagePolicy.text:
+        return _marked(node, node.alt, context, style);
+      case MawyImagePolicy.show:
+        break;
+    }
+
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
       child: _Image(node: node, context: context),

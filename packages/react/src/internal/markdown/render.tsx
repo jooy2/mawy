@@ -28,6 +28,8 @@ import type {
   MawyDirectives,
   MawyHighlighter,
   MawyHtmlPolicy,
+  MawyImagePolicy,
+  MawyLinkPolicy,
   MawyLinkRel,
   MawyLinkTarget,
   MawyUrlKind,
@@ -154,6 +156,10 @@ export interface RenderContext {
   linkTarget?: MawyLinkTarget;
   /** What such a link declares about where it goes. See `relationship`. */
   linkRel?: MawyLinkRel;
+  /** How a link the document wrote is drawn. See `MawyLinkPolicy`. @default 'show' */
+  links?: MawyLinkPolicy;
+  /** How a picture the document asks for is drawn. See `MawyImagePolicy`. @default 'show' */
+  images?: MawyImagePolicy;
   /**
    * A run of the document to draw as the characters it was written with rather
    * than as what it means.
@@ -305,6 +311,34 @@ function revealed(node: { range: MdRange }, context: RenderContext): boolean {
   return (
     at !== null && at !== undefined && at.start === node.range.start && at.end === node.range.end
   );
+}
+
+/**
+ * A link or a picture as the characters it was written with.
+ *
+ * The editor draws the one the caret is in this way, and an application that
+ * asked for `source` gets every one of them drawn this way. Marked like any
+ * other run, because in a viewer these are words on the page a reader can look
+ * for.
+ */
+function sourceOf(node: MdInline, index: number, context: RenderContext): React.ReactElement {
+  return (
+    <span key={index} className="mawy-md-source" {...origin(node, context)}>
+      {marked(node, context.source?.slice(node.range.start, node.range.end) ?? '', context)}
+    </span>
+  );
+}
+
+/**
+ * A link or a picture an application asked not to have drawn.
+ *
+ * Nothing on a page drawn once and left alone. Elsewhere an empty element that
+ * still says where it came from, because the editor finds a run of text by
+ * where the elements before it ended, and a link with no element left in the
+ * tree would have the text after it looked for from the start of the link.
+ */
+function hidden(node: MdInline, index: number, context: RenderContext): React.ReactNode {
+  return context.still ? null : <span key={index} {...origin(node, context)} />;
 }
 
 /**
@@ -645,10 +679,18 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
         );
 
       case 'link': {
-        if (revealed(node, context)) {
+        if (revealed(node, context) || context.links === 'source') {
+          return sourceOf(node, index, context);
+        }
+
+        if (context.links === 'hide') {
+          return hidden(node, index, context);
+        }
+
+        if (context.links === 'text') {
           return (
-            <span key={index} className="mawy-md-source" {...origin(node, context)}>
-              {context.source?.slice(node.range.start, node.range.end)}
+            <span key={index} className="mawy-md-link-text" {...origin(node, context)}>
+              {renderInline(node.children, context)}
             </span>
           );
         }
@@ -693,9 +735,13 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
       }
 
       case 'image':
-        return revealed(node, context) ? (
-          <span key={index} className="mawy-md-source" {...origin(node, context)}>
-            {context.source?.slice(node.range.start, node.range.end)}
+        return revealed(node, context) || context.images === 'source' ? (
+          sourceOf(node, index, context)
+        ) : context.images === 'hide' ? (
+          hidden(node, index, context)
+        ) : context.images === 'text' ? (
+          <span key={index} className="mawy-md-image-text" {...origin(node, context)}>
+            {marked(node, node.alt, context)}
           </span>
         ) : context.image ? (
           // Handed over whole rather than fetched here. Which pictures are
@@ -921,6 +967,20 @@ export function plainHtml({
 
   if (!/^\s*\/?>$/.test(markup.slice(at)) || !src) {
     return null;
+  }
+
+  // The same answers `sanitizeHtml` gives a picture in markup it had to parse,
+  // so a picture reads the same whichever of the two read it.
+  if (context.images && context.images !== 'show') {
+    return (
+      <Tag className="mawy-md-html" {...marks}>
+        {context.images === 'source' ? (
+          <span className="mawy-md-source">{markup}</span>
+        ) : context.images === 'text' ? (
+          <span className="mawy-md-image-text">{attributes.get('alt')}</span>
+        ) : null}
+      </Tag>
+    );
   }
 
   return (

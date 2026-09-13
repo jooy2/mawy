@@ -5,6 +5,8 @@ import type {
   MawyDirectives,
   MawyHtmlPolicy,
   MawyImageProps,
+  MawyImagePolicy,
+  MawyLinkPolicy,
   MawyLinkRel,
   MawyLinkTarget,
   MawyParseOptions,
@@ -66,6 +68,10 @@ export interface MawyEditorDocumentProps {
   linkTarget?: MawyLinkTarget;
   /** What such a link declares. See `MawyViewer.linkRel`. */
   linkRel?: MawyLinkRel;
+  /** How such a link is drawn. See `MawyEditor.links`. */
+  links?: MawyLinkPolicy;
+  /** How a picture is drawn. See `MawyEditor.images`. */
+  images?: MawyImagePolicy;
   /** What draws the constructs this package does not know about. */
   directives?: MawyDirectives;
 
@@ -248,6 +254,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       html,
       linkTarget,
       linkRel,
+      links,
+      images,
       directives,
       image,
       resolveUrl,
@@ -333,6 +341,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         headingBase,
         linkTarget,
         linkRel,
+        links,
+        images,
         firstImage: picture,
         source: value,
         reveal,
@@ -349,6 +359,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         headingBase,
         linkTarget,
         linkRel,
+        links,
+        images,
         picture,
         value,
         reveal

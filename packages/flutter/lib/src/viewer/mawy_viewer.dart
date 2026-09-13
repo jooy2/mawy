@@ -89,6 +89,8 @@ class MawyViewer extends StatefulWidget {
     this.locale = MawyLocale.en,
     this.strings,
     this.onLinkTap,
+    this.links = MawyLinkPolicy.show,
+    this.images = MawyImagePolicy.show,
     this.directives,
     this.imageBuilder,
     this.resolveUrl,
@@ -167,6 +169,24 @@ class MawyViewer extends StatefulWidget {
   /// is not a decision a viewer should make. The scheme allowlist has already
   /// run — a `javascript:` never reaches here — but the rest is yours.
   final void Function(String url, String? title)? onLinkTap;
+
+  /// How a link the document wrote is drawn: as a link, as its words, as the
+  /// characters it was written with, or not at all. A screen carrying documents
+  /// its readers wrote is the case this exists for:
+  ///
+  /// ```dart
+  /// MawyViewer(value: comment.body, links: MawyLinkPolicy.text, images: MawyImagePolicy.hide)
+  /// ```
+  ///
+  /// The find bar searches what is drawn, so a hidden link's words are not
+  /// found. See [MawyLinkPolicy].
+  final MawyLinkPolicy links;
+
+  /// How a picture the document asks for is drawn: fetched, as its
+  /// description, as the characters it was written with, or not at all.
+  /// Nothing is fetched and [imageBuilder] is not asked under any but
+  /// [MawyImagePolicy.show]. See [MawyImagePolicy].
+  final MawyImagePolicy images;
 
   /// What draws the constructs this package does not know about.
   ///
@@ -669,6 +689,8 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   String? _foundQuery;
   bool? _foundMatchCase;
   MdDocument? _foundDocument;
+  MawyLinkPolicy? _foundLinks;
+  MawyImagePolicy? _foundImages;
 
   /// Nothing found, as one object rather than a new one per build.
   ///
@@ -684,11 +706,20 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     if (_found == null ||
         _foundQuery != _query ||
         _foundMatchCase != _matchCase ||
-        !identical(_foundDocument, document)) {
-      _found = findInDocument(document.root.children, _query, _matchCase);
+        !identical(_foundDocument, document) ||
+        _foundLinks != widget.links ||
+        _foundImages != widget.images) {
+      _found = findInDocument(
+        document.root.children,
+        _query,
+        _matchCase,
+        drawing: MawyFindDrawing(source: widget.value, links: widget.links, images: widget.images),
+      );
       _foundQuery = _query;
       _foundMatchCase = _matchCase;
       _foundDocument = document;
+      _foundLinks = widget.links;
+      _foundImages = widget.images;
     }
 
     return _found!;
@@ -1003,6 +1034,8 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
         for (final MdFootnoteDefinition footnote in document.footnotes) footnote.label: footnote,
       },
       onLinkTap: widget.onLinkTap == null ? null : _tapLink,
+      links: widget.links,
+      images: widget.images,
       directives: widget.directives,
       highlighter: widget.highlight,
       source: widget.value,
@@ -1031,6 +1064,8 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       widget.highlight,
       widget.imageBuilder,
       widget.resolveUrl,
+      widget.links,
+      widget.images,
       // Whether a link does anything rather than what it does: the drawing is
       // handed `_tapLink`, which does not change, and an application writing
       // `onLinkTap: (url, _) => open(url)` where the widget is written hands

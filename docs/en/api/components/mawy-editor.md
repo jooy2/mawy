@@ -248,7 +248,9 @@ It is there because a platform's own find reaches a page of text and not the ins
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives`, `anchorPrefix` and `headingBase` reach the drawn document as well.
+`parse`, `html`, `linkTarget`, `linkRel`, `links`, `images`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives`, `anchorPrefix`, `headingBase`, `links` and `images` reach the drawn document as well.
+
+On the drawn document, the link or picture the caret is in is written out as its source whatever `links` and `images` say, the way it always is, because that is where a caret can edit it. Under `hide` a link or a picture is not on the surface until the caret reaches it, which is what an editor showing a writer what readers will be shown asks for.
 
 `anchorPrefix` is what keeps two editors on one page apart. Both documents opening with `# Introduction` give two headings `id="introduction"`, and a footnote reference in the second editor lands on the first editor's note, until each editor is given a prefix of its own. Unset, the editor makes none up: which editors share a page is the application's knowledge, and a generated name is one the application could not link to.
 
@@ -256,7 +258,7 @@ It is there because a platform's own find reaches a page of text and not the ins
 
 ::: fw flutter
 
-`parse`, `directives`, `highlight`, `onLinkTap`, `resolveUrl`, `typography`, `defaultTypography` and `tokens` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and are passed straight through to the preview.
+`parse`, `directives`, `highlight`, `onLinkTap`, `links`, `images`, `resolveUrl`, `typography`, `defaultTypography` and `tokens` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and are passed straight through to the preview.
 
 The colour scheme is the controlled pair here rather than the viewer's single argument: `colorScheme` when the application owns it, `defaultColorScheme` (`MawyColorScheme.system`) when the editor keeps it itself, and `onColorSchemeChange` either way.
 

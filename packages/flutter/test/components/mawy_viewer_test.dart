@@ -1846,6 +1846,114 @@ void main() {
   /// does not appear, or a link that goes nowhere, until somebody says what the
   /// address means. What matters as much as that working is what it leaves
   /// alone: an anchor and an absolute URL are already answers.
+  /// A screen carrying documents its readers wrote decides what a link and a
+  /// picture in them become. See [MawyLinkPolicy] and [MawyImagePolicy].
+  group('links and pictures drawn some other way', () {
+    const String document =
+        'Read [the guide](https://example.com/guide) first.[^a]\n\n![a cat](https://nowhere.example/c.png)\n\n[^a]: A note.';
+
+    Future<({List<String> opened, List<MawyImage> asked})> drawn(
+      WidgetTester tester, {
+      required MawyLinkPolicy links,
+      required MawyImagePolicy images,
+    }) async {
+      final List<String> opened = <String>[];
+      final List<MawyImage> asked = <MawyImage>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyViewer(
+            value: document,
+            links: links,
+            images: images,
+            onLinkTap: (String url, String? _) => opened.add(url),
+            imageBuilder: (BuildContext context, MawyImage image) {
+              asked.add(image);
+
+              return Text('drew ${image.alt}');
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      return (opened: opened, asked: asked);
+    }
+
+    testWidgets('draws a link as its words and a picture as its description', (
+      WidgetTester tester,
+    ) async {
+      final ({List<String> opened, List<MawyImage> asked}) seen = await drawn(
+        tester,
+        links: MawyLinkPolicy.text,
+        images: MawyImagePolicy.text,
+      );
+
+      expect(documentText(tester), contains('Read the guide first.'));
+      expect(documentText(tester), contains('a cat'));
+      expect(documentText(tester), isNot(contains('https://')));
+      expect(styleOf(tester, 'the guide')?.decoration, isNot(TextDecoration.underline));
+
+      final Rect box = tester.getRect(find.textContaining('the guide'));
+
+      await tester.tapAt(Offset(box.left + 60, box.center.dy));
+      await tester.pumpAndSettle();
+
+      expect(seen.opened, isEmpty);
+      expect(seen.asked, isEmpty);
+    });
+
+    testWidgets('draws them as the characters they were written with', (WidgetTester tester) async {
+      final ({List<String> opened, List<MawyImage> asked}) seen = await drawn(
+        tester,
+        links: MawyLinkPolicy.source,
+        images: MawyImagePolicy.source,
+      );
+
+      expect(documentText(tester), contains('Read [the guide](https://example.com/guide) first.'));
+      expect(documentText(tester), contains('![a cat](https://nowhere.example/c.png)'));
+      expect(seen.asked, isEmpty);
+    });
+
+    testWidgets('draws nothing of them, and keeps the footnote', (WidgetTester tester) async {
+      final ({List<String> opened, List<MawyImage> asked}) seen = await drawn(
+        tester,
+        links: MawyLinkPolicy.hide,
+        images: MawyImagePolicy.hide,
+      );
+
+      expect(documentText(tester), contains('Read  first.'));
+      expect(documentText(tester), isNot(contains('the guide')));
+      expect(documentText(tester), isNot(contains('a cat')));
+      expect(documentText(tester), contains('A note.'));
+      expect(seen.asked, isEmpty);
+    });
+
+    testWidgets('finds what is drawn, and nothing that is not', (WidgetTester tester) async {
+      Future<void> search(MawyLinkPolicy links, MawyImagePolicy images, String query) async {
+        await tester.pumpWidget(host(MawyViewer(value: document, links: links, images: images)));
+        await tester.tap(toolbarButton('Find'));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.descendant(of: find.byType(MawyFindBar), matching: find.byType(EditableText)),
+          query,
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await search(MawyLinkPolicy.hide, MawyImagePolicy.hide, 'guide');
+      expect(find.text('No matches'), findsOneWidget);
+
+      await search(MawyLinkPolicy.source, MawyImagePolicy.text, 'example.com');
+      expect(find.text('1 of 1'), findsOneWidget);
+      expect(_marks(tester).length, 1);
+
+      await search(MawyLinkPolicy.show, MawyImagePolicy.text, 'cat');
+      expect(find.text('1 of 1'), findsOneWidget);
+      expect(_marks(tester).length, 1);
+    });
+  });
+
   group('resolving the URLs a document writes', () {
     String base(String url, MawyUrlKind kind) => 'resolved:${kind.name}:$url';
 

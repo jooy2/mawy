@@ -14,6 +14,10 @@ import 'package:mawy/src/markdown/ast.dart' show MdRange;
 /// one place to read the whole of it from.
 export 'package:mawy/src/code.dart';
 
+/// How a link and a picture are drawn, in a file of its own for the same
+/// reason: the find bar's walk reads it, and `tool/parity.dart` runs that walk.
+export 'package:mawy/src/drawing.dart';
+
 /// Which palette to draw in.
 ///
 /// [system] follows the platform's own brightness, which is the default: a

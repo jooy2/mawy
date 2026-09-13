@@ -38,6 +38,7 @@ order: 2
 | [`MawyParseOptions`](./parse-options) | 마크다운 자체를 어떻게 읽을지. |
 | [`MdDocument`](./md-document) | 파싱한 문서와 그 아래 모든 노드. |
 | [`MawyUrlResolver`](./url-resolver) | 문서의 상대 URL이 어디를 가리키는지. |
+| [링크와 이미지 그리기](./drawing-policy) | 링크를 따라가거나 그림을 내려받게 두지 않을 때 둘을 어떻게 그릴지. |
 | [`MawyDirectiveKind`](./directive-kind) | 디렉티브가 세 모양 중 어느 것으로 쓰였는지. |
 | [디렉티브](./directives) | 이 패키지가 모르는 구성물을 무엇으로 그릴지. |
 | [`MawyHighlighter`](./highlighter) | 코드 블록에 마크업이 아니라 토큰으로 색을 입히는 것. |

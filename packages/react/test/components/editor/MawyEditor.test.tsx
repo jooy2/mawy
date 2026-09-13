@@ -1620,6 +1620,42 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('One and two.\n\nA **boLDld** word.');
   });
 
+  /**
+   * A run of text is found in the document by where the elements before it
+   * ended, so a link that is not drawn still leaves an element saying where it
+   * was, and a picture drawn as its description is found inside what it was
+   * written with.
+   */
+  it('types beside a link it does not draw, and into a picture drawn as words', async () => {
+    const onChange = vi.fn();
+    // The words after the link are the link's own words too, which is what
+    // makes the element it leaves behind the only way to tell them apart.
+    const source = 'See [end.](/end.)end.\n\n![the cat](/cat.png)';
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        links="hide"
+        images="text"
+        onChange={onChange}
+      />
+    );
+
+    expect(bodyOf(screen).querySelector('p')?.textContent).toBe('See end.');
+
+    put(bodyOf(screen), 'end.', 1);
+    type(bodyOf(screen), 'insertText', 'X');
+
+    expect(onChange).toHaveBeenLastCalledWith('See [end.](/end.)eXnd.\n\n![the cat](/cat.png)');
+
+    await vi.waitFor(() => expect(bodyOf(screen).textContent).toContain('eXnd.'));
+
+    put(bodyOf(screen), 'the cat', 4);
+    type(bodyOf(screen), 'insertText', 'Y');
+
+    expect(onChange).toHaveBeenLastCalledWith('See [end.](/end.)eXnd.\n\n![the Ycat](/cat.png)');
+  });
+
   it('keeps a marker on the page until it is the block it looks like', async () => {
     const onChange = vi.fn();
     const screen = await render(

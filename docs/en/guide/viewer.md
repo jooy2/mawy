@@ -345,6 +345,26 @@ A viewer renders content that the person running it did not write, so the defaul
 
 **Every URL is checked, in Markdown as much as in HTML.** `[click](javascript:…)` is plain Markdown with no HTML anywhere near it, so the scheme allowlist is not part of the HTML option and is not switched off with it. A refused destination is drawn as the words the author wrote, with no link around them, so a reader sees the sentence rather than a link that does nothing.
 
+**A page can ask for links and pictures to be drawn some other way.** A page carrying documents its readers wrote may not want to send a reader wherever a comment points, or fetch whatever picture it names. `links` and `images` draw them as their words, as the characters they were written with, or not at all, and nothing is followed or fetched under any of the three:
+
+::: fw react
+
+```tsx
+<MawyViewer value={comment.body} links="text" images="hide" />
+```
+
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(value: comment.body, links: MawyLinkPolicy.text, images: MawyImagePolicy.hide)
+```
+
+:::
+
+A footnote's number and the way back from a note are this library's own and stay, and the find bar searches only what is drawn. See [link and image policy](../api/types/drawing-policy) for what each value draws.
+
 ::: fw flutter
 
 **Raw HTML is shown as the characters it was written with, and there is no option to change that.** Flutter has no HTML to draw it as, which is why the Flutter package has no `html` prop. The rest of this section applies to the React package only.

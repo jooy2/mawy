@@ -357,6 +357,10 @@ const scrolls = {
  * numbers of matches for the same page, and that number is the one part of a
  * find bar a reader can check.
  *
+ * A query may say how links and pictures are drawn, as a third and a fourth
+ * entry, and then what is searched is what that draws: a link's source, a
+ * picture's description, or nothing.
+ *
  * The matches are printed in the order the traversal found them, which is the
  * order both halves put them into the map.
  */
@@ -367,8 +371,8 @@ const finds = JSON.parse(
 const found = corpus().map((document) => {
   const blocks = parseMarkdown(document).root.children;
 
-  return finds.map(([query, matchCase]) => {
-    const answer = findInDocument(blocks, query, matchCase);
+  return finds.map(([query, matchCase, links, images]) => {
+    const answer = findInDocument(blocks, query, matchCase, { source: document, links, images });
 
     return [
       answer.total,

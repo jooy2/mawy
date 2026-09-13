@@ -345,6 +345,26 @@ MawyViewer(
 
 **모든 URL은 HTML에서와 마찬가지로 마크다운에서도 검사합니다.** `[click](javascript:…)`은 HTML이 하나도 없는 순수 마크다운이므로, 스킴 허용 목록은 HTML 옵션에 속하지 않고 그 옵션과 함께 꺼지지도 않습니다. 거절된 대상은 작성자가 쓴 낱말 그대로, 링크 없이 그립니다. 독자에게는 동작하지 않는 링크 대신 문장이 보입니다.
 
+**링크와 그림을 다른 방식으로 그리게 할 수 있습니다.** 독자가 쓴 글을 싣는 페이지라면 댓글이 가리키는 곳으로 독자를 보내거나 댓글에 적힌 그림을 내려받고 싶지 않을 수 있습니다. `links`와 `images`는 링크와 그림을 낱말로, 쓰인 글자 그대로, 또는 아예 그리지 않게 합니다. 셋 중 어느 값이든 따라가거나 내려받는 일은 없습니다.
+
+::: fw react
+
+```tsx
+<MawyViewer value={comment.body} links="text" images="hide" />
+```
+
+:::
+
+::: fw flutter
+
+```dart
+MawyViewer(value: comment.body, links: MawyLinkPolicy.text, images: MawyImagePolicy.hide)
+```
+
+:::
+
+각주 번호와 각주에서 되돌아가는 링크는 이 라이브러리가 만든 것이라 그대로 남고, 찾기는 그려진 것만 찾습니다. 값마다 무엇을 그리는지는 [링크와 이미지 그리기](../api/types/drawing-policy)를 보세요.
+
 ::: fw flutter
 
 **원시 HTML은 쓰인 글자 그대로 보이고, 바꿀 방법이 없습니다.** Flutter에는 그것을 그릴 HTML 자체가 없습니다. Flutter 패키지에 `html` 프롭이 없는 이유입니다. 이 절의 나머지 내용은 React 패키지에만 해당합니다.

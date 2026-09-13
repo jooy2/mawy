@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { MawyViewer } from 'mawy-react';
+import { MawyViewer, type MawyImagePolicy, type MawyLinkPolicy } from 'mawy-react';
 import drawn from '../../../../flutter/tool/drawn.json';
 
 /**
@@ -24,15 +24,18 @@ import drawn from '../../../../flutter/tool/drawn.json';
  * Only what both packages draw goes in it. There is no raw HTML to draw in the
  * Flutter package and no `wysiwyg` surface, and those differences are written
  * up in `docs/*\/guide/editor.md` rather than tested around. A picture's alt
- * text is not here either, and that one is worth naming: a browser draws it
- * from the attribute when the picture will not load, so it is never text on the
- * page, where the Flutter renderer has to draw it as words. Each package checks
- * its own half in its own file.
+ * text is not here either while the picture is drawn, and that one is worth
+ * naming: a browser draws it from the attribute when the picture will not load,
+ * so it is never text on the page, where the Flutter renderer has to draw it as
+ * words. Under `images: "text"` both draw it as words, and that is here. Each
+ * package checks its own half in its own file.
  */
 
 interface Case {
   why: string;
   markdown: string;
+  links?: MawyLinkPolicy;
+  images?: MawyImagePolicy;
   says: string[];
   omits?: string[];
 }
@@ -43,7 +46,13 @@ describe('a drawn document', () => {
       // Nothing but the document: the toolbar has words of its own and this is
       // about what the Markdown became.
       const screen = await render(
-        <MawyViewer value={each.markdown} toolbar={[]} directives={{}} />
+        <MawyViewer
+          value={each.markdown}
+          links={each.links}
+          images={each.images}
+          toolbar={[]}
+          directives={{}}
+        />
       );
       const said = screen.container.textContent ?? '';
 

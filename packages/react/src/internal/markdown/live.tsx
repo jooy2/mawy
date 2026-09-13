@@ -70,9 +70,12 @@ function RawHtml({
       context.html === 'raw'
         ? value
         : context.html === 'sanitize' && hydrated
-          ? sanitizeHtml(value, context.resolveUrl)
+          ? sanitizeHtml(value, context.resolveUrl, {
+              links: context.links,
+              images: context.images
+            })
           : null,
-    [context.html, context.resolveUrl, value, hydrated]
+    [context.html, context.resolveUrl, context.links, context.images, value, hydrated]
   );
 
   // What can be read without a DOM is drawn the same way on the server and on

@@ -66,6 +66,8 @@ With neither `value` nor `defaultValue`, the viewer becomes the file picker. Tha
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | What becomes of raw HTML written inside the document. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | Where a link the document wrote opens. |
 | `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | What such a link declares about where it goes. Added to what it already declares. |
+| `links` | [`MawyLinkPolicy`](../types/drawing-policy#mawylinkpolicy) | `'show'` | How a link the document wrote is drawn: as a link, as its words, as its source, or not at all. |
+| `images` | [`MawyImagePolicy`](../types/drawing-policy#mawyimagepolicy) | `'show'` | How a picture is drawn: fetched, as its description, as its source, or not at all. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the viewer's own interface. Nothing to do with the document. |
 | `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | The interface's words, some or all of them, over the ones `locale` has. |
 | `highlight` | [`MawyHighlight`](../types/highlighter) | — | What colours a fenced code block. Nothing by default. |
@@ -85,6 +87,8 @@ With neither `value` nor `defaultValue`, the viewer becomes the file picker. Tha
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | The language of the viewer's own interface. Nothing to do with the document. |
 | `strings` | [`MawyStrings?`](../types/locale#mawystrings) | — | The interface's words, where the application has its own. Given, `locale` says nothing. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | What a tapped link does. |
+| `links` | [`MawyLinkPolicy`](../types/drawing-policy#mawylinkpolicy) | `MawyLinkPolicy.show` | How a link the document wrote is drawn: as a link, as its words, as its source, or not at all. |
+| `images` | [`MawyImagePolicy`](../types/drawing-policy#mawyimagepolicy) | `MawyImagePolicy.show` | How a picture is drawn: fetched, as its description, as its source, or not at all. |
 | `highlight` | [`MawyHighlighter?`](../types/highlighter) | — | What colours a fenced code block. Nothing by default. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](../types/directives)`>?` | — | What draws the constructs this package does not know about. |
 | `imageBuilder` | [`MawyImageBuilder?`](../types/image) | the viewer draws it | What draws a picture the document points at. |

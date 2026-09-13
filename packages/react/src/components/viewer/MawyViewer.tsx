@@ -9,6 +9,8 @@ import type {
   MawyHighlight,
   MawyHtmlPolicy,
   MawyImageProps,
+  MawyImagePolicy,
+  MawyLinkPolicy,
   MawyLinkRel,
   MawyLinkTarget,
   MawyLocale,
@@ -140,6 +142,31 @@ export interface MawyViewerProps extends Omit<
    * `MawyLinkRel`.
    */
   linkRel?: MawyLinkRel;
+
+  /**
+   * How a link the document wrote is drawn: as a link, as its words, as the
+   * characters it was written with, or not at all. A page carrying documents
+   * its readers wrote is the case this exists for:
+   *
+   * ```tsx
+   * <MawyViewer value={comment.body} links="text" images="hide" />
+   * ```
+   *
+   * The find bar searches what is drawn, so a hidden link's words are not
+   * found. See `MawyLinkPolicy`.
+   *
+   * @default 'show'
+   */
+  links?: MawyLinkPolicy;
+
+  /**
+   * How a picture the document asks for is drawn: fetched, as its description,
+   * as the characters it was written with, or not at all. Nothing is fetched
+   * and `image` is not asked under any but `show`. See `MawyImagePolicy`.
+   *
+   * @default 'show'
+   */
+  images?: MawyImagePolicy;
 
   /**
    * Whether the viewer has a frame around it, or floats in the page.
@@ -343,6 +370,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     html = 'escape',
     linkTarget = 'blank',
     linkRel,
+    links = 'show',
+    images = 'show',
     frame = 'box',
     toolbarPlacement = 'top',
     locale = 'en',
@@ -465,8 +494,11 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     [document_]
   );
   const found = React.useMemo(
-    () => (finding ? findInDocument(document_.root.children, query, matchCase) : NOTHING_FOUND),
-    [finding, document_, query, matchCase]
+    () =>
+      finding
+        ? findInDocument(document_.root.children, query, matchCase, { source: text, links, images })
+        : NOTHING_FOUND,
+    [finding, document_, query, matchCase, text, links, images]
   );
   /** The one being stepped through, kept inside a count that may have shrunk. */
   const currentMatch = found.total ? Math.min(at, found.total - 1) : -1;
@@ -481,6 +513,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       directives,
       linkTarget,
       linkRel,
+      links,
+      images,
       image,
       resolveUrl,
       anchorPrefix,
@@ -499,6 +533,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       directives,
       linkTarget,
       linkRel,
+      links,
+      images,
       image,
       resolveUrl,
       anchorPrefix,

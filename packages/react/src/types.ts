@@ -727,6 +727,52 @@ export type MawyLinkTarget = 'blank' | 'self';
  */
 export type MawyLinkRel = string | ((href: string) => string | null | undefined);
 
+/**
+ * How a link the document wrote is drawn.
+ *
+ * - `show` — the default. A link, which a reader can follow.
+ * - `text` — its words, set the way the words around them are, with nothing to
+ *   follow, focus or press. Formatting inside the link stays, and a picture
+ *   inside it is drawn as `MawyImagePolicy` says.
+ * - `source` — the characters it was written with, `[words](address)`, set the
+ *   way the editor writes out the link the caret is in. The address is on the
+ *   page and nothing follows it.
+ * - `hide` — nothing, words and all.
+ *
+ * A page carrying documents its readers wrote is the case this exists for, and
+ * which of the four it wants is a question about that page: `text` keeps the
+ * sentence and drops the destination, `source` shows the destination and
+ * follows nothing, and `hide` takes the link out of the sentence altogether.
+ *
+ *     <MawyViewer value={comment.body} links="text" images="hide" />
+ *
+ * Only the links the document wrote. A footnote's number, the way back from a
+ * note and a heading's anchor are this library's own and are drawn whatever
+ * this says. A link in raw HTML follows it under `html="sanitize"`, and under
+ * `raw` nothing is changed, which is what `raw` means.
+ *
+ * The anchors and the outline do not move: a heading's anchor is made from the
+ * words the author wrote, so a link to it from outside still lands whether or
+ * not the words are drawn.
+ */
+export type MawyLinkPolicy = 'show' | 'text' | 'source' | 'hide';
+
+/**
+ * How a picture the document asks for is drawn.
+ *
+ * - `show` — the default. The picture, fetched.
+ * - `text` — its description, the alt text, as words where the picture would
+ *   have been. A picture with no description draws nothing.
+ * - `source` — the characters it was written with, `![description](address)`.
+ * - `hide` — nothing.
+ *
+ * Every value but `show` fetches nothing, and an `image` component is never
+ * asked. A picture in raw HTML follows it under `html="sanitize"`, and under
+ * `raw` nothing is changed. See `MawyLinkPolicy`, which is the same four
+ * answers about a link.
+ */
+export type MawyImagePolicy = 'show' | 'text' | 'source' | 'hide';
+
 /** How the Markdown itself is read. */
 export interface MawyParseOptions {
   /**

@@ -15,6 +15,8 @@ import type {
   MawyHtmlPolicy,
   MawyImageProps,
   MawyImageUpload,
+  MawyImagePolicy,
+  MawyLinkPolicy,
   MawyLinkRel,
   MawyLinkTarget,
   MawyLocale,
@@ -320,6 +322,26 @@ export interface MawyEditorProps extends Omit<
    */
   linkRel?: MawyLinkRel;
   /**
+   * How a link the document wrote is drawn, in the preview and on the drawn
+   * surface. See `MawyLinkPolicy`.
+   *
+   * On the drawn surface the link the caret is in is written out as its source
+   * whatever this says, the way it always is, because that is where a caret
+   * can edit it. Anywhere else a link under `hide` is not on the surface at
+   * all, so a writer cannot see it until the caret arrives at it — which is
+   * what an editor that shows what a reader will be shown is asking for.
+   *
+   * @default 'show'
+   */
+  links?: MawyLinkPolicy;
+  /**
+   * How a picture the document asks for is drawn, in the preview and on the
+   * drawn surface. See `MawyImagePolicy` and `links`.
+   *
+   * @default 'show'
+   */
+  images?: MawyImagePolicy;
+  /**
    * What colours a fenced code block in the preview. The drawn document is not
    * coloured and will not be: an editing surface where the caret has to find
    * its way back into the source is not the place for a second opinion about
@@ -479,6 +501,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     html = 'escape',
     linkTarget = 'blank',
     linkRel,
+    links = 'show',
+    images = 'show',
     highlight,
     directives,
     image,
@@ -2087,6 +2111,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               html={html}
               linkTarget={linkTarget}
               linkRel={linkRel}
+              links={links}
+              images={images}
               directives={directives}
               image={image}
               resolveUrl={resolveUrl}
@@ -2141,6 +2167,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               html={html}
               linkTarget={linkTarget}
               linkRel={linkRel}
+              links={links}
+              images={images}
               highlight={highlight}
               directives={directives}
               image={image}

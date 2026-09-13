@@ -248,7 +248,9 @@ Column(
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`, `anchorPrefix`, `headingBase`는 그려진 문서에도 닿습니다.
+`parse`, `html`, `linkTarget`, `linkRel`, `links`, `images`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`, `anchorPrefix`, `headingBase`, `links`, `images`는 그려진 문서에도 닿습니다.
+
+그려진 문서에서는 `links`와 `images`가 무엇이든 캐럿이 들어간 링크나 그림을 늘 그래 왔듯 원문으로 풀어 씁니다. 캐럿이 고칠 수 있는 곳이 거기뿐이기 때문입니다. `hide`로 둔 링크와 그림은 캐럿이 닿기 전까지 화면에 없습니다. 독자에게 보일 모습을 작성자에게도 보여 주는 에디터라면 그것이 원하는 동작입니다.
 
 `anchorPrefix`는 한 페이지에 놓인 에디터 두 개를 서로 떼어 놓습니다. 두 문서가 모두 `# Introduction`으로 시작하면 제목 두 개가 똑같이 `id="introduction"`을 받고, 두 번째 에디터의 각주 참조는 첫 번째 에디터의 각주로 갑니다. 에디터마다 접두사를 따로 주면 이 충돌이 사라집니다. 주지 않으면 에디터가 스스로 만들지 않습니다. 어느 에디터들이 한 페이지에 있는지는 애플리케이션만 알고, 자동으로 만든 이름은 애플리케이션이 자기 화면에서 링크를 걸 수 없는 이름이기 때문입니다.
 
@@ -256,7 +258,7 @@ Column(
 
 ::: fw flutter
 
-`parse`, `directives`, `highlight`, `onLinkTap`, `resolveUrl`, `typography`, `defaultTypography`, `tokens`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 미리보기로 그대로 전달됩니다.
+`parse`, `directives`, `highlight`, `onLinkTap`, `links`, `images`, `resolveUrl`, `typography`, `defaultTypography`, `tokens`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 미리보기로 그대로 전달됩니다.
 
 색 팔레트는 뷰어의 인자 하나와 달리 여기서는 제어 쌍입니다. 애플리케이션이 주인일 때는 `colorScheme`, 에디터가 직접 가질 때는 `defaultColorScheme`(`MawyColorScheme.system`), 어느 쪽이든 `onColorSchemeChange`입니다.
 

@@ -5,5 +5,10 @@
  ["문서", false],
  ["the editor", false],
  ["", false],
- ["no document in this repository contains this", false]
+ ["no document in this repository contains this", false],
+ ["Mawy", false, "hide", "hide"],
+ ["example", false, "source", "source"],
+ ["the", false, "text", "text"],
+ ["https", false, "source", "hide"],
+ ["a", false, "show", "text"]
 ]

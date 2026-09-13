@@ -38,6 +38,7 @@ Exported from `package:mawy/mawy.dart`, which is this package's entire public su
 | [`MawyParseOptions`](./parse-options) | How the Markdown itself is read. |
 | [`MdDocument`](./md-document) | A parsed document, and every node under it. |
 | [`MawyUrlResolver`](./url-resolver) | Where a relative URL in the document points. |
+| [Link and image policy](./drawing-policy) | How a link and a picture are drawn, for a page that does not want them followed or fetched. |
 | [`MawyDirectiveKind`](./directive-kind) | Which of the three shapes a directive was written in. |
 | [Directives](./directives) | What draws the constructs this package does not know about. |
 | [`MawyHighlighter`](./highlighter) | What colours a code block, in tokens rather than markup. |

@@ -39,6 +39,8 @@ A React Server Component in a framework that has them, and an ordinary component
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | What becomes of raw HTML written inside it. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | Where a link the document wrote opens. |
 | `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | What such a link declares about where it goes. Added to what it already declares. |
+| `links` | [`MawyLinkPolicy`](../types/drawing-policy#mawylinkpolicy) | `'show'` | How a link the document wrote is drawn: as a link, as its words, as its source, or not at all. |
+| `images` | [`MawyImagePolicy`](../types/drawing-policy#mawyimagepolicy) | `'show'` | How a picture is drawn: fetched, as its description, as its source, or not at all. |
 | `directives` | [`MawyDirectives`](../types/directives) | — | What draws the constructs this package does not know about. |
 | `image` | `ComponentType<`[`MawyImageProps`](../types/image)`>` | — | What draws a picture the document points at, and how a framework's own image component gets used. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | Where a relative URL in the document points. |

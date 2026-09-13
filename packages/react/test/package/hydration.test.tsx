@@ -88,6 +88,22 @@ describe('a document drawn on a server and picked up in a browser', () => {
     expect(await hydrating(element)).toEqual([]);
   });
 
+  it('agrees with itself over links and pictures drawn some other way', async () => {
+    for (const policy of ['text', 'source', 'hide'] as const) {
+      expect(
+        await hydrating(
+          <MawyViewer
+            html="sanitize"
+            value={'A [link](/a).\n\n![A cat](/cat.png)\n\n<img src="/dog.png" alt="A dog">'}
+            links={policy}
+            images={policy}
+            toolbar={false}
+          />
+        )
+      ).toEqual([]);
+    }
+  });
+
   it('sanitises once it is running in the browser', async () => {
     const host = document.createElement('div');
     const element = <MawyViewer html="sanitize" value={'<p class="k">hi</p>'} toolbar={false} />;

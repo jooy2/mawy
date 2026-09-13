@@ -209,6 +209,143 @@ describe('safety', () => {
 });
 
 /**
+ * A page carrying documents its readers wrote decides what a link and a picture
+ * in them become. See `MawyLinkPolicy` and `MawyImagePolicy`.
+ */
+describe('links and pictures drawn some other way', () => {
+  const DOCUMENT =
+    'Read [the **guide**](https://example.com/guide) first.[^a]\n\n![A cat](https://example.com/cat.png)\n\n[^a]: A note.';
+
+  it('draws a link as its words, and a picture as its description, with nothing fetched', async () => {
+    const image = vi.fn(() => null);
+    const screen = await render(
+      <MawyViewer value={DOCUMENT} links="text" images="text" image={image} toolbar={false} />
+    );
+    const document_ = screen.container.querySelector('.mawy-md') as HTMLElement;
+
+    expect(document_.textContent).toContain('Read the guide first.');
+    expect(document_.querySelector('.mawy-md-link-text strong')?.textContent).toBe('guide');
+    expect(document_.querySelector('.mawy-md-image-text')?.textContent).toBe('A cat');
+    expect(document_.querySelector('a[href^="https://"]')).toBeNull();
+    expect(document_.querySelector('img')).toBeNull();
+    expect(image).not.toHaveBeenCalled();
+    // The footnote's number and the way back from it are this library's own.
+    expect(document_.querySelector('.mawy-md-footnote-ref a')).not.toBeNull();
+  });
+
+  it('draws them as the characters they were written with', async () => {
+    const screen = await render(
+      <MawyViewer value={DOCUMENT} links="source" images="source" toolbar={false} />
+    );
+    const sources = [...screen.container.querySelectorAll('.mawy-md .mawy-md-source')].map(
+      (each) => each.textContent
+    );
+
+    expect(sources).toEqual([
+      '[the **guide**](https://example.com/guide)',
+      '![A cat](https://example.com/cat.png)'
+    ]);
+    expect(screen.container.querySelector('.mawy-md a[href^="https://"]')).toBeNull();
+    expect(screen.container.querySelector('.mawy-md img')).toBeNull();
+  });
+
+  it('draws nothing of them at all', async () => {
+    const screen = await render(
+      <MawyViewer value={DOCUMENT} links="hide" images="hide" toolbar={false} />
+    );
+    const said = screen.container.querySelector('.mawy-md')?.textContent ?? '';
+
+    expect(said).toContain('Read  first.');
+    expect(said).not.toContain('guide');
+    expect(said).not.toContain('A cat');
+    expect(screen.container.querySelector('.mawy-md img')).toBeNull();
+    expect(screen.container.querySelector('.mawy-md-footnote-ref a')).not.toBeNull();
+  });
+
+  it('gives a link and a picture in sanitised markup the same answers', async () => {
+    const markup =
+      '<p><a href="/x" onclick="alert(1)">in <b>bold</b></a> and <img src="/a.png" alt="a picture"></p>';
+    const drawn = async (policy: 'text' | 'source' | 'hide') => {
+      const screen = await render(
+        <MawyViewer html="sanitize" value={markup} links={policy} images={policy} toolbar={false} />
+      );
+      const html = screen.container.querySelector('.mawy-md-html') as HTMLElement;
+
+      await vi.waitFor(() => expect(html.querySelector('p')).not.toBeNull());
+
+      return html;
+    };
+
+    const text = await drawn('text');
+
+    expect(text.querySelector('a')).toBeNull();
+    expect(text.querySelector('img')).toBeNull();
+    expect(text.querySelector('.mawy-md-link-text b')?.textContent).toBe('bold');
+    expect(text.querySelector('.mawy-md-image-text')?.textContent).toBe('a picture');
+
+    const source = await drawn('source');
+
+    expect(source.querySelector('a')).toBeNull();
+    expect([...source.querySelectorAll('.mawy-md-source')].map((each) => each.textContent)).toEqual(
+      ['<a href="/x" onclick="alert(1)">in <b>bold</b></a>', '<img src="/a.png" alt="a picture">']
+    );
+
+    const hide = await drawn('hide');
+
+    expect(hide.querySelector('a')).toBeNull();
+    expect(hide.querySelector('img')).toBeNull();
+    expect(hide.textContent).toBe(' and ');
+  });
+
+  it('leaves an anchor with nowhere to go, which is a place rather than a link', async () => {
+    const screen = await render(
+      <MawyViewer html="sanitize" value={'<p><a name="here">Here</a></p>'} links="hide" />
+    );
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-md-html a')?.textContent).toBe('Here')
+    );
+  });
+
+  it('finds what is drawn, and nothing that is not', async () => {
+    const field = (screen: { container: HTMLElement }) =>
+      screen.container.querySelector('.mawy-find-input') as HTMLInputElement;
+    const search = async (screen: { container: HTMLElement }, query: string) => {
+      (screen.container.querySelector('button[data-mawy-tip="Find"]') as HTMLButtonElement).click();
+      await vi.waitFor(() => expect(field(screen)).not.toBe(null));
+
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+
+      setter?.call(field(screen), query);
+      field(screen).dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const count = (screen: { container: HTMLElement }) =>
+      screen.container.querySelector('.mawy-find-count')?.textContent;
+
+    const hidden = await render(<MawyViewer value={DOCUMENT} links="hide" images="hide" />);
+
+    await search(hidden, 'guide');
+    await vi.waitFor(() => expect(count(hidden)).toBe('No matches'));
+
+    const source = await render(<MawyViewer value={DOCUMENT} links="source" images="text" />);
+
+    await search(source, 'example.com');
+    await vi.waitFor(() => expect(count(source)).toBe('1 of 1'));
+    expect(source.container.querySelector('.mawy-find-hit')?.closest('.mawy-md-source')).not.toBe(
+      null
+    );
+
+    const text = await render(<MawyViewer value={DOCUMENT} images="text" />);
+
+    await search(text, 'cat');
+    await vi.waitFor(() => expect(count(text)).toBe('1 of 1'));
+    expect(text.container.querySelector('.mawy-find-hit')?.closest('.mawy-md-image-text')).not.toBe(
+      null
+    );
+  });
+});
+
+/**
  * Two viewers on one page both give their own `# Introduction` the anchor
  * `introduction`, and two elements with one `id` is a link that lands on
  * whichever the browser met first.

@@ -55,6 +55,8 @@ import type {
   MawyHighlighter,
   MawyHtmlPolicy,
   MawyImageProps,
+  MawyImagePolicy,
+  MawyLinkPolicy,
   MawyLinkRel,
   MawyLinkTarget,
   MawyLocale,
@@ -108,6 +110,27 @@ export interface MawyDocumentProps {
    * `MawyLinkRel`.
    */
   linkRel?: MawyLinkRel;
+
+  /**
+   * How a link the document wrote is drawn: as a link, as its words, as the
+   * characters it was written with, or not at all. See `MawyLinkPolicy`.
+   *
+   * ```tsx
+   * <MawyDocument value={comment.body} links="text" images="hide" />
+   * ```
+   *
+   * @default 'show'
+   */
+  links?: MawyLinkPolicy;
+
+  /**
+   * How a picture the document asks for is drawn: fetched, as its description,
+   * as the characters it was written with, or not at all. Nothing is fetched
+   * and `image` is not asked under any but `show`. See `MawyImagePolicy`.
+   *
+   * @default 'show'
+   */
+  images?: MawyImagePolicy;
 
   /** What draws the constructs this package does not know about. */
   directives?: MawyDirectives;
@@ -229,6 +252,8 @@ export function MawyDocument({
   html = 'escape',
   linkTarget = 'blank',
   linkRel,
+  links = 'show',
+  images = 'show',
   directives,
   image,
   resolveUrl,
@@ -261,6 +286,8 @@ export function MawyDocument({
     headingBase,
     linkTarget,
     linkRel,
+    links,
+    images,
     source: value,
     highlighter: highlight ?? null,
     firstImage: firstImage(document_.root.children),

@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **`links` and `images` say how a link and a picture the document wrote are drawn.** A screen carrying documents its readers wrote could keep a link from doing anything by leaving out `onLinkTap`, and a picture from being fetched through `imageBuilder`, but a link still looked like one and there was no way to say what should be drawn instead. `MawyLinkPolicy.show` and `MawyImagePolicy.show` are what was drawn before and are the defaults. `text` draws a link as its words, formatting kept, with nothing to tap, and a picture as its description. `source` draws either as the characters it was written with, set the way a directive nobody claimed is, and `hide` draws nothing, words and all. Nothing is followed or fetched under any of the three, and `imageBuilder` is never asked. A footnote's number and the way back from a note are this library's own and stay. The find bar searches what is drawn, so a hidden link's words are not found and a link drawn as its source is found by its address. On `MawyViewer` and `MawyEditor`, where they reach the preview. The React package has the same two, and the parity check compares what both find bars find under them.
+
 ## 1.4.0 (2026-09-13)
 
 ### Breaking changes

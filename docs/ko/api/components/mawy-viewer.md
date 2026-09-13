@@ -66,6 +66,8 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | 문서 안에 쓰인 날 HTML을 어떻게 할지. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
 | `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | 그 링크가 가는 곳에 대해 무엇을 밝힐지. 이미 밝힌 것에 더합니다. |
+| `links` | [`MawyLinkPolicy`](../types/drawing-policy#mawylinkpolicy) | `'show'` | 문서가 쓴 링크를 링크로, 낱말로, 원문으로 그릴지, 아예 그리지 않을지. |
+| `images` | [`MawyImagePolicy`](../types/drawing-policy#mawyimagepolicy) | `'show'` | 그림을 내려받아, 설명으로, 원문으로 그릴지, 아예 그리지 않을지. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 뷰어 인터페이스가 쓰는 언어. 문서와는 무관합니다. |
 | `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | 인터페이스의 낱말 일부나 전부. 나머지는 `locale`에서 가져옵니다. |
 | `highlight` | [`MawyHighlight`](../types/highlighter) | — | 펜스 코드 블록에 색을 입히는 것. 기본은 아무것도 하지 않습니다. |
@@ -85,6 +87,8 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `locale` | [`MawyLocale`](../types/locale) | `MawyLocale.en` | 뷰어 인터페이스가 쓰는 언어. 문서와는 무관합니다. |
 | `strings` | [`MawyStrings?`](../types/locale#mawystrings) | — | 애플리케이션이 직접 가진 인터페이스 낱말. 주면 `locale`은 쓰이지 않습니다. |
 | `onLinkTap` | `void Function(String url, String? title)?` | — | 링크를 눌렀을 때 무엇을 할지. |
+| `links` | [`MawyLinkPolicy`](../types/drawing-policy#mawylinkpolicy) | `MawyLinkPolicy.show` | 문서가 쓴 링크를 링크로, 낱말로, 원문으로 그릴지, 아예 그리지 않을지. |
+| `images` | [`MawyImagePolicy`](../types/drawing-policy#mawyimagepolicy) | `MawyImagePolicy.show` | 그림을 내려받아, 설명으로, 원문으로 그릴지, 아예 그리지 않을지. |
 | `highlight` | [`MawyHighlighter?`](../types/highlighter) | — | 펜스 코드 블록에 색을 입히는 것. 기본은 아무것도 하지 않습니다. |
 | `directives` | `Map<String, `[`MawyDirectiveBuilder`](../types/directives)`>?` | — | 이 패키지가 모르는 구성물을 무엇으로 그릴지. |
 | `imageBuilder` | [`MawyImageBuilder?`](../types/image) | 뷰어가 직접 그림 | 문서가 가리키는 그림을 무엇으로 그릴지. |

@@ -76,5 +76,53 @@
   "markdown": "Caf&eacute; &amp; bar, at www.example.com or a@example.com.",
   "says": ["Café & bar", "www.example.com", "a@example.com"],
   "omits": ["&eacute;", "&amp;"]
+ },
+ {
+  "why": "A link an application asked to have drawn as text is its words, with nothing to follow and no destination on the page.",
+  "markdown": "Read [the guide](https://example.com/guide) first.",
+  "links": "text",
+  "says": ["Read the guide first."],
+  "omits": ["https://example.com/guide", "["]
+ },
+ {
+  "why": "A link drawn as its source is every character it was written with.",
+  "markdown": "Read [the guide](https://example.com/guide) first.",
+  "links": "source",
+  "says": ["Read [the guide](https://example.com/guide) first."]
+ },
+ {
+  "why": "A hidden link takes its words with it, and the sentence around it stays.",
+  "markdown": "Read [the guide](https://example.com/guide) first.",
+  "links": "hide",
+  "says": ["Read  first."],
+  "omits": ["the guide", "example.com"]
+ },
+ {
+  "why": "A picture drawn as text is its description, where the picture would have been.",
+  "markdown": "Before.\n\n![A cat on a mat](https://example.com/cat.png)\n\nAfter.",
+  "images": "text",
+  "says": ["Before.", "A cat on a mat", "After."],
+  "omits": ["cat.png"]
+ },
+ {
+  "why": "A picture drawn as its source is every character it was written with.",
+  "markdown": "![A cat on a mat](https://example.com/cat.png)",
+  "images": "source",
+  "says": ["![A cat on a mat](https://example.com/cat.png)"]
+ },
+ {
+  "why": "A hidden picture draws nothing, its description included.",
+  "markdown": "Before.\n\n![A cat on a mat](https://example.com/cat.png)\n\nAfter.",
+  "images": "hide",
+  "says": ["Before.", "After."],
+  "omits": ["A cat on a mat", "cat.png"]
+ },
+ {
+  "why": "A picture inside a link is drawn as pictures are asked to be, inside a link drawn as links are, and a footnote's number is this library's own and stays.",
+  "markdown": "[![Build](https://example.com/badge.svg)](https://example.com/ci) passing.[^a]\n\n[^a]: A note.",
+  "links": "text",
+  "images": "text",
+  "says": ["Build passing.", "1", "A note."],
+  "omits": ["https://"]
  }
 ]

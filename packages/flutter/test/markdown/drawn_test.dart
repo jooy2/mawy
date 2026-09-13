@@ -26,10 +26,11 @@ import '../support/spans.dart';
 /// Only what both packages draw goes in it. There is no raw HTML here to draw
 /// and no `wysiwyg` surface, and those differences are written up in
 /// `docs/*/guide/editor.md` rather than tested around. A picture's alt text is
-/// not here either, and that one is worth naming: a browser draws it from the
-/// attribute when the picture will not load, so it is never text on the page,
-/// where this renderer has to draw it as words. Each package checks its own
-/// half in its own file.
+/// not here either while the picture is drawn, and that one is worth naming: a
+/// browser draws it from the attribute when the picture will not load, so it is
+/// never text on the page, where this renderer has to draw it as words. Under
+/// `images: "text"` both draw it as words, and that is here. Each package
+/// checks its own half in its own file.
 void main() {
   final List<dynamic> cases =
       jsonDecode(File('tool/drawn.json').readAsStringSync()) as List<dynamic>;
@@ -38,12 +39,16 @@ void main() {
     for (int index = 0; index < cases.length; index += 1) {
       final Map<String, dynamic> each = cases[index] as Map<String, dynamic>;
       final String markdown = each['markdown'] as String;
+      final String? links = each['links'] as String?;
+      final String? images = each['images'] as String?;
 
       testWidgets('${index + 1}. ${each['why']}', (WidgetTester tester) async {
         await tester.pumpWidget(
           host(
             MawyViewer(
               value: markdown,
+              links: links == null ? MawyLinkPolicy.show : MawyLinkPolicy.values.byName(links),
+              images: images == null ? MawyImagePolicy.show : MawyImagePolicy.values.byName(images),
               // Nothing but the document: the toolbar has words of its own and
               // this is about what the Markdown became.
               toolbar: const <MawyViewerToolbarItem>[],

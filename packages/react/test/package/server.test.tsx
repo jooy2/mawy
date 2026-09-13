@@ -203,6 +203,38 @@ describe('a document rendered on a server', () => {
     ]);
   });
 
+  it('draws a link and a picture as the application asked, with or without markup', () => {
+    const value =
+      'A [link](https://example.com).\n\n![A cat](/cat.png)\n\n<img src="/dog.png" alt="A dog">';
+    const drawn = (policy: 'text' | 'source' | 'hide') =>
+      renderToStaticMarkup(
+        <MawyDocument value={value} html="sanitize" links={policy} images={policy} />
+      );
+
+    expect(drawn('text')).toContain('A <span class="mawy-md-link-text">link</span>.');
+    expect(drawn('text')).toContain('<span class="mawy-md-image-text">A cat</span>');
+    expect(drawn('text')).toContain(
+      '<div class="mawy-md-html"><span class="mawy-md-image-text">A dog</span></div>'
+    );
+
+    expect(drawn('source')).toContain(
+      'A <span class="mawy-md-source">[link](https://example.com)</span>.'
+    );
+    expect(drawn('source')).toContain(
+      '<div class="mawy-md-html"><span class="mawy-md-source">&lt;img src=&quot;/dog.png&quot; alt=&quot;A dog&quot;&gt;</span></div>'
+    );
+
+    // Nothing at all on a page nothing will read back: the empty element the
+    // viewer leaves is for the editor finding its way through the text.
+    expect(drawn('hide')).toContain('<p>A .</p>');
+    expect(drawn('hide')).toContain('<div class="mawy-md-html"></div>');
+
+    for (const policy of ['text', 'source', 'hide'] as const) {
+      expect(drawn(policy)).not.toContain('<a ');
+      expect(drawn(policy)).not.toContain('<img');
+    }
+  });
+
   it('pairs only tags a browser has one way to read', () => {
     for (const markup of ['a <u class="x">b</u> c', 'a <u>b</i> c', 'a <u>b']) {
       expect(renderToStaticMarkup(<MawyDocument html="sanitize" value={markup} />)).toContain(
