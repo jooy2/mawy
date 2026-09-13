@@ -923,20 +923,27 @@ final RegExp _containerItem = RegExp(r'^(?:[-*+]|\d{1,9}[.)])[ \t]+');
 /// or HTML.
 ///
 /// Strictly inside, so the end of a closing fence is after the block and a caret
-/// there can still put something under it — except for a fence nothing closes,
-/// whose last line is still code.
+/// there can still put something under it — except for code nothing closes, a
+/// fence with no second fence or an indented block, whose last line is still
+/// code. A container is looked inside at its end as well, because that end can
+/// be the end of such code.
 bool _verbatimAt(List<MdNode> nodes, int offset) {
   for (final MdNode node in nodes) {
     final int start = node.range.start;
     final int end = node.range.end;
-    final bool open = node is MdCode && node.content.end == end && node.content.start > start;
 
-    if (offset <= start || offset > end || (offset == end && !open)) {
+    if (offset <= start || offset > end) {
       continue;
     }
 
     if (node is MdCode || node is MdHtmlBlock) {
-      return true;
+      final bool open = node is MdCode && node.content.end == end && node.content.start > start;
+
+      if (offset < end || open) {
+        return true;
+      }
+
+      continue;
     }
 
     if (_verbatimAt(_blocksIn(node), offset)) {

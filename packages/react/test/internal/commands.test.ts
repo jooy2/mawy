@@ -326,6 +326,12 @@ describe('tables', () => {
     expect(table('insertTable', '    co^de')).toBe(null);
     expect(table('insertTable', '> ```\n> co^de\n> ```')).toBe(null);
     expect(table('insertTable', '<div>\nwo^rds\n</div>')).toBe(null);
+    // At the very end of a quotation or a list item whose code nothing closes,
+    // which is still inside the code as well as at the container's edge.
+    expect(table('insertTable', '> ```\n> code^')).toBe(null);
+    expect(table('insertTable', '- ```\n  code^')).toBe(null);
+    expect(table('insertTable', '- item\n\n      code^')).toBe(null);
+    expect(table('insertTable', '    code^')).toBe(null);
     // After the closing fence is after the block.
     expect(table('insertTable', '```\ncode\n```^')).toBe(
       '```\ncode\n```\n\n|  ^|  |\n| --- | --- |\n|  |  |'

@@ -817,20 +817,27 @@ export function containerOf(head: string): { lead: string; carry: string; mark: 
  * or HTML.
  *
  * Strictly inside, so the end of a closing fence is after the block and a
- * caret there can still put something under it — except for a fence nothing
- * closes, whose last line is still code.
+ * caret there can still put something under it — except for code nothing
+ * closes, a fence with no second fence or an indented block, whose last line is
+ * still code. A container is looked inside at its end as well, because that end
+ * can be the end of such code.
  */
 function verbatimAt(nodes: readonly MdNode[], offset: number): boolean {
   for (const node of nodes) {
     const { start, end } = node.range;
-    const open = node.type === 'code' && node.content.end === end && node.content.start > start;
 
-    if (offset <= start || offset > end || (offset === end && !open)) {
+    if (offset <= start || offset > end) {
       continue;
     }
 
     if (node.type === 'code' || node.type === 'html') {
-      return true;
+      const open = node.type === 'code' && node.content.end === end && node.content.start > start;
+
+      if (offset < end || open) {
+        return true;
+      }
+
+      continue;
     }
 
     if ('children' in node && verbatimAt(node.children as MdNode[], offset)) {
