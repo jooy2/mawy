@@ -27,11 +27,6 @@ import 'package:mawy/src/types.dart';
  * The controls
  * ---------------------------------------------------------------------- */
 
-/// One icon button on the toolbar.
-///
-/// Focusable, and activated by Enter and by the space bar as well as by a
-/// pointer — the shortcuts are written out here rather than inherited, because
-/// this package does not require a [WidgetsApp] and it is a [WidgetsApp] that
 /// Which way the things a toolbar opens should go.
 ///
 /// A bar along the bottom has nothing under it to open into, so its menus and
@@ -57,6 +52,11 @@ class MawyOpensUp extends InheritedWidget {
   bool updateShouldNotify(MawyOpensUp old) => old.up != up;
 }
 
+/// One icon button on the toolbar.
+///
+/// Focusable, and activated by Enter and by the space bar as well as by a
+/// pointer — the shortcuts are written out here rather than inherited, because
+/// this package does not require a [WidgetsApp] and it is a [WidgetsApp] that
 /// would otherwise be supplying them.
 class MawyToolbarButton extends StatefulWidget {
   /// Creates a toolbar button.

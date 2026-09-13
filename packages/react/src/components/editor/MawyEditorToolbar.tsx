@@ -194,17 +194,6 @@ const TABLE_ACTIONS: readonly {
 ];
 
 /**
- * The editor's toolbar.
- *
- * Every formatting button here runs a command that also has a keyboard
- * shortcut, and the order of those two matters: the commands are the editor and
- * the buttons are a way of finding them. An editor whose toolbar is the only
- * way to reach a command is an editor that cannot be used without a pointer.
- *
- * Like the viewer's, it is a real `toolbar` — one tab stop, arrows inside —
- * and it draws only the controls it was given.
- */
-/**
  * How many of a toolbar's groups fit across it, and what to do with the rest.
  *
  * A toolbar is a row and a row has a width, and eighteen buttons is wider than
@@ -310,6 +299,17 @@ function useOverflow(groups: number): {
   return { row, shown };
 }
 
+/**
+ * The editor's toolbar.
+ *
+ * Every formatting button here runs a command that also has a keyboard
+ * shortcut, and the order of those two matters: the commands are the editor and
+ * the buttons are a way of finding them. An editor whose toolbar is the only
+ * way to reach a command is an editor that cannot be used without a pointer.
+ *
+ * Like the viewer's, it is a real `toolbar` — one tab stop, arrows inside —
+ * and it draws only the controls it was given.
+ */
 export function MawyEditorToolbar({
   items,
   strings,
