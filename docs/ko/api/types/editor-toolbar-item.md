@@ -24,6 +24,7 @@ type MawyEditorToolbarItem =
   | 'orderedList'
   | 'taskList'
   | 'codeBlock'
+  | 'table'
   | 'rule'
   | 'find'
   | 'open'

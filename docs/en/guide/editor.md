@@ -127,13 +127,13 @@ A caret in a place the page cannot draw is the same problem. Markdown does not k
 
 `Enter` is a different thing in every container it is pressed in, because a blank line means something different in each:
 
-| Where           | What `Enter` does                                                           |
-| --------------- | --------------------------------------------------------------------------- |
-| Between blocks  | A blank line                                                                |
-| In a list item  | A new item, marker carried down. On an item still empty, the marker goes    |
-| In a quotation  | Ends the paragraph. Continuing it takes a _blank quoted line_               |
-| In a code block | A newline and nothing else                                                  |
-| In a table      | Nothing: a row is a line, and there is nowhere in the file for a second one |
+| Where | What `Enter` does |
+| --- | --- |
+| Between blocks | A blank line |
+| In a list item | A new item, marker carried down. On an item still empty, the marker goes |
+| In a quotation | Ends the paragraph. Continuing it takes a _blank quoted line_ |
+| In a code block | A newline and nothing else |
+| In a table | A new row under this one. On a row still empty, the row goes and the caret leaves the table |
 
 `Backspace` at the start of a block joins it to the one before it: two list items run together, a paragraph joins the heading above it. Two joins are refused. Joining a table cell to the cell beside it would remove the pipe between them, and joining a code block to whatever is above it would remove the fence.
 
@@ -215,6 +215,7 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | `'heading'` | A menu of heading 1, 2, 3 and body text |
 | `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
+| `'table'` | A menu that inserts a table and adds or removes its rows and columns. See [tables](#tables) |
 | `'find'` | Opens the find bar. See [finding](#finding) |
 | `'open'`, `'save'` | Reads a Markdown file in and writes one out. See [opening and saving](#opening-and-saving) |
 | `'colorScheme'` | Light, dark, or whatever the system says |
@@ -233,6 +234,36 @@ The toolbar decides this by measuring itself; it is not configurable. It replace
 **A bar too narrow for its buttons scrolls sideways.** Nothing is hidden in a menu. The row is inside a `SingleChildScrollView`, so what does not fit is a drag away, and the arrows that move the focus along the row scroll it into view as they go.
 
 The React package solves the same problem with a menu at the end of the bar, and the difference comes from the platform. A row that scrolls under a finger suits a touch screen; a menu suits a page with a pointer and no obvious way to drag a bar sideways.
+
+:::
+
+## Tables
+
+::: fw react
+
+The toolbar's `table` button is a menu of everything that makes a table or changes its shape, and each entry has a shortcut. What they write is a GitHub table: the alignment in the delimiter row and whatever is written in the other cells stay exactly as they were, because each command puts in or takes out one cell per line rather than writing the table out again.
+
+|                                       |                     |
+| ------------------------------------- | ------------------- |
+| `Mod` + `Alt` + `T`                   | Insert a table      |
+| `Mod` + `Enter`                       | Add a row below     |
+| `Mod` + `Shift` + `Enter`             | Add a row above     |
+| `Mod` + `Alt` + `Enter`               | Add a column after  |
+| `Mod` + `Alt` + `Shift` + `Enter`     | Add a column before |
+| `Mod` + `Shift` + `Backspace`         | Delete this row     |
+| `Mod` + `Alt` + `Shift` + `Backspace` | Delete this column  |
+
+`Enter` adds a row and `Backspace` takes one away, with `Alt` meaning the column rather than the row and `Shift` the one above or the one the caret is in. A letter would be easier to remember, and nearly every letter is already taken: `Mod`+`Alt`+`I` opens a browser's developer tools, `Mod`+`Shift`+`T` reopens a tab, and on Windows `Ctrl`+`Alt` is `AltGr`, which types `€` and `@` on many European keyboards. `T` for a new table is one of the few letters `AltGr` leaves alone.
+
+The shortcuts only act inside a table, and outside one they are left to the browser. A new table has two empty columns, a header and one row, with a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. A row cannot go above the header and the last column cannot be removed, so those entries are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
+
+On the drawn document, **`Enter` in a cell follows the rule it has in a list.** It adds a row under this one with the caret in the same column, and on a row that is still empty, the row goes and the caret moves to a line of its own after the table. That is the way out of a table at the end of a document, which otherwise has nowhere after it for a caret to go. Typing into an empty cell writes the words between the spaces, so `|  |` becomes `| Name |` rather than `|  Name|`.
+
+:::
+
+::: fw flutter
+
+The table commands are the React package's toolbar and keyboard. `runTableCommand` and `continueTable` exist in this package too and are diffed against the React package's by the parity check, but they are not exported: the toolbar and the editor have nowhere to call them from yet, and adding a table item to `MawyEditorToolbarItem` is a value added to an enum an application may `switch` over.
 
 :::
 

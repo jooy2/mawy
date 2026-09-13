@@ -99,6 +99,14 @@ export interface MawyStrings {
   orderedList: string;
   taskList: string;
   codeBlock: string;
+  table: string;
+  tableInsert: string;
+  tableRowBelow: string;
+  tableRowAbove: string;
+  tableColumnAfter: string;
+  tableColumnBefore: string;
+  tableRowRemove: string;
+  tableColumnRemove: string;
   thematicBreak: string;
   status: string;
   statusPosition: string;
@@ -207,6 +215,14 @@ const en: MawyStrings = {
   orderedList: 'Numbered list',
   taskList: 'Task list',
   codeBlock: 'Code block',
+  table: 'Table',
+  tableInsert: 'Insert a table',
+  tableRowBelow: 'Add a row below',
+  tableRowAbove: 'Add a row above',
+  tableColumnAfter: 'Add a column after',
+  tableColumnBefore: 'Add a column before',
+  tableRowRemove: 'Delete this row',
+  tableColumnRemove: 'Delete this column',
   thematicBreak: 'Divider',
   status: 'Document statistics',
   statusPosition: 'Ln %L, Col %C',
@@ -306,6 +322,14 @@ const ko: MawyStrings = {
   orderedList: '순서 있는 목록',
   taskList: '체크 목록',
   codeBlock: '코드 블록',
+  table: '표',
+  tableInsert: '표 넣기',
+  tableRowBelow: '아래에 행 추가',
+  tableRowAbove: '위에 행 추가',
+  tableColumnAfter: '뒤에 열 추가',
+  tableColumnBefore: '앞에 열 추가',
+  tableRowRemove: '이 행 삭제',
+  tableColumnRemove: '이 열 삭제',
   thematicBreak: '구분선',
   status: '문서 통계',
   statusPosition: '%L행 %C열',

@@ -31,8 +31,10 @@ import {
   continueList,
   indent,
   runCommand,
+  runTableCommand,
   type EditState,
-  type MawyCommand
+  type MawyCommand,
+  type MawyTableCommand
 } from '../../internal/commands.js';
 import type { MawyAim, MawyEdit } from '../../internal/editing.js';
 import {
@@ -106,6 +108,40 @@ const SPLIT_MOST = 0.85;
  * rather than sniffed, because a keyboard is a property of the person and not
  * of the operating system.
  */
+/**
+ * The keys that change a table's shape, which only do anything in a table.
+ *
+ * Built on the two keys a row is made and unmade with: `Enter` adds, and
+ * `Backspace` takes away. `Shift` is the row above or the row itself, `Alt` is
+ * the column rather than the row. A letter would have been easier to remember
+ * and every letter is already somebody's: `Mod`+`Alt`+`I` is a browser's
+ * developer tools, `Mod`+`Shift`+`T` reopens a tab, and on Windows `Ctrl`+`Alt`
+ * is `AltGr`, which types `€` and `@` on half of Europe's keyboards. `T` for a
+ * new table is the one letter, and it is one of the few `AltGr` leaves alone.
+ */
+function tableShortcut(event: React.KeyboardEvent): MawyTableCommand | null {
+  const { altKey, shiftKey } = event;
+
+  if (event.key === 'Enter') {
+    return altKey
+      ? shiftKey
+        ? 'addColumnBefore'
+        : 'addColumnAfter'
+      : shiftKey
+        ? 'addRowAbove'
+        : 'addRowBelow';
+  }
+
+  if (event.key === 'Backspace' && shiftKey) {
+    return altKey ? 'removeColumn' : 'removeRow';
+  }
+
+  // `code` as well as `key`: `Option`+`T` on a Mac is `†`.
+  return altKey && !shiftKey && (event.code === 'KeyT' || event.key.toLowerCase() === 't')
+    ? 'insertTable'
+    : null;
+}
+
 const SHORTCUTS: Record<string, MawyCommand> = {
   b: 'bold',
   i: 'italic',
@@ -789,6 +825,34 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [readOnly, run, stateNow]
   );
 
+  /**
+   * A table command, run where the caret is, if it has anything to act on.
+   *
+   * Nothing at all where GFM is off: the parser would not read a table there,
+   * and pipes written into a document that will never draw them are a mess
+   * rather than a table.
+   */
+  const tableAfter = React.useCallback(
+    (name: MawyTableCommand): [EditState, EditState] | null => {
+      const before = readOnly || parse?.gfm === false ? null : stateNow();
+      const after = before && runTableCommand(name, before);
+
+      return before && after ? [before, after] : null;
+    },
+    [parse?.gfm, readOnly, stateNow]
+  );
+
+  const tableCommand = React.useCallback(
+    (name: MawyTableCommand) => {
+      const change = tableAfter(name);
+
+      if (change) {
+        run(...change);
+      }
+    },
+    [run, tableAfter]
+  );
+
   /* ---------------------------------------------------------------------
    * Putting an image in
    * ------------------------------------------------------------------ */
@@ -1256,6 +1320,18 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     }
 
     const key = event.key.toLowerCase();
+    const table = tableShortcut(event);
+
+    if (table) {
+      const change = tableAfter(table);
+
+      if (change) {
+        event.preventDefault();
+        run(...change);
+      }
+
+      return;
+    }
 
     // Before the modifiers are read for anything else, because `Cmd`+`Shift`+`Z`
     // is a redo rather than a shifted shortcut, and `Ctrl`+`Y` is the same thing
@@ -1558,6 +1634,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           finding={finding && showSource}
           onOpen={readOnly ? undefined : openFile}
           onPickImage={onUploadImage ? pickImage : undefined}
+          onTable={tableCommand}
+          tableAvailable={(name) => tableAfter(name) !== null}
           onSave={save}
         />
       </React.Fragment>

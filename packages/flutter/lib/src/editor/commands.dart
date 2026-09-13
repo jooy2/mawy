@@ -11,6 +11,9 @@
 /// sounds obvious and is the half people leave out.
 library;
 
+import 'package:mawy/src/markdown/ast.dart';
+import 'package:mawy/src/markdown/parse.dart';
+
 /// A document and where the caret is in it.
 class EditState {
   /// Creates a state.
@@ -556,4 +559,482 @@ EditState indent(EditState state, {required bool out}) {
         .map((String line) => out ? line.substring(_outdentOf(line)) : _indentWidth + line)
         .toList(),
   );
+}
+
+/* -------------------------------------------------------------------------
+ * Tables
+ * ---------------------------------------------------------------------- */
+
+/// What can be done to a table's shape.
+///
+/// Its own list rather than more of [MawyCommand], because none of these is a
+/// toggle and none of them always applies: a row cannot go above the header,
+/// and the last column cannot be taken away. So each answers `null` where it
+/// has nothing to do. Not exported, and not an addition to [MawyCommand]: a
+/// value added to an exported enum is a `switch` somewhere else that no longer
+/// compiles, and the Flutter editor has no table controls to hand these to
+/// yet. They are here so that `tool/parity.dart` holds both packages to one
+/// answer.
+enum MawyTableCommand {
+  /// A table of two columns, a header and one row.
+  insertTable,
+
+  /// A row under the caret's.
+  addRowBelow,
+
+  /// A row over the caret's, which is never over the header.
+  addRowAbove,
+
+  /// A column after the caret's.
+  addColumnAfter,
+
+  /// A column before the caret's.
+  addColumnBefore,
+
+  /// The caret's row, which is never the header.
+  removeRow,
+
+  /// The caret's column, which is never the last one.
+  removeColumn,
+}
+
+/// One cell's run, between the pipes and not including them.
+class _TableCell {
+  const _TableCell(this.from, this.to);
+
+  final int from;
+  final int to;
+}
+
+/// One line of a table, and where each of its cells is written.
+class _TableLine {
+  const _TableLine({
+    required this.start,
+    required this.end,
+    required this.lineStart,
+    required this.cells,
+    required this.opened,
+    required this.closed,
+  });
+
+  /// Where the row's own characters start, after whatever holds the table.
+  final int start;
+  final int end;
+
+  /// Where the line itself starts, which is before a quotation's `>`.
+  final int lineStart;
+  final List<_TableCell> cells;
+
+  /// Whether the row opens with a pipe of its own.
+  final bool opened;
+
+  /// Whether it closes with one.
+  final bool closed;
+}
+
+class _TableAt {
+  const _TableAt({
+    required this.lines,
+    required this.row,
+    required this.column,
+    required this.columns,
+    required this.prefix,
+  });
+
+  /// The header, the delimiter row, and the body, in that order.
+  final List<_TableLine> lines;
+
+  /// Which line the caret is on, with the delimiter row counted as the header.
+  final int row;
+
+  /// Which cell it is in.
+  final int column;
+  final int columns;
+
+  /// What a line of this table has to start with to still be in it.
+  final String prefix;
+}
+
+final RegExp _closingPipe = RegExp(r'(?:^|[^\\])\|$');
+final RegExp _quoted = RegExp(r'^(?:[ \t]*>)*');
+
+int _lineStartOf(String value, int offset) =>
+    offset <= 0 ? 0 : value.lastIndexOf('\n', offset - 1) + 1;
+
+/// A row, cut at its unescaped pipes the way the parser cuts it.
+///
+/// `_splitRow` in `block.dart` is the rule, and this is it again with the
+/// offsets kept rather than the text. It has to agree exactly: a pipe this
+/// counted and the parser did not is a cell written into the middle of another
+/// one.
+_TableLine _tableLine(String value, int start, int end) {
+  final String text = value.substring(start, end);
+  int from = start + (text.length - text.trimLeft().length);
+  int stop = end - (text.length - text.trimRight().length);
+  final bool opened = from < stop && value[from] == '|';
+
+  if (opened) {
+    from += 1;
+  }
+
+  final bool closed = _closingPipe.hasMatch(value.substring(from, stop < from ? from : stop));
+
+  if (closed) {
+    stop -= 1;
+  }
+
+  final List<_TableCell> cells = <_TableCell>[];
+  int cell = from;
+
+  for (int at = from; at < stop; at += 1) {
+    if (value[at] == r'\' && at + 1 < stop && value[at + 1] == '|') {
+      at += 1;
+      continue;
+    }
+
+    if (value[at] == '|') {
+      cells.add(_TableCell(cell, at));
+      cell = at + 1;
+    }
+  }
+
+  cells.add(_TableCell(cell, stop < cell ? cell : stop));
+
+  return _TableLine(
+    start: start,
+    end: end,
+    lineStart: _lineStartOf(value, start),
+    cells: cells,
+    opened: opened,
+    closed: closed,
+  );
+}
+
+/// The blocks a node holds, where it holds any a table could be among.
+List<MdNode> _blocksIn(MdNode node) {
+  return switch (node) {
+    MdRoot() => node.children,
+    MdBlockquote() => node.children,
+    MdList() => node.children,
+    MdListItem() => node.children,
+    MdDefinitionList() => node.children,
+    MdDefinitionDescription() => node.children,
+    MdFootnoteDefinition() => node.children,
+    MdContainerDirective() => node.children,
+    _ => const <MdNode>[],
+  };
+}
+
+/// The table a place in the tree is inside, if it is inside one.
+MdTable? _tableNodeAt(List<MdNode> nodes, int offset) {
+  for (final MdNode node in nodes) {
+    if (offset < node.range.start || offset > node.range.end) {
+      continue;
+    }
+
+    if (node is MdTable) {
+      return node;
+    }
+
+    final MdTable? inside = _tableNodeAt(_blocksIn(node), offset);
+
+    if (inside != null) {
+      return inside;
+    }
+  }
+
+  return null;
+}
+
+/// The table the caret is in, read with the parser, or `null`.
+///
+/// The parser rather than a look at the lines around the caret, because a line
+/// with a pipe in it is a table row only where the parser says so: inside a
+/// code block it is code, and the line after a table with no pipe in it at all
+/// is one of its rows. What the commands change has to be what is drawn as a
+/// table.
+_TableAt? _tableAt(String value, int offset) {
+  if (!value.contains('|')) {
+    return null;
+  }
+
+  final MdDocument document = parseMarkdown(value);
+  final MdTable? table = _tableNodeAt(<MdNode>[
+    ...document.root.children,
+    ...document.footnotes,
+  ], offset);
+
+  if (table == null) {
+    return null;
+  }
+
+  final MdTableRow header = table.children.first;
+  final int delimiterStart = value.indexOf('\n', header.range.end) + 1;
+  final int newline = value.indexOf('\n', delimiterStart);
+  final int delimiterEnd = newline == -1 ? value.length : newline;
+  final int quoted =
+      _quoted.firstMatch(value.substring(delimiterStart, delimiterEnd))?.group(0)?.length ?? 0;
+  final List<_TableLine> lines = <_TableLine>[
+    _tableLine(value, header.range.start, header.range.end),
+    _tableLine(value, delimiterStart + quoted, delimiterEnd),
+    for (final MdTableRow row in table.children.skip(1))
+      _tableLine(value, row.range.start, row.range.end),
+  ];
+  final int on = lines.indexWhere(
+    (_TableLine line) => line.lineStart <= offset && offset <= line.end,
+  );
+
+  if (on == -1) {
+    return null;
+  }
+
+  final _TableLine delimiter = lines[1];
+  final List<_TableCell> cells = lines[on].cells;
+  final int column = cells.indexWhere((_TableCell cell) => offset <= cell.to);
+
+  return _TableAt(
+    lines: lines,
+    row: on == 1 ? 0 : on,
+    column: column == -1 ? cells.length - 1 : column,
+    columns: table.align.length,
+    prefix: value.substring(
+      delimiter.lineStart,
+      delimiter.cells.first.from - (delimiter.opened ? 1 : 0),
+    ),
+  );
+}
+
+/// Where a caret goes in a cell: after what is written in it, or at the end of
+/// an empty one, which is where the parser says an empty cell is and so where
+/// the drawn document can put a caret into it.
+int _caretInCell(String value, _TableCell cell) {
+  int at = cell.to;
+
+  while (at > cell.from && value[at - 1] == ' ') {
+    at -= 1;
+  }
+
+  return at == cell.from ? cell.to : at;
+}
+
+/// The same table read again after a change, and a caret put in one of its
+/// cells.
+EditState _caretAfter(String value, int anchor, int row, int column) {
+  final _TableAt? table = _tableAt(value, anchor);
+  final _TableLine? line = table != null && row < table.lines.length ? table.lines[row] : null;
+  int at = anchor;
+
+  if (line != null) {
+    at = _caretInCell(
+      value,
+      line.cells[column < line.cells.length ? column : line.cells.length - 1],
+    );
+  }
+
+  return EditState(value, at, at);
+}
+
+/// Every line of the table rewritten, from the last so the offsets hold.
+String _rewriteLines(
+  String value,
+  List<_TableLine> lines,
+  String Function(String text, _TableLine line, int index) rewrite,
+) {
+  String out = value;
+
+  for (int index = lines.length - 1; index >= 0; index -= 1) {
+    final _TableLine line = lines[index];
+    final String text = value.substring(line.start, line.end);
+
+    out = out.substring(0, line.start) + rewrite(text, line, index) + out.substring(line.end);
+  }
+
+  return out;
+}
+
+/// A row with nothing in any of its cells, which every new one is.
+String _emptyRow(int columns) => '|${'  |' * columns}';
+
+/// A table of two columns, a header and one row, where the caret is.
+///
+/// With a blank line either side of it, because a table has to be a block of
+/// its own to be one. Empty rather than filled with column names: whatever
+/// words it came with would be in the interface's language and in the document
+/// for good.
+EditState? _insertTable(EditState state) {
+  final String value = state.value;
+
+  if (_tableAt(value, state.start) != null) {
+    return null;
+  }
+
+  final String before = value.substring(0, state.start);
+  final String after = value.substring(state.end);
+  final String lead = before.isEmpty || before.endsWith('\n\n')
+      ? ''
+      : (before.endsWith('\n') ? '\n' : '\n\n');
+  final String tail = after.isEmpty || after.startsWith('\n\n')
+      ? ''
+      : (after.startsWith('\n') ? '\n' : '\n\n');
+  final String text = '$lead${_emptyRow(2)}\n| --- | --- |\n${_emptyRow(2)}$tail';
+  final int caret = state.start + lead.length + 3;
+
+  return EditState(before + text + after, caret, caret);
+}
+
+EditState? _addRow(EditState state, {required bool below}) {
+  final _TableAt? table = _tableAt(state.value, state.start);
+
+  if (table == null || (!below && table.row == 0)) {
+    return null;
+  }
+
+  final String value = state.value;
+  // Under the header is under the delimiter row, which belongs to it.
+  final _TableLine next = table.lines[table.row == 0 ? 1 : table.row];
+  final String text = '${table.prefix}${_emptyRow(table.columns)}';
+  final int at = below ? next.end : next.lineStart;
+  final String written = below ? '\n$text' : '$text\n';
+  final int opens = below ? at + 1 : at;
+  final int column = table.column < table.columns - 1 ? table.column : table.columns - 1;
+  final int caret = opens + table.prefix.length + 3 + 3 * column;
+
+  return EditState(value.substring(0, at) + written + value.substring(at), caret, caret);
+}
+
+EditState? _removeRow(EditState state) {
+  final _TableAt? table = _tableAt(state.value, state.start);
+
+  if (table == null || table.row == 0) {
+    return null;
+  }
+
+  final String value = state.value;
+  final _TableLine line = table.lines[table.row];
+  final String next = value.substring(0, line.lineStart - 1) + value.substring(line.end);
+  // The row that moved up into its place, or the one above where there is none.
+  final int row = table.row < table.lines.length - 1 ? table.row : table.row - 1;
+
+  return _caretAfter(next, table.lines.first.start, row == 1 ? 0 : row, table.column);
+}
+
+EditState? _addColumn(EditState state, {required bool after}) {
+  final _TableAt? table = _tableAt(state.value, state.start);
+
+  if (table == null) {
+    return null;
+  }
+
+  final int column = table.column;
+  final String next = _rewriteLines(state.value, table.lines, (
+    String text,
+    _TableLine line,
+    int index,
+  ) {
+    // A row shorter than the column is already empty there.
+    if (column >= line.cells.length) {
+      return text;
+    }
+
+    final _TableCell cell = line.cells[column];
+    final String content = index == 1 ? '---' : '';
+    final bool last = column == line.cells.length - 1;
+    // A row with no pipe on the side the cell goes on has to be given one, or
+    // an empty cell at either end is read as no cell at all.
+    final int at = (after ? cell.to : cell.from) - line.start;
+    final String written = after
+        ? (!last || line.closed ? '| $content ' : ' | $content |')
+        : (column > 0 || line.opened ? ' $content |' : '| $content | ');
+
+    return text.substring(0, at) + written + text.substring(at);
+  });
+
+  return _caretAfter(next, table.lines.first.start, table.row, after ? column + 1 : column);
+}
+
+EditState? _removeColumn(EditState state) {
+  final _TableAt? table = _tableAt(state.value, state.start);
+
+  if (table == null || table.columns < 2) {
+    return null;
+  }
+
+  final int column = table.column;
+  final String next = _rewriteLines(state.value, table.lines, (
+    String text,
+    _TableLine line,
+    int index,
+  ) {
+    if (column >= line.cells.length) {
+      return text;
+    }
+
+    final _TableCell cell = line.cells[column];
+    final int from = cell.from - line.start;
+    final int to = cell.to - line.start;
+    final String out;
+
+    if (line.cells.length == 1) {
+      // A short row with nothing else in it keeps a pipe, or it would be a
+      // blank line and the end of the table.
+      out = text.substring(0, from) + (line.opened || line.closed ? ' ' : '|') + text.substring(to);
+    } else if (column < line.cells.length - 1 || line.closed) {
+      out = text.substring(0, from) + text.substring(to + 1);
+    } else {
+      out = text.substring(0, from - 1).trimRight() + text.substring(to);
+    }
+
+    // A header row with no pipe left in it is not a table's header any more.
+    return index == 0 && !out.contains('|') ? '${out.trimRight()} |' : out;
+  });
+
+  return _caretAfter(next, table.lines.first.start, table.row, column > 0 ? column - 1 : 0);
+}
+
+/// A table command, or `null` where it has nothing to do.
+EditState? runTableCommand(MawyTableCommand command, EditState state) {
+  return switch (command) {
+    MawyTableCommand.insertTable => _insertTable(state),
+    MawyTableCommand.addRowBelow => _addRow(state, below: true),
+    MawyTableCommand.addRowAbove => _addRow(state, below: false),
+    MawyTableCommand.addColumnAfter => _addColumn(state, after: true),
+    MawyTableCommand.addColumnBefore => _addColumn(state, after: false),
+    MawyTableCommand.removeRow => _removeRow(state),
+    MawyTableCommand.removeColumn => _removeColumn(state),
+  };
+}
+
+/// What `Enter` does in a table, which is what it does in a list.
+///
+/// A cell holds one line, so there is nowhere in the file for `Enter` to put a
+/// second one. What it does instead is the list's rule said about rows: a new
+/// row under this one, with the caret in the same column, and on a row that is
+/// still empty the row goes and the caret goes to a line of its own after the
+/// table.
+///
+/// `null` outside a table, and for a selection.
+EditState? continueTable(EditState state) {
+  final _TableAt? table = state.start == state.end ? _tableAt(state.value, state.start) : null;
+
+  if (table == null) {
+    return null;
+  }
+
+  final String value = state.value;
+  final _TableLine line = table.lines[table.row];
+  final bool empty = line.cells.every(
+    (_TableCell cell) => value.substring(cell.from, cell.to).trim().isEmpty,
+  );
+
+  if (table.row == 0 || !empty) {
+    return _addRow(state, below: true);
+  }
+
+  final _TableLine last = table.lines.last;
+  final int removed = line.end - line.lineStart + 1;
+  final int end = identical(line, last) ? line.lineStart - 1 : last.end - removed;
+  final String without = value.substring(0, line.lineStart - 1) + value.substring(line.end);
+  final int caret = end + 2;
+
+  return EditState('${without.substring(0, end)}\n\n${without.substring(end)}', caret, caret);
 }

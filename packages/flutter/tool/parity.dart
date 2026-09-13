@@ -386,6 +386,18 @@ List<Object?> _edits() {
     out['continueList'] = carried == null
         ? null
         : <Object?>[carried.value, carried.start, carried.end];
+
+    // The table commands answer `null` where they have nothing to act on, and
+    // which states those are is as much the rule as what the others do.
+    for (final MawyTableCommand command in MawyTableCommand.values) {
+      final EditState? after = runTableCommand(command, state);
+
+      out[command.name] = after == null ? null : <Object?>[after.value, after.start, after.end];
+    }
+
+    final EditState? row = continueTable(state);
+
+    out['continueTable'] = row == null ? null : <Object?>[row.value, row.start, row.end];
     out['indent'] = <Object?>[indented.value, indented.start, indented.end];
     out['outdent'] = <Object?>[outdented.value, outdented.start, outdented.end];
 

@@ -16,7 +16,7 @@
  * backspace there removes a separator rather than a letter.
  */
 
-import { continueList } from './commands.js';
+import { continueList, continueTable } from './commands.js';
 import { markdownFromHtml } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
 import { ruleFor } from './rules.js';
@@ -353,8 +353,8 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
  * caret is between blocks to begin with. Inside a list it is a new item with
  * the marker carried down; inside a quotation it is a new quoted line; inside a
  * code block it is a newline and nothing else, because everything in there is
- * the characters it is. In a table it is nothing at all: a row is a line, and
- * there is nowhere in the file for a second one to go.
+ * the characters it is. In a table it is the list's rule said about rows: a new
+ * row, and on a row still empty, a way out. See `continueTable`.
  */
 function breakAt(
   root: HTMLElement,
@@ -368,7 +368,17 @@ function breakAt(
   const tag = block?.tagName;
 
   if (tag === 'TD' || tag === 'TH') {
-    return null;
+    const row = continueTable({ value, start, end });
+
+    // A row carried down keeps the caret in the table; a row given up leaves it
+    // on a line of its own after it, where nothing is drawn yet.
+    return row
+      ? {
+          value: row.value,
+          caret: row.start,
+          betweenBlocks: row.value.slice(row.start - 2, row.start) === '\n\n'
+        }
+      : null;
   }
 
   if (tag === 'PRE') {
@@ -565,7 +575,26 @@ export function editFor(
       // A shorthand only means what it says where the line it is on is a line
       // of Markdown. Inside a code block every character is the character it
       // is, and a table cell has no room for a block of any kind.
-      const tag = blockAt(root, range.startContainer)?.tagName;
+      const block = blockAt(root, range.startContainer);
+      const tag = block?.tagName;
+
+      // An empty cell is spaces between two pipes, and the parser puts it after
+      // all of them. Typed there as it is, `|  |` becomes `|  a|`; so the
+      // spaces are given back around the words instead, the way a cell with
+      // something in it is written.
+      if (start === end && (tag === 'TD' || tag === 'TH') && !block?.textContent) {
+        let from = start;
+
+        while (from > 0 && (value[from - 1] === ' ' || value[from - 1] === '\t')) {
+          from -= 1;
+        }
+
+        return {
+          value: `${value.slice(0, from)} ${event.data} ${value.slice(start)}`,
+          caret: from + 1 + event.data.length
+        };
+      }
+
       const rule =
         start === end && tag !== 'PRE' && tag !== 'TD' && tag !== 'TH'
           ? ruleFor(value, start, event.data)

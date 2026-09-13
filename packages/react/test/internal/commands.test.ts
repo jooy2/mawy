@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   commandActive,
   continueList,
+  continueTable,
   indent,
   runCommand,
+  runTableCommand,
   type EditState,
-  type MawyCommand
+  type MawyCommand,
+  type MawyTableCommand
 } from '../../src/internal/commands.js';
 
 /**
@@ -253,5 +256,93 @@ describe('indenting', () => {
 
   it('outdents from a caret too, because there is nothing else it could mean', () => {
     expect(tab('  one|', true)).toBe('«one»');
+  });
+});
+
+/**
+ * Tables, where `|` is the thing being edited, so the caret is `^` instead.
+ */
+describe('tables', () => {
+  const put = (marked: string): EditState => {
+    const start = marked.indexOf('^');
+
+    return { value: marked.replace('^', ''), start, end: start };
+  };
+  const shown = (state: EditState | null) =>
+    state && state.value.slice(0, state.start) + '^' + state.value.slice(state.start);
+  const table = (command: MawyTableCommand, marked: string) =>
+    shown(runTableCommand(command, put(marked)));
+
+  const TABLE = ['| a | b |', '| :-- | --: |', '| c | `d\\|e` |'].join('\n');
+
+  it('inserts an empty table of two columns with a blank line either side', () => {
+    expect(table('insertTable', 'Before.^After.')).toBe(
+      'Before.\n\n|  ^|  |\n| --- | --- |\n|  |  |\n\nAfter.'
+    );
+    expect(table('insertTable', '^')).toBe('|  ^|  |\n| --- | --- |\n|  |  |');
+    // Not inside a table that is already there.
+    expect(table('insertTable', TABLE.replace('c', 'c^'))).toBe(null);
+  });
+
+  it('adds a row under the caret and above it, but never above the header', () => {
+    expect(table('addRowBelow', TABLE.replace('c', 'c^'))).toBe(`${TABLE}\n|  ^|  |`);
+    expect(table('addRowBelow', TABLE.replace('a', 'a^'))).toBe(
+      ['| a | b |', '| :-- | --: |', '|  ^|  |', '| c | `d\\|e` |'].join('\n')
+    );
+    expect(table('addRowAbove', TABLE.replace('`d', '`^d'))).toBe(
+      ['| a | b |', '| :-- | --: |', '|  |  ^|', '| c | `d\\|e` |'].join('\n')
+    );
+    expect(table('addRowAbove', TABLE.replace('a', 'a^'))).toBe(null);
+  });
+
+  it('removes a body row, and leaves the header alone', () => {
+    expect(table('removeRow', `${TABLE}\n| x | y |`.replace('c', 'c^'))).toBe(
+      ['| a | b |', '| :-- | --: |', '| x^ | y |'].join('\n')
+    );
+    expect(table('removeRow', TABLE.replace('b', 'b^'))).toBe(null);
+  });
+
+  it('adds a column either side, keeping the alignment and what is in the cells', () => {
+    expect(table('addColumnAfter', TABLE.replace('a', 'a^'))).toBe(
+      ['| a |  ^| b |', '| :-- | --- | --: |', '| c |  | `d\\|e` |'].join('\n')
+    );
+    expect(table('addColumnBefore', TABLE.replace('a', 'a^'))).toBe(
+      ['|  ^| a | b |', '| --- | :-- | --: |', '|  | c | `d\\|e` |'].join('\n')
+    );
+  });
+
+  it('adds a column to a table written without pipes at either end', () => {
+    expect(table('addColumnAfter', 'a | b^\n--- | ---\nc | d')).toBe(
+      'a | b |  ^|\n--- | --- | --- |\nc | d |  |'
+    );
+    expect(table('addColumnBefore', 'a^ | b\n--- | ---\nc | d')).toBe(
+      '|  ^| a | b\n| --- | --- | ---\n|  | c | d'
+    );
+  });
+
+  it('removes a column, but not the last one', () => {
+    expect(table('removeColumn', TABLE.replace('b', 'b^'))).toBe(
+      ['| a^ |', '| :-- |', '| c |'].join('\n')
+    );
+    expect(table('removeColumn', 'a | b^\n--- | ---')).toBe('a^ |\n---');
+    expect(table('removeColumn', '| a^ |\n| --- |')).toBe(null);
+  });
+
+  it('carries the prefix of a quotation onto a row it adds', () => {
+    expect(table('addRowBelow', '> | a^ |\n> | --- |')).toBe('> | a |\n> | --- |\n> |  ^|');
+  });
+
+  it('does nothing outside a table, or to pipes in a code block', () => {
+    expect(table('addRowBelow', 'Just^ words.')).toBe(null);
+    expect(table('addRowBelow', '```\n| a^ |\n| --- |\n```')).toBe(null);
+  });
+
+  it('carries Enter down a row, and leaves the table from a row still empty', () => {
+    expect(shown(continueTable(put(TABLE.replace('c', 'c^'))))).toBe(`${TABLE}\n|  ^|  |`);
+    expect(shown(continueTable(put(`${TABLE}\n|  ^|  |`)))).toBe(`${TABLE}\n\n^`);
+    expect(shown(continueTable(put(`${TABLE}\n|  ^|  |\n\nAfter.`)))).toBe(
+      `${TABLE}\n\n^\n\nAfter.`
+    );
+    expect(continueTable(put('Not^ a table.'))).toBe(null);
   });
 });

@@ -10,6 +10,9 @@
  * sounds obvious and is the half people leave out.
  */
 
+import type { MdNode, MdTable } from './markdown/ast.js';
+import { parseMarkdown } from './markdown/parse.js';
+
 export interface EditState {
   value: string;
   start: number;
@@ -523,4 +526,403 @@ export function indent(state: EditState, out: boolean): EditState {
   return mapLines(state, (lines) =>
     lines.map((line) => (out ? line.slice(outdentOf(line)) : INDENT + line))
   );
+}
+
+/* -------------------------------------------------------------------------
+ * Tables
+ * ---------------------------------------------------------------------- */
+
+/**
+ * What can be done to a table's shape.
+ *
+ * Its own list rather than more of `MawyCommand`, because none of these is a
+ * toggle and none of them always applies: a row cannot go above the header, and
+ * the last column cannot be taken away. So each answers `null` where it has
+ * nothing to do, which is also how the toolbar knows which of them to offer.
+ */
+export type MawyTableCommand =
+  | 'insertTable'
+  | 'addRowBelow'
+  | 'addRowAbove'
+  | 'addColumnAfter'
+  | 'addColumnBefore'
+  | 'removeRow'
+  | 'removeColumn';
+
+/** One line of a table, and where each of its cells is written. */
+interface TableLine {
+  /** Where the row's own characters start, after whatever holds the table. */
+  start: number;
+  end: number;
+  /** Where the line itself starts, which is before a quotation's `>`. */
+  lineStart: number;
+  /** Each cell's run, between the pipes and not including them. */
+  cells: { from: number; to: number }[];
+  /** Whether the row opens with a pipe of its own. */
+  opened: boolean;
+  /** Whether it closes with one. */
+  closed: boolean;
+}
+
+interface TableAt {
+  /** The header, the delimiter row, and the body, in that order. */
+  lines: TableLine[];
+  /** Which line the caret is on, with the delimiter row counted as the header. */
+  row: number;
+  /** Which cell it is in. */
+  column: number;
+  columns: number;
+  /** What a line of this table has to start with to still be in it. */
+  prefix: string;
+}
+
+/**
+ * A row, cut at its unescaped pipes the way the parser cuts it.
+ *
+ * `splitRow` in `block.ts` is the rule, and this is it again with the offsets
+ * kept rather than the text. It has to agree exactly: a pipe this counted and
+ * the parser did not is a cell written into the middle of another one.
+ */
+function tableLine(value: string, start: number, end: number): TableLine {
+  const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+  const text = value.slice(start, end);
+  let from = start + (text.length - text.trimStart().length);
+  let stop = end - (text.length - text.trimEnd().length);
+  const opened = value[from] === '|' && from < stop;
+
+  if (opened) {
+    from += 1;
+  }
+
+  const closed = /(?:^|[^\\])\|$/.test(value.slice(from, stop));
+
+  if (closed) {
+    stop -= 1;
+  }
+
+  const cells: { from: number; to: number }[] = [];
+  let cell = from;
+
+  for (let at = from; at < stop; at += 1) {
+    if (value[at] === '\\' && value[at + 1] === '|' && at + 1 < stop) {
+      at += 1;
+      continue;
+    }
+
+    if (value[at] === '|') {
+      cells.push({ from: cell, to: at });
+      cell = at + 1;
+    }
+  }
+
+  cells.push({ from: cell, to: stop });
+
+  return { start, end, lineStart, cells, opened, closed };
+}
+
+/** The table a place in the tree is inside, if it is inside one. */
+function tableNodeAt(nodes: readonly MdNode[], offset: number): MdTable | null {
+  for (const node of nodes) {
+    if (offset < node.range.start || offset > node.range.end) {
+      continue;
+    }
+
+    if (node.type === 'table') {
+      return node;
+    }
+
+    const inside = 'children' in node ? tableNodeAt(node.children as MdNode[], offset) : null;
+
+    if (inside) {
+      return inside;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * The table the caret is in, read with the parser, or `null`.
+ *
+ * The parser rather than a look at the lines around the caret, because a line
+ * with a pipe in it is a table row only where the parser says so: inside a code
+ * block it is code, and the line after a table with no pipe in it at all is one
+ * of its rows. What the commands change has to be what is drawn as a table.
+ */
+function tableAt(value: string, offset: number): TableAt | null {
+  if (!value.includes('|')) {
+    return null;
+  }
+
+  const document = parseMarkdown(value);
+  const table = tableNodeAt([...document.root.children, ...document.footnotes], offset);
+
+  if (!table) {
+    return null;
+  }
+
+  const [header, ...body] = table.children;
+  const delimiterStart = value.indexOf('\n', header.range.end) + 1;
+  const delimiterEnd = value.indexOf('\n', delimiterStart);
+  const delimiterLine = value.slice(delimiterStart, delimiterEnd === -1 ? undefined : delimiterEnd);
+  const quoted = /^(?:[ \t]*>)*/.exec(delimiterLine)?.[0].length ?? 0;
+  const lines = [
+    tableLine(value, header.range.start, header.range.end),
+    tableLine(value, delimiterStart + quoted, delimiterEnd === -1 ? value.length : delimiterEnd),
+    ...body.map((row) => tableLine(value, row.range.start, row.range.end))
+  ];
+  const on = lines.findIndex((line) => line.lineStart <= offset && offset <= line.end);
+
+  if (on === -1) {
+    return null;
+  }
+
+  const delimiter = lines[1];
+  const cells = lines[on].cells;
+  const column = cells.findIndex((cell) => offset <= cell.to);
+
+  return {
+    lines,
+    row: on === 1 ? 0 : on,
+    column: column === -1 ? cells.length - 1 : column,
+    columns: table.align.length,
+    prefix: value.slice(delimiter.lineStart, delimiter.cells[0].from - (delimiter.opened ? 1 : 0))
+  };
+}
+
+/**
+ * Where a caret goes in a cell: after what is written in it, or at the end of an
+ * empty one, which is where the parser says an empty cell is and so where the
+ * drawn document can put a caret into it.
+ */
+function caretInCell(value: string, cell: { from: number; to: number }): number {
+  let at = cell.to;
+
+  while (at > cell.from && value[at - 1] === ' ') {
+    at -= 1;
+  }
+
+  return at === cell.from ? cell.to : at;
+}
+
+/** The same table read again after a change, and a caret put in one of its cells. */
+function caretAfter(value: string, anchor: number, row: number, column: number): EditState {
+  const table = tableAt(value, anchor);
+  const line = table?.lines[row];
+  const cell = line?.cells[Math.min(column, line.cells.length - 1)];
+  const at = cell ? caretInCell(value, cell) : anchor;
+
+  return { value, start: at, end: at };
+}
+
+/** Every line of the table rewritten, from the last so the offsets hold. */
+function rewriteLines(
+  value: string,
+  lines: readonly TableLine[],
+  rewrite: (text: string, line: TableLine, index: number) => string
+): string {
+  let out = value;
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    const text = value.slice(line.start, line.end);
+
+    out = out.slice(0, line.start) + rewrite(text, line, index) + out.slice(line.end);
+  }
+
+  return out;
+}
+
+/** A row with nothing in any of its cells, which every new one is. */
+function emptyRow(columns: number): string {
+  return `|${'  |'.repeat(columns)}`;
+}
+
+/**
+ * A table of two columns, a header and one row, where the caret is.
+ *
+ * With a blank line either side of it, because a table has to be a block of its
+ * own to be one. Empty rather than filled with column names: whatever words it
+ * came with would be in the interface's language and in the document for good.
+ */
+function insertTable(state: EditState): EditState | null {
+  const { value, start, end } = state;
+
+  if (tableAt(value, start)) {
+    return null;
+  }
+
+  const before = value.slice(0, start);
+  const after = value.slice(end);
+  const lead = !before || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+  const tail = !after || after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
+  const text = `${lead}${emptyRow(2)}\n| --- | --- |\n${emptyRow(2)}${tail}`;
+  const caret = start + lead.length + 3;
+
+  return { value: before + text + after, start: caret, end: caret };
+}
+
+function addRow(state: EditState, below: boolean): EditState | null {
+  const table = tableAt(state.value, state.start);
+
+  if (!table || (!below && table.row === 0)) {
+    return null;
+  }
+
+  const { value } = state;
+  // Under the header is under the delimiter row, which belongs to it.
+  const next = table.lines[table.row === 0 ? 1 : table.row];
+  const text = `${table.prefix}${emptyRow(table.columns)}`;
+  const at = below ? next.end : next.lineStart;
+  const written = below ? `\n${text}` : `${text}\n`;
+  const opens = below ? at + 1 : at;
+  const caret = opens + table.prefix.length + 3 + 3 * Math.min(table.column, table.columns - 1);
+
+  return { value: value.slice(0, at) + written + value.slice(at), start: caret, end: caret };
+}
+
+function removeRow(state: EditState): EditState | null {
+  const table = tableAt(state.value, state.start);
+
+  if (!table || table.row === 0) {
+    return null;
+  }
+
+  const { value } = state;
+  const line = table.lines[table.row];
+  const next = value.slice(0, line.lineStart - 1) + value.slice(line.end);
+  // The row that moved up into its place, or the one above where there is none.
+  const row = table.row < table.lines.length - 1 ? table.row : table.row - 1;
+
+  return caretAfter(next, table.lines[0].start, row === 1 ? 0 : row, table.column);
+}
+
+function addColumn(state: EditState, after: boolean): EditState | null {
+  const table = tableAt(state.value, state.start);
+
+  if (!table) {
+    return null;
+  }
+
+  const { column } = table;
+  const next = rewriteLines(state.value, table.lines, (text, line, index) => {
+    const cell = line.cells[column];
+
+    // A row shorter than the column is already empty there.
+    if (!cell) {
+      return text;
+    }
+
+    const content = index === 1 ? '---' : '';
+    const last = column === line.cells.length - 1;
+    // A row with no pipe on the side the cell goes on has to be given one, or
+    // an empty cell at either end is read as no cell at all.
+    const at = (after ? cell.to : cell.from) - line.start;
+    const written = after
+      ? !last || line.closed
+        ? `| ${content} `
+        : ` | ${content} |`
+      : column > 0 || line.opened
+        ? ` ${content} |`
+        : `| ${content} | `;
+
+    return text.slice(0, at) + written + text.slice(at);
+  });
+
+  return caretAfter(next, table.lines[0].start, table.row, after ? column + 1 : column);
+}
+
+function removeColumn(state: EditState): EditState | null {
+  const table = tableAt(state.value, state.start);
+
+  if (!table || table.columns < 2) {
+    return null;
+  }
+
+  const { column } = table;
+  const next = rewriteLines(state.value, table.lines, (text, line, index) => {
+    const cell = line.cells[column];
+
+    if (!cell) {
+      return text;
+    }
+
+    const from = cell.from - line.start;
+    const to = cell.to - line.start;
+    let out: string;
+
+    if (line.cells.length === 1) {
+      // A short row with nothing else in it keeps a pipe, or it would be a
+      // blank line and the end of the table.
+      out = text.slice(0, from) + (line.opened || line.closed ? ' ' : '|') + text.slice(to);
+    } else if (column < line.cells.length - 1 || line.closed) {
+      out = text.slice(0, from) + text.slice(to + 1);
+    } else {
+      out = text.slice(0, from - 1).trimEnd() + text.slice(to);
+    }
+
+    // A header row with no pipe left in it is not a table's header any more.
+    return index === 0 && !out.includes('|') ? `${out.trimEnd()} |` : out;
+  });
+
+  return caretAfter(next, table.lines[0].start, table.row, Math.max(0, column - 1));
+}
+
+/** A table command, or `null` where it has nothing to do. */
+export function runTableCommand(command: MawyTableCommand, state: EditState): EditState | null {
+  switch (command) {
+    case 'insertTable':
+      return insertTable(state);
+    case 'addRowBelow':
+      return addRow(state, true);
+    case 'addRowAbove':
+      return addRow(state, false);
+    case 'addColumnAfter':
+      return addColumn(state, true);
+    case 'addColumnBefore':
+      return addColumn(state, false);
+    case 'removeRow':
+      return removeRow(state);
+    case 'removeColumn':
+      return removeColumn(state);
+    default:
+      return null;
+  }
+}
+
+/**
+ * What `Enter` does in a table, which is what it does in a list.
+ *
+ * A cell holds one line, so there is nowhere in the file for `Enter` to put a
+ * second one. What it does instead is the list's rule said about rows: a new
+ * row under this one, with the caret in the same column, and on a row that is
+ * still empty the row goes and the caret goes to a line of its own after the
+ * table. That second half is the way out of a table at the end of a document,
+ * which otherwise has nowhere after it for a caret to be.
+ *
+ * `null` outside a table, and for a selection, which `Enter` has no business
+ * replacing with a row.
+ */
+export function continueTable(state: EditState): EditState | null {
+  const table = state.start === state.end ? tableAt(state.value, state.start) : null;
+
+  if (!table) {
+    return null;
+  }
+
+  const { value } = state;
+  const line = table.lines[table.row];
+  const empty = line.cells.every((cell) => !value.slice(cell.from, cell.to).trim());
+
+  if (table.row === 0 || !empty) {
+    return addRow(state, true);
+  }
+
+  const last = table.lines[table.lines.length - 1];
+  const removed = line.end - line.lineStart + 1;
+  const end = line === last ? line.lineStart - 1 : last.end - removed;
+  const without = value.slice(0, line.lineStart - 1) + value.slice(line.end);
+  const caret = end + 2;
+
+  return { value: `${without.slice(0, end)}\n\n${without.slice(end)}`, start: caret, end: caret };
 }

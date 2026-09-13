@@ -1945,7 +1945,7 @@ describe('the document surface', () => {
     expect(coded).toHaveBeenLastCalledWith('```ts\nconst\n a = 1;\n```');
   });
 
-  it('leaves a table alone where a row is a line and a cell is a cell', async () => {
+  it('does not join a cell to the one beside it', async () => {
     const source = '| a | b |\n| - | - |\n| 1 | 2 |';
     const onChange = vi.fn();
     const screen = await render(
@@ -1953,11 +1953,10 @@ describe('the document surface', () => {
     );
 
     put(bodyOf(screen), '2', 0);
-    type(bodyOf(screen), 'insertParagraph');
     type(bodyOf(screen), 'deleteContentBackward');
 
-    // There is nowhere in the file for a second row to go, and joining two
-    // cells would be eating the pipe between them.
+    // Joining two cells would be eating the pipe between them. `Enter` in a
+    // table is a row of its own now; see the tables below.
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -2339,6 +2338,133 @@ describe('the document surface', () => {
  * *is* a heading the moment the space lands. Two need writing down, and they
  * are the two where the marker changes the meaning of text nobody is typing.
  */
+/**
+ * Tables, which somebody who does not know the pipe syntax still has to be
+ * able to make and grow.
+ */
+describe('tables', () => {
+  /** A shortcut with every modifier it asks for, `Mod` included. */
+  const press = (
+    element: HTMLElement,
+    key: string,
+    modifiers: { shift?: boolean; alt?: boolean }
+  ) =>
+    element.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key,
+        code: key.length === 1 ? `Key${key.toUpperCase()}` : key,
+        metaKey: true,
+        shiftKey: modifiers.shift ?? false,
+        altKey: modifiers.alt ?? false,
+        bubbles: true,
+        cancelable: true
+      })
+    );
+
+  it('makes a table from the toolbar on the drawn document, and types into it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Intro." mode="wysiwyg" onChange={onChange} style={WIDE} />
+    );
+
+    put(bodyOf(screen), 'Intro.', 6);
+    await screen.getByRole('button', { name: 'Table' }).click();
+
+    // Nothing to add a row to yet.
+    await expect.element(screen.getByRole('button', { name: 'Add a row below' })).toBeDisabled();
+    await screen.getByRole('button', { name: 'Insert a table' }).click();
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Intro.\n\n|  |  |\n| --- | --- |\n|  |  |')
+    );
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('table')).not.toBe(null));
+
+    type(bodyOf(screen), 'insertText', 'Name');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Intro.\n\n| Name |  |\n| --- | --- |\n|  |  |')
+    );
+    expect(bodyOf(screen).querySelector('th')?.textContent).toBe('Name');
+  });
+
+  it('grows and shrinks a table from the keyboard, keeping what is in its cells', async () => {
+    const onChange = vi.fn();
+    const source = '| a | **b** |\n| :-- | --: |\n| c | d |';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+    );
+    const cell = () => bodyOf(screen);
+
+    put(cell(), 'c', 1);
+    // `selectionchange` is how the editor hears about a caret that was put
+    // somewhere, and it arrives on a task of its own.
+    await new Promise((done) => setTimeout(done, 30));
+    press(cell(), 'Enter', {});
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(`${source}\n|  |  |`));
+
+    press(cell(), 'Enter', { alt: true });
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        '| a |  | **b** |\n| :-- | --- | --: |\n| c |  | d |\n|  |  |  |'
+      )
+    );
+
+    press(cell(), 'Backspace', { shift: true, alt: true });
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a | **b** |\n| :-- | --: |\n| c | d |\n|  |  |')
+    );
+
+    press(cell(), 'Backspace', { shift: true });
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(source));
+  });
+
+  it('carries Enter down a row, and leaves the table from a row still empty', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'| a |\n| --- |\n| b |'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'b', 1);
+    type(bodyOf(screen), 'insertParagraph');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b |\n|  |')
+    );
+    await vi.waitFor(() => expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(3));
+
+    type(bodyOf(screen), 'insertParagraph');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b |\n\n'));
+
+    type(bodyOf(screen), 'insertText', 'After.');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b |\n\nAfter.')
+    );
+  });
+
+  it('runs the same commands on the source', async () => {
+    const screen = await render(<MawyEditor defaultValue="Intro." modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(6, 6);
+    press(input, 't', { alt: true });
+
+    await vi.waitFor(() => expect(input.value).toBe('Intro.\n\n|  |  |\n| --- | --- |\n|  |  |'));
+
+    press(input, 'Enter', {});
+
+    await vi.waitFor(() =>
+      expect(input.value).toBe('Intro.\n\n|  |  |\n| --- | --- |\n|  |  |\n|  |  |')
+    );
+  });
+});
+
 describe('input rules', () => {
   /**
    * A run of characters, one keystroke at a time, with the document drawn again

@@ -37,7 +37,8 @@ export type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
  * Everything except `mode`, `find`, `open`, `save`, `colorScheme` and
  * `separator` is a formatting command, and every one of them has a keyboard
  * shortcut — the buttons are a way of finding the commands rather than the way
- * of running them. `find` and `save` have one too, `Mod`+`F` and `Mod`+`S`,
+ * of running them. `table` is a menu of the seven things that change a table's
+ * shape, and each of those has its own. `find` and `save` have one too, `Mod`+`F` and `Mod`+`S`,
  * and both work whether or not the button is on the toolbar. `open` has none:
  * the browser's own `Mod`+`O` is a reasonable thing to leave alone, and
  * opening a file is a rare and deliberate act rather than one done in a flow.
@@ -56,6 +57,7 @@ export type MawyEditorToolbarItem =
   | 'orderedList'
   | 'taskList'
   | 'codeBlock'
+  | 'table'
   | 'rule'
   | 'find'
   | 'open'

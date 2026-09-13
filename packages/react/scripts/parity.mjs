@@ -27,7 +27,14 @@ import { fileURLToPath } from 'node:url';
 import { parseMarkdown } from '../src/internal/markdown/parse.ts';
 import { mawyHighlighter } from '../src/highlight.ts';
 import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
-import { commandActive, continueList, indent, runCommand } from '../src/internal/commands.ts';
+import {
+  commandActive,
+  continueList,
+  continueTable,
+  indent,
+  runCommand,
+  runTableCommand
+} from '../src/internal/commands.ts';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../src/internal/search.ts';
 import {
   caretAt,
@@ -169,6 +176,16 @@ const COMMANDS = [
   'rule'
 ];
 
+const TABLE_COMMANDS = [
+  'insertTable',
+  'addRowBelow',
+  'addRowAbove',
+  'addColumnAfter',
+  'addColumnBefore',
+  'removeRow',
+  'removeColumn'
+];
+
 /**
  * And the editing commands, which are a fourth thing written twice.
  *
@@ -202,6 +219,18 @@ const edits = JSON.parse(
   const outdented = indent(state, true);
 
   out.continueList = carried && [carried.value, carried.start, carried.end];
+
+  // The table commands answer `null` where they have nothing to act on, and
+  // which states those are is as much the rule as what the others do.
+  for (const command of TABLE_COMMANDS) {
+    const after = runTableCommand(command, state);
+
+    out[command] = after && [after.value, after.start, after.end];
+  }
+
+  const row = continueTable(state);
+
+  out.continueTable = row && [row.value, row.start, row.end];
   out.indent = [indented.value, indented.start, indented.end];
   out.outdent = [outdented.value, outdented.start, outdented.end];
 

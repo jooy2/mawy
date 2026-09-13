@@ -15,6 +15,10 @@
 
 export {
   ALargeSmall as FontSizeIcon,
+  BetweenHorizontalEnd as RowBelowIcon,
+  BetweenHorizontalStart as RowAboveIcon,
+  BetweenVerticalEnd as ColumnAfterIcon,
+  BetweenVerticalStart as ColumnBeforeIcon,
   Bold as BoldIcon,
   Braces as CodeBlockIcon,
   Code as CodeIcon,
@@ -36,6 +40,8 @@ export {
   Pilcrow as ParagraphIcon,
   SquarePen as WysiwygIcon,
   Strikethrough as StrikethroughIcon,
+  Table as TableIcon,
+  Trash2 as RemoveIcon,
   TextQuote as QuoteIcon,
   Check as CheckIcon,
   ChevronDown as ChevronDownIcon,

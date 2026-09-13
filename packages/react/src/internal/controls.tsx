@@ -293,7 +293,15 @@ export function Choice<T extends string>({
 
 export interface ActionsProps {
   label: string;
-  actions: readonly { label: string; icon?: React.ReactNode; run: () => void }[];
+  actions: readonly {
+    label: string;
+    icon?: React.ReactNode;
+    run: () => void;
+    /** Offered but not pressable, where it has nothing to act on. */
+    disabled?: boolean;
+    /** What `aria-keyshortcuts` says the same thing is on the keyboard. */
+    keys?: string;
+  }[];
 }
 
 /**
@@ -309,7 +317,9 @@ export function Actions({ label, actions }: ActionsProps): React.ReactElement {
   const group = React.useRef<HTMLDivElement>(null);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const buttons = [...(group.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
+    const buttons = [
+      ...(group.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])
+    ];
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
     const to =
       event.key === 'ArrowDown' || event.key === 'ArrowRight'
@@ -332,12 +342,14 @@ export function Actions({ label, actions }: ActionsProps): React.ReactElement {
 
   return (
     <div className="mawy-choice" role="group" aria-label={label} ref={group} onKeyDown={onKeyDown}>
-      {actions.map((action, index) => (
+      {actions.map((action) => (
         <button
           key={action.label}
           type="button"
           className="mawy-choice-option"
-          tabIndex={index === 0 ? 0 : -1}
+          disabled={action.disabled}
+          aria-keyshortcuts={action.keys}
+          tabIndex={action === actions.find((each) => !each.disabled) ? 0 : -1}
           onClick={() => {
             // Shut first: what an entry does may open something of its own —
             // a file picker — and the panel should not still be over the page
