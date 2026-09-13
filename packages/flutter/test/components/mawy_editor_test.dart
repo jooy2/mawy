@@ -1204,6 +1204,48 @@ void main() {
       expect(seen.last, 'Intro.\n\n|  |  |  |\n| --- | --- | --- |\n|  |  |  |');
     });
 
+    testWidgets('lets a screen reader press an entry', (WidgetTester tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: 'Intro.', mode: MawyEditorMode.plain, onChange: seen.add)),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 6);
+      await press(tester, 'Table');
+      tester.semantics.tap(find.semantics.byLabel('Insert a table'));
+      await tester.pumpAndSettle();
+
+      expect(seen.last, 'Intro.\n\n|  |  |\n| --- | --- |\n|  |  |');
+      semantics.dispose();
+    });
+
+    testWidgets('is not offered where nothing can be edited', (WidgetTester tester) async {
+      MawyToolbarButton table() => tester.widget(
+        find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == 'Table',
+        ),
+      );
+
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'Intro.', mode: MawyEditorMode.preview)),
+      );
+      expect(table().enabled, isFalse);
+
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'Intro.', mode: MawyEditorMode.plain, readOnly: true)),
+      );
+      expect(table().enabled, isFalse);
+
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'Intro.', mode: MawyEditorMode.plain)),
+      );
+      expect(table().enabled, isTrue);
+    });
+
     testWidgets('reshapes a table from the keyboard, and leaves the keys alone elsewhere', (
       WidgetTester tester,
     ) async {

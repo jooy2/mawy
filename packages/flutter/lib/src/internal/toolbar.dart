@@ -295,6 +295,7 @@ class MawyToolbarMenu extends StatefulWidget {
     required this.tokens,
     required this.builder,
     this.focusNode,
+    this.enabled = true,
     super.key,
   });
 
@@ -312,6 +313,9 @@ class MawyToolbarMenu extends StatefulWidget {
 
   /// The node the row's [MawyRoving] gave this control.
   final FocusNode? focusNode;
+
+  /// Whether it can be opened at all. See [MawyToolbarButton.enabled].
+  final bool enabled;
 
   @override
   State<MawyToolbarMenu> createState() => _MawyToolbarMenuState();
@@ -523,6 +527,7 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
           label: widget.label,
           tokens: widget.tokens,
           pressed: _entry != null,
+          enabled: widget.enabled,
           focusNode: _button,
           onPressed: _toggle,
         ),
@@ -890,6 +895,9 @@ class _ActionEntryState extends State<_ActionEntry> {
       button: true,
       enabled: action.enabled,
       label: action.label,
+      // Said here as well as on the detector, because the words below are left
+      // out of the tree and the press is left out with them.
+      onTap: action.enabled ? action.onPressed : null,
       excludeSemantics: true,
       child: FocusableActionDetector(
         enabled: action.enabled,

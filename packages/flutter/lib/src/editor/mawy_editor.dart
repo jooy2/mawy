@@ -842,7 +842,9 @@ class _MawyEditorState extends State<MawyEditor> {
   /// is a parse of the document and so is asked when the menu opens or the key
   /// is pressed rather than on every build.
   bool _tableAvailable(MawyTableCommand command) =>
-      !widget.readOnly && runTableCommand(command, _state) != null;
+      !widget.readOnly &&
+      _current != MawyEditorMode.preview &&
+      runTableCommand(command, _state) != null;
 
   void _setMode(MawyEditorMode mode) {
     widget.onModeChange?.call(mode);
@@ -1065,6 +1067,7 @@ class _MawyEditorState extends State<MawyEditor> {
           canUndo: showSource && !widget.readOnly && _history.value.canUndo,
           canRedo: showSource && !widget.readOnly && _history.value.canRedo,
           onTravel: _travel,
+          editable: showSource && !widget.readOnly,
           onTable: _runTable,
           tableAvailable: _tableAvailable,
           headingLevels: _headingLevels,
@@ -1253,6 +1256,7 @@ class _Toolbar extends StatefulWidget {
     required this.canUndo,
     required this.canRedo,
     required this.onTravel,
+    required this.editable,
     required this.onTable,
     required this.tableAvailable,
     required this.headingLevels,
@@ -1277,6 +1281,10 @@ class _Toolbar extends StatefulWidget {
   final bool canUndo;
   final bool canRedo;
   final void Function({required bool back}) onTravel;
+
+  /// Whether there is a source showing that can be changed, which a menu of
+  /// things to change in it needs before it is worth opening.
+  final bool editable;
   final ValueChanged<MawyTableCommand> onTable;
   final bool Function(MawyTableCommand) tableAvailable;
   final List<int> headingLevels;
@@ -1452,6 +1460,7 @@ class _ToolbarState extends State<_Toolbar> {
             label: widget.strings.table,
             tokens: widget.tokens,
             focusNode: next(),
+            enabled: widget.editable,
             // Built when the menu opens, because which entries apply depends on
             // whether the caret is in a table, and reading that is a parse.
             builder: (VoidCallback close) => MawyToolbarActions(
