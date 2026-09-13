@@ -53,15 +53,16 @@ with where the code is.
 
 ## Reported
 
-- **A paste from a word processor with words and a picture in it.** Word and
-  Outlook are said to put `<img src="file:///…">` in the HTML beside a picture
-  of the copied selection. The words are pasted and the picture becomes its
-  description, because `pastedImagesIn` in `packages/react/src/internal/images.ts`
-  only takes the file when the markup has no words at all; taking it otherwise
-  could upload a picture of the whole selection. Not reproduced: which
-  applications do this, and what a browser exposes as files for it, are
-  unconfirmed. Chromium's own copy of an image, which puts nothing but the
-  `<img>` beside the file, is confirmed and handled.
+- **A paste from Word on Windows, or from Outlook.** A picture whose `<img>`
+  points at a file on the copying machine is read out of the RTF on the same
+  clipboard now, matched to the markup by counting — `picturesInRtf` in
+  `packages/react/src/internal/rtf.ts`. What was captured is Word 16 for Mac: its
+  markup carries each picture's bytes, its RTF holds each picture as a PNG inside
+  `\shppict` with a metafile copy inside `\nonshppict`, and the PNG file beside
+  them is a picture of the whole selection. That Word on Windows writes `file:`
+  addresses beside the same RTF is reported and not captured, and so is whether
+  Outlook's `cid:` pictures come with RTF at all. A clipboard that breaks the
+  counting loses its pictures the way every such paste did before.
 
 ## Release
 

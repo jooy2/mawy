@@ -3,6 +3,7 @@ import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { MawyEditor, type MawyEditorHandle } from 'mawy-react';
 import { rowHeight, rowRect } from '../../../src/internal/source.js';
+import { PIXEL_HEX, wordHtml, wordRtf } from '../../support/word.js';
 // The one test file that needs the real stylesheet. The source surface is two
 // layers that have to lay out identically, and without the CSS there is only
 // one layout to check against itself.
@@ -3417,6 +3418,55 @@ describe('images', () => {
       );
       expect(onChange).not.toHaveBeenCalledWith(expect.stringContaining('data:'));
       expect(onUploadImage).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  /*
+   * A word processor's clipboard: markup whose picture points at a file on the
+   * machine that copied it, RTF with the picture's bytes in it, and a PNG of the
+   * whole selection. See `test/support/word.ts`.
+   */
+  it('uploads a picture from a word processor out of its RTF, and not the picture of the selection', async () => {
+    for (const modes of [['plain'], ['wysiwyg']] as const) {
+      const onChange = vi.fn();
+      const onUploadImage = vi.fn(async () => '/up.png');
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Before."
+          modes={modes}
+          onChange={onChange}
+          onUploadImage={onUploadImage}
+        />
+      );
+      const clipboard = {
+        'text/html': wordHtml('file:///PATH/clip_image001.png'),
+        'text/rtf': wordRtf(PIXEL_HEX)
+      };
+      const selection = png('image.png');
+
+      if (modes[0] === 'plain') {
+        const input = sourceOf(screen);
+
+        input.focus();
+        input.setSelectionRange(7, 7);
+        pasteFiles(input, [selection], clipboard);
+      } else {
+        put(bodyOf(screen), 'Before.', 7);
+        pasteFiles(bodyOf(screen), [selection], clipboard);
+      }
+
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith(expect.stringContaining('![image](/up.png)'))
+      );
+      expect(onChange).toHaveBeenLastCalledWith(expect.stringContaining('Some words.'));
+      expect(onUploadImage).toHaveBeenCalledTimes(1);
+
+      const uploaded = (onUploadImage.mock.calls[0] as unknown as [File])[0];
+
+      expect(uploaded.type).toBe('image/png');
+      expect([...new Uint8Array(await uploaded.arrayBuffer())]).toEqual(
+        PIXEL_HEX.match(/../g)?.map((pair) => Number.parseInt(pair, 16))
+      );
     }
   });
 

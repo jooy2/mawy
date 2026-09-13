@@ -513,7 +513,10 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         // image goes. See `pasteFromHtml`.
         const pasted =
           now.onImages && !literal
-            ? pasteFromHtml(event.clipboardData?.getData('text/html') ?? '')
+            ? pasteFromHtml(
+                event.clipboardData?.getData('text/html') ?? '',
+                event.clipboardData?.getData('text/rtf') ?? ''
+              )
             : null;
 
         if (pasted?.images.length) {

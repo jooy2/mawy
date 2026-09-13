@@ -18,6 +18,7 @@
  * browser, and the document it builds is inert — no scripts, no loads.
  */
 
+import { picturesInRtf } from '../rtf.js';
 import { dataImageBytes, safeImageUrl, safeUrl } from './url.js';
 
 /**
@@ -37,6 +38,12 @@ interface Reading {
    * `pasteFromHtml`.
    */
   inline: { url: string; alt: string }[] | null;
+  /**
+   * The bytes of pictures whose `<img>` points nowhere a page can reach, read
+   * out of the RTF that came with the markup, by the element each belongs to.
+   * See `pasteFromHtml`.
+   */
+  recovered?: ReadonlyMap<Element, string>;
 }
 
 /**
@@ -227,8 +234,11 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
         const url = safeImageUrl(unmarked(element.getAttribute('src')));
         const alt = escapeText(unmarked(element.getAttribute('alt')));
 
-        if (url && reading.inline && dataImageBytes(url)) {
-          reading.inline.push({ url, alt: unmarked(element.getAttribute('alt')) });
+        const bytes =
+          url && dataImageBytes(url) ? url : url ? null : reading.recovered?.get(element);
+
+        if (bytes && reading.inline) {
+          reading.inline.push({ url: bytes, alt: unmarked(element.getAttribute('alt')) });
           out += STOOD;
           break;
         }
@@ -415,6 +425,40 @@ export function markdownFromHtml(html: string): string {
 }
 
 /**
+ * The pictures of the RTF, for the `<img>` elements of the markup, where every
+ * `<img>` has one.
+ *
+ * Which picture belongs to which element is only known by counting them in the
+ * order both write them, so a count that does not match takes none: a picture
+ * in the wrong place is worse than one left out. See `picturesInRtf`.
+ */
+function recoveredPictures(body: HTMLElement, rtf: string): ReadonlyMap<Element, string> {
+  const elements = [...body.querySelectorAll('img')];
+  const found = new Map<Element, string>();
+
+  // Read only for a picture that needs it. RTF is the whole document again, and
+  // a clipboard whose pictures already say where they are, or carry their own
+  // bytes, has nothing in it this could add.
+  if (!elements.some((element) => !safeImageUrl(unmarked(element.getAttribute('src'))))) {
+    return found;
+  }
+
+  const pictures = picturesInRtf(rtf);
+
+  if (pictures.length === elements.length) {
+    elements.forEach((element, index) => {
+      const picture = pictures[index];
+
+      if (picture) {
+        found.set(element, picture);
+      }
+    });
+  }
+
+  return found;
+}
+
+/**
  * Markdown for a piece of HTML, with its `data:` pictures taken out and said
  * where they stood.
  *
@@ -424,10 +468,19 @@ export function markdownFromHtml(html: string): string {
  * from a text editor — so they are put through it, the same as the file a
  * screenshot arrives as, and written where they were once it has answered. With
  * nowhere to upload them they stay what they were, which is `markdownFromHtml`.
+ *
+ * `rtf` is the same clipboard's RTF, where there was one. A word processor
+ * writes a picture into its markup as an `<img>` pointing at a file on the
+ * machine that copied it, and into its RTF as the picture's bytes, so a picture
+ * whose `<img>` points nowhere a page can reach is read out of the RTF and taken
+ * out like a `data:` one.
  */
-export function pasteFromHtml(html: string): { markdown: string; images: MawyInlineImage[] } {
+export function pasteFromHtml(
+  html: string,
+  rtf = ''
+): { markdown: string; images: MawyInlineImage[] } {
   const found: { url: string; alt: string }[] = [];
-  const marked = read(html, { alts: true, inline: found });
+  const marked = read(html, { alts: true, inline: found }, rtf);
   const images: MawyInlineImage[] = [];
   let markdown = '';
   let from = 0;
@@ -466,12 +519,16 @@ export function markupHasContent(html: string): boolean {
   return read(html, { alts: false, inline: [] }).replaceAll(STOOD, '').trim() !== '';
 }
 
-function read(html: string, reading: Reading): string {
+function read(html: string, reading: Reading, rtf = ''): string {
   if (typeof DOMParser === 'undefined' || !html.trim()) {
     return '';
   }
 
   const parsed = new DOMParser().parseFromString(html, 'text/html');
+
+  if (rtf && reading.inline) {
+    reading.recovered = recoveredPictures(parsed.body, rtf);
+  }
 
   return blocksOf(parsed.body, reading)
     .join('\n\n')

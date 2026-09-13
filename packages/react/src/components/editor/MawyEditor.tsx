@@ -1515,7 +1515,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       const html = event.clipboardData.getData('text/html');
       const { markdown, images: inline } = upload.current
-        ? pasteFromHtml(html)
+        ? pasteFromHtml(html, event.clipboardData.getData('text/rtf'))
         : { markdown: markdownFromHtml(html), images: [] };
 
       if (!markdown && !inline.length) {

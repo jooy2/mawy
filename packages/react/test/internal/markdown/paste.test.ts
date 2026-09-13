@@ -4,6 +4,7 @@ import {
   markupHasContent,
   pasteFromHtml
 } from '../../../src/internal/markdown/paste.js';
+import { PIXEL_DATA, PIXEL_HEX, rtfPicture, wordHtml, wordRtf } from '../../support/word.js';
 
 /**
  * What arrives on the clipboard, read once for what can be made of it.
@@ -157,5 +158,75 @@ describe('pictures carried inline', () => {
     expect(markupHasContent('<img src="blob:https://a.test/x" alt="x (1×1)">')).toBe(false);
     expect(markupHasContent('<img src="https://a.test/x.png">')).toBe(true);
     expect(markupHasContent('<p>words</p>')).toBe(true);
+  });
+});
+
+/**
+ * What a word processor puts beside its markup: the same document in RTF, with
+ * every picture's bytes in it. Word writes an `<img>` whose address is a file on
+ * the machine that copied it, which no page can open, and the picture is lost
+ * unless it is read back out of the RTF. See `test/support/word.ts`.
+ */
+describe('pictures read out of the RTF beside the markup', () => {
+  const LOCAL = 'file:///PATH/clip_image001.png';
+
+  it('takes a picture the markup cannot point at from the RTF', () => {
+    expect(pasteFromHtml(wordHtml(LOCAL), wordRtf(PIXEL_HEX))).toEqual({
+      markdown: 'Some words.\n\n',
+      images: [{ at: 13, url: PIXEL_DATA, alt: '' }]
+    });
+    // Word breaks the hexadecimal into lines, which are not part of it.
+    const broken = PIXEL_HEX.replace(/(.{40})/g, '$1\r\n');
+
+    expect(pasteFromHtml(wordHtml(LOCAL), wordRtf(broken)).images).toEqual([
+      { at: 13, url: PIXEL_DATA, alt: '' }
+    ]);
+  });
+
+  it('matches the pictures in the order both write them, bytes in the markup and all', () => {
+    const jpeg = rtfPicture('jpegblip', 'ffd8ffe000104a46494600');
+
+    expect(
+      pasteFromHtml(
+        wordHtml(PIXEL_DATA, LOCAL),
+        `{\\rtf1 Some words.\\par ${rtfPicture('pngblip', PIXEL_HEX)}${jpeg}}`
+      ).images
+    ).toEqual([
+      { at: 13, url: PIXEL_DATA, alt: '' },
+      { at: 13, url: 'data:image/jpeg;base64,/9j/4AAQSkZJRgA=', alt: '' }
+    ]);
+  });
+
+  it('is not thrown off by the escapes in the words before a picture', () => {
+    // A brace written as a character, a backslash, and a letter written as its
+    // two hexadecimal digits — none of which opens or closes a group. Read as a
+    // brace, the one inside the fallback would end it early, and its metafile
+    // would be counted as a second picture.
+    const fallback = rtfPicture('wmetafile8', '0100', true).replace(
+      '{\\nonshppict',
+      '{\\nonshppict \\} '
+    );
+    const rtf = `{\\rtf1 A \\{brace\\} and \\\\ and caf\\'e9.\\par ${rtfPicture('pngblip', PIXEL_HEX)}${fallback}}`;
+
+    expect(pasteFromHtml(wordHtml(LOCAL), rtf).images).toEqual([
+      { at: 13, url: PIXEL_DATA, alt: '' }
+    ]);
+  });
+
+  it('takes nothing from RTF without one picture for every picture in the markup', () => {
+    // Which RTF picture goes with which `<img>` is only known by counting, and a
+    // picture in the wrong place is worse than one left out.
+    expect(pasteFromHtml(wordHtml(LOCAL, LOCAL), wordRtf(PIXEL_HEX)).images).toEqual([]);
+    expect(pasteFromHtml(wordHtml(LOCAL), wordRtf(PIXEL_HEX, PIXEL_HEX)).images).toEqual([]);
+  });
+
+  it('takes no picture in a format nothing can open as a file, and no RTF without a paste', () => {
+    const metafile = `{\\rtf1 ${rtfPicture('wmetafile8', '0100090000')}}`;
+
+    expect(pasteFromHtml(wordHtml(LOCAL), metafile).images).toEqual([]);
+    expect(pasteFromHtml(wordHtml(LOCAL)).images).toEqual([]);
+    expect(pasteFromHtml(wordHtml(LOCAL), '{\\rtf1 {\\pict\\pngblip\\bin4 abcd}}').images).toEqual(
+      []
+    );
   });
 });
