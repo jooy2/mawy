@@ -160,6 +160,28 @@ const SHORTCUTS: Record<string, MawyCommand> = {
 /** What the `heading` menu offers until an application says otherwise. */
 const DEFAULT_HEADING_LEVELS: readonly MawyHeadingLevel[] = [1, 2, 3];
 
+/**
+ * What an application can do to an editor from outside it.
+ *
+ * Handed over through `handle` rather than through `ref`, which has always been
+ * the outermost element and stays that: changing what `ref` is would break
+ * every application already measuring or scrolling the editor by it.
+ */
+export interface MawyEditorHandle {
+  /**
+   * The focus put back on whichever surface is showing, with the caret where it
+   * was left. Nothing in `preview`, which has no caret.
+   */
+  focus(): void;
+  /**
+   * Markdown written where the caret is, in place of whatever is selected, as
+   * one step to undo — a button beside the editor inserting a snippet is the
+   * case this is for. The caret ends up after it. Nothing while the editor is
+   * read-only or in `preview`.
+   */
+  insert(markdown: string): void;
+}
+
 export interface MawyEditorProps extends Omit<
   React.ComponentPropsWithoutRef<'div'>,
   'children' | 'onChange'
@@ -371,6 +393,19 @@ export interface MawyEditorProps extends Omit<
    */
   toolbarPlacement?: MawyToolbarPlacement;
 
+  /**
+   * Where the editor hands an application what it can do from outside. See
+   * `MawyEditorHandle`.
+   *
+   * ```tsx
+   * const editor = useRef<MawyEditorHandle>(null);
+   *
+   * <button onClick={() => editor.current?.insert('> [!NOTE]\n> ')}>Note</button>
+   * <MawyEditor handle={editor} />
+   * ```
+   */
+  handle?: React.Ref<MawyEditorHandle>;
+
   /** @default 'en' */
   locale?: MawyLocale;
 
@@ -436,6 +471,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     toolbarPlacement = 'top',
     locale = 'en',
     strings: overrides,
+    handle,
     className,
     ...rest
   },
@@ -896,6 +932,49 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
     },
     [readOnly, run, stateNow]
+  );
+
+  React.useImperativeHandle(
+    handle,
+    () => ({
+      focus: () => {
+        if (showDocument) {
+          const element = drawn.current;
+          const at = element && domAt(element, selection.start, text);
+
+          element?.focus();
+
+          if (element && at) {
+            const range = element.ownerDocument.createRange();
+
+            range.setStart(at.node, at.offset);
+            range.collapse(true);
+            element.ownerDocument.getSelection()?.removeAllRanges();
+            element.ownerDocument.getSelection()?.addRange(range);
+          }
+
+          return;
+        }
+
+        source.current?.focus();
+      },
+      insert: (markdown: string) => {
+        const before = readOnly ? null : stateNow();
+
+        if (!before || !markdown) {
+          return;
+        }
+
+        const at = before.start + markdown.length;
+
+        run(before, {
+          value: before.value.slice(0, before.start) + markdown + before.value.slice(before.end),
+          start: at,
+          end: at
+        });
+      }
+    }),
+    [readOnly, run, selection.start, showDocument, stateNow, text]
   );
 
   /**

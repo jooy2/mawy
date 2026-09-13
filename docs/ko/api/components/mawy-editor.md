@@ -138,6 +138,42 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 
 :::
 
+## 에디터 밖에서
+
+::: fw react
+
+| 프롭 | 타입 | 기본값 | 하는 일 |
+| --- | --- | --- | --- |
+| `handle` | `Ref<MawyEditorHandle>` | — | 애플리케이션이 자기 컨트롤에서 에디터에 할 수 있는 일. |
+
+```ts
+interface MawyEditorHandle {
+  focus(): void;
+  insert(markdown: string): void;
+}
+```
+
+`insert`는 커서 자리에 마크다운을 쓰고, 선택한 내용이 있으면 그것을 대신합니다. 되돌리기 한 번에 되돌아가는 한 단계이고, 커서는 쓴 내용 뒤에 둡니다. `focus`는 지금 보이는 화면에 포커스를 돌려주고, 커서는 두었던 자리에 있습니다. 둘 다 `preview`에서는 아무 일도 하지 않고, `insert`는 에디터가 읽기 전용일 때도 아무 일도 하지 않습니다.
+
+```tsx
+const editor = useRef<MawyEditorHandle>(null);
+
+<>
+  <button onClick={() => editor.current?.insert('> [!NOTE]\n> ')}>참고</button>
+  <MawyEditor handle={editor} />
+</>;
+```
+
+`ref`는 가장 바깥 요소이고 앞으로도 그렇기 때문에 따로 프롭을 두었습니다. `ref`가 가리키는 것을 바꾸면, 이미 `ref`로 에디터를 재거나 스크롤하는 애플리케이션이 모두 깨집니다.
+
+:::
+
+::: fw flutter
+
+Flutter에서 텍스트 필드 안으로 손을 뻗는 방법은 `TextEditingController`인데, 이 에디터는 아직 그것을 받지 않습니다. `value`와 `onChange`가 둘 사이의 접점입니다.
+
+:::
+
 ## 열기와 저장
 
 ::: fw react

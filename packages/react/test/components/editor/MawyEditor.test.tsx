@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { MawyEditor } from 'mawy-react';
+import { MawyEditor, type MawyEditorHandle } from 'mawy-react';
 import { rowHeight, rowRect } from '../../../src/internal/source.js';
 // The one test file that needs the real stylesheet. The source surface is two
 // layers that have to lay out identically, and without the CSS there is only
@@ -704,6 +704,60 @@ describe('the frame', () => {
 });
 
 describe('the toolbar and the keyboard', () => {
+  it('inserts at the caret and takes the focus when something outside asks', async () => {
+    for (const mode of ['plain', 'wysiwyg'] as const) {
+      const onChange = vi.fn();
+      const handle: { current: MawyEditorHandle | null } = { current: null };
+      const screen = await render(
+        <div>
+          <MawyEditor defaultValue="one two" mode={mode} onChange={onChange} handle={handle} />
+          <button type="button">Outside</button>
+        </div>
+      );
+      const outside = screen.container.querySelector('button:not([data-mawy-toolbar-item])');
+
+      if (mode === 'plain') {
+        sourceOf(screen).focus();
+        sourceOf(screen).setSelectionRange(4, 7);
+      } else {
+        put(bodyOf(screen), 'one two', 4, 7);
+        await new Promise((done) => setTimeout(done, 30));
+      }
+
+      (outside as HTMLButtonElement).focus();
+      handle.current?.insert('**three**');
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one **three**'));
+
+      (outside as HTMLButtonElement).focus();
+      handle.current?.focus();
+
+      expect(document.activeElement).toBe(mode === 'plain' ? sourceOf(screen) : bodyOf(screen));
+
+      await screen.unmount();
+    }
+  });
+
+  it('inserts nothing into a read-only editor', async () => {
+    const onChange = vi.fn();
+    const handle: { current: MawyEditorHandle | null } = { current: null };
+
+    await render(
+      <MawyEditor
+        defaultValue="one"
+        modes={['plain']}
+        readOnly
+        onChange={onChange}
+        handle={handle}
+      />
+    );
+
+    handle.current?.insert('two');
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('offers the heading levels it was told to, from the menu and the keys alike', async () => {
     const onChange = vi.fn();
     const screen = await render(

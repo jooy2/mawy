@@ -138,6 +138,42 @@ There is no image upload here. The editor writes the Markdown an application han
 
 :::
 
+## From outside the editor
+
+::: fw react
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `handle` | `Ref<MawyEditorHandle>` | — | What an application can do to the editor from a control of its own. |
+
+```ts
+interface MawyEditorHandle {
+  focus(): void;
+  insert(markdown: string): void;
+}
+```
+
+`insert` writes Markdown where the caret is, in place of whatever is selected, as one step to undo, and leaves the caret after it. `focus` puts the focus back on whichever surface is showing, with the caret where it was left. Both do nothing in `preview`, and `insert` does nothing while the editor is read-only.
+
+```tsx
+const editor = useRef<MawyEditorHandle>(null);
+
+<>
+  <button onClick={() => editor.current?.insert('> [!NOTE]\n> ')}>Note</button>
+  <MawyEditor handle={editor} />
+</>;
+```
+
+It is a prop of its own because `ref` is the outermost element and stays that. Changing what `ref` is would break every application already measuring or scrolling the editor by it.
+
+:::
+
+::: fw flutter
+
+A `TextEditingController` is the Flutter way to reach into a text field, and this editor does not take one yet. `value` and `onChange` are the seam.
+
+:::
+
 ## Opening and saving
 
 ::: fw react
