@@ -261,7 +261,15 @@ export function withStrings(
   locale: MawyLocale | undefined,
   overrides: Partial<MawyStrings> | undefined
 ): MawyStrings {
-  return overrides ? { ...stringsFor(locale), ...overrides } : stringsFor(locale);
+  if (!overrides) {
+    return stringsFor(locale);
+  }
+
+  // A key given as `undefined` is a key not given, which is what it is once
+  // `useStrings` has compared it on a page — and a server has to agree.
+  const given = Object.entries(overrides).filter(([, text]) => text !== undefined);
+
+  return { ...stringsFor(locale), ...Object.fromEntries(given) };
 }
 
 /**

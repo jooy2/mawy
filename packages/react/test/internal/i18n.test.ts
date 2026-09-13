@@ -9,6 +9,8 @@ describe('strings', () => {
     expect(strings.bold).toBe('Fett');
     expect(strings.italic).toBe('기울임');
     expect(strings.lang).toBe('ko');
+    // A key given as `undefined` is a key not given, as it is on a page.
+    expect(withStrings('en', { bold: undefined }).bold).toBe('Bold');
   });
 
   it('fills every placeholder it names, once, and leaves the rest as written', () => {
