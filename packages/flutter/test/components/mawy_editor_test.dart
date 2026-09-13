@@ -974,6 +974,64 @@ void main() {
     });
   });
 
+  group('the history', () {
+    MawyToolbarButton button(WidgetTester tester, String label) => tester.widget(
+      find.byWidgetPredicate(
+        (Widget widget) => widget is MawyToolbarButton && widget.label == label,
+      ),
+    );
+
+    testWidgets('steps back and forward from the toolbar, and says when it cannot', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: 'one two', mode: MawyEditorMode.plain, onChange: seen.add)),
+      );
+
+      expect(button(tester, 'Undo').enabled, isFalse);
+      expect(button(tester, 'Redo').enabled, isFalse);
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection(baseOffset: 4, extentOffset: 7);
+      await tester.pump(const Duration(seconds: 1));
+      await press(tester, 'Bold');
+      // Flutter gathers a run of changes into one step for half a second.
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(seen.last, 'one **two**');
+      expect(button(tester, 'Undo').enabled, isTrue);
+
+      await press(tester, 'Undo');
+
+      expect(seen.last, 'one two');
+      expect(button(tester, 'Redo').enabled, isTrue);
+
+      await press(tester, 'Redo');
+
+      expect(seen.last, 'one **two**');
+    });
+
+    testWidgets('has nothing to step through in the preview or a read-only document', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one', mode: MawyEditorMode.preview)),
+      );
+
+      expect(button(tester, 'Undo').enabled, isFalse);
+
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: 'one', mode: MawyEditorMode.plain, readOnly: true)),
+      );
+
+      expect(button(tester, 'Undo').enabled, isFalse);
+    });
+  });
+
   group('the keyboard', () {
     Future<void> chord(WidgetTester tester, LogicalKeyboardKey key, {bool shift = false}) async {
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);

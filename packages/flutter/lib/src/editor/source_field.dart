@@ -377,6 +377,7 @@ class MawySourceField extends StatefulWidget {
     required this.onEnter,
     required this.onIndent,
     required this.onCommand,
+    this.undoController,
     this.scrollController,
     this.editableKey,
     this.lineNumbers = true,
@@ -414,6 +415,9 @@ class MawySourceField extends StatefulWidget {
 
   /// What a formatting shortcut runs. Absent while the document is read only.
   final void Function(MawyCommand)? onCommand;
+
+  /// The field's history, where somebody outside wants to read it and walk it.
+  final UndoHistoryController? undoController;
 
   /// The field's own scroller, where somebody outside wants to watch it.
   final ScrollController? scrollController;
@@ -711,6 +715,7 @@ class _MawySourceFieldState extends State<MawySourceField>
                     controller: controller,
                     focusNode: widget.focusNode,
                     scrollController: widget.scrollController,
+                    undoController: widget.undoController,
                     readOnly: widget.readOnly,
                     style: style,
                     cursorColor: tokens.accent,

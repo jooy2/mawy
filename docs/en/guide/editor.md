@@ -233,7 +233,7 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | Item |  |
 | --- | --- |
 | `'mode'` | The surface switch |
-| `'undo'`, `'redo'` | A step back through the history and forward again, disabled while there is none. React only |
+| `'undo'`, `'redo'` | A step back through the history and forward again, disabled while there is none |
 | `'heading'` | A menu of heading 1, 2, 3 and body text, or of the levels in `headingLevels` |
 | `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
@@ -397,7 +397,7 @@ The editor still handles the drop. **A file it will not take is refused rather t
 
 ::: fw flutter
 
-This section applies to the React package only. Here the application opens files and writes them back: a file picker is a plugin rather than a widget, and which one an app has already chosen is not a Markdown editor's decision. `MawyEditorToolbarItem` has no `open` or `save` for the same reason. `onChange` hands over the document, and the application decides where it goes.
+This section applies to the React package only. Here the application opens files and writes them back: a file picker is a plugin rather than a widget, and which one an app has already chosen is not a Markdown editor's decision. For the same reason `open` is a button the application gives a meaning with `onOpen`, and it is not drawn without one, and there is no `save`. `onChange` hands over the document, and the application decides where it goes.
 
 :::
 
@@ -453,11 +453,7 @@ The drawn document does not capture `Tab` at all. It is one focusable element, s
 
 `Mod`+`Z` goes back, `Mod`+`Shift`+`Z` comes forward again, and `Ctrl`+`Y` is the Windows spelling of the same command. The history is **one list for the whole editor** rather than one per surface.
 
-::: fw react
-
-The toolbar's `undo` and `redo` buttons do the same, and are on the default toolbar right after the surface switch, where a narrow bar keeps them. On a phone they are the only undo there is. Each is disabled while there is no step to take back or put back.
-
-:::
+The toolbar's `undo` and `redo` buttons do the same, and are on the default toolbar right after the surface switch, which is the end of the bar that stays in view on a narrow screen. On a phone they are the only undo there is. Each is disabled while there is no step to take back or put back.
 
 On its own, the source surface could have used the browser's own stack, which a `<textarea>` keeps well. But the drawn document is a `contenteditable` that refuses every input, so nothing is ever recorded on the browser's stack. With two stacks, an edit made in `wysiwyg` and taken back in `plain` would step through half of what happened and then stop.
 
@@ -469,7 +465,9 @@ A run of typing is **one step**, not one per keystroke, because an undo that giv
 
 **This section applies to the React package only, and this package keeps no history of its own.** The reason that one needs a history does not arise here. There are two editable surfaces over there and the drawn one gets no entry on the browser's stack, so a single list is the only way an edit made on one can be taken back on the other. Here there is one editable surface, an `EditableText`, and it keeps its own undo stack.
 
-So undo is Flutter's rather than this package's, and it behaves the way it does in every other text field in your application, which is what somebody typing expects. How it treats a change made by a toolbar button rather than a keystroke is also Flutter's to decide, and it matches any other `TextEditingController` written to from outside.
+So undo is Flutter's rather than this package's, and it behaves the way it does in every other text field in your application, which is what somebody typing expects. How it treats a change made by a toolbar button rather than a keystroke is also Flutter's to decide, and it matches any other `TextEditingController` written to from outside. Flutter gathers the changes made within half a second of each other into one step, so the `undo` button can take a moment after a change to have something to take back.
+
+The toolbar's two buttons walk that same history. In `preview` there is no source, so both are disabled.
 
 The keys are bound on the source itself as well as by a `WidgetsApp`. This package does not require one, and a text field outside one has a history and no key to walk it with.
 

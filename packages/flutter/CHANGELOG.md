@@ -4,11 +4,17 @@
 
 ## vNext
 
+### Breaking changes
+
+- **`MawyEditorToolbarItem` has new values**: `undo` and `redo`, which are below. A `switch` over the enum that names every value and has no `default` stops compiling until it names these too, because Dart checks such a `switch` for every value the enum has. A `toolbar` list an application wrote is unaffected, and so is any code that only compares values or builds lists of them.
+
 ### Added
 
 - **An application can hand the interface words of its own.** `strings` on `MawyEditor` and `MawyViewer` takes a `MawyStrings`, which is exported now: a locale's words from `MawyStrings.of`, with the ones that differ changed through `copyWith`. It is for an application whose translations live in a catalogue of its own, which is a better answer than this package carrying every language that catalogue has. Given, it is every word and `locale` says nothing, and the editor hands it to its preview. Two sets with the same words are equal, so one built on every build redraws nothing. The class has no public constructor and is `final`, so a word added to it later is not a breaking change for anybody. The placeholders a few strings carry, `%N`, `%T`, `%L` and `%C`, are documented on the class. The React package gained the same prop.
 
 - **The quotation, the three lists, the code block, the divider and the image have keyboard shortcuts.** The guide said every formatting command had one, and seven of them could only be reached from the toolbar. `Mod`+`Shift`+`.` quotes, `Mod`+`Shift`+`8`, `7` and `9` make a bulleted, numbered and task list, `Mod`+`Shift`+`E` fences a code block, `Mod`+`Shift`+`K` writes an image and `Mod`+`Shift`+`,` a divider. They are the React package's keys, and the reasons for each are in its guide.
+
+- **`undo` and `redo` are toolbar items.** Undo was a key and nothing else, so an editor on a phone had no undo at all. Both buttons walk the source field's own history, which is still Flutter's and still gathers a run of changes into one step, and each is drawn disabled while there is no step to take back or put back, while the document is read only, and in `preview`. They are on `kMawyEditorToolbar` straight after the surface switch. `MawyStrings` gained `undo` and `redo`.
 
 ### Fixed
 

@@ -56,6 +56,16 @@ enum MawyEditorToolbarItem {
   /// The switch between the surfaces.
   mode,
 
+  /// A step back through the history of the source.
+  ///
+  /// Drawn disabled while there is nothing to take back, while the document is
+  /// read only, and in `preview`, where there is no source to take it back in.
+  /// The history is the source field's own, which is Flutter's; see [MawyEditor].
+  undo,
+
+  /// A step forward again, drawn disabled while there is nothing to put back.
+  redo,
+
   /// `**bold**`.
   bold,
 
@@ -144,6 +154,9 @@ const List<MawyEditorMode> kMawyEditorModes = <MawyEditorMode>[
 /// The toolbar an editor draws unless it is told otherwise.
 const List<MawyEditorToolbarItem> kMawyEditorToolbar = <MawyEditorToolbarItem>[
   MawyEditorToolbarItem.mode,
+  MawyEditorToolbarItem.separator,
+  MawyEditorToolbarItem.undo,
+  MawyEditorToolbarItem.redo,
   MawyEditorToolbarItem.separator,
   MawyEditorToolbarItem.heading,
   MawyEditorToolbarItem.bold,
@@ -354,6 +367,10 @@ class _MawyEditorState extends State<MawyEditor> {
   );
   final FocusNode _focus = FocusNode();
 
+  /// The source field's history, held here so the toolbar can read it and walk
+  /// it. It is still the field's: Flutter keeps it and decides what a step is.
+  final UndoHistoryController _history = UndoHistoryController();
+
   /// The two scrollers, and what lines them up. See `_syncScroll`.
   final ScrollController _sourceScroll = ScrollController();
   final ScrollController _previewScroll = ScrollController();
@@ -466,6 +483,7 @@ class _MawyEditorState extends State<MawyEditor> {
     super.initState();
     _lastReported = _controller.text;
     _controller.addListener(_changed);
+    _history.addListener(_historyMoved);
     _sourceScroll.addListener(_syncScroll);
   }
 
@@ -505,6 +523,8 @@ class _MawyEditorState extends State<MawyEditor> {
     _controller.removeListener(_changed);
     _controller.dispose();
     _focus.dispose();
+    _history.removeListener(_historyMoved);
+    _history.dispose();
     _sourceScroll.removeListener(_syncScroll);
     _sourceScroll.dispose();
     _previewScroll.dispose();
@@ -537,6 +557,27 @@ class _MawyEditorState extends State<MawyEditor> {
     // The status bar and the toolbar's pressed states both read the selection,
     // so a caret that only moved is still a rebuild.
     setState(() {});
+  }
+
+  /// Whether there is a step to take back or put back changed, which the field
+  /// says a moment after the text changed rather than with it.
+  void _historyMoved() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /// A step through the history, from the toolbar, with the focus back in the
+  /// source so the caret shows where it happened — which is what every other
+  /// button there does.
+  void _travel({required bool back}) {
+    if (back) {
+      _history.undo();
+    } else {
+      _history.redo();
+    }
+
+    _focus.requestFocus();
   }
 
   Brightness _brightness(BuildContext context) => switch (_scheme) {
@@ -861,6 +902,7 @@ class _MawyEditorState extends State<MawyEditor> {
       onEnter: _enter,
       onIndent: _indent,
       onCommand: widget.readOnly ? null : _run,
+      undoController: _history,
       scrollController: _sourceScroll,
       editableKey: _editable,
       lineNumbers: widget.lineNumbers,
@@ -892,6 +934,9 @@ class _MawyEditorState extends State<MawyEditor> {
           colorScheme: _scheme,
           onColorScheme: widget.onColorSchemeChange == null ? null : _setScheme,
           onCommand: widget.readOnly ? null : _run,
+          canUndo: showSource && !widget.readOnly && _history.value.canUndo,
+          canRedo: showSource && !widget.readOnly && _history.value.canRedo,
+          onTravel: _travel,
           finding: _finding && showSource,
           onFind: showSource ? _openFind : null,
           onOpen: widget.readOnly ? null : widget.onOpen,
@@ -1073,6 +1118,9 @@ class _Toolbar extends StatefulWidget {
     required this.colorScheme,
     required this.onColorScheme,
     required this.onCommand,
+    required this.canUndo,
+    required this.canRedo,
+    required this.onTravel,
     required this.finding,
     required this.onFind,
     required this.onOpen,
@@ -1090,6 +1138,9 @@ class _Toolbar extends StatefulWidget {
   final MawyColorScheme colorScheme;
   final ValueChanged<MawyColorScheme>? onColorScheme;
   final ValueChanged<MawyCommand>? onCommand;
+  final bool canUndo;
+  final bool canRedo;
+  final void Function({required bool back}) onTravel;
   final bool finding;
   final VoidCallback? onFind;
   final VoidCallback? onOpen;
@@ -1213,6 +1264,25 @@ class _ToolbarState extends State<_Toolbar> {
             ),
           );
         }
+
+        continue;
+      }
+
+      if (item == MawyEditorToolbarItem.undo || item == MawyEditorToolbarItem.redo) {
+        final bool back = item == MawyEditorToolbarItem.undo;
+
+        // Here for a writer with no keyboard, which on a phone is every writer:
+        // `Mod`+`Z` is the whole of undo otherwise.
+        children.add(
+          MawyToolbarButton(
+            icon: back ? LucideIcons.undo2 : LucideIcons.redo2,
+            label: back ? widget.strings.undo : widget.strings.redo,
+            tokens: widget.tokens,
+            focusNode: next(),
+            enabled: back ? widget.canUndo : widget.canRedo,
+            onPressed: () => widget.onTravel(back: back),
+          ),
+        );
 
         continue;
       }

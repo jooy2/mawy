@@ -68,6 +68,8 @@ final class MawyStrings {
     required this.footnotes,
     required this.footnoteBack,
     required this.editor,
+    required this.undo,
+    required this.redo,
     required this.source,
     required this.sourceEscape,
     required this.mode,
@@ -211,6 +213,12 @@ final class MawyStrings {
 
   /// The editor: Document.
   final String editor;
+
+  /// The editor: Undo.
+  final String undo;
+
+  /// The editor: Redo.
+  final String redo;
 
   /// The editor: Markdown source.
   final String source;
@@ -391,6 +399,8 @@ final class MawyStrings {
     String? footnotes,
     String? footnoteBack,
     String? editor,
+    String? undo,
+    String? redo,
     String? source,
     String? sourceEscape,
     String? mode,
@@ -472,6 +482,8 @@ final class MawyStrings {
       footnotes: footnotes ?? this.footnotes,
       footnoteBack: footnoteBack ?? this.footnoteBack,
       editor: editor ?? this.editor,
+      undo: undo ?? this.undo,
+      redo: redo ?? this.redo,
       source: source ?? this.source,
       sourceEscape: sourceEscape ?? this.sourceEscape,
       mode: mode ?? this.mode,
@@ -559,6 +571,8 @@ final class MawyStrings {
       other.footnotes == footnotes &&
       other.footnoteBack == footnoteBack &&
       other.editor == editor &&
+      other.undo == undo &&
+      other.redo == redo &&
       other.source == source &&
       other.sourceEscape == sourceEscape &&
       other.mode == mode &&
@@ -641,6 +655,8 @@ final class MawyStrings {
     footnotes,
     footnoteBack,
     editor,
+    undo,
+    redo,
     source,
     sourceEscape,
     mode,
@@ -724,6 +740,8 @@ const MawyStrings _en = MawyStrings._(
   footnotes: 'Footnotes',
   footnoteBack: 'Back to where this was mentioned',
   editor: 'Document',
+  undo: 'Undo',
+  redo: 'Redo',
   source: 'Markdown source',
   sourceEscape: 'Tab indents. Press Escape and then Tab to move on.',
   mode: 'View',
@@ -806,6 +824,8 @@ const MawyStrings _ko = MawyStrings._(
   footnotes: '각주',
   footnoteBack: '언급된 자리로 돌아가기',
   editor: '문서',
+  undo: '실행 취소',
+  redo: '다시 실행',
   source: '마크다운 원문',
   sourceEscape: 'Tab은 들여쓰기입니다. 빠져나가려면 Escape를 누른 다음 Tab을 누르세요.',
   mode: '보기',

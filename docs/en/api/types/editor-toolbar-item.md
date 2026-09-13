@@ -42,6 +42,8 @@ type MawyEditorToolbarItem =
 ```dart
 enum MawyEditorToolbarItem {
   mode,
+  undo,
+  redo,
   bold,
   italic,
   strikethrough,
@@ -56,6 +58,7 @@ enum MawyEditorToolbarItem {
   codeBlock,
   rule,
   find,
+  open,
   colorScheme,
   separator,
 }
@@ -63,11 +66,13 @@ enum MawyEditorToolbarItem {
 
 :::
 
-Everything except `mode`, `find`, `colorScheme` and `separator` is a formatting command, and every one of those also has a keyboard shortcut. `find` has one too, `Mod`+`F`, and it works whether or not the button is drawn. `separator` draws a hairline rather than a control.
+Everything except `mode`, `undo`, `redo`, `find`, `open`, `save`, `colorScheme` and `separator` is a formatting command, and every one of those also has a keyboard shortcut. `find` has one too, `Mod`+`F`, and it works whether or not the button is drawn. `separator` draws a hairline rather than a control.
+
+`undo` and `redo` are the history, `Mod`+`Z` and `Mod`+`Shift`+`Z`, drawn disabled while there is nothing to take back or put back.
 
 ::: fw react
 
-`undo` and `redo` are the history, `Mod`+`Z` and `Mod`+`Shift`+`Z`, drawn disabled while there is nothing to take back or put back. `table` is a menu of the seven commands that insert a table and change its shape, each with a shortcut of its own; see [tables](../../guide/editor#tables).
+`table` is a menu of the seven commands that insert a table and change its shape, each with a shortcut of its own; see [tables](../../guide/editor#tables).
 
 `open` and `save` are here as well. `Mod`+`S` saves whether the button is drawn or not; `open` has no shortcut, because the browser's own `Mod`+`O` is a reasonable thing to leave alone and opening a file is a rare and deliberate act rather than one done mid-flow.
 
@@ -83,7 +88,7 @@ type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[];
 
 ::: fw flutter
 
-There is no `open` and no `save`. The application handles both here; see [opening and saving](../../guide/editor#opening-and-saving).
+`open` is drawn only where `onOpen` is given, because a file picker is a plugin and what a press of it opens is the application's. There is no `save`: the application has the document through `onChange` and decides where it goes. See [opening and saving](../../guide/editor#opening-and-saving).
 
 ## `kMawyEditorToolbar`
 
