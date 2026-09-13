@@ -60,11 +60,6 @@ something to read before starting rather than a job waiting for somebody.
   checked by the parity diff and not exported. A value added to the exported
   `MawyEditorToolbarItem` enum breaks an application's exhaustive `switch`, so
   the toolbar items wait for a major version.
-- **`insertTable` inside a code block or a quotation.** In a fenced code block it
-  splits the block around the table, the way `rule` and `codeBlock` already do
-  there. In a quotation the table is written without the `>` prefix, so it
-  lands after the quotation rather than in it. `insertTable` in
-  `packages/react/src/internal/commands.ts` and its twin in `commands.dart`.
 
 ## Reported
 

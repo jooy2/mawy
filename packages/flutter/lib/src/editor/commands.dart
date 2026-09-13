@@ -872,31 +872,140 @@ String _rewriteLines(
 /// A row with nothing in any of its cells, which every new one is.
 String _emptyRow(int columns) => '|${'  |' * columns}';
 
+/// A line taken apart into what its containers wrote and what is left.
+///
+/// `lead` is the prefix as it was typed and `carry` is the prefix the *next*
+/// line of the same containers takes: a quotation writes its `>` on every line
+/// of itself, and a list item writes its bullet once and indents the rest.
+///
+/// Read off the characters rather than out of the parser, which is right for
+/// the place that asks. It is writing lines into the containers the caret's own
+/// line opens with, and what those lines have to start with is what this line
+/// started with.
+({String lead, String carry, String mark}) _containerOf(String head) {
+  String lead = '';
+  String carry = '';
+  String rest = head;
+
+  for (;;) {
+    final String indent = _containerIndent.firstMatch(rest)?.group(0) ?? '';
+
+    rest = rest.substring(indent.length);
+    lead += indent;
+    carry += indent;
+
+    final String? quote = _containerQuote.firstMatch(rest)?.group(0);
+
+    if (quote != null) {
+      rest = rest.substring(quote.length);
+      lead += quote;
+      carry += quote;
+      continue;
+    }
+
+    final String? item = _containerItem.firstMatch(rest)?.group(0);
+
+    if (item == null) {
+      return (lead: lead, carry: carry, mark: rest);
+    }
+
+    rest = rest.substring(item.length);
+    lead += item;
+    carry += ' ' * item.length;
+  }
+}
+
+final RegExp _containerIndent = RegExp(r'^[ \t]*');
+final RegExp _containerQuote = RegExp(r'^>[ \t]?');
+final RegExp _containerItem = RegExp(r'^(?:[-*+]|\d{1,9}[.)])[ \t]+');
+
+/// Whether a place is inside a block whose lines are its own characters: code,
+/// or HTML.
+///
+/// Strictly inside, so the end of a closing fence is after the block and a caret
+/// there can still put something under it — except for a fence nothing closes,
+/// whose last line is still code.
+bool _verbatimAt(List<MdNode> nodes, int offset) {
+  for (final MdNode node in nodes) {
+    final int start = node.range.start;
+    final int end = node.range.end;
+    final bool open = node is MdCode && node.content.end == end && node.content.start > start;
+
+    if (offset <= start || offset > end || (offset == end && !open)) {
+      continue;
+    }
+
+    if (node is MdCode || node is MdHtmlBlock) {
+      return true;
+    }
+
+    if (_verbatimAt(_blocksIn(node), offset)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// A table of two columns, a header and one row, where the caret is.
 ///
 /// With a blank line either side of it, because a table has to be a block of
 /// its own to be one. Empty rather than filled with column names: whatever
 /// words it came with would be in the interface's language and in the document
 /// for good.
+///
+/// Inside a quotation or a list item every line of it, and the blank lines
+/// around it, carry that container's prefix, or the first line without one
+/// would end the container and the table would land after it. Inside a code
+/// block there is nothing to do: a table there is characters, and splitting the
+/// block around one would change what the rest of the code is.
 EditState? _insertTable(EditState state) {
   final String value = state.value;
+  final int start = state.start;
+  final int end = state.end;
 
-  if (_tableAt(value, state.start) != null) {
+  if (_tableAt(value, start) != null) {
     return null;
   }
 
-  final String before = value.substring(0, state.start);
-  final String after = value.substring(state.end);
-  final String lead = before.isEmpty || before.endsWith('\n\n')
-      ? ''
-      : (before.endsWith('\n') ? '\n' : '\n\n');
-  final String tail = after.isEmpty || after.startsWith('\n\n')
-      ? ''
-      : (after.startsWith('\n') ? '\n' : '\n\n');
-  final String text = '$lead${_emptyRow(2)}\n| --- | --- |\n${_emptyRow(2)}$tail';
-  final int caret = state.start + lead.length + 3;
+  final MdDocument document = parseMarkdown(value);
+  final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
 
-  return EditState(before + text + after, caret, caret);
+  if (_verbatimAt(blocks, start) || _verbatimAt(blocks, end)) {
+    return null;
+  }
+
+  final int from = start > 0 ? value.lastIndexOf('\n', start - 1) + 1 : 0;
+  final line = _containerOf(value.substring(from, start));
+  final String carry = line.carry;
+  final String blank = carry.trimRight();
+  final int stop = value.indexOf('\n', end);
+  final String rest = value.substring(end, stop == -1 ? value.length : stop);
+  final String above = from > 1
+      ? value.substring(value.lastIndexOf('\n', from - 2) + 1, from - 1)
+      : '';
+  final int next = stop == -1 ? -1 : value.indexOf('\n', stop + 1);
+  final String below = stop == -1
+      ? ''
+      : value.substring(stop + 1, next == -1 ? value.length : next);
+
+  // Words before the caret end their line, and a blank line of the same
+  // containers comes between them and the table. With none, the line is the
+  // table's own, and needs a blank line above it only where the line above has
+  // something on it — and not at all where this line opens a list item, which a
+  // table can be the first thing in.
+  final String lead = line.mark.trim().isNotEmpty
+      ? '\n$blank\n$carry'
+      : (from > 0 && line.lead == carry && _containerOf(above).mark.trim().isNotEmpty
+            ? '\n$carry'
+            : '');
+  final String tail = rest.trim().isNotEmpty
+      ? '\n$blank\n$carry'
+      : (stop != -1 && _containerOf(below).mark.trim().isNotEmpty ? '\n$blank' : '');
+  final String text = '$lead${_emptyRow(2)}\n$carry| --- | --- |\n$carry${_emptyRow(2)}$tail';
+  final int caret = start + lead.length + 3;
+
+  return EditState(value.substring(0, start) + text + value.substring(end), caret, caret);
 }
 
 EditState? _addRow(EditState state, {required bool below}) {

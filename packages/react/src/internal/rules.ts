@@ -21,6 +21,7 @@
  * break is given a line under it to carry on typing on.
  */
 
+import { containerOf } from './commands.js';
 import type { MawyEdit } from './editing.js';
 
 /** Three backticks or three tildes, and nothing else left on the line. */
@@ -28,10 +29,6 @@ const FENCE = /^(?:`{3,}|~{3,})$/;
 
 /** The three characters a break can be written with, spaces between allowed. */
 const BREAK = /^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
-
-const INDENT = /^[ \t]*/;
-const QUOTE = /^>[ \t]?/;
-const ITEM = /^(?:[-*+]|\d{1,9}[.)])[ \t]+/;
 
 /**
  * What the shorthand just completed turns into, or `null` for "not one".
@@ -46,6 +43,9 @@ export function ruleFor(value: string, at: number, text: string): MawyEdit | nul
   const ending = value.indexOf('\n', at);
   const to = ending === -1 ? value.length : ending;
   const rest = value.slice(at, to);
+  // Only the fence reads the line's containers. Inside one, the characters a
+  // break is written with are a bullet at least as often as they are a break,
+  // and telling those two apart is the parser's job rather than a pattern's.
   const { lead, carry, mark } = containerOf(head);
 
   if (FENCE.test(mark)) {
@@ -77,50 +77,6 @@ export function ruleFor(value: string, at: number, text: string): MawyEdit | nul
   }
 
   return null;
-}
-
-/**
- * A line taken apart into what its containers wrote and what is left.
- *
- * `lead` is the prefix as it was typed and `carry` is the prefix the *next*
- * line of the same containers takes: a quotation writes its `>` on every line
- * of itself, and a list item writes its bullet once and indents the rest.
- *
- * Only the fence asks for this. Inside a container the characters a break is
- * written with are a bullet at least as often as they are a break, and telling
- * those two apart is the parser's job rather than a regular expression's.
- */
-function containerOf(head: string): { lead: string; carry: string; mark: string } {
-  let lead = '';
-  let carry = '';
-  let rest = head;
-
-  for (;;) {
-    const indent = INDENT.exec(rest)?.[0] ?? '';
-
-    rest = rest.slice(indent.length);
-    lead += indent;
-    carry += indent;
-
-    const quote = QUOTE.exec(rest)?.[0];
-
-    if (quote) {
-      rest = rest.slice(quote.length);
-      lead += quote;
-      carry += quote;
-      continue;
-    }
-
-    const item = ITEM.exec(rest)?.[0];
-
-    if (!item) {
-      return { lead, carry, mark: rest };
-    }
-
-    rest = rest.slice(item.length);
-    lead += item;
-    carry += ' '.repeat(item.length);
-  }
 }
 
 /**

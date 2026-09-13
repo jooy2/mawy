@@ -757,11 +757,91 @@ function emptyRow(columns: number): string {
 }
 
 /**
+ * A line taken apart into what its containers wrote and what is left.
+ *
+ * `lead` is the prefix as it was typed and `carry` is the prefix the *next*
+ * line of the same containers takes: a quotation writes its `>` on every line
+ * of itself, and a list item writes its bullet once and indents the rest.
+ *
+ * Read off the characters rather than out of the parser, which is right for
+ * the two places that ask. Both are writing lines into the containers the
+ * caret's own line opens with, and what those lines have to start with is what
+ * this line started with.
+ */
+export function containerOf(head: string): { lead: string; carry: string; mark: string } {
+  let lead = '';
+  let carry = '';
+  let rest = head;
+
+  for (;;) {
+    const indent = /^[ \t]*/.exec(rest)?.[0] ?? '';
+
+    rest = rest.slice(indent.length);
+    lead += indent;
+    carry += indent;
+
+    const quote = /^>[ \t]?/.exec(rest)?.[0];
+
+    if (quote) {
+      rest = rest.slice(quote.length);
+      lead += quote;
+      carry += quote;
+      continue;
+    }
+
+    const item = /^(?:[-*+]|\d{1,9}[.)])[ \t]+/.exec(rest)?.[0];
+
+    if (!item) {
+      return { lead, carry, mark: rest };
+    }
+
+    rest = rest.slice(item.length);
+    lead += item;
+    carry += ' '.repeat(item.length);
+  }
+}
+
+/**
+ * Whether a place is inside a block whose lines are its own characters: code,
+ * or HTML.
+ *
+ * Strictly inside, so the end of a closing fence is after the block and a
+ * caret there can still put something under it — except for a fence nothing
+ * closes, whose last line is still code.
+ */
+function verbatimAt(nodes: readonly MdNode[], offset: number): boolean {
+  for (const node of nodes) {
+    const { start, end } = node.range;
+    const open = node.type === 'code' && node.content.end === end && node.content.start > start;
+
+    if (offset <= start || offset > end || (offset === end && !open)) {
+      continue;
+    }
+
+    if (node.type === 'code' || node.type === 'html') {
+      return true;
+    }
+
+    if ('children' in node && verbatimAt(node.children as MdNode[], offset)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * A table of two columns, a header and one row, where the caret is.
  *
  * With a blank line either side of it, because a table has to be a block of its
  * own to be one. Empty rather than filled with column names: whatever words it
  * came with would be in the interface's language and in the document for good.
+ *
+ * Inside a quotation or a list item every line of it, and the blank lines
+ * around it, carry that container's prefix, or the first line without one
+ * would end the container and the table would land after it. Inside a code
+ * block there is nothing to do: a table there is characters, and splitting the
+ * block around one would change what the rest of the code is.
  */
 function insertTable(state: EditState): EditState | null {
   const { value, start, end } = state;
@@ -770,14 +850,41 @@ function insertTable(state: EditState): EditState | null {
     return null;
   }
 
-  const before = value.slice(0, start);
-  const after = value.slice(end);
-  const lead = !before || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
-  const tail = !after || after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
-  const text = `${lead}${emptyRow(2)}\n| --- | --- |\n${emptyRow(2)}${tail}`;
+  const document = parseMarkdown(value);
+  const blocks = [...document.root.children, ...document.footnotes];
+
+  if (verbatimAt(blocks, start) || verbatimAt(blocks, end)) {
+    return null;
+  }
+
+  const from = start > 0 ? value.lastIndexOf('\n', start - 1) + 1 : 0;
+  const { lead: opened, carry, mark } = containerOf(value.slice(from, start));
+  const blank = carry.trimEnd();
+  const stop = value.indexOf('\n', end);
+  const rest = value.slice(end, stop === -1 ? value.length : stop);
+  const above = from > 1 ? value.slice(value.lastIndexOf('\n', from - 2) + 1, from - 1) : '';
+  const next = stop === -1 ? -1 : value.indexOf('\n', stop + 1);
+  const below = stop === -1 ? '' : value.slice(stop + 1, next === -1 ? value.length : next);
+
+  // Words before the caret end their line, and a blank line of the same
+  // containers comes between them and the table. With none, the line is the
+  // table's own, and needs a blank line above it only where the line above has
+  // something on it — and not at all where this line opens a list item, which
+  // a table can be the first thing in.
+  const lead = mark.trim()
+    ? `\n${blank}\n${carry}`
+    : from > 0 && opened === carry && containerOf(above).mark.trim()
+      ? `\n${carry}`
+      : '';
+  const tail = rest.trim()
+    ? `\n${blank}\n${carry}`
+    : stop !== -1 && containerOf(below).mark.trim()
+      ? `\n${blank}`
+      : '';
+  const text = `${lead}${emptyRow(2)}\n${carry}| --- | --- |\n${carry}${emptyRow(2)}${tail}`;
   const caret = start + lead.length + 3;
 
-  return { value: before + text + after, start: caret, end: caret };
+  return { value: value.slice(0, start) + text + value.slice(end), start: caret, end: caret };
 }
 
 function addRow(state: EditState, below: boolean): EditState | null {

@@ -284,6 +284,43 @@ describe('tables', () => {
     expect(table('insertTable', TABLE.replace('c', 'c^'))).toBe(null);
   });
 
+  it('inserts a table inside the quotation or list item the caret is in', () => {
+    expect(table('insertTable', '> Quoted.^')).toBe(
+      '> Quoted.\n>\n> |  ^|  |\n> | --- | --- |\n> |  |  |'
+    );
+    expect(table('insertTable', '> One.^\n> Two.')).toBe(
+      '> One.\n>\n> |  ^|  |\n> | --- | --- |\n> |  |  |\n>\n> Two.'
+    );
+    expect(table('insertTable', '> Before.^After.')).toBe(
+      '> Before.\n>\n> |  ^|  |\n> | --- | --- |\n> |  |  |\n>\n> After.'
+    );
+    expect(table('insertTable', '> One.\n> ^')).toBe(
+      '> One.\n> \n> |  ^|  |\n> | --- | --- |\n> |  |  |'
+    );
+    expect(table('insertTable', '- Item.^\n- Next.')).toBe(
+      '- Item.\n\n  |  ^|  |\n  | --- | --- |\n  |  |  |\n\n- Next.'
+    );
+    // A list item with nothing in it yet takes the table as its first block.
+    expect(table('insertTable', '- One.\n- ^')).toBe(
+      '- One.\n- |  ^|  |\n  | --- | --- |\n  |  |  |'
+    );
+    expect(table('insertTable', '- > Nested.^')).toBe(
+      '- > Nested.\n  >\n  > |  ^|  |\n  > | --- | --- |\n  > |  |  |'
+    );
+  });
+
+  it('does nothing inside a code block or a block of HTML', () => {
+    expect(table('insertTable', '```\nco^de\n```')).toBe(null);
+    expect(table('insertTable', '```\ncode^')).toBe(null);
+    expect(table('insertTable', '    co^de')).toBe(null);
+    expect(table('insertTable', '> ```\n> co^de\n> ```')).toBe(null);
+    expect(table('insertTable', '<div>\nwo^rds\n</div>')).toBe(null);
+    // After the closing fence is after the block.
+    expect(table('insertTable', '```\ncode\n```^')).toBe(
+      '```\ncode\n```\n\n|  ^|  |\n| --- | --- |\n|  |  |'
+    );
+  });
+
   it('adds a row under the caret and above it, but never above the header', () => {
     expect(table('addRowBelow', TABLE.replace('c', 'c^'))).toBe(`${TABLE}\n|  ^|  |`);
     expect(table('addRowBelow', TABLE.replace('a', 'a^'))).toBe(
