@@ -117,6 +117,89 @@ describe('a document rendered on a server', () => {
     );
   });
 
+  /**
+   * An editor that wrote a resized picture by putting its address between two
+   * quotes, unescaped, left every query string in its documents with a bare `&`
+   * in it — and a browser reads `&y=2` in an attribute as those characters.
+   */
+  it('reads an `&` that begins no reference as the character it is', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument
+        html="sanitize"
+        value={'<img width="10" src="https://example.com/a.webp?x=1&y=2" alt="Tom & Jerry" />'}
+      />
+    );
+
+    expect(html).toContain(
+      '<img src="https://example.com/a.webp?x=1&amp;y=2" alt="Tom &amp; Jerry" width="10"'
+    );
+    expect(html).not.toContain('&lt;');
+  });
+
+  /**
+   * The browser is the one that decides what an attribute says, and this suite
+   * runs in three of them. Every value here is either left as characters, or
+   * read exactly the way the engine running the test reads it.
+   */
+  it('reads the values it accepts the way the browser does, and only those', () => {
+    const parser = new DOMParser();
+    const accepted: string[] = [];
+
+    for (const value of [
+      '/a.png?x=1&y=2',
+      '/a.png?x=1&amp;y=2',
+      '/a.png?x=1&',
+      '/a.png?x=1&&y=2',
+      '/a.png?x=1&=2',
+      '/a.png?x=1&%26=2',
+      '/a.png?x=1&é=2',
+      // A name a browser decodes without a semicolon, followed by `=`, which
+      // is the one place it does not.
+      '/a.png?x=1&lt=2',
+      '/a.png?x=1&copy=2',
+      '/a.png?x=1&ampx=2',
+      // Left as characters. What a browser makes of these depends on the table
+      // of names, where `&not_x` is `¬_x`, or on how it reads a number.
+      '/a.png?x=1&not_x=2',
+      '/a.png?x=1&utm_source=2',
+      '/a.png?a&b',
+      '/a.png?x=1&copy-2',
+      '/a.png?x=1&copy',
+      '/a.png?x=1&AMP;y=2',
+      '/a.png?x=1&#38;y=2',
+      '/a.png?x=1&#38y=2',
+      '/a.png?x=1&#y=2'
+    ]) {
+      const markup = `<img src="${value}">`;
+      const drawn = parser
+        .parseFromString(
+          renderToStaticMarkup(<MawyDocument html="sanitize" value={markup} />),
+          'text/html'
+        )
+        .querySelector('img');
+
+      if (drawn) {
+        accepted.push(value);
+        expect(drawn.getAttribute('src'), value).toBe(
+          parser.parseFromString(markup, 'text/html').querySelector('img')?.getAttribute('src')
+        );
+      }
+    }
+
+    expect(accepted).toEqual([
+      '/a.png?x=1&y=2',
+      '/a.png?x=1&amp;y=2',
+      '/a.png?x=1&',
+      '/a.png?x=1&&y=2',
+      '/a.png?x=1&=2',
+      '/a.png?x=1&%26=2',
+      '/a.png?x=1&é=2',
+      '/a.png?x=1&lt=2',
+      '/a.png?x=1&copy=2',
+      '/a.png?x=1&ampx=2'
+    ]);
+  });
+
   it('pairs only tags a browser has one way to read', () => {
     for (const markup of ['a <u class="x">b</u> c', 'a <u>b</i> c', 'a <u>b']) {
       expect(renderToStaticMarkup(<MawyDocument html="sanitize" value={markup} />)).toContain(

@@ -805,8 +805,7 @@ const PLAIN_IMAGE_ATTRIBUTES = new Set(['src', 'alt', 'width', 'height', 'title'
  * Only these, because a browser reads the others by rules that depend on what
  * follows them — `&copy` with no semicolon is `©` in a paragraph and is left
  * alone in an attribute when a letter comes next — and a value this file read
- * one way and a browser another would be a picture pointing somewhere else. A
- * value with any other `&` in it is not read here at all.
+ * one way and a browser another would be a picture pointing somewhere else.
  */
 const PLAIN_REFERENCES: Readonly<Record<string, string>> = {
   '&amp;': '&',
@@ -817,11 +816,34 @@ const PLAIN_REFERENCES: Readonly<Record<string, string>> = {
   '&#39;': "'"
 };
 
+/**
+ * Every `&` in an attribute value: one of the references above, one that
+ * begins no reference at all, or one this file does not read.
+ *
+ * An `&` begins no reference when what follows it could not be the start of
+ * one — the end of the value, or anything but a letter, a digit or `#`, since
+ * `&#38` is an `&` with or without its semicolon — and when letters and digits
+ * follow it and then `=`. The second is the HTML standard's rule for query
+ * strings: inside an attribute, a name followed by `=` is never decoded,
+ * whatever the name is. So `?x=1&y=2` is those characters in every browser, and
+ * neither case needs the table of names.
+ *
+ * Anything else is left unread, because the table is what decides it: `&not_x`
+ * is `¬_x` to a browser and `&utm_source` is not, and the difference is that
+ * `not` is one of the names a browser still decodes without a semicolon.
+ */
+const AMPERSANDS = /(&(?:amp|lt|gt|quot|apos|#39);)|(&(?=[^A-Za-z0-9#]|[A-Za-z0-9]+=|$))|&/g;
+
 /** An attribute value with its references read, or `null` for one not read here. */
 function plainValue(value: string): string | null {
-  const read = value.replace(/&(?:amp|lt|gt|quot|apos|#39);/g, (each) => PLAIN_REFERENCES[each]);
+  let unread = false;
+  const read = value.replace(AMPERSANDS, (each, reference?: string, literal?: string) => {
+    unread ||= !reference && !literal;
 
-  return value.replace(/&(?:amp|lt|gt|quot|apos|#39);/g, '').includes('&') ? null : read;
+    return reference ? PLAIN_REFERENCES[reference] : each;
+  });
+
+  return unread ? null : read;
 }
 
 /**
