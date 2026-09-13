@@ -61,6 +61,8 @@ import { movePlace, type MawyChange, type MawyPlace } from '../../internal/place
 interface MawyUpload extends MawyPlace {
   /** Which of two uploads waiting at the same spot started first. */
   order: number;
+  /** How many images it is, for `onUploadingChange`. */
+  images: number;
   /** What to write, once every file has answered. `null` until then. */
   markdown: string | null;
   /**
@@ -206,6 +208,18 @@ export interface MawyEditorProps extends Omit<
    * writes without one. `Mod`+`Shift`+`U` opens the same picker.
    */
   onUploadImage?: MawyImageUpload;
+
+  /**
+   * How many images are on their way into the document, whenever that changes.
+   *
+   * Called with the count when an upload starts and again when its images are
+   * written, refused or given up on, so zero means the document is the one the
+   * reader will end up with. What an application does with it is hold its save
+   * button: a document saved while an image is still uploading is saved without
+   * it. An upload that finished while the editor was read-only still counts
+   * until it is written, and an editor taken off the page says zero on its way.
+   */
+  onUploadingChange?: (count: number) => void;
 
   /**
    * Where a saved document goes, when the application would rather say.
@@ -371,6 +385,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     toolbar = true,
     status = true,
     onUploadImage,
+    onUploadingChange,
     parse,
     html = 'escape',
     linkTarget = 'blank',
@@ -898,6 +913,49 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    */
   const places = React.useRef<MawyUpload[]>([]);
   const started = React.useRef(0);
+  /** The last count `onUploadingChange` was told, so it hears only of a change. */
+  const told = React.useRef(0);
+  const uploading = React.useRef(onUploadingChange);
+
+  React.useEffect(() => {
+    uploading.current = onUploadingChange;
+  });
+
+  /** How many images are out, said to the application when that changes. */
+  const recount = React.useCallback(() => {
+    const count = places.current.reduce((sum, place) => sum + place.images, 0);
+
+    if (count !== told.current) {
+      told.current = count;
+      uploading.current?.(count);
+    }
+  }, []);
+
+  /** An upload taken off the list, whether it was written, refused or abandoned. */
+  const forget = React.useCallback(
+    (place: MawyUpload) => {
+      const index = places.current.indexOf(place);
+
+      if (index !== -1) {
+        places.current.splice(index, 1);
+        recount();
+      }
+    },
+    [recount]
+  );
+
+  // An editor taken off the page takes its uploads with it — nothing it was
+  // waiting for will be written anywhere — so an application holding its save
+  // button until the count is zero is not left holding it for ever.
+  React.useEffect(
+    () => () => {
+      if (told.current) {
+        told.current = 0;
+        uploading.current?.(0);
+      }
+    },
+    []
+  );
   /** The document the places were last moved to. */
   const shown = React.useRef(text);
   /**
@@ -925,7 +983,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         // A paste an application refused to take never made the document its
         // pictures were counted in, and there is nowhere left for them to go.
         if (place.waiting !== text) {
-          places.current.splice(places.current.indexOf(place), 1);
+          forget(place);
         }
 
         place.waiting = null;
@@ -936,7 +994,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // front of it when it was pasted first, and behind it otherwise.
       Object.assign(place, movePlace(place, change, own !== null && place.order > own.order));
     }
-  }, [text]);
+  }, [forget, text]);
 
   /**
    * The note taken down once nothing is uploading, unless what it says is that
@@ -982,13 +1040,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    */
   const putImage = (place: MawyUpload) => {
     const markdown = place.markdown;
-    const index = places.current.indexOf(place);
-
-    if (readOnly || markdown === null || index === -1) {
+    if (readOnly || markdown === null || !places.current.includes(place)) {
       return;
     }
-
-    places.current.splice(index, 1);
 
     const value = shown.current;
     const start = Math.min(place.start, value.length);
@@ -1013,6 +1067,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     setRoom(null);
     setSelection(caret);
     write(next);
+    forget(place);
     settled();
   };
 
@@ -1060,10 +1115,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         end: at.end,
         order: started.current,
         markdown: null,
-        waiting: after
+        waiting: after,
+        images: files.length
       };
 
       places.current.push(place);
+      recount();
       setNote({ text: strings.uploading, failed: false });
 
       const written: string[] = [];
@@ -1103,8 +1160,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       if (written.length) {
         place.markdown = written.join('\n\n');
         putLater.current(place);
-      } else if (places.current.includes(place)) {
-        places.current.splice(places.current.indexOf(place), 1);
+      } else {
+        forget(place);
       }
 
       /*
@@ -1128,7 +1185,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         settled();
       }
     },
-    [readOnly, settled, strings]
+    [forget, readOnly, recount, settled, strings]
   );
 
   /**

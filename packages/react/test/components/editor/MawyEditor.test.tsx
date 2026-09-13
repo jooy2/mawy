@@ -3256,6 +3256,63 @@ describe('images', () => {
     );
   });
 
+  it('tells the application how many images are still on their way in', async () => {
+    const upload = slowUpload();
+    const onUploadingChange = vi.fn();
+    const props = {
+      defaultValue: 'Saving.',
+      modes: ['plain'] as const,
+      onUploadImage: upload.hook,
+      onUploadingChange
+    };
+    const screen = await render(<MawyEditor {...props} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    pasteFiles(input, [png('a.png')]);
+    drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [
+      png('b.png'),
+      png('c.png')
+    ]);
+
+    await vi.waitFor(() => expect(onUploadingChange).toHaveBeenLastCalledWith(3));
+
+    await upload.settle('/a.png');
+    await vi.waitFor(() => expect(onUploadingChange).toHaveBeenLastCalledWith(2));
+
+    // Answered while read-only, and still not in the document, so still counted.
+    await screen.rerender(<MawyEditor {...props} readOnly />);
+    await upload.settle('/b.png');
+    await upload.settle(null);
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(onUploadingChange).toHaveBeenLastCalledWith(2);
+
+    await screen.rerender(<MawyEditor {...props} />);
+    await vi.waitFor(() => expect(onUploadingChange).toHaveBeenLastCalledWith(0));
+    expect(input.value).toContain('![b](/b.png)');
+  });
+
+  it('says nothing is uploading when it is taken off the page', async () => {
+    const onUploadingChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onUploadImage={() => new Promise<string>(() => {})}
+        onUploadingChange={onUploadingChange}
+      />
+    );
+
+    drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
+
+    await vi.waitFor(() => expect(onUploadingChange).toHaveBeenLastCalledWith(1));
+    await screen.unmount();
+
+    expect(onUploadingChange).toHaveBeenLastCalledWith(0);
+  });
+
   it('does not upload into a read-only editor', async () => {
     const onUploadImage = vi.fn(async () => '/a.png');
     const screen = await render(

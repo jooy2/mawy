@@ -325,6 +325,19 @@ The image lands where it was put: a drop goes to the point the pointer let go of
 
 **A read-only document is not changed by an upload that finishes while it is one.** `readOnly` is what an application sets while it saves, and an image written in the middle of a save would be on the screen and missing from what was saved. So the image waits, the note under the document still says it is being added, and it is written where it was put as soon as `readOnly` is lifted.
 
+**`onUploadingChange` says how many images are still on their way in**, each time that changes, so an application can hold its save button until the count is zero. A document saved before then is saved without those images. An image that finished uploading while the editor was read-only still counts until it is written, and an editor taken off the page reports zero as it goes, because nothing it was waiting for will be written anywhere.
+
+```tsx
+const [uploading, setUploading] = useState(0);
+
+<>
+  <MawyEditor onUploadImage={upload} onUploadingChange={setUploading} />
+  <button disabled={uploading > 0} onClick={save}>
+    Save
+  </button>
+</>;
+```
+
 ## Colour in the preview
 
 `highlight` is passed straight through to the viewer inside the preview, so a `split` or `preview` surface colours its code the way [the viewer does](./viewer#colouring-a-code-block). The lazy form works here too, and is the one to use:
