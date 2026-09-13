@@ -85,6 +85,10 @@ export interface MawyStrings {
   codeSpan: string;
   link: string;
   image: string;
+  /** The image menu's entry that chooses a file, where an upload is possible. */
+  imageUpload: string;
+  /** And the one that writes `![](url)` for an address to be typed in. */
+  imageLink: string;
   heading: string;
   heading1: string;
   heading2: string;
@@ -191,6 +195,8 @@ const en: MawyStrings = {
   codeSpan: 'Code',
   link: 'Link',
   image: 'Image',
+  imageUpload: 'Upload an image',
+  imageLink: 'Link to an image',
   heading: 'Heading',
   heading1: 'Heading 1',
   heading2: 'Heading 2',
@@ -288,6 +294,8 @@ const ko: MawyStrings = {
   codeSpan: '코드',
   link: '링크',
   image: '이미지',
+  imageUpload: '이미지 올리기',
+  imageLink: '이미지 링크 넣기',
   heading: '제목',
   heading1: '제목 1',
   heading2: '제목 2',

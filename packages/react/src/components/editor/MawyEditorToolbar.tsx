@@ -4,7 +4,7 @@ import * as React from 'react';
 import type { MawyColorScheme, MawyEditorToolbarItem, MawyMode } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MawyCommand } from '../../internal/commands.js';
-import { Choice, IconButton, Menu } from '../../internal/controls.js';
+import { Actions, Choice, IconButton, Menu } from '../../internal/controls.js';
 import { tabStops, useRoving } from '../../internal/roving.js';
 import {
   BoldIcon,
@@ -24,6 +24,7 @@ import {
   MoreIcon,
   OpenFileIcon,
   OrderedListIcon,
+  UploadIcon,
   ParagraphIcon,
   PreviewIcon,
   QuoteIcon,
@@ -55,6 +56,11 @@ export interface MawyEditorToolbarProps {
   finding: boolean;
   /** Absent while the document cannot be replaced. */
   onOpen?: () => void;
+  /**
+   * Chooses an image file to upload. Present only where the application has
+   * said where an image goes, and then `image` is a menu of that and the link.
+   */
+  onPickImage?: () => void;
   onSave: () => void;
 }
 
@@ -224,6 +230,7 @@ export function MawyEditorToolbar({
   onFind,
   finding,
   onOpen,
+  onPickImage,
   onSave
 }: MawyEditorToolbarProps): React.ReactElement {
   const { onKeyDown, itemProps } = useRoving();
@@ -341,6 +348,37 @@ export function MawyEditorToolbar({
                 value: 'paragraph',
                 label: strings.paragraph,
                 icon: <ParagraphIcon className="mawy-icon" aria-hidden="true" />
+              }
+            ]}
+          />
+        </Menu>
+      );
+    }
+
+    if (item === 'image' && onPickImage) {
+      // Two ways in, because somebody on a phone has no file to drag and no
+      // clipboard with a screenshot on it, and somebody with a picture already
+      // on the web has nothing to upload.
+      return (
+        <Menu
+          key={key}
+          label={strings.image}
+          icon={<ImageIcon className="mawy-icon" aria-hidden="true" />}
+          disabled={!editable}
+          {...itemProps(at)}
+        >
+          <Actions
+            label={strings.image}
+            actions={[
+              {
+                label: strings.imageUpload,
+                icon: <UploadIcon className="mawy-icon" aria-hidden="true" />,
+                run: onPickImage
+              },
+              {
+                label: strings.imageLink,
+                icon: <LinkIcon className="mawy-icon" aria-hidden="true" />,
+                run: () => onCommand('image')
               }
             ]}
           />

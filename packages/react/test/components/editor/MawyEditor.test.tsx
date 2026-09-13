@@ -2594,6 +2594,105 @@ describe('images', () => {
     await vi.waitFor(() => expect(input.value).toBe('Look: ![](url)'));
   });
 
+  /**
+   * The image picker, answered with these files.
+   *
+   * A real picker is a window of the operating system's, so its `click` is
+   * stubbed and what it would have handed back is put on the input directly.
+   */
+  function choose(screen: { container: HTMLElement }, files: File[]) {
+    const input = screen.container.querySelector(
+      'input[type="file"][accept="image/*"]'
+    ) as HTMLInputElement;
+    const chosen = new DataTransfer();
+
+    for (const file of files) {
+      chosen.items.add(file);
+    }
+
+    input.files = chosen.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  it('chooses image files from the toolbar, on every surface that edits', async () => {
+    const opened = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+
+    try {
+      for (const mode of ['wysiwyg', 'plain', 'split'] as const) {
+        const onChange = vi.fn();
+        const screen = await render(
+          <MawyEditor
+            defaultValue="Look: here."
+            mode={mode}
+            onChange={onChange}
+            onUploadImage={async (file) => `/${file.name}`}
+            style={WIDE}
+          />
+        );
+
+        if (mode === 'wysiwyg') {
+          put(bodyOf(screen), 'Look: here.', 6);
+        } else {
+          sourceOf(screen).focus();
+          sourceOf(screen).setSelectionRange(6, 6);
+        }
+
+        opened.mockClear();
+        await screen.getByRole('button', { name: 'Image' }).click();
+        await screen.getByRole('button', { name: 'Upload an image' }).click();
+
+        expect(opened).toHaveBeenCalledTimes(1);
+
+        const input = screen.container.querySelector(
+          'input[type="file"][accept="image/*"]'
+        ) as HTMLInputElement;
+
+        expect(input.multiple).toBe(true);
+
+        choose(screen, [png('a.png'), png('b.png')]);
+
+        // Where the caret was before the picker opened, both at once.
+        await vi.waitFor(() =>
+          expect(onChange).toHaveBeenLastCalledWith('Look: ![a](/a.png)\n\n![b](/b.png)here.')
+        );
+        expect(onChange).toHaveBeenCalledTimes(1);
+
+        await screen.unmount();
+      }
+    } finally {
+      opened.mockRestore();
+    }
+  });
+
+  it('opens the picker from the keyboard, and still links an image without one', async () => {
+    const opened = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+
+    try {
+      const screen = await render(
+        <MawyEditor
+          defaultValue="Look: "
+          modes={['plain']}
+          onUploadImage={async () => '/a.png'}
+          style={WIDE}
+        />
+      );
+      const input = sourceOf(screen);
+
+      input.focus();
+      input.setSelectionRange(6, 6);
+      keys(input, 'U', true);
+
+      expect(opened).toHaveBeenCalledTimes(1);
+
+      await screen.getByRole('button', { name: 'Image' }).click();
+      await screen.getByRole('button', { name: 'Link to an image' }).click();
+
+      await vi.waitFor(() => expect(input.value).toBe('Look: ![](url)'));
+    } finally {
+      opened.mockRestore();
+    }
+  });
+
   it('uploads a dropped file and writes what came back', async () => {
     const onChange = vi.fn();
     const onUploadImage = vi.fn(async () => '/uploads/a.png');

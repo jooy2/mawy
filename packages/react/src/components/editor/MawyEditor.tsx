@@ -161,9 +161,11 @@ export interface MawyEditorProps extends Omit<
    * application's decision. `MawyImageUpload` has the rest of why. Nothing here
    * touches an image that is already on the web — one pasted as part of a page
    * arrives as the URL it already had, upload or no upload, and only a picture
-   * pasted as a `data:` address is uploaded like a file — and nothing here
-   * touches the toolbar's image button, which writes `![](url)` for you to fill
-   * in.
+   * pasted as a `data:` address is uploaded like a file.
+   *
+   * With it, the toolbar's image button is a menu: a file chosen from the device
+   * — the photo library or the camera, on a phone — and the `![](url)` it
+   * writes without one. `Mod`+`Shift`+`U` opens the same picker.
    */
   onUploadImage?: MawyImageUpload;
 
@@ -1005,6 +1007,53 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   );
 
   /**
+   * An image file chosen from the device, which is the way in that needs
+   * neither a drag nor a clipboard.
+   *
+   * On a phone or a tablet those two are the ways that are not there: nothing
+   * is dragged from a desktop, and a picture in the photo library is not on the
+   * clipboard. `image/*` is what makes a phone offer the library and the camera
+   * rather than a list of files.
+   *
+   * The place is read when the picker opens, because by the time a file comes
+   * back the focus has been on the toolbar and the picker, and the caret that
+   * mattered is the one before either.
+   */
+  const imagePicker = React.useRef<HTMLInputElement>(null);
+  const pickedFor = React.useRef<MawyPlace | null>(null);
+
+  const pickImage = React.useCallback(() => {
+    const state = readOnly || !upload.current ? null : stateNow();
+
+    if (!state) {
+      return;
+    }
+
+    pickedFor.current = { start: state.start, end: state.end };
+    imagePicker.current?.click();
+  }, [readOnly, stateNow]);
+
+  const onImagesPicked = (files: File[]) => {
+    const at = pickedFor.current;
+    const images = files.filter((file) => file.type.startsWith('image/'));
+
+    pickedFor.current = null;
+
+    if (!at) {
+      return;
+    }
+
+    if (!images.length) {
+      // The picker was switched to every file and something else was chosen.
+      setNote({ text: strings.uploadFailed, failed: true });
+
+      return;
+    }
+
+    void addImages(images, at);
+  };
+
+  /**
    * Where a file was dropped, in the document's own offsets.
    *
    * On the drawn document that is the point it was let go over, read back
@@ -1247,6 +1296,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       if (key === 'x') {
         event.preventDefault();
         run(state, runCommand('strikethrough', state));
+      }
+
+      if (key === 'u' && upload.current) {
+        event.preventDefault();
+        pickImage();
       }
 
       return;
@@ -1503,6 +1557,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           onFind={showSource ? openFind : undefined}
           finding={finding && showSource}
           onOpen={readOnly ? undefined : openFile}
+          onPickImage={onUploadImage ? pickImage : undefined}
           onSave={save}
         />
       </React.Fragment>
@@ -1721,6 +1776,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       ) : null}
 
       <FilePicker ref={picker} accept={accept} onFile={(file) => void read(file)} />
+      {onUploadImage ? (
+        <FilePicker ref={imagePicker} accept="image/*" multiple onFiles={onImagesPicked} />
+      ) : null}
 
       {/* Whatever the mode. `preview` has no caret, so the position and the
           selection report the one the source surface was left with — which is

@@ -53,6 +53,8 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
 export interface MenuProps {
   label: string;
   icon: React.ReactNode;
+  /** Off in the modes where what the menu holds has nothing to act on. */
+  disabled?: boolean;
   /**
    * What is inside the panel.
    *
@@ -100,7 +102,7 @@ const Dismiss = React.createContext<(() => void) | null>(null);
  * on and the component does not honour is worse than no role at all.
  */
 export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu(
-  { label, icon, children, tabIndex, onFocus },
+  { label, icon, disabled, children, tabIndex, onFocus },
   ref
 ) {
   const [open, setOpen] = React.useState(false);
@@ -162,6 +164,7 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
         label={label}
         icon={icon}
         pressed={open}
+        disabled={disabled}
         tabIndex={tabIndex}
         onFocus={onFocus}
         aria-expanded={open}
@@ -288,6 +291,69 @@ export function Choice<T extends string>({
   );
 }
 
+export interface ActionsProps {
+  label: string;
+  actions: readonly { label: string; icon?: React.ReactNode; run: () => void }[];
+}
+
+/**
+ * A few things to do, as a list that looks like a `Choice`.
+ *
+ * Buttons rather than radios, because nothing here is a value being chosen:
+ * the image menu's two entries each do something and then the panel has done
+ * its job. Everything else is the `Choice` above — one tab stop, the arrows
+ * inside, and the panel shut once an entry has been pressed.
+ */
+export function Actions({ label, actions }: ActionsProps): React.ReactElement {
+  const dismiss = React.useContext(Dismiss);
+  const group = React.useRef<HTMLDivElement>(null);
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const buttons = [...(group.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const to =
+      event.key === 'ArrowDown' || event.key === 'ArrowRight'
+        ? at + 1
+        : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+          ? at - 1
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? buttons.length - 1
+              : null;
+
+    if (at === -1 || to === null) {
+      return;
+    }
+
+    event.preventDefault();
+    buttons[(to + buttons.length) % buttons.length].focus();
+  };
+
+  return (
+    <div className="mawy-choice" role="group" aria-label={label} ref={group} onKeyDown={onKeyDown}>
+      {actions.map((action, index) => (
+        <button
+          key={action.label}
+          type="button"
+          className="mawy-choice-option"
+          tabIndex={index === 0 ? 0 : -1}
+          onClick={() => {
+            // Shut first: what an entry does may open something of its own —
+            // a file picker — and the panel should not still be over the page
+            // when it comes back.
+            dismiss?.();
+            action.run();
+          }}
+        >
+          {action.icon}
+          <span>{action.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export interface SliderProps {
   label: string;
   value: number;
@@ -367,21 +433,29 @@ export function Slider({
  */
 export const FilePicker = React.forwardRef<
   HTMLInputElement,
-  { accept: string; onFile: (file: File) => void }
->(function FilePicker({ accept, onFile }, ref) {
+  {
+    accept: string;
+    /** Whether several files can be chosen at once, which `onFiles` is handed. */
+    multiple?: boolean;
+    onFile?: (file: File) => void;
+    onFiles?: (files: File[]) => void;
+  }
+>(function FilePicker({ accept, multiple, onFile, onFiles }, ref) {
   return (
     <input
       ref={ref}
       type="file"
       className="mawy-file-input"
       accept={accept}
+      multiple={multiple}
       tabIndex={-1}
       aria-hidden="true"
       onChange={(event) => {
-        const file = event.currentTarget.files?.[0];
+        const files = [...(event.currentTarget.files ?? [])];
 
-        if (file) {
-          onFile(file);
+        if (files.length) {
+          onFiles?.(files);
+          onFile?.(files[0]);
         }
 
         // Cleared, so that choosing the same file twice in a row is two events

@@ -6,6 +6,8 @@
 
 ### Added
 
+- **An image file can be chosen from the toolbar.** Where `onUploadImage` is given, the `image` button is a menu of two: _Upload an image_ opens the device's picker, and _Link to an image_ writes the `![](url)` it always did. A drop and a paste were the only ways to reach `onUploadImage`, and on a phone or a tablet neither is there — nothing is dragged, and a picture in the photo library is not on the clipboard. The picker asks for `image/*`, so a phone offers the library and the camera, and takes several pictures at once; they go where the caret was before the menu opened, as one edit, by every rule a drop follows. `Mod`+`Shift`+`U` opens the same picker. Without `onUploadImage` the button is what it was. `MawyStrings` gained `imageUpload` and `imageLink`.
+
 - **`MawyEditor` takes `anchorPrefix`, and uses it on the drawn document and in the preview.** Two editors on one page whose documents shared a heading gave both headings the same `id`, and a footnote reference in the second editor went to the first editor's note, with no way to say otherwise: the prop existed on `MawyViewer` and `MawyDocument` and the editor had nowhere to pass it. Unset, nothing changes, and the editor does not make a prefix up — which editors share a page is the application's knowledge, and a generated name is one it could not link to.
 
 ### Changed

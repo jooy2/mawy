@@ -183,6 +183,7 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 | `Mod` + `0`             | Body text                              |
 | `Mod` + `F`             | Find and replace                       |
 | `Mod` + `S`             | Save                                   |
+| `Mod` + `Shift` + `U`   | Upload an image                        |
 | `Tab` / `Shift` + `Tab` | Indent, outdent                        |
 | `Mod` + `Z`             | Undo                                   |
 | `Mod` + `Shift` + `Z`   | Redo, and `Ctrl` + `Y` as well         |
@@ -192,7 +193,7 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 
 ::: fw flutter
 
-`Mod`+`S` is the one line of that table this package does not handle, because there is nothing here to save to. [Opening and saving](#opening-and-saving) has the reason. Undo belongs to the platform rather than this package, as [undo](#undo) explains, and everything else is the same keyboard.
+`Mod`+`S` and `Mod`+`Shift`+`U` are the lines of that table this package does not handle, because there is nothing here to save to and no image upload. [Opening and saving](#opening-and-saving) has the reason. Undo belongs to the platform rather than this package, as [undo](#undo) explains, and everything else is the same keyboard.
 
 :::
 
@@ -240,6 +241,12 @@ The React package solves the same problem with a menu at the end of the bar, and
 There are three ways in, because an image can arrive with a URL already or without one.
 
 **The toolbar's image button** writes `![](url)` with the destination selected, ready to be typed over. It is the link button with a `!` in front of it and follows the same rules: select a URL first and it becomes the destination, select anything else and it becomes the description for a reader who is not seeing the image. It needs nothing from the application and is always available.
+
+::: fw react
+
+**Where `onUploadImage` is given, the button is a menu of two**: _Upload an image_, which opens the device's own picker, and _Link to an image_, which is the `![](url)` above. On a phone or a tablet the picker is the only way in, because nothing is dragged there and a picture in the photo library is not on the clipboard, so it asks for `image/*` and the platform offers the library and the camera. Several pictures can be chosen at once. `Mod`+`Shift`+`U` opens the same picker. The pictures go where the caret was before the menu opened, and follow every rule a drop does, which the rest of this section describes.
+
+:::
 
 **An image pasted or dropped as part of a web page** arrives as the URL it already had. That is not an image feature but markup, which [pasting](#pasting) reads. Nothing is uploaded, because the picture is already on the web.
 
