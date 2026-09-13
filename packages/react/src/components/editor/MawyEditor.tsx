@@ -940,15 +940,19 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       focus: () => {
         if (showDocument) {
           const element = drawn.current;
-          const at = element && domAt(element, selection.start, text);
+          const head = element && domAt(element, selection.start, text);
+          const tail =
+            element && selection.end !== selection.start
+              ? domAt(element, selection.end, text)
+              : head;
 
           element?.focus();
 
-          if (element && at) {
+          if (element && head && tail) {
             const range = element.ownerDocument.createRange();
 
-            range.setStart(at.node, at.offset);
-            range.collapse(true);
+            range.setStart(head.node, head.offset);
+            range.setEnd(tail.node, tail.offset);
             element.ownerDocument.getSelection()?.removeAllRanges();
             element.ownerDocument.getSelection()?.addRange(range);
           }
@@ -974,7 +978,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         });
       }
     }),
-    [readOnly, run, selection.start, showDocument, stateNow, text]
+    [readOnly, run, selection.end, selection.start, showDocument, stateNow, text]
   );
 
   /**

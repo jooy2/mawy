@@ -711,6 +711,26 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         // change back.
         restore(was.host, was.before);
 
+        // An empty table cell is spaces between two pipes, and composing into
+        // one gives the spaces back around the words the way typing into one
+        // does. See `editFor`.
+        const tag = (was.host as Element).tagName;
+
+        if (!was.before && (tag === 'TD' || tag === 'TH')) {
+          let from = was.start;
+
+          while (from > 0 && (value[from - 1] === ' ' || value[from - 1] === '\t')) {
+            from -= 1;
+          }
+
+          onEdit({
+            value: `${value.slice(0, from)} ${after} ${value.slice(was.start)}`,
+            caret: from + 1 + (caret - was.start)
+          });
+
+          return;
+        }
+
         onEdit({
           value: value.slice(0, was.start) + after + value.slice(was.start + was.before.length),
           caret

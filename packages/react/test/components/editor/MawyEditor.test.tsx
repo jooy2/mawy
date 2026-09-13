@@ -2670,6 +2670,51 @@ describe('tables', () => {
     }
   });
 
+  it('composes into an empty cell the way it types into one', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'|  | b |\n| - | - |'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const cell = body.querySelector('th') as HTMLElement;
+    const selection = document.getSelection() as Selection;
+    const range = document.createRange();
+
+    body.focus();
+    range.setStart(cell, 0);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    cell.textContent = '이름';
+    range.setStart(cell.firstChild as Text, 2);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '이름' }));
+
+    expect(onChange).toHaveBeenLastCalledWith('| 이름 | b |\n| - | - |');
+  });
+
+  it('gives the drawn document back its whole selection when something outside asks', async () => {
+    const handle: { current: MawyEditorHandle | null } = { current: null };
+    const screen = await render(
+      <div>
+        <MawyEditor defaultValue="one two three" mode="wysiwyg" handle={handle} />
+        <input aria-label="Elsewhere" />
+      </div>
+    );
+
+    put(bodyOf(screen), 'one two three', 4, 7);
+    await new Promise((done) => setTimeout(done, 30));
+    (screen.container.querySelector('[aria-label="Elsewhere"]') as HTMLElement).focus();
+    handle.current?.focus();
+
+    expect(document.getSelection()?.getRangeAt(0).toString()).toBe('two');
+    expect(document.activeElement).toBe(bodyOf(screen));
+  });
+
   it('runs the same commands on the source', async () => {
     const screen = await render(<MawyEditor defaultValue="Intro." modes={['plain']} />);
     const input = sourceOf(screen);
