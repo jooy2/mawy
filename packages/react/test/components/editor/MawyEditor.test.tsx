@@ -2639,6 +2639,37 @@ describe('tables', () => {
     );
   });
 
+  it('leaves a table in a quotation or a list item for a line still inside it', async () => {
+    for (const [source, left] of [
+      ['> | a |\n> | - |\n> | x |', '> | a |\n> | - |\n> | x |\n>\n> After'],
+      ['- item\n\n  | a |\n  | - |\n  | x |', '- item\n\n  | a |\n  | - |\n  | x |\n\n  After']
+    ]) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+      );
+
+      put(bodyOf(screen), 'x', 1);
+      type(bodyOf(screen), 'insertParagraph');
+      await vi.waitFor(() => expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(3));
+      type(bodyOf(screen), 'insertParagraph');
+      await vi.waitFor(() => expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(2));
+
+      for (const character of 'After') {
+        const before = onChange.mock.calls.length;
+
+        type(bodyOf(screen), 'insertText', character);
+        await vi.waitFor(() => expect(onChange.mock.calls.length).toBeGreaterThan(before));
+      }
+
+      expect(onChange).toHaveBeenLastCalledWith(left);
+      // Still one quotation, or one list with the words in its item.
+      expect(bodyOf(screen).querySelectorAll('blockquote, ul')).toHaveLength(1);
+
+      await screen.unmount();
+    }
+  });
+
   it('runs the same commands on the source', async () => {
     const screen = await render(<MawyEditor defaultValue="Intro." modes={['plain']} />);
     const input = sourceOf(screen);

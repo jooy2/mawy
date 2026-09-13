@@ -270,7 +270,7 @@ The toolbar's `table` button is a menu of everything that makes a table or chang
 
 The shortcuts only act inside a table, and outside one they are left to the browser. A new table has two empty columns, a header and one row, with a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. A row cannot go above the header and the last column cannot be removed, so those entries are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
 
-On the drawn document, **`Enter` in a cell follows the rule it has in a list.** It adds a row under this one with the caret in the same column, and on a row that is still empty, the row goes and the caret moves to a line of its own after the table. That is the way out of a table at the end of a document, which otherwise has nowhere after it for a caret to go. Typing into an empty cell writes the words between the spaces, so `|  |` becomes `| Name |` rather than `|  Name|`.
+On the drawn document, **`Enter` in a cell follows the rule it has in a list.** It adds a row under this one with the caret in the same column, and on a row that is still empty, the row goes and the caret moves to a line of its own after the table, still inside the quotation or list item the table is in. That is the way out of a table at the end of a document, which otherwise has nowhere after it for a caret to go. Typing into an empty cell writes the words between the spaces, so `|  |` becomes `| Name |` rather than `|  Name|`.
 
 :::
 

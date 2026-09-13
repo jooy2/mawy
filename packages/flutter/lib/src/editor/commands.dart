@@ -713,6 +713,8 @@ _TableLine _tableLine(String value, int start, int end) {
     }
   }
 
+  // In order even for a row that trims away to nothing, which a no-break space
+  // on its own does: the parser still reads it as a row.
   cells.add(_TableCell(cell, stop < cell ? cell : stop));
 
   return _TableLine(
@@ -1025,7 +1027,7 @@ EditState? runTableCommand(MawyTableCommand command, EditState state) {
 /// second one. What it does instead is the list's rule said about rows: a new
 /// row under this one, with the caret in the same column, and on a row that is
 /// still empty the row goes and the caret goes to a line of its own after the
-/// table.
+/// table, still inside the quotation or the list item the table is in.
 ///
 /// `null` outside a table, and for a selection.
 EditState? continueTable(EditState state) {
@@ -1049,7 +1051,10 @@ EditState? continueTable(EditState state) {
   final int removed = line.end - line.lineStart + 1;
   final int end = identical(line, last) ? line.lineStart - 1 : last.end - removed;
   final String without = value.substring(0, line.lineStart - 1) + value.substring(line.end);
-  final int caret = end + 2;
+  // A line of its own after the table, and inside whatever holds it: a
+  // quotation's blank line is `>`, and a list item's next line is indented.
+  final String text = '\n${table.prefix.trimRight()}\n${table.prefix}';
+  final int caret = end + text.length;
 
-  return EditState('${without.substring(0, end)}\n\n${without.substring(end)}', caret, caret);
+  return EditState(without.substring(0, end) + text + without.substring(end), caret, caret);
 }

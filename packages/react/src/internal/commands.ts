@@ -631,7 +631,9 @@ function tableLine(value: string, start: number, end: number): TableLine {
     }
   }
 
-  cells.push({ from: cell, to: stop });
+  // In order even for a row that trims away to nothing, which a no-break space
+  // on its own does: the parser still reads it as a row.
+  cells.push({ from: cell, to: Math.max(cell, stop) });
 
   return { start, end, lineStart, cells, opened, closed };
 }
@@ -913,7 +915,7 @@ export function runTableCommand(command: MawyTableCommand, state: EditState): Ed
  * second one. What it does instead is the list's rule said about rows: a new
  * row under this one, with the caret in the same column, and on a row that is
  * still empty the row goes and the caret goes to a line of its own after the
- * table. That second half is the way out of a table at the end of a document,
+ * table, still inside the quotation or the list item the table is in. That second half is the way out of a table at the end of a document,
  * which otherwise has nowhere after it for a caret to be.
  *
  * `null` outside a table, and for a selection, which `Enter` has no business
@@ -938,7 +940,10 @@ export function continueTable(state: EditState): EditState | null {
   const removed = line.end - line.lineStart + 1;
   const end = line === last ? line.lineStart - 1 : last.end - removed;
   const without = value.slice(0, line.lineStart - 1) + value.slice(line.end);
-  const caret = end + 2;
+  // A line of its own after the table, and inside whatever holds it: a
+  // quotation's blank line is `>`, and a list item's next line is indented.
+  const text = `\n${table.prefix.trimEnd()}\n${table.prefix}`;
+  const caret = end + text.length;
 
-  return { value: `${without.slice(0, end)}\n\n${without.slice(end)}`, start: caret, end: caret };
+  return { value: without.slice(0, end) + text + without.slice(end), start: caret, end: caret };
 }

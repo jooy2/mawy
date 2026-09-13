@@ -371,14 +371,12 @@ function breakAt(
     const row = continueTable({ value, start, end });
 
     // A row carried down keeps the caret in the table; a row given up leaves it
-    // on a line of its own after it, where nothing is drawn yet.
-    return row
-      ? {
-          value: row.value,
-          caret: row.start,
-          betweenBlocks: row.value.slice(row.start - 2, row.start) === '\n\n'
-        }
-      : null;
+    // on a line of its own after it, where nothing is drawn yet — unless that
+    // line is a quotation's `> `, which is drawn as its marker the way `Enter`
+    // at the end of a quoted paragraph already leaves one.
+    const line = row?.value.slice(row.value.lastIndexOf('\n', row.start - 1) + 1, row.start);
+
+    return row ? { value: row.value, caret: row.start, betweenBlocks: !line?.trim() } : null;
   }
 
   if (tag === 'PRE') {
