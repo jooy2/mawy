@@ -44,13 +44,12 @@ something to read before starting rather than a job waiting for somebody.
 
 ## Confirmed
 
-- **The Flutter editor has none of what the React one gained for an application
-  moving from MDXEditor.** No `undo`, `redo` or `table` on the toolbar, no way to
-  hand it words of its own, and no handle. `runTableCommand`, `continueTable`,
-  `toggleHeading` and `headingActive` are in `lib/src/editor/commands.dart`,
-  checked by the parity diff and not exported. A value added to the exported
-  `MawyEditorToolbarItem` enum breaks an application's exhaustive `switch`, so
-  the toolbar items wait for a major version.
+Nothing, at the moment. The last of it was what the React editor gained for an
+application moving from MDXEditor and the Flutter editor did not, and the seven
+toolbar commands that had no key, and both packages have all of it now. What
+the Flutter editor still does not do on purpose, uploading a picture, is under
+"Decided" in [CLAUDE.md](CLAUDE.md). The next finding goes under this heading
+with where the code is.
 
 ## Reported
 

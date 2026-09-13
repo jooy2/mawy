@@ -303,15 +303,13 @@ There is no drawn document here, so `Enter` in a row of the source is a line end
 
 ## Images
 
-There are three ways in, because an image can arrive with a URL already or without one.
-
 **The toolbar's image button** writes `![](url)` with the destination selected, ready to be typed over. It is the link button with a `!` in front of it and follows the same rules: select a URL first and it becomes the destination, select anything else and it becomes the description for a reader who is not seeing the image. It needs nothing from the application and is always available.
 
 ::: fw react
 
-**Where `onUploadImage` is given, the button is a menu of two**: _Upload an image_, which opens the device's own picker, and _Link to an image_, which is the `![](url)` above. On a phone or a tablet the picker is the only way in, because nothing is dragged there and a picture in the photo library is not on the clipboard, so it asks for `image/*` and the platform offers the library and the camera. Several pictures can be chosen at once. `Mod`+`Shift`+`U` opens the same picker. The pictures go where the caret was before the menu opened, and follow every rule a drop does, which the rest of this section describes.
+There are two more ways in, because an image can arrive with a URL already or without one.
 
-:::
+**Where `onUploadImage` is given, the button is a menu of two**: _Upload an image_, which opens the device's own picker, and _Link to an image_, which is the `![](url)` above. On a phone or a tablet the picker is the only way in, because nothing is dragged there and a picture in the photo library is not on the clipboard, so it asks for `image/*` and the platform offers the library and the camera. Several pictures can be chosen at once. `Mod`+`Shift`+`U` opens the same picker. The pictures go where the caret was before the menu opened, and follow every rule a drop does, which the rest of this section describes.
 
 **An image pasted or dropped as part of a web page** arrives as the URL it already had. That is not an image feature but markup, which [pasting](#pasting) reads. Nothing is uploaded, because the picture is already on the web.
 
@@ -370,6 +368,27 @@ const [uploading, setUploading] = useState(0);
   </button>
 </>;
 ```
+
+:::
+
+::: fw flutter
+
+**There is no upload here.** A picture on the clipboard and a file on the device are both out of a widget's reach without a plugin, and which plugin an application has chosen is not a Markdown editor's decision, which is the same reason `open` is a button the application gives a meaning to. An application with a picker picks the file, stores it wherever its pictures go, and writes the picture where the caret is with [`MawyEditorHandle`](../api/components/mawy-editor#from-outside-the-editor):
+
+```dart
+final MawyEditorHandle editor = MawyEditorHandle();
+
+Future<void> addPicture() async {
+  final Picture? picked = await pickPicture(); // the application's own picker
+  if (picked == null) return;
+
+  editor.insert('![${picked.name}](${await store(picked)})');
+}
+```
+
+The picture goes where the caret is when `insert` is called, which after a slow upload is wherever the writer has got to by then, and nothing is written while the editor is read only.
+
+:::
 
 ## Colour in the preview
 
