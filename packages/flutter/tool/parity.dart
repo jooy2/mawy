@@ -367,6 +367,19 @@ List<Object?> _edits() {
       ];
     }
 
+    // The three levels past the default menu's, which an editor can be told to
+    // offer and which reach the document through the same two functions.
+    for (final int depth in <int>[4, 5, 6]) {
+      final EditState after = toggleHeading(state, depth);
+
+      out['heading$depth'] = <Object?>[
+        after.value,
+        after.start,
+        after.end,
+        headingActive(state, depth),
+      ];
+    }
+
     final MawyCaretAt caret = caretAt(state.value, state.start, state.end);
 
     out['counts'] = <Object?>[

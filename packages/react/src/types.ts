@@ -31,6 +31,9 @@ import type * as React from 'react';
  */
 export type MawyMode = 'wysiwyg' | 'plain' | 'preview' | 'split';
 
+/** A heading's depth, which is how many `#` it is written with. */
+export type MawyHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
 /**
  * One control on the editor's toolbar.
  *
@@ -273,6 +276,9 @@ export interface MawyStrings {
   heading1: string;
   heading2: string;
   heading3: string;
+  heading4: string;
+  heading5: string;
+  heading6: string;
   paragraph: string;
   quote: string;
   bulletList: string;

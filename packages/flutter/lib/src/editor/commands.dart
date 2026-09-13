@@ -207,7 +207,10 @@ EditState _toggleOrdered(EditState state) {
 /// to be one, and counting it as a line that did not match made a selection
 /// with a paragraph break in it impossible to toggle off. A blank line is left
 /// alone on the way in, too — `# ` on its own is a heading with nothing in it.
-EditState _toggleHeading(EditState state, int depth) {
+/// A heading of [depth] over every line the selection touches, or off it, for
+/// any of the six. [runCommand] reaches the first three and body text through
+/// this; an editor told to offer other levels calls it directly.
+EditState toggleHeading(EditState state, int depth) {
   final String hashes = '#' * depth;
   final RegExp already = RegExp('^[ \\t]*$hashes ');
 
@@ -358,10 +361,10 @@ EditState runCommand(MawyCommand command, EditState state) {
     MawyCommand.code => _toggleWrap(state, '`'),
     MawyCommand.link => _insertLink(state, image: false),
     MawyCommand.image => _insertLink(state, image: true),
-    MawyCommand.heading1 => _toggleHeading(state, 1),
-    MawyCommand.heading2 => _toggleHeading(state, 2),
-    MawyCommand.heading3 => _toggleHeading(state, 3),
-    MawyCommand.paragraph => _toggleHeading(state, 0),
+    MawyCommand.heading1 => toggleHeading(state, 1),
+    MawyCommand.heading2 => toggleHeading(state, 2),
+    MawyCommand.heading3 => toggleHeading(state, 3),
+    MawyCommand.paragraph => toggleHeading(state, 0),
     MawyCommand.quote => _togglePrefix(state, _quote, '> ', blanks: true),
     MawyCommand.bulletList => _togglePrefix(state, _bulletList, '- ', blanks: false),
     MawyCommand.taskList => _togglePrefix(state, _taskList, '- [ ] ', blanks: false),
@@ -370,6 +373,44 @@ EditState runCommand(MawyCommand command, EditState state) {
     MawyCommand.rule => _insertRule(state),
   };
 }
+
+/// Whether every line the selection touches that has anything on it matches.
+///
+/// A line at a time, stopping at the first one that does not — rather than
+/// cutting the whole selection into lines and then asking about them. The
+/// answer is usually no on the first line, and cutting it up first is the work
+/// of the whole selection either way.
+bool _everyLineIs(EditState state, RegExp pattern) {
+  final List<int> span = _lineRange(state.value, state.start, state.end);
+  int at = span[0];
+  bool any = false;
+
+  while (at < span[1]) {
+    final int newline = state.value.indexOf('\n', at);
+    final int end = newline == -1 || newline > span[1] ? span[1] : newline;
+    final String line = state.value.substring(at, end);
+
+    if (line.trim().isNotEmpty) {
+      if (!pattern.hasMatch(line)) {
+        return false;
+      }
+
+      any = true;
+    }
+
+    at = end + 1;
+  }
+
+  return any;
+}
+
+/// Whether the selection is already a heading of [depth], for any of the six.
+///
+/// [commandActive] answers for the three the default menu offers; an editor
+/// told to offer others asks this instead. [toggleHeading] is the command for
+/// all six.
+bool headingActive(EditState state, int depth) =>
+    _everyLineIs(state, RegExp('^[ \\t]*${'#' * depth} '));
 
 /// Whether the selection is already what the command would make it.
 ///
@@ -390,33 +431,7 @@ bool commandActive(MawyCommand command, EditState state) {
             _slice(state.value, state.end, state.end + width) == marker);
   }
 
-  // A line at a time, stopping at the first one that is not — rather than
-  // cutting the whole selection into lines and then asking about them. The
-  // answer is usually no on the first line, and cutting it up first is the
-  // work of the whole selection either way.
-  bool everyLine(RegExp pattern) {
-    final List<int> span = _lineRange(state.value, state.start, state.end);
-    int at = span[0];
-    bool any = false;
-
-    while (at < span[1]) {
-      final int newline = state.value.indexOf('\n', at);
-      final int end = newline == -1 || newline > span[1] ? span[1] : newline;
-      final String line = state.value.substring(at, end);
-
-      if (line.trim().isNotEmpty) {
-        if (!pattern.hasMatch(line)) {
-          return false;
-        }
-
-        any = true;
-      }
-
-      at = end + 1;
-    }
-
-    return any;
-  }
+  bool everyLine(RegExp pattern) => _everyLineIs(state, pattern);
 
   return switch (command) {
     MawyCommand.bold => wrapped('**'),

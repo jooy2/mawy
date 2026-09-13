@@ -31,9 +31,11 @@ import {
   commandActive,
   continueList,
   continueTable,
+  headingActive,
   indent,
   runCommand,
-  runTableCommand
+  runTableCommand,
+  toggleHeading
 } from '../src/internal/commands.ts';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../src/internal/search.ts';
 import {
@@ -204,6 +206,14 @@ const edits = JSON.parse(
     const after = runCommand(command, state);
 
     out[command] = [after.value, after.start, after.end, commandActive(command, state)];
+  }
+
+  // The three levels past the default menu's, which an editor can be told to
+  // offer and which reach the document through the same two functions.
+  for (const depth of [4, 5, 6]) {
+    const after = toggleHeading(state, depth);
+
+    out[`heading${depth}`] = [after.value, after.start, after.end, headingActive(state, depth)];
   }
 
   out.counts = [

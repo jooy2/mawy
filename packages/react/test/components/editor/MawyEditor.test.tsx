@@ -704,6 +704,55 @@ describe('the frame', () => {
 });
 
 describe('the toolbar and the keyboard', () => {
+  it('offers the heading levels it was told to, from the menu and the keys alike', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Section"
+        modes={['plain']}
+        headingLevels={[2, 3, 4]}
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(3, 3);
+    await screen.getByRole('button', { name: 'Heading' }).click();
+
+    await expect.element(screen.getByRole('radio', { name: 'Heading 4' })).toBeInTheDocument();
+    expect(screen.container.querySelector('[role="radio"][aria-label="Heading 1"]')).toBe(null);
+    expect(
+      [...screen.container.querySelectorAll('.mawy-choice-option')].map((each) => each.textContent)
+    ).toEqual(['Heading 2', 'Heading 3', 'Heading 4', 'Body text']);
+
+    await screen.getByRole('radio', { name: 'Heading 4' }).click();
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#### Section'));
+
+    // `Mod`+`1` is not a level this editor offers, and `Mod`+`2` is.
+    keys(input, '1');
+    await new Promise((done) => setTimeout(done, 30));
+    expect(onChange).toHaveBeenLastCalledWith('#### Section');
+
+    keys(input, '2');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('## Section'));
+  });
+
+  it('draws the document the way a page with its own `h1` will', async () => {
+    for (const mode of ['wysiwyg', 'preview'] as const) {
+      const screen = await render(
+        <MawyEditor defaultValue={'# Title\n\n## Part'} mode={mode} headingBase={2} />
+      );
+
+      expect(screen.container.querySelector('h1')).toBe(null);
+      expect(screen.container.querySelector('h2')?.textContent).toBe('Title');
+      expect(screen.container.querySelector('h3')?.textContent).toBe('Part');
+
+      await screen.unmount();
+    }
+  });
+
   it('says what the application tells it to, placeholders and all', async () => {
     const screen = await render(
       <MawyEditor

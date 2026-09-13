@@ -161,7 +161,7 @@ function toggleOrdered(state: EditState): EditState {
  * a paragraph break in it impossible to toggle off. A blank line is left alone
  * on the way in, too — `# ` on its own is a heading with nothing in it.
  */
-function toggleHeading(state: EditState, depth: number): EditState {
+export function toggleHeading(state: EditState, depth: number): EditState {
   const hashes = '#'.repeat(depth);
   const already = new RegExp(`^[ \\t]*${hashes} `);
 
@@ -323,6 +323,48 @@ export function runCommand(command: MawyCommand, state: EditState): EditState {
 }
 
 /**
+ * Whether every line the selection touches that has anything on it matches.
+ *
+ * A line at a time, stopping at the first one that does not — rather than
+ * cutting the whole selection into lines and then asking about them. The answer
+ * is usually no on the first line, and cutting it up first is the work of the
+ * whole selection either way.
+ */
+function everyLineIs(state: EditState, pattern: RegExp): boolean {
+  const [from, to] = lineRange(state.value, state.start, state.end);
+  let at = from;
+  let any = false;
+
+  while (at < to) {
+    const newline = state.value.indexOf('\n', at);
+    const end = newline === -1 || newline > to ? to : newline;
+    const line = state.value.slice(at, end);
+
+    if (line.trim()) {
+      if (!pattern.test(line)) {
+        return false;
+      }
+
+      any = true;
+    }
+
+    at = end + 1;
+  }
+
+  return any;
+}
+
+/**
+ * Whether the selection is already a heading of this depth, for any of the six.
+ *
+ * `commandActive` answers for the three the default menu offers; an editor told
+ * to offer others asks this instead. `toggleHeading` is the command for all six.
+ */
+export function headingActive(state: EditState, depth: number): boolean {
+  return everyLineIs(state, new RegExp(`^[ \\t]*${'#'.repeat(depth)} `));
+}
+
+/**
  * Whether the selection is already what the command would make it.
  *
  * This is what lets a toolbar button be drawn as pressed, and it matters more
@@ -345,33 +387,7 @@ export function commandActive(command: MawyCommand, state: EditState): boolean {
     );
   };
 
-  // A line at a time, stopping at the first one that is not — rather than
-  // cutting the whole selection into lines and then asking about them. The
-  // answer is usually no on the first line, and cutting it up first is the
-  // work of the whole selection either way.
-  const everyLine = (pattern: RegExp): boolean => {
-    const [from, to] = lineRange(state.value, state.start, state.end);
-    let at = from;
-    let any = false;
-
-    while (at < to) {
-      const newline = state.value.indexOf('\n', at);
-      const end = newline === -1 || newline > to ? to : newline;
-      const line = state.value.slice(at, end);
-
-      if (line.trim()) {
-        if (!pattern.test(line)) {
-          return false;
-        }
-
-        any = true;
-      }
-
-      at = end + 1;
-    }
-
-    return any;
-  };
+  const everyLine = (pattern: RegExp): boolean => everyLineIs(state, pattern);
 
   switch (command) {
     case 'bold':

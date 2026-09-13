@@ -10,6 +10,7 @@ import type {
   MawyEditorToolbarOption,
   MawyFont,
   MawyFrame,
+  MawyHeadingLevel,
   MawyHighlight,
   MawyHtmlPolicy,
   MawyImageProps,
@@ -31,6 +32,8 @@ import { useStrings } from '../../internal/strings.js';
 import {
   commandActive,
   continueList,
+  headingActive,
+  toggleHeading,
   indent,
   runCommand,
   runTableCommand,
@@ -151,11 +154,11 @@ const SHORTCUTS: Record<string, MawyCommand> = {
   i: 'italic',
   k: 'link',
   e: 'code',
-  '1': 'heading1',
-  '2': 'heading2',
-  '3': 'heading3',
   '0': 'paragraph'
 };
+
+/** What the `heading` menu offers until an application says otherwise. */
+const DEFAULT_HEADING_LEVELS: readonly MawyHeadingLevel[] = [1, 2, 3];
 
 export interface MawyEditorProps extends Omit<
   React.ComponentPropsWithoutRef<'div'>,
@@ -313,6 +316,29 @@ export interface MawyEditorProps extends Omit<
    * `anchorPrefix`.
    */
   anchorPrefix?: string;
+
+  /**
+   * Which of `h1` to `h6` the document's own `#` is drawn as, on the drawn
+   * document and in the preview. See `MawyViewer`'s own `headingBase`: an
+   * editor beside a page that writes its own `h1` draws what the page will.
+   * What the document says is not moved, and neither is the `heading` menu.
+   *
+   * @default 1
+   */
+  headingBase?: number;
+
+  /**
+   * Which heading levels the `heading` menu offers, and in what order.
+   *
+   * The document's own depths, written with that many `#`: `[2, 3, 4]` for an
+   * application whose pages put the title in an `h1` of their own and whose
+   * documents start at `##`. `Mod`+`1` to `Mod`+`6` toggle a level only where it
+   * is offered, so the keys and the menu say the same thing. Body text is always
+   * offered, and is `Mod`+`0`.
+   *
+   * @default [1, 2, 3]
+   */
+  headingLevels?: readonly MawyHeadingLevel[];
   fonts?: readonly MawyFont[];
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
@@ -395,6 +421,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     image,
     resolveUrl,
     anchorPrefix,
+    headingBase,
+    headingLevels = DEFAULT_HEADING_LEVELS,
     onSave,
     accept = MAWY_ACCEPT,
     fileDrop = false,
@@ -1500,6 +1528,15 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    const depth = Number(key) as MawyHeadingLevel;
+
+    if (headingLevels.includes(depth)) {
+      event.preventDefault();
+      run(state, toggleHeading(state, depth));
+
+      return;
+    }
+
     const name = SHORTCUTS[key];
 
     if (name) {
@@ -1747,6 +1784,15 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           onColorSchemeChange={setScheme}
           onCommand={command}
           active={(name) => commandActive(name, { value: text, ...selection })}
+          headingLevels={headingLevels}
+          headingActive={(depth) => headingActive({ value: text, ...selection }, depth)}
+          onHeading={(depth) => {
+            const before = readOnly ? null : stateNow();
+
+            if (before) {
+              run(before, toggleHeading(before, depth));
+            }
+          }}
           editable={editable}
           onFind={showSource ? openFind : undefined}
           finding={finding && showSource}
@@ -1890,6 +1936,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               image={image}
               resolveUrl={resolveUrl}
               anchorPrefix={anchorPrefix}
+              headingBase={headingBase}
               strings={strings}
               room={room}
               aim={aim}
@@ -1944,6 +1991,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               image={image}
               resolveUrl={resolveUrl}
               anchorPrefix={anchorPrefix}
+              headingBase={headingBase}
               fonts={fonts}
               locale={locale}
               strings={overrides}

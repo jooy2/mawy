@@ -94,6 +94,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | 툴바에 둘 컨트롤과 그 순서. |
+| `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3]` | `heading` 메뉴가 보여 주고 `Mod`+`1`~`Mod`+`6`이 닿는 제목 수준. |
 | `frame` | [`MawyFrame`](../types/frame) | `'box'` | 에디터가 테두리를 두를지, 페이지 위에 뜰지. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | 툴바와 찾기 바가 어느 끝에 있을지. 상태 표시줄은 움직이지 않습니다. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | 상태 표시줄이 셀 것. |
@@ -183,7 +184,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`와 `anchorPrefix`는 그려진 문서에도 닿습니다.
+`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`, `anchorPrefix`, `headingBase`는 그려진 문서에도 닿습니다.
 
 `anchorPrefix`는 한 페이지에 놓인 에디터 두 개를 서로 떼어 놓습니다. 두 문서가 모두 `# Introduction`으로 시작하면 제목 두 개가 똑같이 `id="introduction"`을 받고, 두 번째 에디터의 각주 참조는 첫 번째 에디터의 각주로 갑니다. 에디터마다 접두사를 따로 주면 이 충돌이 사라집니다. 주지 않으면 에디터가 스스로 만들지 않습니다. 어느 에디터들이 한 페이지에 있는지는 애플리케이션만 알고, 자동으로 만든 이름은 애플리케이션이 자기 화면에서 링크를 걸 수 없는 이름이기 때문입니다.
 

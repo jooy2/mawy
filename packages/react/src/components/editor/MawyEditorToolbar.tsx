@@ -1,7 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import type { MawyColorScheme, MawyEditorToolbarItem, MawyMode } from '../../types.js';
+import type {
+  MawyColorScheme,
+  MawyEditorToolbarItem,
+  MawyHeadingLevel,
+  MawyMode
+} from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MawyCommand, MawyTableCommand } from '../../internal/commands.js';
 import { Actions, Choice, IconButton, Menu } from '../../internal/controls.js';
@@ -18,6 +23,9 @@ import {
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
+  Heading4Icon,
+  Heading5Icon,
+  Heading6Icon,
   HeadingIcon,
   ImageIcon,
   ItalicIcon,
@@ -57,6 +65,12 @@ export interface MawyEditorToolbarProps {
   onCommand: (command: MawyCommand) => void;
   /** Whether the selection is already what a command would make it. */
   active: (command: MawyCommand) => boolean;
+  /** Which heading levels the `heading` menu offers, in order. */
+  headingLevels: readonly MawyHeadingLevel[];
+  /** A heading of this depth over the selection, or off it; `0` is body text. */
+  onHeading: (depth: MawyHeadingLevel | 0) => void;
+  /** Whether the selection is already a heading of this depth. */
+  headingActive: (depth: MawyHeadingLevel) => boolean;
   /** Off in the modes that have nothing to format. */
   editable: boolean;
   /** Opens the find bar. Absent in the modes that have no source to search. */
@@ -79,6 +93,15 @@ export interface MawyEditorToolbarProps {
   tableAvailable: (command: MawyTableCommand) => boolean;
   onSave: () => void;
 }
+
+const HEADING_ICONS: Record<MawyHeadingLevel, typeof SourceIcon> = {
+  1: Heading1Icon,
+  2: Heading2Icon,
+  3: Heading3Icon,
+  4: Heading4Icon,
+  5: Heading5Icon,
+  6: Heading6Icon
+};
 
 const MODE_ICONS: Record<MawyMode, typeof SourceIcon> = {
   wysiwyg: WysiwygIcon,
@@ -297,6 +320,9 @@ export function MawyEditorToolbar({
   onColorSchemeChange,
   onCommand,
   active,
+  headingLevels,
+  onHeading,
+  headingActive,
   editable,
   onFind,
   finding,
@@ -396,31 +422,22 @@ export function MawyEditorToolbar({
           icon={<HeadingIcon className="mawy-icon" aria-hidden="true" />}
           {...itemProps(at)}
         >
-          <Choice<MawyCommand>
+          <Choice<string>
             label={strings.heading}
-            value={
-              (['heading1', 'heading2', 'heading3'] as const).find((command) => active(command)) ??
-              'paragraph'
-            }
-            onChange={onCommand}
+            value={String(headingLevels.find((depth) => headingActive(depth)) ?? 0)}
+            onChange={(chosen) => onHeading(Number(chosen) as MawyHeadingLevel | 0)}
             options={[
+              ...headingLevels.map((depth) => {
+                const Icon = HEADING_ICONS[depth];
+
+                return {
+                  value: String(depth),
+                  label: strings[`heading${depth}`],
+                  icon: <Icon className="mawy-icon" aria-hidden="true" />
+                };
+              }),
               {
-                value: 'heading1',
-                label: strings.heading1,
-                icon: <Heading1Icon className="mawy-icon" aria-hidden="true" />
-              },
-              {
-                value: 'heading2',
-                label: strings.heading2,
-                icon: <Heading2Icon className="mawy-icon" aria-hidden="true" />
-              },
-              {
-                value: 'heading3',
-                label: strings.heading3,
-                icon: <Heading3Icon className="mawy-icon" aria-hidden="true" />
-              },
-              {
-                value: 'paragraph',
+                value: '0',
                 label: strings.paragraph,
                 icon: <ParagraphIcon className="mawy-icon" aria-hidden="true" />
               }

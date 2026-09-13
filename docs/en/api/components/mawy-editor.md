@@ -94,6 +94,7 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | Which controls the toolbar has, and in what order. |
+| `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3]` | Which heading levels the `heading` menu offers and `Mod`+`1` to `Mod`+`6` reach. |
 | `frame` | [`MawyFrame`](../types/frame) | `'box'` | Whether the editor has a frame around it, or floats in the page. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | Which end the toolbar and the find bar are at. The status bar does not move. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | What the status bar counts. |
@@ -183,7 +184,7 @@ It is there because a platform's own find reaches a page of text and not the ins
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives` and `anchorPrefix` reach the drawn document as well.
+`parse`, `html`, `linkTarget`, `linkRel`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives`, `anchorPrefix` and `headingBase` reach the drawn document as well.
 
 `anchorPrefix` is what keeps two editors on one page apart. Both documents opening with `# Introduction` give two headings `id="introduction"`, and a footnote reference in the second editor lands on the first editor's note, until each editor is given a prefix of its own. Unset, the editor makes none up: which editors share a page is the application's knowledge, and a generated name is one the application could not link to.
 

@@ -197,6 +197,16 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 
 :::
 
+::: fw react
+
+**`headingLevels` says which headings the menu offers**, for an application whose pages write the title as their own `h1` and whose documents start at `##`. `headingLevels={[2, 3, 4]}` offers heading 2, 3 and 4 and body text, and `Mod`+`2`, `Mod`+`3` and `Mod`+`4` toggle those, while `Mod`+`1` is left to the browser. The levels are the document's own depths, the number of `#` written. `headingBase` is the other half and moves nothing in the document: it is what the drawn document and the preview draw a `#` as, with the same meaning it has on [the viewer](./viewer#heading-levels), so an editor beside such a page draws what the page will.
+
+```tsx
+<MawyEditor value={post.body} onChange={setBody} headingLevels={[2, 3, 4]} />
+```
+
+:::
+
 **There is no underline.** Markdown has no way to write one, and the only way a document can is `<u>`, which is raw HTML: drawn as its characters under the default `html="escape"`, and in the Flutter package, which has no HTML to draw at all. A button that wrote it would make documents that read one way in a viewer set to `sanitize` and another everywhere else the same file is read. A `<u>` already in a document is drawn as an underline under `sanitize` and `raw`.
 
 Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and the toolbar button shows which are in force. Markers replace each other rather than stacking, so turning a numbered list into a bulleted one gives a bulleted list and not `- 1. item`.
@@ -215,7 +225,7 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | --- | --- |
 | `'mode'` | The surface switch |
 | `'undo'`, `'redo'` | A step back through the history and forward again, disabled while there is none. React only |
-| `'heading'` | A menu of heading 1, 2, 3 and body text |
+| `'heading'` | A menu of heading 1, 2, 3 and body text, or of the levels in `headingLevels` |
 | `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
 | `'table'` | A menu that inserts a table and adds or removes its rows and columns. See [tables](#tables) |
