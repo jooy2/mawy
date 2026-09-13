@@ -44,15 +44,6 @@ something to read before starting rather than a job waiting for somebody.
 
 ## Confirmed
 
-- **Seven of the editor's toolbar commands have no keyboard shortcut**, though
-  the doc comment on `MawyEditorToolbarItem` in `packages/react/src/types.ts`
-  and "Formatting" in `docs/*/guide/editor.md` say every one of them does:
-  `image`, `quote`, `bulletList`, `orderedList`, `taskList`, `codeBlock` and
-  `rule`. `SHORTCUTS` in `MawyEditor.tsx` has none of them. The work is choosing
-  the keys: most letters under `Mod`+`Shift` or `Mod`+`Alt` are already a
-  browser's, or `AltGr`'s on Windows, which is written down beside
-  `tableShortcut`. The Flutter package's shortcuts, in `source_field.dart`, have
-  the same gap.
 - **The Flutter editor has none of what the React one gained for an application
   moving from MDXEditor.** No `undo`, `redo` or `table` on the toolbar, no way to
   hand it words of its own, and no handle. `runTableCommand`, `continueTable`,

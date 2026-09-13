@@ -869,6 +869,35 @@ describe('the toolbar and the keyboard', () => {
     await expect.element(screen.getByRole('textbox')).toHaveValue('one **two** three');
   });
 
+  /*
+   * Pressed rather than dispatched, because which of these arrive at all is
+   * the question: under `Shift` a `7` is `&` and a `.` is `>`, so a handler
+   * reading the character would never see the key it was written for.
+   */
+  it('reaches the block commands and the image from the keyboard as well', async () => {
+    const cases: [keys: string, after: string][] = [
+      ['{Control>}{Shift>}.{/Shift}{/Control}', '> Words.'],
+      ['{Control>}{Shift>}8{/Shift}{/Control}', '- Words.'],
+      ['{Control>}{Shift>}7{/Shift}{/Control}', '1. Words.'],
+      ['{Control>}{Shift>}9{/Shift}{/Control}', '- [ ] Words.'],
+      ['{Control>}{Shift>}e{/Shift}{/Control}', '```\nWords.\n```'],
+      ['{Control>}{Shift>}k{/Shift}{/Control}', '![Words.](url)'],
+      ['{Control>}{Shift>},{/Shift}{/Control}', 'Words.\n\n---\n']
+    ];
+
+    for (const [pressed, after] of cases) {
+      const screen = await render(<MawyEditor defaultValue="Words." modes={['plain']} />);
+      const input = sourceOf(screen);
+
+      input.focus();
+      // The divider goes after the words, and everything else takes them.
+      input.setSelectionRange(after.endsWith('---\n') ? 6 : 0, 6);
+      await userEvent.keyboard(pressed);
+
+      await expect.poll(() => input.value).toBe(after);
+    }
+  });
+
   it('carries a list marker down on Enter, and takes it away on the empty item', async () => {
     const screen = await render(<MawyEditor defaultValue="- one" modes={['plain']} />);
     const input = sourceOf(screen);

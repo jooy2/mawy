@@ -38,14 +38,16 @@ export type MawyHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
  * One control on the editor's toolbar.
  *
  * Everything except `mode`, `undo`, `redo`, `find`, `open`, `save`,
- * `colorScheme` and `separator` is a formatting command, and every one of them has a keyboard
- * shortcut — the buttons are a way of finding the commands rather than the way
- * of running them. `undo` and `redo` are `Mod`+`Z` and `Mod`+`Shift`+`Z`, and are
- * drawn disabled while there is nothing to take back or put back. `table` is a menu of the seven things that change a table's
- * shape, and each of those has its own. `find` and `save` have one too, `Mod`+`F` and `Mod`+`S`,
- * and both work whether or not the button is on the toolbar. `open` has none:
- * the browser's own `Mod`+`O` is a reasonable thing to leave alone, and
- * opening a file is a rare and deliberate act rather than one done in a flow.
+ * `colorScheme` and `separator` is a formatting command, and every one of them
+ * has a keyboard shortcut — the buttons are a way of finding the commands
+ * rather than the way of running them. The guide lists them. `undo` and `redo`
+ * are `Mod`+`Z` and `Mod`+`Shift`+`Z`, and are drawn disabled while there is
+ * nothing to take back or put back. `table` is a menu of the seven things that
+ * change a table's shape, and each of those has its own. `find` and `save` have
+ * one too, `Mod`+`F` and `Mod`+`S`, and both work whether or not the button is
+ * on the toolbar. `open` has none: the browser's own `Mod`+`O` is a reasonable
+ * thing to leave alone, and opening a file is a rare and deliberate act rather
+ * than one done in a flow.
  */
 export type MawyEditorToolbarItem =
   | 'mode'

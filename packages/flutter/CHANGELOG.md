@@ -2,6 +2,12 @@
 
 > This package's history. Mawy keeps a separate changelog for each language it ships, beside that package's own manifest, because the two version independently.
 
+## vNext
+
+### Added
+
+- **The quotation, the three lists, the code block, the divider and the image have keyboard shortcuts.** The guide said every formatting command had one, and seven of them could only be reached from the toolbar. `Mod`+`Shift`+`.` quotes, `Mod`+`Shift`+`8`, `7` and `9` make a bulleted, numbered and task list, `Mod`+`Shift`+`E` fences a code block, `Mod`+`Shift`+`K` writes an image and `Mod`+`Shift`+`,` a divider. They are the React package's keys, and the reasons for each are in its guide.
+
 ## 1.3.0 (2026-09-12)
 
 ### Added

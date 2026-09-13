@@ -285,6 +285,50 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
   SingleActivator(LogicalKeyboardKey.keyX, meta: true, shift: true): _CommandIntent(
     MawyCommand.strikethrough,
   ),
+  // The blocks, and the image. The reasons for each key are beside `SHIFTED`
+  // in the React package, and they are the same keys.
+  SingleActivator(LogicalKeyboardKey.keyK, control: true, shift: true): _CommandIntent(
+    MawyCommand.image,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyK, meta: true, shift: true): _CommandIntent(
+    MawyCommand.image,
+  ),
+  SingleActivator(LogicalKeyboardKey.period, control: true, shift: true): _CommandIntent(
+    MawyCommand.quote,
+  ),
+  SingleActivator(LogicalKeyboardKey.period, meta: true, shift: true): _CommandIntent(
+    MawyCommand.quote,
+  ),
+  SingleActivator(LogicalKeyboardKey.digit8, control: true, shift: true): _CommandIntent(
+    MawyCommand.bulletList,
+  ),
+  SingleActivator(LogicalKeyboardKey.digit8, meta: true, shift: true): _CommandIntent(
+    MawyCommand.bulletList,
+  ),
+  SingleActivator(LogicalKeyboardKey.digit7, control: true, shift: true): _CommandIntent(
+    MawyCommand.orderedList,
+  ),
+  SingleActivator(LogicalKeyboardKey.digit7, meta: true, shift: true): _CommandIntent(
+    MawyCommand.orderedList,
+  ),
+  SingleActivator(LogicalKeyboardKey.digit9, control: true, shift: true): _CommandIntent(
+    MawyCommand.taskList,
+  ),
+  SingleActivator(LogicalKeyboardKey.digit9, meta: true, shift: true): _CommandIntent(
+    MawyCommand.taskList,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyE, control: true, shift: true): _CommandIntent(
+    MawyCommand.codeBlock,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyE, meta: true, shift: true): _CommandIntent(
+    MawyCommand.codeBlock,
+  ),
+  SingleActivator(LogicalKeyboardKey.comma, control: true, shift: true): _CommandIntent(
+    MawyCommand.rule,
+  ),
+  SingleActivator(LogicalKeyboardKey.comma, meta: true, shift: true): _CommandIntent(
+    MawyCommand.rule,
+  ),
 };
 
 /// The source surface: one text field, coloured, with the keys an editor needs.

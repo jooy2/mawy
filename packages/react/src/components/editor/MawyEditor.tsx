@@ -109,13 +109,6 @@ const SPLIT_LEAST = 0.15;
 const SPLIT_MOST = 0.85;
 
 /**
- * The keyboard, which is the editor's real interface.
- *
- * `Mod` is Command or Control, whichever the machine has — both are accepted
- * rather than sniffed, because a keyboard is a property of the person and not
- * of the operating system.
- */
-/**
  * The keys that change a table's shape, which only do anything in a table.
  *
  * Built on the two keys a row is made and unmade with: `Enter` adds, and
@@ -149,12 +142,44 @@ function tableShortcut(event: React.KeyboardEvent): MawyTableCommand | null {
     : null;
 }
 
+/**
+ * The keyboard, which is the editor's real interface.
+ *
+ * `Mod` is Command or Control, whichever the machine has — both are accepted
+ * rather than sniffed, because a keyboard is a property of the person and not
+ * of the operating system.
+ */
 const SHORTCUTS: Record<string, MawyCommand> = {
   b: 'bold',
   i: 'italic',
   k: 'link',
   e: 'code',
   '0': 'paragraph'
+};
+
+/**
+ * The same under `Mod`+`Shift`, which is where the blocks are.
+ *
+ * The lists and the quotation are the keys GitHub's comment box gives them,
+ * `7`, `8` and `.`, and the task list is the digit after. The image and the code
+ * block are the link and the code span with `Shift`, which is what each of them
+ * is. The divider is `,`, because the key a divider is written with is not
+ * free: `Mod`+`Shift`+`-` shrinks the page in Chromium and Firefox alike.
+ *
+ * A letter is read by what it types, so it follows the keyboard's layout the
+ * way `SHORTCUTS` does. The rest are read by the key: under `Shift` a `7` is
+ * `&` on one keyboard and `/` on another, and a handler reading the character
+ * would never see the key it was written for.
+ */
+const SHIFTED: Record<string, MawyCommand> = {
+  x: 'strikethrough',
+  k: 'image',
+  e: 'codeBlock',
+  Period: 'quote',
+  Comma: 'rule',
+  Digit7: 'orderedList',
+  Digit8: 'bulletList',
+  Digit9: 'taskList'
 };
 
 /** What the `heading` menu offers until an application says otherwise. */
@@ -1634,14 +1659,18 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     }
 
     if (event.shiftKey) {
-      if (key === 'x') {
-        event.preventDefault();
-        run(state, runCommand('strikethrough', state));
-      }
-
       if (key === 'u' && upload.current) {
         event.preventDefault();
         pickImage();
+
+        return;
+      }
+
+      const shifted = SHIFTED[key] ?? SHIFTED[event.code];
+
+      if (shifted) {
+        event.preventDefault();
+        run(state, runCommand(shifted, state));
       }
 
       return;

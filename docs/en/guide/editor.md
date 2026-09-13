@@ -179,6 +179,13 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 | `Mod` + `Shift` + `X`   | Strikethrough                          |
 | `Mod` + `E`             | Code                                   |
 | `Mod` + `K`             | Link                                   |
+| `Mod` + `Shift` + `K`   | Image                                  |
+| `Mod` + `Shift` + `.`   | Quotation                              |
+| `Mod` + `Shift` + `8`   | Bulleted list                          |
+| `Mod` + `Shift` + `7`   | Numbered list                          |
+| `Mod` + `Shift` + `9`   | Task list                              |
+| `Mod` + `Shift` + `E`   | Code block                             |
+| `Mod` + `Shift` + `,`   | Divider                                |
 | `Mod` + `1` / `2` / `3` | Heading 1, 2, 3                        |
 | `Mod` + `0`             | Body text                              |
 | `Mod` + `F`             | Find and replace                       |
@@ -190,6 +197,8 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 | `Enter`                 | Carries a list marker to the next line |
 
 `Mod` is Command or Control, whichever the machine has. Both are accepted rather than guessed at.
+
+The lists and the quotation use the keys GitHub's comment box gives them, and the task list takes the digit after. The image and the code block are the link and the code span with `Shift` added. The divider is on `,` because the key a divider is written with is taken: `Mod`+`Shift`+`-` shrinks the page in Chromium and Firefox. The digits and the punctuation are read by where the key is rather than by what it types, since under `Shift` a `7` types `&` on one keyboard and `/` on another. In Firefox on Windows and Linux, `Ctrl`+`Shift`+`K` and `Ctrl`+`Shift`+`E` open developer tools; they still do everywhere on the page except inside the editor.
 
 ::: fw flutter
 

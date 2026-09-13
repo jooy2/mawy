@@ -1013,6 +1013,48 @@ void main() {
       expect(seen.last, '~~one~~ **_two_** three');
     });
 
+    testWidgets('reaches the blocks and the image under Shift', (WidgetTester tester) async {
+      final List<(LogicalKeyboardKey, String)> cases = <(LogicalKeyboardKey, String)>[
+        (LogicalKeyboardKey.period, '> Words.'),
+        (LogicalKeyboardKey.digit8, '- Words.'),
+        (LogicalKeyboardKey.digit7, '1. Words.'),
+        (LogicalKeyboardKey.digit9, '- [ ] Words.'),
+        (LogicalKeyboardKey.keyE, '```\nWords.\n```'),
+        (LogicalKeyboardKey.keyK, '![Words.](url)'),
+        (LogicalKeyboardKey.comma, 'Words.\n\n---\n'),
+      ];
+
+      for (final (LogicalKeyboardKey key, String after) in cases) {
+        final List<String> seen = <String>[];
+
+        await tester.pumpWidget(
+          host(
+            MawyEditor(
+              key: UniqueKey(),
+              defaultValue: 'Words.',
+              mode: MawyEditorMode.plain,
+              toolbar: const <MawyEditorToolbarItem>[],
+              status: const <MawyEditorStatusItem>[],
+              onChange: seen.add,
+            ),
+          ),
+        );
+
+        final EditableText field = tester.widget(find.byType(EditableText));
+
+        field.focusNode.requestFocus();
+        await tester.pump();
+        // The divider goes after the words, and everything else takes them.
+        field.controller.selection = TextSelection(
+          baseOffset: key == LogicalKeyboardKey.comma ? 6 : 0,
+          extentOffset: 6,
+        );
+        await chord(tester, key, shift: true);
+
+        expect(seen.last, after, reason: key.debugName);
+      }
+    });
+
     testWidgets('runs no command while the document is read only', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 
