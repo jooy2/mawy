@@ -44,9 +44,39 @@ something to read before starting rather than a job waiting for somebody.
 
 ## Confirmed
 
-Nothing, at the moment. The last of it was the inline parser's cost on a
-document nobody wrote by hand, and every shape measured is linear in both
-packages now. The next finding goes under this heading with where the code is.
+- **Seven of the editor's toolbar commands have no keyboard shortcut**, though
+  the doc comment on `MawyEditorToolbarItem` in `packages/react/src/types.ts`
+  and "Formatting" in `docs/*/guide/editor.md` say every one of them does:
+  `image`, `quote`, `bulletList`, `orderedList`, `taskList`, `codeBlock` and
+  `rule`. `SHORTCUTS` in `MawyEditor.tsx` has none of them. The work is choosing
+  the keys: most letters under `Mod`+`Shift` or `Mod`+`Alt` are already a
+  browser's, or `AltGr`'s on Windows, which is written down beside
+  `tableShortcut`. The Flutter package's shortcuts, in `source_field.dart`, have
+  the same gap.
+- **The Flutter editor has none of what the React one gained for an application
+  moving from MDXEditor.** No `undo`, `redo` or `table` on the toolbar, no way to
+  hand it words of its own, and no handle. `runTableCommand`, `continueTable`,
+  `toggleHeading` and `headingActive` are in `lib/src/editor/commands.dart`,
+  checked by the parity diff and not exported. A value added to the exported
+  `MawyEditorToolbarItem` enum breaks an application's exhaustive `switch`, so
+  the toolbar items wait for a major version.
+- **`insertTable` inside a code block or a quotation.** In a fenced code block it
+  splits the block around the table, the way `rule` and `codeBlock` already do
+  there. In a quotation the table is written without the `>` prefix, so it
+  lands after the quotation rather than in it. `insertTable` in
+  `packages/react/src/internal/commands.ts` and its twin in `commands.dart`.
+
+## Reported
+
+- **A paste from a word processor with words and a picture in it.** Word and
+  Outlook are said to put `<img src="file:///…">` in the HTML beside a picture
+  of the copied selection. The words are pasted and the picture becomes its
+  description, because `pastedImagesIn` in `packages/react/src/internal/images.ts`
+  only takes the file when the markup has no words at all; taking it otherwise
+  could upload a picture of the whole selection. Not reproduced: which
+  applications do this, and what a browser exposes as files for it, are
+  unconfirmed. Chromium's own copy of an image, which puts nothing but the
+  `<img>` beside the file, is confirmed and handled.
 
 ## Release
 
