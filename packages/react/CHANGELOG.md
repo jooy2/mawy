@@ -8,6 +8,8 @@
 
 - **A picture written as HTML is drawn on a server when its address has a bare `&` in it.** Under `html="sanitize"`, `<img width="10" src="/a.webp?x=1&y=2">` was drawn as its characters by `MawyDocument`, and by `MawyViewer` until it hydrated, because the reader that needs no DOM accepted no `&` but the six references it decodes. A browser reads an `&` that begins no reference as the character it is: one at the end of a value, one followed by anything but a letter, a digit or `#`, and one followed by letters and digits and then `=`, which inside an attribute is never decoded whatever the name is. Those are read that way here now, and they are what an editor that wrote a picture's address into its tag without escaping it leaves in every query string. A name followed by anything else, such as `&utm_source=`, is still drawn as characters, because whether a browser decodes it depends on the table of reference names; `&not_x` is `¬_x` to a browser. The suite checks every value it accepts against the browser it runs in.
 
+- **`MawyDocument` is as wide as the column it is drawn in, up to the measure.** Its root is a flex column and the document inside it is centred with auto margins, and in a flex container those margins size the document to its content instead of to the column. A short post came out as wide as its longest line, in the middle of the page, whatever `measure` said. `.mawy-md` is `width: 100%` now, which changes nothing in the viewer and the editor, where the document is in a block.
+
 ## 1.4.0 (2026-09-13)
 
 ### Added

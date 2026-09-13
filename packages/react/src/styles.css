@@ -1022,8 +1022,16 @@
  *
  * The Flutter package has taken this as `MawyViewer.padding` since it had a
  * viewer, and this is the same answer in the only form a stylesheet has.
+ *
+ * `width: 100%` is what the auto margins take away where the document is a
+ * flex item, which it is in `MawyDocument`: the root is a flex column, and an
+ * item with auto margins across that column is as wide as its content rather
+ * than stretched. A short post came out as wide as its longest line. In a
+ * block, which is where the viewer and the editor draw it, the declaration
+ * changes nothing.
  */
 .mawy-root .mawy-md {
+  width: 100%;
   max-width: var(--mawy-doc-measure);
   margin: 0 auto;
   padding: var(--mawy-doc-padding, 40px 28px 96px);

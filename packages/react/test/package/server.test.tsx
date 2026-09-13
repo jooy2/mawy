@@ -4,6 +4,9 @@ import { MawyDocument, type MawyDocumentProps } from '../../src/server.js';
 import { MawyViewer, type MawyViewerProps } from '../../src/index.js';
 import { mawyHighlighter } from '../../src/highlight.js';
 import { sources } from '../support/sources';
+// For the one question here that is about layout rather than markup: how wide
+// the document is in a page's column.
+import '../../src/styles.css';
 
 /**
  * The document, drawn on a server and left alone.
@@ -441,5 +444,45 @@ describe('a document rendered on a server', () => {
       /^(?:\s|\/\/[^\n]*|\/\*[\s\S]*?\*\/)*'use client'/.test(source);
 
     expect([...seen].filter((path) => declared(sources[path]))).toEqual([]);
+  });
+});
+
+/**
+ * The drawing, in a page's column.
+ *
+ * `MawyDocument`'s root is a flex column, as every root is, and the document
+ * inside it is centred with auto margins. In a flex container those margins
+ * are what the item's width is taken from instead of the container's, so a
+ * short document came out as wide as its longest line.
+ */
+describe('a document drawn into a column', () => {
+  const widthIn = (column: number, element: React.ReactElement) => {
+    const host = document.createElement('div');
+
+    host.style.width = `${column}px`;
+    host.innerHTML = renderToStaticMarkup(element);
+    document.body.append(host);
+
+    const box = host.querySelector('.mawy-md')!.getBoundingClientRect();
+    const from = box.left - host.getBoundingClientRect().left;
+
+    host.remove();
+
+    return { width: box.width, from };
+  };
+
+  it('takes the width of the column, however short the document is', () => {
+    expect(
+      widthIn(670, <MawyDocument value="A short line." typography={{ measure: 'full' }} />)
+    ).toEqual({ width: 670, from: 0 });
+    // The default measure is 44rem, which is wider than this column.
+    expect(widthIn(670, <MawyDocument value="A short line." />)).toEqual({ width: 670, from: 0 });
+  });
+
+  it('stops at the measure, in the middle of a column wider than it', () => {
+    // 34rem is 544 pixels, so 228 are left over and half of them go on each side.
+    expect(
+      widthIn(772, <MawyDocument value="A short line." typography={{ measure: 'narrow' }} />)
+    ).toEqual({ width: 544, from: 114 });
   });
 });
