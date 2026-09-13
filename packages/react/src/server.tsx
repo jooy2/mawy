@@ -27,11 +27,15 @@
  *   page with nothing behind it is a lie. An application that wants them wants
  *   `MawyViewer`.
  * - **No copy button on a code block**, for the same reason.
- * - **`html="sanitize"` draws the markup as characters.** Sanitising needs a
+ * - **`html="sanitize"` draws most markup as characters.** Sanitising needs a
  *   DOM to parse with and a server has none — which is what `MawyViewer` does
  *   on a server too, except that there the elements arrive on the render after.
- *   Here there is no render after. `html="raw"` writes the markup out as the
- *   author wrote it, with everything that means; see the guide.
+ *   Here there is no render after. The exceptions are the few pieces a browser
+ *   has only one way to read, which need no parser: a `<br>`, an `<img>` with
+ *   nothing but quoted `src`, `alt`, `width`, `height` and `title`, and a tag
+ *   like `<u>` around some words. See `plainHtml` and `pairsIn` in `render.tsx`.
+ *   `html="raw"` writes the markup out as the author wrote it, with everything
+ *   that means; see the guide.
  * - **A highlighter is used only if it answers at once.** A promise has no
  *   second render to arrive on. Pass the one this package ships, or any other
  *   synchronous one, and the colour is in the HTML.
@@ -125,9 +129,10 @@ export interface MawyDocumentProps {
    *
    *     renderMarkdown(document, { resolveUrl: (url) => new URL(url, base).href })
    *
-   * It reaches a link's `href` and a picture's source. Raw HTML is drawn as
-   * characters here whatever the policy says — sanitising wants a DOM and a
-   * server has none — so there are no addresses inside it to resolve.
+   * It reaches a link's `href` and a picture's source, including the source of
+   * the one kind of picture written as raw HTML that is drawn here: see
+   * `plainHtml`. Any other raw HTML is characters, so there are no addresses
+   * inside it to resolve.
    */
   resolveUrl?: MawyUrlResolver;
 

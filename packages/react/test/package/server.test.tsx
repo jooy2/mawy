@@ -76,6 +76,47 @@ describe('a document rendered on a server', () => {
     expect(html).toContain('<u>under <em>lined</em></u> words');
   });
 
+  /**
+   * The two pieces of markup an editor that wrote HTML for what Markdown cannot
+   * say leaves in its documents, drawn as elements with no DOM to sanitise with.
+   */
+  it('draws a line break and a resized picture under `sanitize`', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument
+        html="sanitize"
+        value={
+          'Words<br/>and more.\n\n<img width="320" height="200" src="/a.png?x=1&amp;y=2" alt="A &quot;cat&quot;" />'
+        }
+      />
+    );
+
+    expect(html).toContain('<span class="mawy-md-html"><br/></span>and more.');
+    expect(html).toContain(
+      '<div class="mawy-md-html"><img src="/a.png?x=1&amp;y=2" alt="A &quot;cat&quot;" width="320" height="200" loading="lazy" decoding="async"/></div>'
+    );
+    expect(html).not.toContain('&lt;');
+  });
+
+  it('leaves a picture it cannot read exactly as the characters it was written with', () => {
+    for (const markup of [
+      '<img src="javascript:alert(1)">',
+      '<img src=/a.png>',
+      '<img src="/a.png" onerror="alert(1)">',
+      '<img src="/a.png" alt="&copy;">',
+      '<img src="/a.png" src="/b.png">',
+      '<img alt="no address">'
+    ]) {
+      const html = renderToStaticMarkup(<MawyDocument html="sanitize" value={markup} />);
+
+      expect(html).toContain('&lt;img');
+      expect(html).not.toContain('<img');
+    }
+
+    expect(renderToStaticMarkup(<MawyDocument value={'<img src="/a.png">'} />)).not.toContain(
+      '<img'
+    );
+  });
+
   it('pairs only tags a browser has one way to read', () => {
     for (const markup of ['a <u class="x">b</u> c', 'a <u>b</i> c', 'a <u>b']) {
       expect(renderToStaticMarkup(<MawyDocument html="sanitize" value={markup} />)).toContain(

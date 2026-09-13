@@ -47,7 +47,7 @@ import type {
   MdTextDirective
 } from './ast.js';
 import { toPlainText } from './inline.js';
-import { isRelativeUrl } from './url.js';
+import { isRelativeUrl, safeImageUrl } from './url.js';
 import type { MawyFound } from './find.js';
 import type { MawyStrings } from '../i18n.js';
 import { CautionIcon, ImportantIcon, NoteIcon, TipIcon, WarningIcon } from '../icons.js';
@@ -793,7 +793,131 @@ function StillHtml(props: {
   marks?: MawyMarks;
   reveal?: boolean;
 }): React.ReactElement {
-  return drawnHtml(props, props.context.html === 'raw' ? props.value : null);
+  return plainHtml(props) ?? drawnHtml(props, props.context.html === 'raw' ? props.value : null);
+}
+
+/** The attributes a picture written in HTML may carry and still be read here. */
+const PLAIN_IMAGE_ATTRIBUTES = new Set(['src', 'alt', 'width', 'height', 'title']);
+
+/**
+ * The references an attribute value may use, and what each one is.
+ *
+ * Only these, because a browser reads the others by rules that depend on what
+ * follows them — `&copy` with no semicolon is `©` in a paragraph and is left
+ * alone in an attribute when a letter comes next — and a value this file read
+ * one way and a browser another would be a picture pointing somewhere else. A
+ * value with any other `&` in it is not read here at all.
+ */
+const PLAIN_REFERENCES: Readonly<Record<string, string>> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&apos;': "'",
+  '&#39;': "'"
+};
+
+/** An attribute value with its references read, or `null` for one not read here. */
+function plainValue(value: string): string | null {
+  const read = value.replace(/&(?:amp|lt|gt|quot|apos|#39);/g, (each) => PLAIN_REFERENCES[each]);
+
+  return value.replace(/&(?:amp|lt|gt|quot|apos|#39);/g, '').includes('&') ? null : read;
+}
+
+/**
+ * A line break or a picture written as HTML, drawn as the element it is with
+ * no DOM to read it with.
+ *
+ * Sanitising means parsing, and parsing means `DOMParser`, which a server has
+ * not got — so `sanitize` drew every piece of markup as its characters there,
+ * and a page that `MawyDocument` built showed `<br/>` and `<img …>` to its
+ * readers, while `MawyViewer` showed them for as long as it took to hydrate.
+ * These two are what an editor writing HTML for what Markdown cannot say leaves
+ * in its documents, and both can be read exactly without a parser, because the
+ * form accepted is narrow enough that a browser has only one way to read it:
+ * the whole run of markup is the one tag, every attribute is quoted, and every
+ * attribute is one of the few named above with a value this file can decode
+ * exactly. Anything else — another attribute, an unquoted value, a second tag
+ * in the same run — returns `null` and is drawn the way it always was.
+ *
+ * The picture's address goes through the same check a Markdown image does, and
+ * through `resolveUrl`.
+ */
+export function plainHtml({
+  value,
+  context,
+  inline,
+  marks,
+  reveal
+}: {
+  value: string;
+  context: RenderContext;
+  inline?: boolean;
+  marks?: MawyMarks;
+  reveal?: boolean;
+}): React.ReactElement | null {
+  if (context.html !== 'sanitize' || reveal) {
+    return null;
+  }
+
+  const Tag = inline ? 'span' : 'div';
+  const markup = value.trim();
+
+  if (/^<br\s*\/?>$/i.test(markup)) {
+    return (
+      <Tag className="mawy-md-html" {...marks}>
+        <br />
+      </Tag>
+    );
+  }
+
+  const head = /^<img(?=[\s/>])/i.exec(markup);
+
+  if (!head) {
+    return null;
+  }
+
+  const attributes = new Map<string, string>();
+  const attribute = /\s+([A-Za-z][A-Za-z0-9-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/y;
+  let at = head[0].length;
+
+  attribute.lastIndex = at;
+
+  for (let found = attribute.exec(markup); found; found = attribute.exec(markup)) {
+    const name = found[1].toLowerCase();
+    const read = plainValue(found[2] ?? found[3]);
+
+    if (!PLAIN_IMAGE_ATTRIBUTES.has(name) || attributes.has(name) || read === null) {
+      return null;
+    }
+
+    attributes.set(name, read);
+    at = attribute.lastIndex;
+  }
+
+  const src = safeImageUrl(attributes.get('src') ?? '');
+
+  if (!/^\s*\/?>$/.test(markup.slice(at)) || !src) {
+    return null;
+  }
+
+  return (
+    <Tag className="mawy-md-html" {...marks}>
+      <img
+        src={resolved(context, src, 'image')}
+        alt={attributes.get('alt')}
+        width={attributes.get('width')}
+        height={attributes.get('height')}
+        title={attributes.get('title')}
+        // Lazy, as a picture the document wrote in Markdown is past its first.
+        // Without it React writes a `preload` for every one of these into the
+        // head of a page drawn on a server, which is every picture in the
+        // document fetched before the page is.
+        loading="lazy"
+        decoding="async"
+      />
+    </Tag>
+  );
 }
 
 export function drawnHtml(

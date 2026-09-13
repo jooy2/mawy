@@ -72,6 +72,22 @@ describe('a document drawn on a server and picked up in a browser', () => {
     ).toEqual([]);
   });
 
+  it('draws the markup it can read without a DOM on the server already', async () => {
+    const element = (
+      <MawyViewer
+        html="sanitize"
+        value={'An <u>underline</u>.\n\n<img width="10" height="20" src="/a.png" />'}
+        toolbar={false}
+      />
+    );
+
+    // So the page does not move when the browser picks it up.
+    expect(renderToString(element)).toContain(
+      '<img src="/a.png" width="10" height="20" loading="lazy" decoding="async"'
+    );
+    expect(await hydrating(element)).toEqual([]);
+  });
+
   it('sanitises once it is running in the browser', async () => {
     const host = document.createElement('div');
     const element = <MawyViewer html="sanitize" value={'<p class="k">hi</p>'} toolbar={false} />;

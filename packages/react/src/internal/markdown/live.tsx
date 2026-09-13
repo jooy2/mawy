@@ -24,6 +24,7 @@ import {
   checkedTokens,
   drawnCode,
   drawnHtml,
+  plainHtml,
   type MawyMarks,
   type RenderContext
 } from './render.js';
@@ -74,7 +75,12 @@ function RawHtml({
     [context.html, context.resolveUrl, value, hydrated]
   );
 
-  return drawnHtml({ value, context, inline, marks, reveal }, html);
+  // What can be read without a DOM is drawn the same way on the server and on
+  // the first render here, so there is nothing to change after hydrating.
+  return (
+    plainHtml({ value, context, inline, marks, reveal }) ??
+    drawnHtml({ value, context, inline, marks, reveal }, html)
+  );
 }
 
 /**
