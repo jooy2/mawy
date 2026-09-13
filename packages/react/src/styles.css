@@ -1896,7 +1896,13 @@
   overflow: auto;
 }
 
+/* As tall as the pane, when what is written is shorter than it, so the empty
+ * part of the pane is still the document: a drag that starts there selects, and
+ * the menu a right click opens there can paste. Where the pane is as tall as
+ * what is in it, the percentage has nothing to resolve against and does
+ * nothing. `MawyEditorDocument` answers the room either side of the measure. */
 .mawy-root .mawy-document-body {
+  min-height: 100%;
   outline: none;
 }
 

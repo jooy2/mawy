@@ -32,7 +32,7 @@ import {
 } from '../../internal/editing.js';
 import { fileFromDataUrl, pastedImagesIn } from '../../internal/images.js';
 import { pasteFromHtml } from '../../internal/markdown/paste.js';
-import { domAt, sourceAt } from '../../internal/position.js';
+import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
   value: string;
@@ -749,8 +749,120 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       };
     }, [value, readOnly, onEdit, aim]);
 
+    /**
+     * The caret, put down by a press rather than by the browser, and whether
+     * there was a place in the document to put it.
+     *
+     * The editor is told where it went straight away rather than on the
+     * `selectionchange` that follows. The press gave the editor the focus, and
+     * the render the focus causes draws out the link the editor's own record of
+     * the caret is inside and puts the caret back where that record says — which,
+     * until the editor has been told, is where the caret was before the press.
+     */
+    const put = (element: HTMLElement, at: { node: Node; offset: number } | null): boolean => {
+      const owner = element.ownerDocument;
+      const offset = at && documentAt(element, at.node, at.offset, value, aim.current);
+
+      if (!at || offset === null) {
+        return false;
+      }
+
+      const range = owner.createRange();
+
+      range.setStart(at.node, at.offset);
+      range.collapse(true);
+      owner.getSelection()?.removeAllRanges();
+      owner.getSelection()?.addRange(range);
+      onSelect({ start: offset, end: offset });
+
+      return true;
+    };
+
+    /** Whether a point on the page is lower than everything the document draws. */
+    const belowAll = (element: HTMLElement, y: number) => {
+      const last = element.lastElementChild;
+
+      return !last || y > last.getBoundingClientRect().bottom;
+    };
+
+    /**
+     * A press on the pane around the document, which takes no focus of its own.
+     *
+     * The document is as wide as the measure, and the pane is as wide as the
+     * editor, so there is room either side of it that is not the document. A
+     * press there put the caret nowhere, and what was typed next went nowhere
+     * with it. Beside a line it is the line — the browser is asked about the
+     * nearest point that is inside the document — and below the last block it is
+     * the end, the way a press below the last line of a textarea is.
+     *
+     * `mousedown` with its default prevented, so the focus never leaves the
+     * editor on its way back into it. A scroll bar is the pane too, and pressing
+     * one is scrolling.
+     */
+    const pressPane = (event: React.MouseEvent<HTMLDivElement>) => {
+      const element = root.current;
+      const pane = event.currentTarget;
+      const modified = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey;
+
+      if (!element || readOnly || event.target !== pane || event.button !== 0 || modified) {
+        return;
+      }
+
+      const box = pane.getBoundingClientRect();
+      const x = event.clientX - box.left - pane.clientLeft;
+      const y = event.clientY - box.top - pane.clientTop;
+
+      if (x < 0 || y < 0 || x >= pane.clientWidth || y >= pane.clientHeight) {
+        return;
+      }
+
+      event.preventDefault();
+      element.focus({ preventScroll: true });
+
+      const inside = element.getBoundingClientRect();
+      const point = belowAll(element, event.clientY)
+        ? null
+        : caretFromPoint(
+            Math.min(Math.max(event.clientX, inside.left + 1), inside.right - 1),
+            event.clientY
+          );
+
+      if (!point || !element.contains(point.node) || !put(element, point)) {
+        put(element, domAt(element, value.length, value));
+      }
+    };
+
+    /**
+     * A click below the last block, on the document itself.
+     *
+     * The document is at least as tall as the pane, so a press below what is
+     * written in it lands on it, and the browser puts the caret down — at the end
+     * of the last paragraph or item, except below a table, where Chromium and
+     * WebKit put it in the box the table scrolls inside and a keystroke has
+     * nowhere to go. Moved to the end of the document on `click` rather than on
+     * `mousedown`, so a drag that starts down there still selects, and only while
+     * nothing is selected.
+     */
+    const clickBelow = (event: React.MouseEvent<HTMLDivElement>) => {
+      const element = root.current;
+
+      if (
+        !element ||
+        readOnly ||
+        event.target !== element ||
+        !element.ownerDocument.getSelection()?.isCollapsed ||
+        !belowAll(element, event.clientY)
+      ) {
+        return;
+      }
+
+      put(element, domAt(element, value.length, value));
+    };
+
     return (
-      <div className="mawy-document">
+      // Both handlers are for a pointer, and neither is the only way in: the
+      // document is a `textbox` a keyboard reaches with `Tab`.
+      <div className="mawy-document" onMouseDown={pressPane} onClick={clickBelow}>
         {/*
           A `div` rather than an `article`, which is what this used to be: ARIA
           does not let a document section be a `textbox`, and a role a browser

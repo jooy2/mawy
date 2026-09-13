@@ -1492,6 +1492,109 @@ describe('the status bar', () => {
  * application is given and the thing that has to be right.
  */
 describe('the document surface', () => {
+  /**
+   * The editable element is as tall as what is written in it, and the pane
+   * around it fills the editor and scrolls. A press on the part of the pane the
+   * document does not reach landed on nothing that takes the focus, and what was
+   * typed next went nowhere.
+   */
+  it('puts the caret at the end for a press below the document', async () => {
+    for (const [source, typed] of [
+      ['One line', 'One lineX'],
+      // Chromium and WebKit put the caret for a press below a table in the box
+      // the table scrolls inside, where a keystroke has nowhere to go.
+      ['| a | b |\n| --- | --- |\n| c | d |', '| a | b |\n| --- | --- |\n| c | dX |']
+    ]) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor
+          style={{ height: 344 }}
+          modes={['wysiwyg']}
+          defaultValue={source}
+          onChange={onChange}
+        />
+      );
+      const pane = screen.container.querySelector('.mawy-document') as HTMLElement;
+
+      // The empty part of the pane is the document, so a drag that starts
+      // there is the browser's own.
+      expect(bodyOf(screen).offsetHeight).toBe(pane.clientHeight);
+
+      await userEvent.click(page.elementLocator(pane), {
+        position: { x: 40, y: pane.clientHeight - 12 }
+      });
+      await userEvent.keyboard('X');
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(typed));
+      await screen.unmount();
+    }
+  });
+
+  it('puts the caret on the line beside a press in the room either side of it', async () => {
+    const onChange = vi.fn();
+    // A measure narrower than the editor, so there is room either side.
+    const screen = await render(
+      <MawyEditor
+        style={{ height: 344, width: 400, '--mawy-doc-measure': '14rem' } as React.CSSProperties}
+        modes={['wysiwyg']}
+        defaultValue={'One line\n\nTwo'}
+        onChange={onChange}
+      />
+    );
+    const pane = screen.container.querySelector('.mawy-document') as HTMLElement;
+    const line = bodyOf(screen).querySelector('p')!.getBoundingClientRect();
+    const y = line.top + line.height / 2 - pane.getBoundingClientRect().top;
+
+    expect(bodyOf(screen).getBoundingClientRect().left - pane.getBoundingClientRect().left).toBe(
+      (pane.clientWidth - 224) / 2
+    );
+
+    await userEvent.click(page.elementLocator(pane), { position: { x: 8, y } });
+    await userEvent.keyboard('X');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('XOne line\n\nTwo'));
+
+    await userEvent.click(page.elementLocator(pane), { position: { x: pane.clientWidth - 8, y } });
+    await userEvent.keyboard('Y');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('XOne lineY\n\nTwo'));
+  });
+
+  it('keeps the caret a press put down when the focus it gives reveals a link', async () => {
+    const onChange = vi.fn();
+    const source = '[A link](https://example.com) first';
+    const screen = await render(
+      <MawyEditor
+        style={{ height: 344, width: 400, '--mawy-doc-measure': '14rem' } as React.CSSProperties}
+        modes={['wysiwyg']}
+        defaultValue={source}
+        onChange={onChange}
+      />
+    );
+    const pane = screen.container.querySelector('.mawy-document') as HTMLElement;
+    const line = bodyOf(screen).querySelector('p')!.getBoundingClientRect();
+
+    // The editor had its caret at the start, inside the link, until it was told
+    // otherwise — and the render the focus caused put the caret back there.
+    await userEvent.click(page.elementLocator(pane), {
+      position: { x: pane.clientWidth - 8, y: line.bottom - 6 - pane.getBoundingClientRect().top }
+    });
+    await userEvent.keyboard('X');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(`${source}X`));
+  });
+
+  it('leaves a read-only document to be selected rather than focused', async () => {
+    const screen = await render(
+      <MawyEditor style={{ height: 344 }} modes={['wysiwyg']} defaultValue="One line" readOnly />
+    );
+    const pane = screen.container.querySelector('.mawy-document') as HTMLElement;
+
+    await userEvent.click(page.elementLocator(pane), {
+      position: { x: 40, y: pane.clientHeight - 12 }
+    });
+
+    expect(document.activeElement).not.toBe(bodyOf(screen));
+  });
+
   it('types into a paragraph and into the middle of a bold run', async () => {
     const onChange = vi.fn();
     const source = 'One two.\n\nA **bold** word.';

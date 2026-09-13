@@ -44,10 +44,20 @@ something to read before starting rather than a job waiting for somebody.
 
 ## Confirmed
 
-Nothing, at the moment. The last of it was what the React editor gained for an
-application moving from MDXEditor and the Flutter editor did not, and the seven
-toolbar commands that had no key, and both packages have all of it now. What
-the Flutter editor still does not do on purpose, uploading a picture, is under
+- **Nothing can be typed after a divider that ends a document, on `wysiwyg`.**
+  A press below `Words.\n\n---` puts the caret at the end of the document, and
+  `domAt` in `packages/react/src/internal/position.ts` can only place that on
+  the `<hr>` itself, where `editFor` in `internal/editing.ts` finds no block to
+  write into. The keystroke goes nowhere in Chromium, Firefox and WebKit alike.
+  A document that ends in a paragraph, a list, a code block or a table takes
+  the keystroke. The caret needs somewhere to be after the rule, and `withRoom`
+  in `components/editor/MawyEditorDocument.tsx`, which draws one empty paragraph
+  where the last edit left the caret, is the mechanism closest to that.
+
+Before that, the last of it was what the React editor gained for an application
+moving from MDXEditor and the Flutter editor did not, and the seven toolbar
+commands that had no key, and both packages have all of it now. What the
+Flutter editor still does not do on purpose, uploading a picture, is under
 "Decided" in [CLAUDE.md](CLAUDE.md). The next finding goes under this heading
 with where the code is.
 

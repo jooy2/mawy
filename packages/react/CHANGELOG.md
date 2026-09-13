@@ -10,6 +10,8 @@
 
 - **`MawyDocument` is as wide as the column it is drawn in, up to the measure.** Its root is a flex column and the document inside it is centred with auto margins, and in a flex container those margins size the document to its content instead of to the column. A short post came out as wide as its longest line, in the middle of the page, whatever `measure` said. `.mawy-md` is `width: 100%` now, which changes nothing in the viewer and the editor, where the document is in a block.
 
+- **A press anywhere in the `wysiwyg` pane puts the caret in the document.** The editable element was as tall as what was written in it and as wide as the measure, and a press on the rest of the pane landed on an element that takes no focus, so what was typed next went nowhere. The document is at least as tall as the pane now, so a press below what is written lands on it and a drag from there selects. Below the last block the caret goes to the end of the document, including below a table, where Chromium and WebKit had put it inside the box the table scrolls in. In the room either side of the measure it goes to the line at that height. An application that set `min-height: 100%` on `.mawy-document-body` for this can take it out.
+
 ## 1.4.0 (2026-09-13)
 
 ### Added
