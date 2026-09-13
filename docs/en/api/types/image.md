@@ -59,7 +59,9 @@ Which pictures an application is willing to fetch is not a viewer's decision to 
 ## `MawyImageUpload`
 
 ```ts
-type MawyImageUpload = (file: File) => MawyImageSource | null | Promise<MawyImageSource | null>;
+type MawyImageUpload = (
+  file: File
+) => MawyImageSource | MawyImageRefusal | null | Promise<MawyImageSource | MawyImageRefusal | null>;
 ```
 
 Where a picture dropped or pasted into the editor goes, and what URL to write for it. Storing a file somewhere is not a decision a text editor should make on its own, so with no `onUploadImage` a dropped file does nothing. An image already on the web, pasted as part of a page, still arrives as the URL it already had. A picture pasted at a `data:` address is its own bytes rather than an address, and goes through `onUploadImage` like a file when there is one.
@@ -68,7 +70,17 @@ Where a picture dropped or pasted into the editor goes, and what URL to write fo
 <MawyEditor onUploadImage={async (file) => (await save(file)).url} />
 ```
 
-Throwing, or coming back with nothing, is how an upload says it failed: the editor says so and writes nothing.
+Coming back with `{ reason }` is how an upload says it failed and why; see `MawyImageRefusal`. Throwing, or coming back with nothing, is a failure with no reason: the editor says the image could not be added and writes nothing.
+
+## `MawyImageRefusal`
+
+```ts
+interface MawyImageRefusal {
+  reason: string | null;
+}
+```
+
+What an upload answers with to say it failed and why. The note under the document says `reason`, which should be in the interface's language. `null` says the application has already told the reader, and the editor says nothing about that file. Several files at once are one note: the reasons given, each once, in the order the files came, followed by how many of the batch failed with no reason given.
 
 ## `MawyImageSource`
 

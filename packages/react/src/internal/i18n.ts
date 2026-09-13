@@ -123,7 +123,8 @@ const en: MawyStrings = {
   dropImage: 'Drop here to attach an image',
   dropNotDocument: 'A dropped file does not replace the document — use Open for that.',
   uploading: 'Adding the image…',
-  uploadFailed: 'That image could not be added.'
+  uploadFailed: 'That image could not be added.',
+  uploadFailedSome: '%N of %T images could not be added.'
 };
 
 const ko: MawyStrings = {
@@ -232,7 +233,8 @@ const ko: MawyStrings = {
   dropImage: '여기에 드롭하여 이미지 첨부',
   dropNotDocument: '파일을 놓아도 문서가 바뀌지는 않습니다. 문서를 바꾸려면 열기를 쓰세요.',
   uploading: '이미지를 넣는 중…',
-  uploadFailed: '이미지를 넣지 못했습니다.'
+  uploadFailed: '이미지를 넣지 못했습니다.',
+  uploadFailedSome: '이미지 %T개 중 %N개를 넣지 못했습니다.'
 };
 
 const STRINGS: Record<MawyLocale, MawyStrings> = { en, ko };

@@ -3189,6 +3189,73 @@ describe('images', () => {
     });
   });
 
+  it('says why an upload failed when the application says, and nothing when it has', async () => {
+    const note = (screen: { container: HTMLElement }) =>
+      screen.container.querySelector('.mawy-editor-note');
+    const said = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onUploadImage={() => ({ reason: 'That file is larger than 5 MB.' })}
+      />
+    );
+
+    drop(said.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
+
+    await vi.waitFor(() => expect(note(said)?.textContent).toBe('That file is larger than 5 MB.'));
+    await said.unmount();
+
+    const onChange = vi.fn();
+    const told = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onChange={onChange}
+        onUploadImage={() => ({ reason: null })}
+      />
+    );
+
+    drop(told.container.querySelector('.mawy-editor') as HTMLElement, [png()]);
+
+    // The application told the reader itself, so the note goes when the upload
+    // does, with nothing written and nothing more said.
+    await vi.waitFor(() => expect(note(told)).toBe(null));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('says in one note what became of a batch that partly failed', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onChange={onChange}
+        onUploadImage={(file) =>
+          file.name === 'big.png'
+            ? { reason: 'That file is larger than 5 MB.' }
+            : file.name === 'lost.png'
+              ? null
+              : `/${file.name}`
+        }
+      />
+    );
+
+    sourceOf(screen).focus();
+    sourceOf(screen).setSelectionRange(7, 7);
+    drop(screen.container.querySelector('.mawy-editor') as HTMLElement, [
+      png('big.png'),
+      png('fine.png'),
+      png('lost.png')
+    ]);
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Before.![fine](/fine.png)'));
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-editor-note')?.textContent).toBe(
+        'That file is larger than 5 MB. 1 of 3 images could not be added.'
+      )
+    );
+  });
+
   it('does not upload into a read-only editor', async () => {
     const onUploadImage = vi.fn(async () => '/a.png');
     const screen = await render(

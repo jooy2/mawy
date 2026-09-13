@@ -299,7 +299,23 @@ Markup wins only where it has something to say. A browser copying an image puts 
 />
 ```
 
-Answer with the URL to write, or with `{ url, alt, title }` to say what goes around it. Otherwise the file's own name, without its extension, becomes the description. Throw, or answer with nothing, and the editor says the image could not be added and writes nothing at all. That stays on the line under the document until the next upload starts, however many others finish in the meantime.
+Answer with the URL to write, or with `{ url, alt, title }` to say what goes around it. Otherwise the file's own name, without its extension, becomes the description. Throw, or answer with nothing, and the editor says the image could not be added and writes nothing at all.
+
+**Answer with `{ reason }` to say why.** The note under the document says the reason as it was given, so it should be in the interface's language. Answer `{ reason: null }` when the application has already told the reader in its own way, and the editor says nothing about that file, so the reader does not get the same message twice. What was thrown is never shown: it is as likely to be a network error written for a developer as anything a reader should see.
+
+```tsx
+<MawyEditor
+  onUploadImage={async (file) => {
+    if (file.size > LIMIT) {
+      return { reason: t('upload.tooLarge') };
+    }
+
+    return (await save(file)).url;
+  }}
+/>
+```
+
+Several files at once get one note. The ones that went in are on the page and are not mentioned. The note gives the reasons for the ones that did not, each once and in the order the files came, and then how many of the batch failed with no reason: _1 of 3 images could not be added._ That stays on the line under the document until the next upload starts, however many others finish in the meantime.
 
 **Without `onUploadImage`, a dropped file is refused.** It is not half-inserted, and not handed back to the browser either: the editor takes the drop, writes nothing, and says so on the line under the document. That is the intended default. The only alternative is turning a two-megabyte screenshot into a `data:` URI inside somebody's document.
 

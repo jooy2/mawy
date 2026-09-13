@@ -59,7 +59,9 @@ import Image from 'next/image';
 ## `MawyImageUpload`
 
 ```ts
-type MawyImageUpload = (file: File) => MawyImageSource | null | Promise<MawyImageSource | null>;
+type MawyImageUpload = (
+  file: File
+) => MawyImageSource | MawyImageRefusal | null | Promise<MawyImageSource | MawyImageRefusal | null>;
 ```
 
 에디터에 떨어뜨리거나 붙여넣은 그림이 어디로 가고 어떤 URL을 쓸지. 파일을 어딘가에 보관하는 일은 텍스트 에디터가 혼자 정할 일이 아니므로, `onUploadImage`가 없으면 떨어뜨린 파일은 아무 일도 하지 않습니다. 이미 웹에 있는 이미지를 페이지째 붙여넣으면 원래 가지고 있던 URL 그대로 들어옵니다. `data:` 주소로 붙여넣은 그림은 주소가 아니라 그림의 바이트 자체이므로, `onUploadImage`가 있으면 파일처럼 그것을 거칩니다.
@@ -68,7 +70,17 @@ type MawyImageUpload = (file: File) => MawyImageSource | null | Promise<MawyImag
 <MawyEditor onUploadImage={async (file) => (await save(file)).url} />
 ```
 
-예외를 던지거나 아무것도 돌려주지 않는 것이 업로드가 실패했다고 말하는 방법입니다. 에디터는 실패를 알리고 아무것도 쓰지 않습니다.
+`{ reason }`을 돌려주는 것이 업로드가 실패했고 왜 실패했는지 말하는 방법입니다. `MawyImageRefusal`을 보세요. 예외를 던지거나 아무것도 돌려주지 않으면 이유 없는 실패이고, 에디터는 이미지를 넣지 못했다고 알리고 아무것도 쓰지 않습니다.
+
+## `MawyImageRefusal`
+
+```ts
+interface MawyImageRefusal {
+  reason: string | null;
+}
+```
+
+업로드가 실패했고 왜 실패했는지 말할 때 돌려주는 값입니다. 문서 아래 알림이 `reason`을 보여 주므로, 인터페이스의 언어로 써야 합니다. `null`은 애플리케이션이 이미 독자에게 알렸다는 뜻이고, 에디터는 그 파일에 대해 아무 말도 하지 않습니다. 여러 파일을 한 번에 넣으면 알림은 하나입니다. 받은 이유를 파일 순서대로 하나씩만 말하고, 이어서 이유 없이 실패한 파일이 몇 개인지 말합니다.
 
 ## `MawyImageSource`
 

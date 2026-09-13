@@ -1067,20 +1067,36 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       setNote({ text: strings.uploading, failed: false });
 
       const written: string[] = [];
+      /** What the application said about the files it refused, each once. */
+      const reasons: string[] = [];
+      /** How many failed with nothing said about why. */
+      let unexplained = 0;
       let failed = false;
 
       for (const file of files) {
         try {
-          const source = await hook(file);
+          const answer = await hook(file);
 
-          if (source) {
-            written.push(markdownForImage(source, file));
+          if (answer && typeof answer === 'object' && 'reason' in answer) {
+            failed = true;
+
+            // `null` is the application saying it has told the reader already,
+            // and a second message about the same file is one too many.
+            if (answer.reason && !reasons.includes(answer.reason)) {
+              reasons.push(answer.reason);
+            }
+          } else if (answer) {
+            written.push(markdownForImage(answer, file));
           } else {
             // Nothing back is how an upload says no without saying why.
             failed = true;
+            unexplained += 1;
           }
         } catch {
+          // What was thrown is not read out. It is as likely to be a network
+          // error in a developer's words as anything a reader should see.
           failed = true;
+          unexplained += 1;
         }
       }
 
@@ -1091,8 +1107,23 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         places.current.splice(places.current.indexOf(place), 1);
       }
 
-      if (failed) {
-        setNote({ text: strings.uploadFailed, failed: true });
+      /*
+       * One note for the whole batch. The images that went in are on the page
+       * and need no word; what is said is why the others did not — the reasons
+       * the application gave, in the order the files came, and for the files
+       * nobody explained, how many of the batch they were.
+       */
+      const said = [
+        ...reasons,
+        ...(unexplained === 0
+          ? []
+          : files.length === 1
+            ? [strings.uploadFailed]
+            : [fill(strings.uploadFailedSome, { N: String(unexplained), T: String(files.length) })])
+      ].join(' ');
+
+      if (failed && said) {
+        setNote({ text: said, failed: true });
       } else {
         settled();
       }

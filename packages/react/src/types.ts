@@ -99,12 +99,40 @@ export type MawyEditorToolbarOption = boolean | readonly MawyEditorToolbarItem[]
  * <MawyEditor onUploadImage={async (file) => (await save(file)).url} />
  * ```
  *
- * Throwing, or coming back with nothing, is how an upload says it failed, and
- * the editor says so and writes nothing.
+ * Coming back with `{ reason }` is how an upload says it failed and why: the
+ * note under the document says the reason, or says nothing at all when the
+ * reason is `null` — which is the application saying it has told the reader
+ * itself. Throwing, or coming back with nothing, is a failure with no reason,
+ * and the note says the image could not be added. What was thrown is never
+ * shown. Either way nothing is written for that file.
+ *
+ * ```tsx
+ * <MawyEditor
+ *   onUploadImage={async (file) =>
+ *     file.size > LIMIT ? { reason: t('upload.tooLarge') } : (await save(file)).url
+ *   }
+ * />
+ * ```
  */
 export type MawyImageUpload = (
   file: File
-) => MawyImageSource | null | Promise<MawyImageSource | null>;
+) => MawyImageSource | MawyImageRefusal | null | Promise<MawyImageSource | MawyImageRefusal | null>;
+
+/**
+ * An upload that did not happen, and what the reader is told about it.
+ *
+ * Several files at once are one note: the reasons given, each once, in the
+ * order the files came, followed by how many of the batch failed with no reason
+ * given. The files that were added are on the page and are not mentioned.
+ */
+export interface MawyImageRefusal {
+  /**
+   * What the note under the document says, in the interface's language. `null`
+   * when the application has already told the reader, and the editor says
+   * nothing about this file.
+   */
+  reason: string | null;
+}
 
 /** A URL, or a URL with the words that go around it in the Markdown. */
 export type MawyImageSource =
@@ -297,6 +325,8 @@ export interface MawyStrings {
   dropNotDocument: string;
   uploading: string;
   uploadFailed: string;
+  /** `%N` is how many of a batch of `%T` images failed with no reason given. */
+  uploadFailedSome: string;
 }
 
 /**
