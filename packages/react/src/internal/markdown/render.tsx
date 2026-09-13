@@ -482,8 +482,136 @@ function Directive({
  * Inline
  * ---------------------------------------------------------------------- */
 
+/**
+ * Elements a document may write as a tag before some words and a tag after,
+ * and have drawn as one element around them.
+ *
+ * The parser reads `<u>` and `</u>` as two nodes with the words between them,
+ * which is right — CommonMark says exactly that — and each node used to be
+ * drawn on its own: an empty `<u></u>`, the words, and a closing tag that drew
+ * nothing. Under `sanitize` and `raw` alike, an underline underlined nothing.
+ *
+ * Phrasing elements with no attributes and nothing a browser could read two
+ * ways: a start tag, an end tag with the same name, and what is between them
+ * in the same run of inline content. Everything else is drawn as it was, a
+ * node at a time.
+ */
+const PAIRED = new Set([
+  'b',
+  'del',
+  'em',
+  'i',
+  'ins',
+  'kbd',
+  'mark',
+  's',
+  'small',
+  'strong',
+  'sub',
+  'sup',
+  'u'
+]);
+const OPENS = /^<([A-Za-z]+)\s*>$/;
+const CLOSES = /^<\/([A-Za-z]+)\s*>$/;
+
+/**
+ * Which start tags in a run of inline content close where, by index.
+ *
+ * Paired off the way a stack of open elements would be. A closing tag that
+ * does not close the element opened last is markup a browser untangles with
+ * rules of its own, and nothing in the run is paired rather than guessing at
+ * them; an element never closed is left alone.
+ */
+function pairsIn(nodes: readonly MdInline[], context: RenderContext): Map<number, number> {
+  const pairs = new Map<number, number>();
+
+  if (context.html === 'escape') {
+    return pairs;
+  }
+
+  const open: { name: string; at: number }[] = [];
+
+  for (let at = 0; at < nodes.length; at += 1) {
+    const node = nodes[at];
+
+    if (node.type !== 'inlineHtml' || revealed(node, context)) {
+      continue;
+    }
+
+    const opening = OPENS.exec(node.value)?.[1].toLowerCase();
+
+    if (opening && PAIRED.has(opening)) {
+      open.push({ name: opening, at });
+      continue;
+    }
+
+    const closing = CLOSES.exec(node.value)?.[1].toLowerCase();
+
+    if (!closing || !PAIRED.has(closing)) {
+      continue;
+    }
+
+    if (open[open.length - 1]?.name !== closing) {
+      return new Map();
+    }
+
+    pairs.set(open.pop()!.at, at);
+  }
+
+  return pairs;
+}
+
 function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNode {
-  return nodes.map((node, index) => {
+  const pairs = pairsIn(nodes, context);
+
+  if (!pairs.size) {
+    return renderRun(nodes, context);
+  }
+
+  const out: React.ReactNode[] = [];
+  let from = 0;
+
+  for (let at = 0; at < nodes.length; at += 1) {
+    const to = pairs.get(at);
+
+    if (to === undefined) {
+      continue;
+    }
+
+    const opening = nodes[at] as MdInline & { value: string };
+    const closing = nodes[to];
+    const Tag = OPENS.exec(opening.value)![1].toLowerCase() as 'u';
+
+    out.push(
+      <React.Fragment key={`${from}-run`}>
+        {renderRun(nodes.slice(from, at), context, from)}
+      </React.Fragment>
+    );
+    out.push(
+      <Tag
+        key={`${at}-${to}`}
+        {...origin({ range: { start: opening.range.end, end: closing.range.start } }, context)}
+      >
+        {renderInline(nodes.slice(at + 1, to), context)}
+      </Tag>
+    );
+    from = to + 1;
+    at = to;
+  }
+
+  out.push(
+    <React.Fragment key={`${from}-run`}>
+      {renderRun(nodes.slice(from), context, from)}
+    </React.Fragment>
+  );
+
+  return out;
+}
+
+function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.ReactNode {
+  return nodes.map((node, place) => {
+    const index = first + place;
+
     switch (node.type) {
       case 'text':
         return marked(node, node.value, context);

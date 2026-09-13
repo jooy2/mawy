@@ -160,6 +160,16 @@ describe('safety', () => {
     expect(screen.container.querySelector('script')).toBeNull();
   });
 
+  it('draws an underline around the words between its two tags', async () => {
+    const screen = await render(
+      <MawyViewer html="sanitize" value="Some <u>under</u> line." toolbar={false} />
+    );
+
+    // Each tag is a node of its own to the parser, so each used to be drawn on
+    // its own: an empty `<u></u>`, the words, and an empty closing span.
+    expect(screen.container.querySelector('u')?.textContent).toBe('under');
+  });
+
   it('drops a script and everything in it, however it is wrapped', async () => {
     const screen = await render(
       <MawyViewer

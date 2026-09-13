@@ -1979,6 +1979,25 @@ describe('the document surface', () => {
     expect(coded).toHaveBeenLastCalledWith('```ts\nconst\n a = 1;\n```');
   });
 
+  it('types into words an underline is drawn around', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="An <u>underline</u> here."
+        mode="wysiwyg"
+        html="sanitize"
+        onChange={onChange}
+      />
+    );
+
+    expect(bodyOf(screen).querySelector('u')?.textContent).toBe('underline');
+
+    put(bodyOf(screen), 'underline', 5);
+    type(bodyOf(screen), 'insertText', 'X');
+
+    expect(onChange).toHaveBeenLastCalledWith('An <u>underXline</u> here.');
+  });
+
   it('does not join a cell to the one beside it', async () => {
     const source = '| a | b |\n| - | - |\n| 1 | 2 |';
     const onChange = vi.fn();

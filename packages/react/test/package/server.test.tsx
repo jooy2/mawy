@@ -68,6 +68,25 @@ describe('a document rendered on a server', () => {
     expect(raw).toContain('<div>hi</div>');
   });
 
+  it('draws an underline around the words between its two tags under `sanitize`', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument html="sanitize" value="Some <u>under *lined*</u> words." />
+    );
+
+    expect(html).toContain('<u>under <em>lined</em></u> words');
+  });
+
+  it('pairs only tags a browser has one way to read', () => {
+    for (const markup of ['a <u class="x">b</u> c', 'a <u>b</i> c', 'a <u>b']) {
+      expect(renderToStaticMarkup(<MawyDocument html="sanitize" value={markup} />)).toContain(
+        '&lt;u'
+      );
+    }
+
+    // And nothing at all under the default.
+    expect(renderToStaticMarkup(<MawyDocument value="a <u>b</u>" />)).toContain('&lt;u&gt;');
+  });
+
   /**
    * The way back from the page to the document is a quarter of the HTML, and
    * nothing on a page built this way ever walks it. See `origin`.
