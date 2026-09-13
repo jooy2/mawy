@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.4.0 (2026-09-13)
+
 ### Breaking changes
 
 - **`MawyEditorToolbarItem` has new values**: `undo`, `redo` and `table`, which are below. A `switch` over the enum that names every value and has no `default` stops compiling until it names these too, because Dart checks such a `switch` for every value the enum has. A `toolbar` list an application wrote is unaffected, and so is any code that only compares values or builds lists of them.
