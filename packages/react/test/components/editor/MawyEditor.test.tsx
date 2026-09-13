@@ -3693,6 +3693,108 @@ describe('images', () => {
     expect(note()?.textContent).toBe('That image could not be added.');
   });
 
+  it('writes both of two uploads that answer at the same moment', async () => {
+    const upload = slowUpload();
+    const screen = await render(
+      <MawyEditor defaultValue="Hello" modes={['plain']} onUploadImage={upload.hook} />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(5, 5);
+    pasteFiles(input, [png('first.png')]);
+    pasteFiles(input, [png('second.png')]);
+
+    await vi.waitFor(() => expect(upload.hook).toHaveBeenCalledTimes(2));
+    // Both answered before the editor has drawn either.
+    void upload.settle('/1.png');
+    void upload.settle('/2.png', 0);
+
+    await vi.waitFor(() => expect(input.value).toBe('Hello![first](/1.png)![second](/2.png)'));
+  });
+
+  it('writes both pictures a paste carried inline when they answer together', async () => {
+    let count = 0;
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Before."
+        modes={['plain']}
+        onUploadImage={async () => `/up${(count += 1)}.png`}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    pasteFiles(input, [], {
+      'text/html': `<p>A <img src="${DOT}" alt="one"> and <img src="${DOT}" alt="two"> here</p>`
+    });
+
+    await vi.waitFor(() =>
+      expect(input.value).toBe('Before.A ![one](/up1.png) and ![two](/up2.png) here')
+    );
+  });
+
+  it('writes nothing and counts nothing once it has been taken off the page', async () => {
+    const onChange = vi.fn();
+    const onUploadingChange = vi.fn();
+    const upload = slowUpload();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Hello"
+        modes={['plain']}
+        onChange={onChange}
+        onUploadImage={upload.hook}
+        onUploadingChange={onUploadingChange}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(5, 5);
+    pasteFiles(input, [png('a.png')]);
+    pasteFiles(input, [png('b.png')]);
+
+    await vi.waitFor(() => expect(onUploadingChange).toHaveBeenLastCalledWith(2));
+    await screen.unmount();
+
+    const said = onUploadingChange.mock.calls.length;
+
+    await upload.settle('/a.png');
+    await upload.settle('/b.png');
+    await new Promise((done) => setTimeout(done, 50));
+
+    expect(onUploadingChange).toHaveBeenLastCalledWith(0);
+    expect(onUploadingChange).toHaveBeenCalledTimes(said);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps the caret of a source surface the reader left while the image uploaded', async () => {
+    const upload = slowUpload();
+    const screen = await render(
+      <div>
+        <MawyEditor defaultValue="Hello world" modes={['plain']} onUploadImage={upload.hook} />
+        <input aria-label="Elsewhere" />
+      </div>
+    );
+    const input = sourceOf(screen);
+    const elsewhere = screen.container.querySelector('[aria-label="Elsewhere"]') as HTMLElement;
+
+    input.focus();
+    input.setSelectionRange(5, 5);
+    pasteFiles(input, [png()]);
+    input.setSelectionRange(8, 8);
+    elsewhere.focus();
+
+    await upload.settle('/a.png');
+    await vi.waitFor(() => expect(input.value).toBe('Hello![A photo](/a.png) world'));
+
+    // Where it was, moved along by the image, rather than at the end of the
+    // document — which is where the next command or insert would have gone.
+    expect(input.selectionStart).toBe(8 + '![A photo](/a.png)'.length);
+    expect(document.activeElement).toBe(elsewhere);
+  });
+
   it('leaves the focus where the reader took it while the image uploaded', async () => {
     const upload = slowUpload();
     const screen = await render(

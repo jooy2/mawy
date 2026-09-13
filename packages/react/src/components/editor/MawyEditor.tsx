@@ -1056,6 +1056,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   // button until the count is zero is not left holding it for ever.
   React.useEffect(
     () => () => {
+      // Forgotten as well as said, or an upload that answers afterwards still
+      // finds its place, writes into a document nobody is showing and counts
+      // itself back up.
+      places.current.length = 0;
+
       if (told.current) {
         told.current = 0;
         uploading.current?.(0);
@@ -1136,6 +1141,13 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * image went in front of it, and is only put back on a surface that has the
    * focus — a selection set on a surface that does not is a focus taken.
    *
+   * **One at a time.** What is written is worked out from the document as it
+   * was last drawn, so a second upload answering before the first one's write
+   * has been drawn would work from a document without the first image in it
+   * and write it out again. It waits instead, still counted, and the effect
+   * below writes it once the first is on the page — which is also what a
+   * picture taken out of a paste does while the paste itself is on its way in.
+   *
    * **A read-only document does not change**, and that includes an upload
    * that finishes while it is one. `readOnly` is what an application sets while
    * it saves, and an image written in the middle of a save is an image on the
@@ -1148,7 +1160,13 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const putImage = (place: MawyUpload) => {
     const markdown = place.markdown;
 
-    if (readOnly || markdown === null || !places.current.includes(place)) {
+    if (
+      readOnly ||
+      markdown === null ||
+      writing.current !== null ||
+      place.waiting !== null ||
+      !places.current.includes(place)
+    ) {
       return;
     }
 
@@ -1168,7 +1186,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     writing.current = { value: next, change, order: place.order };
 
-    if (element?.contains(element.ownerDocument.activeElement)) {
+    // A textarea is given its caret back whether or not it has the focus:
+    // setting its value puts the caret at the end, and a caret at the end is
+    // where the next command or `handle.insert` would land. Setting a
+    // selection on it does not take the focus. A drawn document is only given
+    // one while it has the focus, because a selection put inside a
+    // `contenteditable` is a focus taken.
+    if (
+      element &&
+      (element === source.current || element.contains(element.ownerDocument.activeElement))
+    ) {
       pending.current = [caret.start, caret.end];
     }
 
@@ -1180,11 +1207,19 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   };
 
   /**
-   * The uploads that finished while the document was read-only, written once it
-   * is not. One per render, oldest first: each is written into the document the
-   * last one left, which is not on the screen until this has run again.
+   * The uploads that finished while they could not be written — the document
+   * read-only, or another image still on its way onto the page — written once
+   * they can be. One per render, oldest first: each is written into the document
+   * the last one left, which is not on the screen until this has run again.
    */
   React.useLayoutEffect(() => {
+    // A write the application did not take — a controlled `value` that stayed
+    // where it was — is not waited on for ever. Any render after it would have
+    // drawn it.
+    if (writing.current && writing.current.value !== text) {
+      writing.current = null;
+    }
+
     const held = readOnly ? undefined : places.current.find((place) => place.markdown !== null);
 
     if (held) {
