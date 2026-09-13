@@ -197,6 +197,39 @@ const List<MawyEditorStatusItem> kMawyEditorStatus = <MawyEditorStatusItem>[
   MawyEditorStatusItem.size,
 ];
 
+/// What an application can do to an editor from outside it.
+///
+/// Made by the application and handed to [MawyEditor.handle], the way a
+/// `ScrollController` is handed to a scroll view. A button beside the editor
+/// that inserts a snippet, or a screen putting the focus back in the editor
+/// after a dialog closes, has no other way in. Before an editor has it, and
+/// after that editor is gone, both methods do nothing.
+///
+/// ```dart
+/// final MawyEditorHandle handle = MawyEditorHandle();
+///
+/// MawyEditor(handle: handle, onChange: save);
+/// TextButton(onPressed: () => handle.insert('![](https://example.com/a.png)'), child: ...);
+/// ```
+class MawyEditorHandle {
+  /// Creates a handle that belongs to no editor yet.
+  MawyEditorHandle();
+
+  _MawyEditorState? _editor;
+
+  /// The focus put back in the source, with the caret where it was left.
+  ///
+  /// Nothing in `preview`, which has no caret.
+  void focus() => _editor?._focusFromOutside();
+
+  /// [markdown] written where the caret is, in place of whatever is selected,
+  /// as one change, with the caret after it and the focus in the source.
+  ///
+  /// A caret nobody has put anywhere yet is at the end of the document. Nothing
+  /// while the editor is read only or in `preview`.
+  void insert(String markdown) => _editor?._insertFromOutside(markdown);
+}
+
 /// A Markdown editor: the source, a preview, and a switch between them.
 ///
 /// ```dart
@@ -238,6 +271,7 @@ class MawyEditor extends StatefulWidget {
     this.onOpen,
     this.lineNumbers = true,
     this.placeholder,
+    this.handle,
   });
 
   /// The document, where the application holds it.
@@ -377,6 +411,10 @@ class MawyEditor extends StatefulWidget {
   /// What the source surface says when it is empty.
   final String? placeholder;
 
+  /// What lets an application insert at the caret and put the focus back from
+  /// a control of its own. See [MawyEditorHandle].
+  final MawyEditorHandle? handle;
+
   @override
   State<MawyEditor> createState() => _MawyEditorState();
 }
@@ -502,6 +540,7 @@ class _MawyEditorState extends State<MawyEditor> {
   void initState() {
     super.initState();
     _lastReported = _controller.text;
+    widget.handle?._editor = this;
     _controller.addListener(_changed);
     _history.addListener(_historyMoved);
     _sourceScroll.addListener(_syncScroll);
@@ -510,6 +549,11 @@ class _MawyEditorState extends State<MawyEditor> {
   @override
   void didUpdateWidget(MawyEditor old) {
     super.didUpdateWidget(old);
+
+    if (old.handle != widget.handle) {
+      _let(old.handle);
+      widget.handle?._editor = this;
+    }
 
     if (widget.value != null && widget.value != _controller.text) {
       final String text = widget.value!;
@@ -540,6 +584,7 @@ class _MawyEditorState extends State<MawyEditor> {
 
   @override
   void dispose() {
+    _let(widget.handle);
     _controller.removeListener(_changed);
     _controller.dispose();
     _focus.dispose();
@@ -577,6 +622,37 @@ class _MawyEditorState extends State<MawyEditor> {
     // The status bar and the toolbar's pressed states both read the selection,
     // so a caret that only moved is still a rebuild.
     setState(() {});
+  }
+
+  /// Lets a handle go, where it is still this editor's. A handle passed on to
+  /// another editor in the same frame is that editor's by now.
+  void _let(MawyEditorHandle? handle) {
+    if (handle?._editor == this) {
+      handle!._editor = null;
+    }
+  }
+
+  void _focusFromOutside() {
+    if (_current != MawyEditorMode.preview) {
+      _focus.requestFocus();
+    }
+  }
+
+  void _insertFromOutside(String markdown) {
+    if (widget.readOnly || _current == MawyEditorMode.preview || markdown.isEmpty) {
+      return;
+    }
+
+    final EditState before = _state;
+    final int at = before.start + markdown.length;
+
+    _apply(
+      EditState(
+        before.value.substring(0, before.start) + markdown + before.value.substring(before.end),
+        at,
+        at,
+      ),
+    );
   }
 
   /// Whether there is a step to take back or put back changed, which the field

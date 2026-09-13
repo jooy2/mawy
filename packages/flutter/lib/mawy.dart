@@ -29,6 +29,7 @@ export 'src/editor/commands.dart'
 export 'src/editor/mawy_editor.dart'
     show
         MawyEditor,
+        MawyEditorHandle,
         MawyEditorMode,
         MawyEditorStatusItem,
         MawyEditorToolbarItem,

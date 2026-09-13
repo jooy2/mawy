@@ -172,7 +172,33 @@ It is a prop of its own because `ref` is the outermost element and stays that. C
 
 ::: fw flutter
 
-A `TextEditingController` is the Flutter way to reach into a text field, and this editor does not take one yet. `value` and `onChange` are the seam.
+| Argument | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `handle` | `MawyEditorHandle?` | — | What an application can do to the editor from a control of its own. |
+
+```dart
+class MawyEditorHandle {
+  MawyEditorHandle();
+
+  void focus();
+  void insert(String markdown);
+}
+```
+
+The application makes one and hands it over, the way a `ScrollController` is handed to a scroll view. `insert` writes Markdown where the caret is, in place of whatever is selected, as one change, and leaves the caret after it and the focus in the source; a caret nobody has placed yet is at the end of the document. `focus` puts the focus back in the source with the caret where it was left. Both do nothing in `preview`, `insert` does nothing while the editor is read only, and both do nothing before an editor has the handle or after it is gone.
+
+```dart
+final MawyEditorHandle editor = MawyEditorHandle();
+
+Column(
+  children: [
+    NoteButton(onPressed: () => editor.insert('> [!NOTE]\n> ')),
+    Expanded(child: MawyEditor(handle: editor)),
+  ],
+);
+```
+
+It is not a `TextEditingController`, which would hand over the field's string and make it a second place the document lives. `value` and `onChange` are still where the document is.
 
 :::
 

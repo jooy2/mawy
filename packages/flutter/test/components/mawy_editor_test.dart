@@ -1033,6 +1033,95 @@ void main() {
     });
   });
 
+  group('from outside', () {
+    testWidgets('inserts where the caret is, in place of the selection', (
+      WidgetTester tester,
+    ) async {
+      final MawyEditorHandle handle = MawyEditorHandle();
+      final List<String> seen = <String>[];
+
+      // Before there is an editor to act on, nothing happens and nothing throws.
+      handle.insert('early');
+      handle.focus();
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two three',
+            mode: MawyEditorMode.plain,
+            handle: handle,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection(baseOffset: 4, extentOffset: 7);
+      handle.insert('**2**');
+      await tester.pump();
+
+      expect(seen.last, 'one **2** three');
+      expect(field.controller.selection, const TextSelection.collapsed(offset: 9));
+      expect(field.focusNode.hasFocus, isTrue);
+    });
+
+    testWidgets('puts the focus back, and does nothing where there is no source to act on', (
+      WidgetTester tester,
+    ) async {
+      final MawyEditorHandle handle = MawyEditorHandle();
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: 'one', mode: MawyEditorMode.plain, handle: handle)),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      expect(field.focusNode.hasFocus, isFalse);
+      handle.focus();
+      await tester.pump();
+      expect(field.focusNode.hasFocus, isTrue);
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            key: UniqueKey(),
+            defaultValue: 'one',
+            mode: MawyEditorMode.plain,
+            readOnly: true,
+            handle: handle,
+            onChange: seen.add,
+          ),
+        ),
+      );
+      handle.insert('two');
+      await tester.pump();
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            key: UniqueKey(),
+            defaultValue: 'one',
+            mode: MawyEditorMode.preview,
+            handle: handle,
+            onChange: seen.add,
+          ),
+        ),
+      );
+      handle.insert('two');
+      await tester.pump();
+
+      expect(seen, isEmpty);
+
+      await tester.pumpWidget(host(const SizedBox()));
+
+      // The editor is gone, and the handle with it.
+      handle.insert('two');
+      expect(seen, isEmpty);
+    });
+  });
+
   group('tables', () {
     Future<void> keys(
       WidgetTester tester,

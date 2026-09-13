@@ -20,6 +20,8 @@
 
 - **`headingLevels` says which headings the editor's menu offers.** The menu offered heading 1 to 3 and body text and nothing else, so an application whose screens write the title themselves, and whose documents start at `##`, offered its writers a level they should not use and none of the one below. `headingLevels: const [2, 3, 4]` offers those three, and `Mod`+`1` to `Mod`+`6` toggle a level only where it is offered, so the keys and the menu agree; a key for a level that is not offered is handed on. The default is `const [1, 2, 3]`, which is what it was, and a number outside one to six is left out. `MawyStrings` gained `heading4` to `heading6`.
 
+- **An application can insert at the caret and put the focus back from a control of its own.** `handle` takes the new `MawyEditorHandle`, which the application makes and hands over the way a `ScrollController` is handed to a scroll view. Its `insert(markdown)` writes where the caret is, in place of the selection, and leaves the caret after it, and its `focus()` puts the focus back in the source with the caret where it was. A button beside the editor had no way to do either. Both do nothing in `preview`, `insert` does nothing while the document is read only, and a handle no editor has, or whose editor is gone, does nothing at all. The React package's `handle` does the same.
+
 ### Fixed
 
 - **`Mod`+`Z`, `Mod`+`Shift`+`Z` and `Ctrl`+`Y` walk the source's history outside a `WidgetsApp`.** A `WidgetsApp` binds those keys to every text field under it, and this package does not require one, so an editor put under a bare `Directionality` kept a history and gave no key to walk it with. The keys are bound on the source itself now, and under a `WidgetsApp` they name the same intents its own do.

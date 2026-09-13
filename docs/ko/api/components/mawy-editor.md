@@ -172,7 +172,33 @@ const editor = useRef<MawyEditorHandle>(null);
 
 ::: fw flutter
 
-Flutter에서 텍스트 필드 안으로 손을 뻗는 방법은 `TextEditingController`인데, 이 에디터는 아직 그것을 받지 않습니다. `value`와 `onChange`가 둘 사이의 접점입니다.
+| 인자     | 타입                | 기본값 | 하는 일                                                |
+| -------- | ------------------- | ------ | ------------------------------------------------------ |
+| `handle` | `MawyEditorHandle?` | —      | 애플리케이션이 자기 컨트롤에서 에디터에 할 수 있는 일. |
+
+```dart
+class MawyEditorHandle {
+  MawyEditorHandle();
+
+  void focus();
+  void insert(String markdown);
+}
+```
+
+애플리케이션이 만들어 넘기며, 스크롤 뷰에 `ScrollController`를 넘기는 것과 같습니다. `insert`는 커서 자리에 마크다운을 선택 영역 대신 한 번의 변경으로 쓰고, 커서를 그 뒤에 두고 초점을 원문에 둡니다. 아직 아무도 커서를 두지 않았다면 문서 끝에 씁니다. `focus`는 커서를 둔 자리 그대로 초점을 원문에 돌려줍니다. `preview`에서는 둘 다 아무 일도 하지 않고, 읽기 전용일 때는 `insert`가 아무 일도 하지 않으며, 에디터가 받기 전이나 사라진 뒤에도 둘 다 아무 일도 하지 않습니다.
+
+```dart
+final MawyEditorHandle editor = MawyEditorHandle();
+
+Column(
+  children: [
+    NoteButton(onPressed: () => editor.insert('> [!NOTE]\n> ')),
+    Expanded(child: MawyEditor(handle: editor)),
+  ],
+);
+```
+
+`TextEditingController`가 아닌 이유는, 그것을 넘기면 필드의 문자열이 넘어가 문서가 사는 곳이 두 군데가 되기 때문입니다. 문서는 여전히 `value`와 `onChange`에 있습니다.
 
 :::
 
