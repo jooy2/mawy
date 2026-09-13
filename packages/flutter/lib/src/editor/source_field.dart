@@ -770,16 +770,16 @@ class _MawySourceFieldState extends State<MawySourceField>
       return KeyEventResult.handled;
     }
 
-    // Plain `Enter` only. With a modifier it is a shortcut — `Mod`+`Enter` adds
-    // a table row — and carrying a list marker down under one would take the
-    // key from whatever it was meant for.
+    // Not under `Mod`, which makes it a shortcut — `Mod`+`Enter` adds a table
+    // row — and carrying a list marker down there would take the key from what
+    // it was meant for. `Alt` on its own is no shortcut's, and the React
+    // package's source reads it the same way.
     final HardwareKeyboard keyboard = HardwareKeyboard.instance;
 
     if (event.logicalKey == LogicalKeyboardKey.enter &&
         !keyboard.isShiftPressed &&
         !keyboard.isControlPressed &&
         !keyboard.isMetaPressed &&
-        !keyboard.isAltPressed &&
         widget.onEnter()) {
       return KeyEventResult.handled;
     }

@@ -1288,6 +1288,16 @@ void main() {
       await keys(tester, LogicalKeyboardKey.enter);
 
       expect(seen.length, count);
+
+      // `Alt` is not a shortcut's modifier on its own, and the React package's
+      // source carries the marker down under it too.
+      field.controller.selection = const TextSelection.collapsed(offset: 6);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      await tester.pump();
+
+      expect(seen.last, startsWith('- item\n- \n'));
     });
   });
 
