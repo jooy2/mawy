@@ -169,7 +169,10 @@ const SHORTCUTS: Record<string, MawyCommand> = {
  * A letter is read by what it types, so it follows the keyboard's layout the
  * way `SHORTCUTS` does. The rest are read by the key: under `Shift` a `7` is
  * `&` on one keyboard and `/` on another, and a handler reading the character
- * would never see the key it was written for.
+ * would never see the key it was written for. The key is asked about only when
+ * what it typed was not a letter — Dvorak's `V` is where QWERTY's `.` is, and
+ * `Ctrl`+`Shift`+`V` pastes plain text there — and never under `Alt`, which on
+ * Windows is half of `AltGr` and types a character of its own.
  */
 const SHIFTED: Record<string, MawyCommand> = {
   x: 'strikethrough',
@@ -1666,7 +1669,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
-      const shifted = SHIFTED[key] ?? SHIFTED[event.code];
+      const letter = key.length === 1 && key.toLowerCase() !== key.toUpperCase();
+      const shifted = event.altKey
+        ? undefined
+        : (SHIFTED[key] ?? (letter ? undefined : SHIFTED[event.code]));
 
       if (shifted) {
         event.preventDefault();

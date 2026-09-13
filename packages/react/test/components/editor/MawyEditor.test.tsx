@@ -898,6 +898,43 @@ describe('the toolbar and the keyboard', () => {
     }
   });
 
+  /*
+   * Dispatched, because what is under test is a keyboard this machine has not
+   * got: the key's position is only asked about when what it typed was not a
+   * letter, and never under `AltGr`, which arrives as `Ctrl` and `Alt` together.
+   */
+  it('reads a key by its position only where it typed no letter and no AltGr was held', async () => {
+    const screen = await render(<MawyEditor defaultValue="Words." modes={['plain']} />);
+    const input = sourceOf(screen);
+    const press = (init: KeyboardEventInit) => {
+      const event = new KeyboardEvent('keydown', {
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+        ...init
+      });
+
+      input.dispatchEvent(event);
+
+      return event.defaultPrevented;
+    };
+
+    input.focus();
+    input.setSelectionRange(0, 6);
+
+    // Dvorak's `V` is where QWERTY has `.`, and `Ctrl`+`Shift`+`V` pastes as
+    // plain text there.
+    expect(press({ key: 'V', code: 'Period' })).toBe(false);
+    // US-International's `AltGr`+`Shift`+`,` types `Ç`.
+    expect(press({ key: 'Ç', code: 'Comma', altKey: true })).toBe(false);
+    expect(input.value).toBe('Words.');
+
+    // A mark typed under `Shift` is still read by where its key is.
+    expect(press({ key: '>', code: 'Period' })).toBe(true);
+    await expect.poll(() => input.value).toBe('> Words.');
+  });
+
   it('carries a list marker down on Enter, and takes it away on the empty item', async () => {
     const screen = await render(<MawyEditor defaultValue="- one" modes={['plain']} />);
     const input = sourceOf(screen);
