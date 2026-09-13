@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { MawyEditor, type MawyEditorHandle } from 'mawy-react';
 import { rowHeight, rowRect } from '../../../src/internal/source.js';
@@ -2600,6 +2600,42 @@ describe('tables', () => {
 
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b |\n\nAfter.')
+    );
+  });
+
+  /*
+   * The rest of this file dispatches `beforeinput` itself. This one presses the
+   * keys, so what is checked is that a browser asked for `Enter` in a cell does
+   * ask this surface for a paragraph, and that the keys under `Mod`+`Alt` reach
+   * it rather than the browser.
+   */
+  it('answers the keys themselves, not only the events they turn into', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'| a | b |\n| --- | --- |\n| c | d |'}
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+
+    put(bodyOf(screen), 'c', 1);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a | b |\n| --- | --- |\n| c | d |\n|  |  |')
+    );
+
+    await userEvent.keyboard('xy');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a | b |\n| --- | --- |\n| c | d |\n| xy |  |')
+    );
+
+    await userEvent.keyboard('{Control>}{Alt>}{Enter}{/Alt}{/Control}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        '| a |  | b |\n| --- | --- | --- |\n| c |  | d |\n| xy |  |  |'
+      )
     );
   });
 

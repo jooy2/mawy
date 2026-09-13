@@ -1147,6 +1147,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    */
   const putImage = (place: MawyUpload) => {
     const markdown = place.markdown;
+
     if (readOnly || markdown === null || !places.current.includes(place)) {
       return;
     }
