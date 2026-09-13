@@ -149,6 +149,17 @@ describe('line markers', () => {
     expect(continueList(at('- one'), false)?.value).toBe('- one\n- ');
   });
 
+  it('acts on a blank first line with the caret in front of everything', () => {
+    // Asked to look from before the start, JavaScript's `lastIndexOf` looks at
+    // the first character instead, so a document opening with a line ending
+    // had its first line read as starting after that line ending and ending
+    // before it, and the command wrote the line ending in twice.
+    expect(run('bulletList', '|\nWords.')).toBe('|\nWords.');
+    expect(run('heading1', '|\nWords.')).toBe('|\nWords.');
+    expect(run('quote', '|\nWords.')).toBe('«>»\nWords.');
+    expect(run('codeBlock', '|\nWords.')).toBe('«```\n\n```»\nWords.');
+  });
+
   it('reads a heading off the lines with something on them', () => {
     // A blank line is not a heading that failed to be one, so a selection with
     // a paragraph break in it still toggles off.

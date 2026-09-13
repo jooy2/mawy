@@ -86,8 +86,8 @@ enum MawyCommand {
 
 /// The offsets of the first and last line the selection touches.
 List<int> _lineRange(String value, int start, int end) {
-  // `lastIndexOf` from before the beginning is `-1` in JavaScript and an error
-  // here, which is the whole of the difference between the two halves of this.
+  // `lastIndexOf` from before the beginning is an error here, and in JavaScript
+  // it looks at the first character instead, so both halves ask only from inside.
   final int from = start <= 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1;
   final int to = value.indexOf('\n', end > value.length ? value.length : end);
 
@@ -975,15 +975,13 @@ EditState? _insertTable(EditState state) {
     return null;
   }
 
-  final int from = start > 0 ? value.lastIndexOf('\n', start - 1) + 1 : 0;
+  final int from = _lineStartOf(value, start);
   final line = _containerOf(value.substring(from, start));
   final String carry = line.carry;
   final String blank = carry.trimRight();
   final int stop = value.indexOf('\n', end);
   final String rest = value.substring(end, stop == -1 ? value.length : stop);
-  final String above = from > 1
-      ? value.substring(value.lastIndexOf('\n', from - 2) + 1, from - 1)
-      : '';
+  final String above = from > 0 ? value.substring(_lineStartOf(value, from - 1), from - 1) : '';
   final int next = stop == -1 ? -1 : value.indexOf('\n', stop + 1);
   final String below = stop == -1
       ? ''

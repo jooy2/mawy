@@ -37,6 +37,9 @@ describe('a fence', () => {
 
   it('leaves what is under it where it was', () => {
     expect(type('Above.\n\n``|\n\nBelow.', '`')).toBe('Above.\n\n```\n|\n```\n\nBelow.');
+    // With nothing above it, at the very start of a document that opens with a
+    // line ending, which the line under it is not to be written twice over.
+    expect(type('|\nBelow.', '```')).toBe('```\n|\n```\nBelow.');
   });
 
   it('carries a list item down onto the lines it adds', () => {

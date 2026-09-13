@@ -38,7 +38,9 @@ const BREAK = /^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
  * that finishes it rather than on the one after.
  */
 export function ruleFor(value: string, at: number, text: string): MawyEdit | null {
-  const from = value.lastIndexOf('\n', at - 1) + 1;
+  // From before the start `lastIndexOf` looks at the first character, which in
+  // a document opening with a line ending is a line start that is not one.
+  const from = at > 0 ? value.lastIndexOf('\n', at - 1) + 1 : 0;
   const head = value.slice(from, at) + text;
   const ending = value.indexOf('\n', at);
   const to = ending === -1 ? value.length : ending;

@@ -41,9 +41,20 @@ export type MawyCommand =
  * Lines
  * ---------------------------------------------------------------------- */
 
+/**
+ * Where the line an offset is on starts.
+ *
+ * Asked to look from before the start of a string, `lastIndexOf` looks at its
+ * first character instead of finding nothing, so without the guard a document
+ * that opens with a line ending has a first line that starts after it.
+ */
+function lineStartOf(value: string, offset: number): number {
+  return offset > 0 ? value.lastIndexOf('\n', offset - 1) + 1 : 0;
+}
+
 /** The offsets of the first and last line the selection touches. */
 function lineRange(value: string, start: number, end: number): [number, number] {
-  const from = value.lastIndexOf('\n', start - 1) + 1;
+  const from = lineStartOf(value, start);
   const to = value.indexOf('\n', end);
 
   return [from, to === -1 ? value.length : to];
@@ -452,7 +463,7 @@ export function continueList(state: EditState, definitionLists = true): EditStat
     return null;
   }
 
-  const from = state.value.lastIndexOf('\n', state.start - 1) + 1;
+  const from = lineStartOf(state.value, state.start);
   const line = state.value.slice(from, state.start);
   const item = ITEM.exec(line);
 
@@ -600,7 +611,7 @@ interface TableAt {
  * the parser did not is a cell written into the middle of another one.
  */
 function tableLine(value: string, start: number, end: number): TableLine {
-  const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+  const lineStart = lineStartOf(value, start);
   const text = value.slice(start, end);
   let from = start + (text.length - text.trimStart().length);
   let stop = end - (text.length - text.trimEnd().length);
@@ -857,12 +868,12 @@ function insertTable(state: EditState): EditState | null {
     return null;
   }
 
-  const from = start > 0 ? value.lastIndexOf('\n', start - 1) + 1 : 0;
+  const from = lineStartOf(value, start);
   const { lead: opened, carry, mark } = containerOf(value.slice(from, start));
   const blank = carry.trimEnd();
   const stop = value.indexOf('\n', end);
   const rest = value.slice(end, stop === -1 ? value.length : stop);
-  const above = from > 1 ? value.slice(value.lastIndexOf('\n', from - 2) + 1, from - 1) : '';
+  const above = from > 0 ? value.slice(lineStartOf(value, from - 1), from - 1) : '';
   const next = stop === -1 ? -1 : value.indexOf('\n', stop + 1);
   const below = stop === -1 ? '' : value.slice(stop + 1, next === -1 ? value.length : next);
 
