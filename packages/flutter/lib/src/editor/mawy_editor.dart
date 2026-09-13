@@ -102,6 +102,14 @@ enum MawyEditorToolbarItem {
   /// A fenced block.
   codeBlock,
 
+  /// A menu that inserts a table and adds or removes its rows and columns.
+  ///
+  /// Each entry has a key as well, and each is drawn disabled where it has
+  /// nothing to act on: a row cannot go above the header, the last column
+  /// cannot be removed, and everything but inserting one wants the caret in a
+  /// table.
+  table,
+
   /// `---`.
   rule,
 
@@ -171,6 +179,7 @@ const List<MawyEditorToolbarItem> kMawyEditorToolbar = <MawyEditorToolbarItem>[
   MawyEditorToolbarItem.orderedList,
   MawyEditorToolbarItem.taskList,
   MawyEditorToolbarItem.codeBlock,
+  MawyEditorToolbarItem.table,
   MawyEditorToolbarItem.rule,
   MawyEditorToolbarItem.separator,
   MawyEditorToolbarItem.find,
@@ -720,6 +729,21 @@ class _MawyEditorState extends State<MawyEditor> {
 
   void _run(MawyCommand command) => _apply(runCommand(command, _state));
 
+  /// A table command, where it has something to act on.
+  void _runTable(MawyTableCommand command) {
+    final EditState? after = runTableCommand(command, _state);
+
+    if (after != null) {
+      _apply(after);
+    }
+  }
+
+  /// Whether a table command has anything to act on where the caret is, which
+  /// is a parse of the document and so is asked when the menu opens or the key
+  /// is pressed rather than on every build.
+  bool _tableAvailable(MawyTableCommand command) =>
+      !widget.readOnly && runTableCommand(command, _state) != null;
+
   void _setMode(MawyEditorMode mode) {
     widget.onModeChange?.call(mode);
 
@@ -902,6 +926,8 @@ class _MawyEditorState extends State<MawyEditor> {
       onEnter: _enter,
       onIndent: _indent,
       onCommand: widget.readOnly ? null : _run,
+      onTable: _runTable,
+      tableAvailable: _tableAvailable,
       undoController: _history,
       scrollController: _sourceScroll,
       editableKey: _editable,
@@ -937,6 +963,8 @@ class _MawyEditorState extends State<MawyEditor> {
           canUndo: showSource && !widget.readOnly && _history.value.canUndo,
           canRedo: showSource && !widget.readOnly && _history.value.canRedo,
           onTravel: _travel,
+          onTable: _runTable,
+          tableAvailable: _tableAvailable,
           finding: _finding && showSource,
           onFind: showSource ? _openFind : null,
           onOpen: widget.readOnly ? null : widget.onOpen,
@@ -1121,6 +1149,8 @@ class _Toolbar extends StatefulWidget {
     required this.canUndo,
     required this.canRedo,
     required this.onTravel,
+    required this.onTable,
+    required this.tableAvailable,
     required this.finding,
     required this.onFind,
     required this.onOpen,
@@ -1141,6 +1171,8 @@ class _Toolbar extends StatefulWidget {
   final bool canUndo;
   final bool canRedo;
   final void Function({required bool back}) onTravel;
+  final ValueChanged<MawyTableCommand> onTable;
+  final bool Function(MawyTableCommand) tableAvailable;
   final bool finding;
   final VoidCallback? onFind;
   final VoidCallback? onOpen;
@@ -1281,6 +1313,71 @@ class _ToolbarState extends State<_Toolbar> {
             focusNode: next(),
             enabled: back ? widget.canUndo : widget.canRedo,
             onPressed: () => widget.onTravel(back: back),
+          ),
+        );
+
+        continue;
+      }
+
+      if (item == MawyEditorToolbarItem.table) {
+        children.add(
+          MawyToolbarMenu(
+            icon: LucideIcons.table,
+            label: widget.strings.table,
+            tokens: widget.tokens,
+            focusNode: next(),
+            // Built when the menu opens, because which entries apply depends on
+            // whether the caret is in a table, and reading that is a parse.
+            builder: (VoidCallback close) => MawyToolbarActions(
+              tokens: widget.tokens,
+              actions: <MawyToolbarAction>[
+                for (final (MawyTableCommand command, String label, IconData icon)
+                    in <(MawyTableCommand, String, IconData)>[
+                      (MawyTableCommand.insertTable, widget.strings.tableInsert, LucideIcons.table),
+                      (
+                        MawyTableCommand.addRowBelow,
+                        widget.strings.tableRowBelow,
+                        LucideIcons.betweenHorizontalEnd,
+                      ),
+                      (
+                        MawyTableCommand.addRowAbove,
+                        widget.strings.tableRowAbove,
+                        LucideIcons.betweenHorizontalStart,
+                      ),
+                      (
+                        MawyTableCommand.addColumnAfter,
+                        widget.strings.tableColumnAfter,
+                        LucideIcons.betweenVerticalEnd,
+                      ),
+                      (
+                        MawyTableCommand.addColumnBefore,
+                        widget.strings.tableColumnBefore,
+                        LucideIcons.betweenVerticalStart,
+                      ),
+                      (
+                        MawyTableCommand.removeRow,
+                        widget.strings.tableRowRemove,
+                        LucideIcons.trash2,
+                      ),
+                      (
+                        MawyTableCommand.removeColumn,
+                        widget.strings.tableColumnRemove,
+                        LucideIcons.trash2,
+                      ),
+                    ])
+                  MawyToolbarAction(
+                    label,
+                    icon: icon,
+                    enabled: widget.tableAvailable(command),
+                    onPressed: () {
+                      // Shut first, so the focus the command puts back in the
+                      // source is not taken back by the panel closing.
+                      close();
+                      widget.onTable(command);
+                    },
+                  ),
+              ],
+            ),
           ),
         );
 

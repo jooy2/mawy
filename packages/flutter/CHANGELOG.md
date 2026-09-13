@@ -6,7 +6,7 @@
 
 ### Breaking changes
 
-- **`MawyEditorToolbarItem` has new values**: `undo` and `redo`, which are below. A `switch` over the enum that names every value and has no `default` stops compiling until it names these too, because Dart checks such a `switch` for every value the enum has. A `toolbar` list an application wrote is unaffected, and so is any code that only compares values or builds lists of them.
+- **`MawyEditorToolbarItem` has new values**: `undo`, `redo` and `table`, which are below. A `switch` over the enum that names every value and has no `default` stops compiling until it names these too, because Dart checks such a `switch` for every value the enum has. A `toolbar` list an application wrote is unaffected, and so is any code that only compares values or builds lists of them.
 
 ### Added
 
@@ -15,6 +15,8 @@
 - **The quotation, the three lists, the code block, the divider and the image have keyboard shortcuts.** The guide said every formatting command had one, and seven of them could only be reached from the toolbar. `Mod`+`Shift`+`.` quotes, `Mod`+`Shift`+`8`, `7` and `9` make a bulleted, numbered and task list, `Mod`+`Shift`+`E` fences a code block, `Mod`+`Shift`+`K` writes an image and `Mod`+`Shift`+`,` a divider. They are the React package's keys, and the reasons for each are in its guide.
 
 - **`undo` and `redo` are toolbar items.** Undo was a key and nothing else, so an editor on a phone had no undo at all. Both buttons walk the source field's own history, which is still Flutter's and still gathers a run of changes into one step, and each is drawn disabled while there is no step to take back or put back, while the document is read only, and in `preview`. They are on `kMawyEditorToolbar` straight after the surface switch. `MawyStrings` gained `undo` and `redo`.
+
+- **A table can be made and reshaped without writing a pipe.** The toolbar's new `table` item is a menu that inserts a table and adds a row below or above, a column after or before, and deletes the row or the column the caret is in, and each has a key: `Mod`+`Alt`+`T` inserts, `Mod`+`Enter` adds a row (`Shift` above, `Alt` a column, both a column before), and `Mod`+`Shift`+`Backspace` deletes a row (`Alt` the column). An entry with nothing to act on is drawn disabled, and outside a table its key is handed on rather than taken. Each command puts in or takes out one cell per line, so the alignment and what is in every other cell stay as they were, and a table inserted in a quotation or a list item goes inside it. They are the React package's commands under the same names, which the parity check has diffed since they were written. `Enter` with a modifier held no longer carries a list marker down, which is what the React package's source has always done. `table` is on `kMawyEditorToolbar` between `codeBlock` and `rule`, and `MawyStrings` gained `table` and the seven entries' names.
 
 ### Fixed
 

@@ -6,7 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/editor/source_field.dart' show MawySourceField, MawySourceGutter;
 import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
-import 'package:mawy/src/internal/toolbar.dart' show MawyToolbarButton;
+import 'package:mawy/src/internal/toolbar.dart'
+    show MawyToolbarAction, MawyToolbarActions, MawyToolbarButton;
 
 import '../support/host.dart';
 import '../support/spans.dart';
@@ -1029,6 +1030,133 @@ void main() {
       );
 
       expect(button(tester, 'Undo').enabled, isFalse);
+    });
+  });
+
+  group('tables', () {
+    Future<void> keys(
+      WidgetTester tester,
+      LogicalKeyboardKey key, {
+      bool shift = false,
+      bool alt = false,
+    }) async {
+      final List<LogicalKeyboardKey> held = <LogicalKeyboardKey>[
+        LogicalKeyboardKey.controlLeft,
+        if (shift) LogicalKeyboardKey.shiftLeft,
+        if (alt) LogicalKeyboardKey.altLeft,
+      ];
+
+      for (final LogicalKeyboardKey each in held) {
+        await tester.sendKeyDownEvent(each);
+      }
+
+      await tester.sendKeyEvent(key);
+
+      for (final LogicalKeyboardKey each in held.reversed) {
+        await tester.sendKeyUpEvent(each);
+      }
+
+      await tester.pump();
+    }
+
+    List<MawyToolbarAction> entries(WidgetTester tester) =>
+        tester.widget<MawyToolbarActions>(find.byType(MawyToolbarActions)).actions;
+
+    testWidgets('inserts a table from the toolbar, and offers only what applies', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: 'Intro.', mode: MawyEditorMode.plain, onChange: seen.add)),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 6);
+      await press(tester, 'Table');
+
+      // Nothing to add a row to yet.
+      expect(entries(tester).map((MawyToolbarAction entry) => entry.enabled), <bool>[
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+      ]);
+
+      await tester.tap(find.text('Insert a table'));
+      await tester.pumpAndSettle();
+
+      expect(seen.last, 'Intro.\n\n|  |  |\n| --- | --- |\n|  |  |');
+      expect(find.byType(MawyToolbarActions), findsNothing);
+
+      await press(tester, 'Table');
+
+      // In the header now: a row cannot go above it, and it cannot be deleted.
+      expect(entries(tester).map((MawyToolbarAction entry) => entry.enabled), <bool>[
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+      ]);
+
+      // The panel opens on the first entry that does anything, and the arrows
+      // step over the ones that do not.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(seen.last, 'Intro.\n\n|  |  |  |\n| --- | --- | --- |\n|  |  |  |');
+    });
+
+    testWidgets('reshapes a table from the keyboard, and leaves the keys alone elsewhere', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '- item\n\n| a | b |\n| --- | --- |\n| c | d |',
+            mode: MawyEditorMode.plain,
+            toolbar: const <MawyEditorToolbarItem>[],
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(find.byType(EditableText));
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection.collapsed(offset: 36);
+      await tester.pump();
+
+      await keys(tester, LogicalKeyboardKey.enter);
+      expect(seen.last, '- item\n\n| a | b |\n| --- | --- |\n| c | d |\n|  |  |');
+
+      // The caret is in the new row's first cell, so the column goes after it.
+      await keys(tester, LogicalKeyboardKey.enter, alt: true);
+      expect(seen.last, '- item\n\n| a |  | b |\n| --- | --- | --- |\n| c |  | d |\n|  |  |  |');
+
+      await keys(tester, LogicalKeyboardKey.backspace, shift: true);
+      expect(seen.last, '- item\n\n| a |  | b |\n| --- | --- | --- |\n| c |  | d |');
+
+      final int count = seen.length;
+
+      // In a list item rather than a table: not a row, and not a list marker
+      // carried down either, which is plain `Enter`'s.
+      field.controller.selection = const TextSelection.collapsed(offset: 6);
+      await tester.pump();
+      await keys(tester, LogicalKeyboardKey.enter);
+
+      expect(seen.length, count);
     });
   });
 

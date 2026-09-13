@@ -261,8 +261,6 @@ The React package solves the same problem with a menu at the end of the bar, and
 
 ## Tables
 
-::: fw react
-
 The toolbar's `table` button is a menu of everything that makes a table or changes its shape, and each entry has a shortcut. What they write is a GitHub table: the alignment in the delimiter row and whatever is written in the other cells stay exactly as they were, because each command puts in or takes out one cell per line rather than writing the table out again.
 
 |                                       |                     |
@@ -277,7 +275,9 @@ The toolbar's `table` button is a menu of everything that makes a table or chang
 
 `Enter` adds a row and `Backspace` takes one away, with `Alt` meaning the column rather than the row and `Shift` the one above or the one the caret is in. A letter would be easier to remember, and nearly every letter is already taken: `Mod`+`Alt`+`I` opens a browser's developer tools, `Mod`+`Shift`+`T` reopens a tab, and on Windows `Ctrl`+`Alt` is `AltGr`, which types `€` and `@` on many European keyboards. `T` for a new table is one of the few letters `AltGr` leaves alone.
 
-The shortcuts only act inside a table, and outside one they are left to the browser. A new table has two empty columns, a header and one row, with a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. Inside a quotation or a list item the table goes inside it, with that container's prefix on every line, and inside a code block there is nowhere for one to go, so _Insert a table_ is disabled there. A row cannot go above the header and the last column cannot be removed, so those entries are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
+The shortcuts only act inside a table, and outside one the keys are handed on to whatever else answers them. A new table has two empty columns, a header and one row, with a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. Inside a quotation or a list item the table goes inside it, with that container's prefix on every line, and inside a code block there is nowhere for one to go, so _Insert a table_ is disabled there. A row cannot go above the header and the last column cannot be removed, so those entries are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
+
+::: fw react
 
 On the drawn document, **`Enter` in a cell follows the rule it has in a list.** It adds a row under this one with the caret in the same column, and on a row that is still empty, the row goes and the caret moves to a line of its own after the table, still inside the quotation or list item the table is in. That is the way out of a table at the end of a document, which otherwise has nowhere after it for a caret to go. Typing into an empty cell writes the words between the spaces, so `|  |` becomes `| Name |` rather than `|  Name|`.
 
@@ -285,7 +285,7 @@ On the drawn document, **`Enter` in a cell follows the rule it has in a list.** 
 
 ::: fw flutter
 
-The table commands are the React package's toolbar and keyboard. `runTableCommand` and `continueTable` exist in this package too and are diffed against the React package's by the parity check, but they are not exported: the toolbar and the editor have nowhere to call them from yet, and adding a table item to `MawyEditorToolbarItem` is a value added to an enum an application may `switch` over.
+There is no drawn document here, so `Enter` in a row of the source is a line ending, as it is in the React package's source. The commands behind the menu are the React package's under the same names, and the parity check diffs the two.
 
 :::
 

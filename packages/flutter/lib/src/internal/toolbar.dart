@@ -737,3 +737,204 @@ class _ChoiceOptionState extends State<_ChoiceOption> {
     );
   }
 }
+
+/// One entry of a [MawyToolbarActions]: something to do, and whether there is
+/// anything here for it to do.
+class MawyToolbarAction {
+  /// Creates an entry.
+  const MawyToolbarAction(this.label, {required this.onPressed, this.icon, this.enabled = true});
+
+  /// What it is called.
+  final String label;
+
+  /// The glyph beside the name, where there is one.
+  final IconData? icon;
+
+  /// Whether it can be pressed. An entry with nothing to act on is still drawn,
+  /// so the list is the same list wherever the caret is.
+  final bool enabled;
+
+  /// What pressing it does. Closing the menu is the caller's.
+  final VoidCallback onPressed;
+}
+
+/// A few things to do, as a list that looks like a [MawyToolbarChoice].
+///
+/// Buttons rather than options, because nothing here is a value being chosen:
+/// each entry does something, and then the panel has done its job. An entry
+/// that cannot be pressed cannot be focused either, and the arrows move between
+/// the ones that can — the React package's `Actions`, which is the same list.
+class MawyToolbarActions extends StatefulWidget {
+  /// Creates the list.
+  const MawyToolbarActions({required this.tokens, required this.actions, super.key});
+
+  /// The palette.
+  final MawyTokens tokens;
+
+  /// The entries, in the order they are drawn.
+  final List<MawyToolbarAction> actions;
+
+  @override
+  State<MawyToolbarActions> createState() => _MawyToolbarActionsState();
+}
+
+class _MawyToolbarActionsState extends State<MawyToolbarActions> {
+  final List<FocusNode> _nodes = <FocusNode>[];
+
+  @override
+  void dispose() {
+    for (final FocusNode node in _nodes) {
+      node.dispose();
+    }
+
+    super.dispose();
+  }
+
+  FocusNode _nodeFor(int at) {
+    while (_nodes.length <= at) {
+      _nodes.add(FocusNode(debugLabel: 'MawyToolbarActions ${_nodes.length}'));
+    }
+
+    return _nodes[at];
+  }
+
+  /// Up and down, and the two ends, over the entries that can be pressed.
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final List<int> open = <int>[
+      for (final (int at, MawyToolbarAction action) in widget.actions.indexed)
+        if (action.enabled) at,
+    ];
+    final int on = open.indexWhere((int at) => _nodeFor(at).hasFocus);
+
+    if (open.isEmpty || on == -1) {
+      return KeyEventResult.ignored;
+    }
+
+    final int? to = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowDown => on + 1,
+      LogicalKeyboardKey.arrowUp => on - 1,
+      LogicalKeyboardKey.home => 0,
+      LogicalKeyboardKey.end => open.length - 1,
+      _ => null,
+    };
+
+    if (to == null) {
+      return KeyEventResult.ignored;
+    }
+
+    _nodeFor(open[to % open.length]).requestFocus();
+
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int first = widget.actions.indexWhere((MawyToolbarAction action) => action.enabled);
+
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: _onKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final (int at, MawyToolbarAction action) in widget.actions.indexed)
+            _ActionEntry(
+              tokens: widget.tokens,
+              action: action,
+              focusNode: _nodeFor(at),
+              // The panel opens with the focus in it, on the first entry that
+              // does anything, for the reason `MawyToolbarChoice` gives.
+              autofocus: at == first,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One of them.
+class _ActionEntry extends StatefulWidget {
+  const _ActionEntry({
+    required this.tokens,
+    required this.action,
+    required this.focusNode,
+    required this.autofocus,
+  });
+
+  final MawyTokens tokens;
+  final MawyToolbarAction action;
+  final FocusNode focusNode;
+  final bool autofocus;
+
+  @override
+  State<_ActionEntry> createState() => _ActionEntryState();
+}
+
+class _ActionEntryState extends State<_ActionEntry> {
+  bool _focused = false;
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final MawyTokens tokens = widget.tokens;
+    final MawyToolbarAction action = widget.action;
+    final Color ink = action.enabled ? tokens.foreground : tokens.foregroundSubtle;
+
+    return Semantics(
+      button: true,
+      enabled: action.enabled,
+      label: action.label,
+      excludeSemantics: true,
+      child: FocusableActionDetector(
+        enabled: action.enabled,
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        mouseCursor: action.enabled ? SystemMouseCursors.click : MouseCursor.defer,
+        shortcuts: mawyActivate,
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (ActivateIntent _) {
+              action.onPressed();
+
+              return null;
+            },
+          ),
+        },
+        onShowHoverHighlight: (bool on) => setState(() => _hovered = on),
+        onShowFocusHighlight: (bool on) => setState(() => _focused = on && MawyFocusVisible.wanted),
+        child: GestureDetector(
+          onTap: action.enabled ? action.onPressed : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: action.enabled && (_focused || _hovered) ? tokens.backgroundSunken : null,
+              borderRadius: BorderRadius.circular(MawyRadius.small),
+              border: Border.all(color: _focused ? tokens.accent : const Color(0x00000000)),
+            ),
+            child: Row(
+              children: <Widget>[
+                if (action.icon != null) ...<Widget>[
+                  Icon(
+                    action.icon,
+                    size: 15,
+                    color: action.enabled ? tokens.foregroundMuted : tokens.foregroundSubtle,
+                  ),
+                  const SizedBox(width: 9),
+                ],
+                Expanded(
+                  child: Text(action.label, style: TextStyle(color: ink, fontSize: 13.5)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

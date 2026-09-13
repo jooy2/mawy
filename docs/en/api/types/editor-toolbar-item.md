@@ -56,6 +56,7 @@ enum MawyEditorToolbarItem {
   orderedList,
   taskList,
   codeBlock,
+  table,
   rule,
   find,
   open,
@@ -70,9 +71,9 @@ Everything except `mode`, `undo`, `redo`, `find`, `open`, `save`, `colorScheme` 
 
 `undo` and `redo` are the history, `Mod`+`Z` and `Mod`+`Shift`+`Z`, drawn disabled while there is nothing to take back or put back.
 
-::: fw react
-
 `table` is a menu of the seven commands that insert a table and change its shape, each with a shortcut of its own; see [tables](../../guide/editor#tables).
+
+::: fw react
 
 `open` and `save` are here as well. `Mod`+`S` saves whether the button is drawn or not; `open` has no shortcut, because the browser's own `Mod`+`O` is a reasonable thing to leave alone and opening a file is a rare and deliberate act rather than one done mid-flow.
 

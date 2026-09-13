@@ -251,6 +251,35 @@ class _CommandIntent extends Intent {
   final MawyCommand command;
 }
 
+/// One table command, on its way from a chord to [MawySourceField].
+class _TableIntent extends Intent {
+  const _TableIntent(this.command);
+
+  final MawyTableCommand command;
+}
+
+/// What a table chord does: the command, where there is a table for it.
+///
+/// Disabled everywhere else, which is what hands the key on. `Mod`+`Enter` out
+/// of a table is somebody else's — an application sending a message with it, a
+/// platform's own binding — and a table shortcut that swallowed it there would
+/// be taking a key for nothing.
+class _TableAction extends Action<_TableIntent> {
+  _TableAction(this.field);
+
+  final MawySourceField field;
+
+  @override
+  bool isEnabled(_TableIntent intent) => field.tableAvailable?.call(intent.command) ?? false;
+
+  @override
+  Object? invoke(_TableIntent intent) {
+    field.onTable?.call(intent.command);
+
+    return null;
+  }
+}
+
 /// The keyboard, which is the editor's other interface.
 ///
 /// `src/components/editor/MawyEditor.tsx` has the same table under the same
@@ -290,6 +319,48 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
   SingleActivator(LogicalKeyboardKey.keyK, control: true): _CommandIntent(MawyCommand.link),
   SingleActivator(LogicalKeyboardKey.keyK, meta: true): _CommandIntent(MawyCommand.link),
   SingleActivator(LogicalKeyboardKey.keyE, control: true): _CommandIntent(MawyCommand.code),
+  // The table's shape, which only does anything in a table. The reasons for
+  // these keys are beside `tableShortcut` in the React package, and they are
+  // the same keys.
+  SingleActivator(LogicalKeyboardKey.keyT, control: true, alt: true): _TableIntent(
+    MawyTableCommand.insertTable,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyT, meta: true, alt: true): _TableIntent(
+    MawyTableCommand.insertTable,
+  ),
+  SingleActivator(LogicalKeyboardKey.enter, control: true): _TableIntent(
+    MawyTableCommand.addRowBelow,
+  ),
+  SingleActivator(LogicalKeyboardKey.enter, meta: true): _TableIntent(MawyTableCommand.addRowBelow),
+  SingleActivator(LogicalKeyboardKey.enter, control: true, shift: true): _TableIntent(
+    MawyTableCommand.addRowAbove,
+  ),
+  SingleActivator(LogicalKeyboardKey.enter, meta: true, shift: true): _TableIntent(
+    MawyTableCommand.addRowAbove,
+  ),
+  SingleActivator(LogicalKeyboardKey.enter, control: true, alt: true): _TableIntent(
+    MawyTableCommand.addColumnAfter,
+  ),
+  SingleActivator(LogicalKeyboardKey.enter, meta: true, alt: true): _TableIntent(
+    MawyTableCommand.addColumnAfter,
+  ),
+  SingleActivator(LogicalKeyboardKey.enter, control: true, alt: true, shift: true): _TableIntent(
+    MawyTableCommand.addColumnBefore,
+  ),
+  SingleActivator(LogicalKeyboardKey.enter, meta: true, alt: true, shift: true): _TableIntent(
+    MawyTableCommand.addColumnBefore,
+  ),
+  SingleActivator(LogicalKeyboardKey.backspace, control: true, shift: true): _TableIntent(
+    MawyTableCommand.removeRow,
+  ),
+  SingleActivator(LogicalKeyboardKey.backspace, meta: true, shift: true): _TableIntent(
+    MawyTableCommand.removeRow,
+  ),
+  SingleActivator(LogicalKeyboardKey.backspace, control: true, alt: true, shift: true):
+      _TableIntent(MawyTableCommand.removeColumn),
+  SingleActivator(LogicalKeyboardKey.backspace, meta: true, alt: true, shift: true): _TableIntent(
+    MawyTableCommand.removeColumn,
+  ),
   SingleActivator(LogicalKeyboardKey.keyE, meta: true): _CommandIntent(MawyCommand.code),
   SingleActivator(LogicalKeyboardKey.digit1, control: true): _CommandIntent(MawyCommand.heading1),
   SingleActivator(LogicalKeyboardKey.digit1, meta: true): _CommandIntent(MawyCommand.heading1),
@@ -377,6 +448,8 @@ class MawySourceField extends StatefulWidget {
     required this.onEnter,
     required this.onIndent,
     required this.onCommand,
+    this.onTable,
+    this.tableAvailable,
     this.undoController,
     this.scrollController,
     this.editableKey,
@@ -415,6 +488,13 @@ class MawySourceField extends StatefulWidget {
 
   /// What a formatting shortcut runs. Absent while the document is read only.
   final void Function(MawyCommand)? onCommand;
+
+  /// What a table shortcut runs.
+  final ValueChanged<MawyTableCommand>? onTable;
+
+  /// Whether a table shortcut has anything to act on, which is what decides
+  /// whether its key is taken or handed on.
+  final bool Function(MawyTableCommand)? tableAvailable;
 
   /// The field's history, where somebody outside wants to read it and walk it.
   final UndoHistoryController? undoController;
@@ -647,8 +727,16 @@ class _MawySourceFieldState extends State<MawySourceField>
       return KeyEventResult.handled;
     }
 
+    // Plain `Enter` only. With a modifier it is a shortcut — `Mod`+`Enter` adds
+    // a table row — and carrying a list marker down under one would take the
+    // key from whatever it was meant for.
+    final HardwareKeyboard keyboard = HardwareKeyboard.instance;
+
     if (event.logicalKey == LogicalKeyboardKey.enter &&
-        !HardwareKeyboard.instance.isShiftPressed &&
+        !keyboard.isShiftPressed &&
+        !keyboard.isControlPressed &&
+        !keyboard.isMetaPressed &&
+        !keyboard.isAltPressed &&
         widget.onEnter()) {
       return KeyEventResult.handled;
     }
@@ -700,6 +788,7 @@ class _MawySourceFieldState extends State<MawySourceField>
                   return null;
                 },
               ),
+              _TableIntent: _TableAction(widget),
             },
             child: Focus(
               onKeyEvent: _onKey,

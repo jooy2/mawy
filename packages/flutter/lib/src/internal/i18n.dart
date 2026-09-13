@@ -92,6 +92,14 @@ final class MawyStrings {
     required this.orderedList,
     required this.taskList,
     required this.codeBlock,
+    required this.table,
+    required this.tableInsert,
+    required this.tableRowBelow,
+    required this.tableRowAbove,
+    required this.tableColumnAfter,
+    required this.tableColumnBefore,
+    required this.tableRowRemove,
+    required this.tableColumnRemove,
     required this.thematicBreak,
     required this.status,
     required this.statusPosition,
@@ -286,6 +294,30 @@ final class MawyStrings {
   /// The editor: Code block.
   final String codeBlock;
 
+  /// The editor: Table.
+  final String table;
+
+  /// The editor: Insert a table.
+  final String tableInsert;
+
+  /// The editor: Add a row below.
+  final String tableRowBelow;
+
+  /// The editor: Add a row above.
+  final String tableRowAbove;
+
+  /// The editor: Add a column after.
+  final String tableColumnAfter;
+
+  /// The editor: Add a column before.
+  final String tableColumnBefore;
+
+  /// The editor: Delete this row.
+  final String tableRowRemove;
+
+  /// The editor: Delete this column.
+  final String tableColumnRemove;
+
   /// The editor: Divider.
   final String thematicBreak;
 
@@ -423,6 +455,14 @@ final class MawyStrings {
     String? orderedList,
     String? taskList,
     String? codeBlock,
+    String? table,
+    String? tableInsert,
+    String? tableRowBelow,
+    String? tableRowAbove,
+    String? tableColumnAfter,
+    String? tableColumnBefore,
+    String? tableRowRemove,
+    String? tableColumnRemove,
     String? thematicBreak,
     String? status,
     String? statusPosition,
@@ -506,6 +546,14 @@ final class MawyStrings {
       orderedList: orderedList ?? this.orderedList,
       taskList: taskList ?? this.taskList,
       codeBlock: codeBlock ?? this.codeBlock,
+      table: table ?? this.table,
+      tableInsert: tableInsert ?? this.tableInsert,
+      tableRowBelow: tableRowBelow ?? this.tableRowBelow,
+      tableRowAbove: tableRowAbove ?? this.tableRowAbove,
+      tableColumnAfter: tableColumnAfter ?? this.tableColumnAfter,
+      tableColumnBefore: tableColumnBefore ?? this.tableColumnBefore,
+      tableRowRemove: tableRowRemove ?? this.tableRowRemove,
+      tableColumnRemove: tableColumnRemove ?? this.tableColumnRemove,
       thematicBreak: thematicBreak ?? this.thematicBreak,
       status: status ?? this.status,
       statusPosition: statusPosition ?? this.statusPosition,
@@ -595,6 +643,14 @@ final class MawyStrings {
       other.orderedList == orderedList &&
       other.taskList == taskList &&
       other.codeBlock == codeBlock &&
+      other.table == table &&
+      other.tableInsert == tableInsert &&
+      other.tableRowBelow == tableRowBelow &&
+      other.tableRowAbove == tableRowAbove &&
+      other.tableColumnAfter == tableColumnAfter &&
+      other.tableColumnBefore == tableColumnBefore &&
+      other.tableRowRemove == tableRowRemove &&
+      other.tableColumnRemove == tableColumnRemove &&
       other.thematicBreak == thematicBreak &&
       other.status == status &&
       other.statusPosition == statusPosition &&
@@ -679,6 +735,14 @@ final class MawyStrings {
     orderedList,
     taskList,
     codeBlock,
+    table,
+    tableInsert,
+    tableRowBelow,
+    tableRowAbove,
+    tableColumnAfter,
+    tableColumnBefore,
+    tableRowRemove,
+    tableColumnRemove,
     thematicBreak,
     status,
     statusPosition,
@@ -764,6 +828,14 @@ const MawyStrings _en = MawyStrings._(
   orderedList: 'Numbered list',
   taskList: 'Task list',
   codeBlock: 'Code block',
+  table: 'Table',
+  tableInsert: 'Insert a table',
+  tableRowBelow: 'Add a row below',
+  tableRowAbove: 'Add a row above',
+  tableColumnAfter: 'Add a column after',
+  tableColumnBefore: 'Add a column before',
+  tableRowRemove: 'Delete this row',
+  tableColumnRemove: 'Delete this column',
   thematicBreak: 'Divider',
   status: 'Document statistics',
   statusPosition: 'Ln %L, Col %C',
@@ -848,6 +920,14 @@ const MawyStrings _ko = MawyStrings._(
   orderedList: '순서 있는 목록',
   taskList: '체크 목록',
   codeBlock: '코드 블록',
+  table: '표',
+  tableInsert: '표 넣기',
+  tableRowBelow: '아래에 행 추가',
+  tableRowAbove: '위에 행 추가',
+  tableColumnAfter: '뒤에 열 추가',
+  tableColumnBefore: '앞에 열 추가',
+  tableRowRemove: '이 행 삭제',
+  tableColumnRemove: '이 열 삭제',
   thematicBreak: '구분선',
   status: '문서 통계',
   statusPosition: '%L행 %C열',
