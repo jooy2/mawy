@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **The code block command puts the caret inside the block it makes, and takes a block off from anywhere inside it.** With nothing selected it came out selecting the whole block it had written, fences and all, and on the drawn document that selection started beside the block rather than in it, so what was typed next went nowhere and the block could not be written in or taken out again. The caret is inside now, among the characters it was among. Pressed again from anywhere inside a fenced block, the command takes the fences off rather than writing a second block into the first, and the toolbar's button is drawn pressed while the caret is in one.
+
 - **`Enter` on the line a list item runs on over carries the list on.** An item's words can run over more than one line, after a hard break or wrapped by hand, and that second line has no marker of its own, so `Enter` at its end made a paragraph under the list instead of the next item. The marker is read off the first line of the item the parser says the line is in, on the source and the drawn document alike. Code inside an item is still the characters it is.
 
 - **A list, a quotation or a heading can be started on a line with nothing on it.** The toolbar's lists, the quotation and the headings left a blank line alone, so pressing one on an empty line did nothing, and a list could only be made out of words already written. On a line of its own each writes its marker now, with the caret after it for the words still to come. A caret, or a selection inside one line, also stays among the words it was among when a marker goes on or comes off. It came out selected around the whole line, which the next letter typed over, marker and all, on the drawn document.

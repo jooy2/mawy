@@ -10,7 +10,7 @@
  * sounds obvious and is the half people leave out.
  */
 
-import type { MdListItem, MdNode, MdTable } from './markdown/ast.js';
+import type { MdCode, MdListItem, MdNode, MdTable } from './markdown/ast.js';
 import { parseMarkdown } from './markdown/parse.js';
 
 export interface EditState {
@@ -309,19 +309,94 @@ function insertLink(state: EditState, image: boolean): EditState {
   };
 }
 
+/**
+ * A fence put around the lines the selection touches, or taken off the fenced
+ * block the caret is in.
+ *
+ * Off from anywhere inside the block, rather than only from a selection that
+ * holds both fences: a caret inside a code block asking for a code block is
+ * asking for it to stop being one, and wrapping the line it is on in fences of
+ * its own writes a second block into the middle of the first.
+ *
+ * A caret stays among the characters it was among, inside the fences on the way
+ * in and out of them on the way back — a caret selected around the whole block
+ * on the drawn document was one the next letter typed over, fences and all.
+ */
 function toggleCodeBlock(state: EditState): EditState {
-  const [from, to] = lineRange(state.value, state.start, state.end);
-  const block = state.value.slice(from, to);
+  const { value, start, end } = state;
+  const code = fencedAt(value, start);
+
+  if (code && start === end) {
+    const { range, content } = code;
+    const opening = content.start - range.start;
+    const inner = value.slice(content.start, content.end).replace(/\n$/, '');
+    const at = Math.min(Math.max(start - opening, range.start), range.start + inner.length);
+
+    return {
+      value: value.slice(0, range.start) + inner + value.slice(range.end),
+      start: at,
+      end: at
+    };
+  }
+
+  const [from, to] = lineRange(value, start, end);
+  const block = value.slice(from, to);
   const lines = block.split('\n');
   const fenced =
     lines.length > 1 && /^ {0,3}```/.test(lines[0]) && /^ {0,3}```/.test(lines[lines.length - 1]);
   const inner = fenced ? lines.slice(1, -1).join('\n') : `\`\`\`\n${block}\n\`\`\``;
 
+  if (start === end) {
+    return {
+      value: value.slice(0, from) + inner + value.slice(to),
+      start: start + 4,
+      end: start + 4
+    };
+  }
+
   return {
-    value: state.value.slice(0, from) + inner + state.value.slice(to),
+    value: value.slice(0, from) + inner + value.slice(to),
     start: from,
     end: from + inner.length
   };
+}
+
+/**
+ * The fenced code block a place is inside, between its fences, or `null`.
+ *
+ * On the fence lines themselves as well, since the opening fence is what a
+ * caret put at the start of the block sits on. Not an indented block, which has
+ * no fence to take off, and not a document with no fence in it at all, which is
+ * the common case and is answered without a parse.
+ */
+function fencedAt(value: string, offset: number): MdCode | null {
+  if (!value.includes('```') && !value.includes('~~~')) {
+    return null;
+  }
+
+  const document = parseMarkdown(value);
+
+  return codeNodeAt([...document.root.children, ...document.footnotes], offset);
+}
+
+function codeNodeAt(nodes: readonly MdNode[], offset: number): MdCode | null {
+  for (const node of nodes) {
+    if (offset < node.range.start || offset > node.range.end) {
+      continue;
+    }
+
+    if (node.type === 'code') {
+      return node.content.start > node.range.start ? node : null;
+    }
+
+    const inside = 'children' in node ? codeNodeAt(node.children as MdNode[], offset) : null;
+
+    if (inside) {
+      return inside;
+    }
+  }
+
+  return null;
 }
 
 function insertRule(state: EditState): EditState {
@@ -470,6 +545,8 @@ export function commandActive(command: MawyCommand, state: EditState): boolean {
       return everyLine(MARKERS.orderedList);
     case 'taskList':
       return everyLine(MARKERS.taskList);
+    case 'codeBlock':
+      return state.start === state.end && fencedAt(state.value, state.start) !== null;
     default:
       return false;
   }

@@ -2527,6 +2527,27 @@ describe('the document surface', () => {
     expect(gone).toHaveBeenLastCalledWith('- one\n\n');
   });
 
+  it('puts the caret inside a code block the toolbar makes, and takes the block off again', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor style={WIDE} defaultValue="One." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'One.', 4);
+    await userEvent.keyboard('{Enter}');
+    await userEvent.click(page.getByRole('button', { name: 'Code block' }));
+    await userEvent.keyboard('x');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\n```\nx\n```'));
+    expect(page.getByRole('button', { name: 'Code block' }).element()).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+
+    await userEvent.click(page.getByRole('button', { name: 'Code block' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\nx'));
+  });
+
   it('carries a quotation down, and a code block takes one newline', async () => {
     const quoted = vi.fn();
     const quote = await render(

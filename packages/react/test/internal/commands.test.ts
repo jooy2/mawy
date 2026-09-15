@@ -176,7 +176,7 @@ describe('line markers', () => {
     expect(run('bulletList', '|\nWords.')).toBe('- |\nWords.');
     expect(run('heading1', '|\nWords.')).toBe('# |\nWords.');
     expect(run('quote', '|\nWords.')).toBe('> |\nWords.');
-    expect(run('codeBlock', '|\nWords.')).toBe('«```\n\n```»\nWords.');
+    expect(run('codeBlock', '|\nWords.')).toBe('```\n|\n```\nWords.');
   });
 
   it('reads a heading off the lines with something on them', () => {
@@ -193,6 +193,16 @@ describe('blocks', () => {
     expect(run('codeBlock', '«```\na\nb\n```»')).toBe('«a\nb»');
   });
 
+  it('fences the line a caret is on with the caret inside, and unfences from inside', () => {
+    expect(run('codeBlock', 'co|de')).toBe('```\nco|de\n```');
+    expect(run('codeBlock', 'Above.\n\n|')).toBe('Above.\n\n```\n|\n```');
+    // Anywhere inside the block is asking for it to stop being one, rather
+    // than for a second block inside the first.
+    expect(run('codeBlock', '```ts\none\ntw|o\n```')).toBe('one\ntw|o');
+    expect(run('codeBlock', 'Above.\n\n```\n|\n```\n\nBelow.')).toBe('Above.\n\n|\n\nBelow.');
+    expect(run('codeBlock', '- ```\n  co|de\n  ```')).toBe('- co|de');
+  });
+
   it('gives a rule the blank lines it needs to be one', () => {
     expect(run('rule', 'text|')).toBe('text\n\n---\n|');
   });
@@ -205,6 +215,12 @@ describe('what is already in force', () => {
     expect(active('bold', 'a «**b**» c')).toBe(true);
     expect(active('bold', 'a **«b»** c')).toBe(true);
     expect(active('bold', 'a «b» c')).toBe(false);
+  });
+
+  it('sees a code block from anywhere inside it', () => {
+    expect(active('codeBlock', '```\nco|de\n```')).toBe(true);
+    expect(active('codeBlock', 'co|de')).toBe(false);
+    expect(active('codeBlock', '    co|de')).toBe(false);
   });
 
   it('sees a line marker only when every line has it', () => {

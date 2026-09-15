@@ -128,6 +128,19 @@ void main() {
     });
   });
 
+  group('blocks', () {
+    test('fences the line a caret is on with the caret inside, and unfences from inside', () {
+      expect(run(MawyCommand.codeBlock, 'co|de'), '```\nco|de\n```');
+      expect(run(MawyCommand.codeBlock, 'Above.\n\n|'), 'Above.\n\n```\n|\n```');
+      expect(run(MawyCommand.codeBlock, '```ts\none\ntw|o\n```'), 'one\ntw|o');
+      expect(
+        run(MawyCommand.codeBlock, 'Above.\n\n```\n|\n```\n\nBelow.'),
+        'Above.\n\n|\n\nBelow.',
+      );
+      expect(run(MawyCommand.codeBlock, '- ```\n  co|de\n  ```'), '- co|de');
+    });
+  });
+
   group('what is already in force', () {
     bool active(MawyCommand command, String marked) => commandActive(command, at(marked));
 
@@ -142,6 +155,12 @@ void main() {
       // between them, or `«**»` reads as bold with nothing in it.
       expect(active(MawyCommand.bold, 'a «**» c'), isFalse);
       expect(active(MawyCommand.code, 'a «`» c'), isFalse);
+    });
+
+    test('sees a code block from anywhere inside it', () {
+      expect(active(MawyCommand.codeBlock, '```\nco|de\n```'), isTrue);
+      expect(active(MawyCommand.codeBlock, 'co|de'), isFalse);
+      expect(active(MawyCommand.codeBlock, '    co|de'), isFalse);
     });
 
     test('sees a line marker only when every line has it', () {

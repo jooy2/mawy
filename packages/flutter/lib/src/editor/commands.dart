@@ -359,21 +359,92 @@ EditState _insertLink(EditState state, {required bool image}) {
 
 final RegExp _fenceLine = RegExp(r'^ {0,3}```');
 
+/// A fence put around the lines the selection touches, or taken off the fenced
+/// block the caret is in.
+///
+/// Off from anywhere inside the block, rather than only from a selection that
+/// holds both fences: a caret inside a code block asking for a code block is
+/// asking for it to stop being one, and wrapping the line it is on in fences of
+/// its own writes a second block into the middle of the first.
+///
+/// A caret stays among the characters it was among, inside the fences on the
+/// way in and out of them on the way back.
 EditState _toggleCodeBlock(EditState state) {
-  final List<int> span = _lineRange(state.value, state.start, state.end);
+  final String value = state.value;
+  final int start = state.start;
+  final int end = state.end;
+  final MdCode? code = _fencedAt(value, start);
+
+  if (code != null && start == end) {
+    final int opening = code.content.start - code.range.start;
+    final String inner = value
+        .substring(code.content.start, code.content.end)
+        .replaceFirst(RegExp(r'\n$'), '');
+    final int least = code.range.start;
+    final int most = code.range.start + inner.length;
+    final int at = (start - opening).clamp(least, most);
+
+    return EditState(
+      value.substring(0, code.range.start) + inner + value.substring(code.range.end),
+      at,
+      at,
+    );
+  }
+
+  final List<int> span = _lineRange(value, start, end);
   final int from = span[0];
   final int to = span[1];
-  final String block = state.value.substring(from, to);
+  final String block = value.substring(from, to);
   final List<String> lines = block.split('\n');
   final bool fenced =
       lines.length > 1 && _fenceLine.hasMatch(lines.first) && _fenceLine.hasMatch(lines.last);
   final String inner = fenced ? lines.sublist(1, lines.length - 1).join('\n') : '```\n$block\n```';
 
+  if (start == end) {
+    return EditState(value.substring(0, from) + inner + value.substring(to), start + 4, start + 4);
+  }
+
   return EditState(
-    state.value.substring(0, from) + inner + state.value.substring(to),
+    value.substring(0, from) + inner + value.substring(to),
     from,
     from + inner.length,
   );
+}
+
+/// The fenced code block a place is inside, between its fences, or `null`.
+///
+/// On the fence lines themselves as well, since the opening fence is what a
+/// caret put at the start of the block sits on. Not an indented block, which
+/// has no fence to take off, and not a document with no fence in it at all,
+/// which is the common case and is answered without a parse.
+MdCode? _fencedAt(String value, int offset) {
+  if (!value.contains('```') && !value.contains('~~~')) {
+    return null;
+  }
+
+  final MdDocument document = parseMarkdown(value);
+
+  return _codeNodeAt(<MdNode>[...document.root.children, ...document.footnotes], offset);
+}
+
+MdCode? _codeNodeAt(List<MdNode> nodes, int offset) {
+  for (final MdNode node in nodes) {
+    if (offset < node.range.start || offset > node.range.end) {
+      continue;
+    }
+
+    if (node is MdCode) {
+      return node.content.start > node.range.start ? node : null;
+    }
+
+    final MdCode? inside = _codeNodeAt(_blocksIn(node), offset);
+
+    if (inside != null) {
+      return inside;
+    }
+  }
+
+  return null;
 }
 
 EditState _insertRule(EditState state) {
@@ -488,6 +559,8 @@ bool commandActive(MawyCommand command, EditState state) {
     MawyCommand.bulletList => everyLine(_markers[_bulletList]!),
     MawyCommand.orderedList => everyLine(_markers[_orderedList]!),
     MawyCommand.taskList => everyLine(_markers[_taskList]!),
+    MawyCommand.codeBlock =>
+      state.start == state.end && _fencedAt(state.value, state.start) != null,
     _ => false,
   };
 }
