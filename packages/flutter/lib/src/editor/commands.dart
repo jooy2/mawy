@@ -105,13 +105,45 @@ EditState _mapLines(EditState state, List<String> Function(List<String>) rewrite
   final List<int> span = _lineRange(state.value, state.start, state.end);
   final int from = span[0];
   final int to = span[1];
-  final String block = rewrite(state.value.substring(from, to).split('\n')).join('\n');
+  final String before = state.value.substring(from, to);
+  final String block = rewrite(before.split('\n')).join('\n');
+  final String value = state.value.substring(0, from) + block + state.value.substring(to);
 
-  return EditState(
-    state.value.substring(0, from) + block + state.value.substring(to),
-    from,
-    from + block.length,
-  );
+  // A caret, or a selection inside one line, is somewhere in the words rather
+  // than around a block, and stays there: moved along by whatever the marker in
+  // front of the words became. A caret selected into the whole line was typed
+  // over by the next letter. A whole line selected stays selected, so the next
+  // command acts on it too.
+  if (!before.contains('\n') && !(state.start == from && state.end == to && from != to)) {
+    return EditState(
+      value,
+      from + _shifted(before, block, state.start - from),
+      from + _shifted(before, block, state.end - from),
+    );
+  }
+
+  return EditState(value, from, from + block.length);
+}
+
+/// Where a place in a line is once only the front of the line has changed.
+///
+/// What the commands rewrite is a marker, and what comes after it is left as it
+/// was, so the words the two lines end with are the same words. A place in them
+/// moves by however much longer the front became; a place in the old marker is
+/// at the end of the new one.
+int _shifted(String was, String now, int at) {
+  int same = 0;
+
+  while (same < was.length &&
+      same < now.length &&
+      was[was.length - 1 - same] == now[now.length - 1 - same]) {
+    same += 1;
+  }
+
+  final int old = was.length - same;
+  final int fresh = now.length - same;
+
+  return at <= old ? fresh : at + fresh - old;
 }
 
 final RegExp _indent = RegExp(r'^[ \t]*');
@@ -165,9 +197,15 @@ EditState _togglePrefix(EditState state, String kind, String prefix, {required b
       }
 
       if (line.trim().isEmpty) {
-        // The marker without the space after it, there being nothing for the
-        // space to be in front of.
-        return blanks ? _indentOf(line) + prefix.trimRight() : line;
+        // A line of its own is where the caret is, and a marker is what was
+        // asked for there — the empty item or quotation the next words go in.
+        // Among other lines it is the marker without the space after it, there
+        // being nothing for the space to be in front of.
+        return lines.length == 1
+            ? _indentOf(line) + prefix
+            : blanks
+            ? _indentOf(line) + prefix.trimRight()
+            : line;
       }
 
       return _indentOf(line) + prefix + _bare(line).trimLeft();
@@ -188,9 +226,10 @@ EditState _toggleOrdered(EditState state) {
         return _bare(line);
       }
 
-      // Blank lines inside the block keep their place and do not take a number.
+      // Blank lines inside the block keep their place and do not take a number,
+      // and a blank line on its own is the first item, still to be written.
       if (line.trim().isEmpty) {
-        return line;
+        return lines.length == 1 ? '${_indentOf(line)}1. ' : line;
       }
 
       number += 1;
@@ -223,7 +262,11 @@ EditState toggleHeading(EditState state, int depth) {
         return _bare(line);
       }
 
-      return line.trim().isEmpty ? line : '${_indentOf(line)}$hashes ${_bare(line).trimLeft()}';
+      return line.trim().isNotEmpty
+          ? '${_indentOf(line)}$hashes ${_bare(line).trimLeft()}'
+          : lines.length == 1
+          ? '${_indentOf(line)}$hashes '
+          : line;
     }).toList();
   });
 }

@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **A list, a quotation or a heading can be started on a line with nothing on it.** The toolbar's lists, the quotation and the headings left a blank line alone, so pressing one on an empty line did nothing, and a list could only be made out of words already written. On a line of its own each writes its marker now, with the caret after it for the words still to come. A caret, or a selection inside one line, also stays among the words it was among when a marker goes on or comes off, where it came out selected around the whole line and the next letter typed over the marker with the words. The React package's commands do the same, and the parity check compares the two.
+
 - **The name of a button against either edge of a toolbar is drawn on the screen.** A tooltip hung from the middle of its button, and the surface switch is against the editor's own edge, so the name of the first mode was drawn half past the edge of the overlay and cut to its last letters. A name that would reach past an edge is hung from the end of its button nearer that edge now, measured with the words it says.
 
 ## 1.5.0 (2026-09-13)

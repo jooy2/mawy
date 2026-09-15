@@ -70,13 +70,49 @@ function lineRange(value: string, start: number, end: number): [number, number] 
  */
 function mapLines(state: EditState, rewrite: (lines: string[]) => string[]): EditState {
   const [from, to] = lineRange(state.value, state.start, state.end);
-  const block = rewrite(state.value.slice(from, to).split('\n')).join('\n');
+  const before = state.value.slice(from, to);
+  const block = rewrite(before.split('\n')).join('\n');
+  const value = state.value.slice(0, from) + block + state.value.slice(to);
 
-  return {
-    value: state.value.slice(0, from) + block + state.value.slice(to),
-    start: from,
-    end: from + block.length
-  };
+  // A caret, or a selection inside one line, is somewhere in the words rather
+  // than around a block, and stays there: moved along by whatever the marker in
+  // front of the words became. A caret selected into the whole line was typed
+  // over by the next letter, which on the drawn document is the marker and all.
+  // A whole line selected stays selected, so the next command acts on it too.
+  if (!before.includes('\n') && !(state.start === from && state.end === to && from !== to)) {
+    return {
+      value,
+      start: from + shifted(before, block, state.start - from),
+      end: from + shifted(before, block, state.end - from)
+    };
+  }
+
+  return { value, start: from, end: from + block.length };
+}
+
+/**
+ * Where a place in a line is once only the front of the line has changed.
+ *
+ * What the commands rewrite is a marker, and what comes after it is left as it
+ * was, so the words the two lines end with are the same words. A place in them
+ * moves by however much longer the front became; a place in the old marker is
+ * at the end of the new one.
+ */
+function shifted(was: string, now: string, at: number): number {
+  let same = 0;
+
+  while (
+    same < was.length &&
+    same < now.length &&
+    was[was.length - 1 - same] === now[now.length - 1 - same]
+  ) {
+    same += 1;
+  }
+
+  const old = was.length - same;
+  const fresh = now.length - same;
+
+  return at <= old ? fresh : at + fresh - old;
 }
 
 /** The indentation a line opens with, so a marker goes after it and not before. */
@@ -130,9 +166,15 @@ function togglePrefix(
       }
 
       if (!line.trim()) {
-        // The marker without the space after it, there being nothing for the
-        // space to be in front of.
-        return blanks ? indentOf(line) + prefix.trimEnd() : line;
+        // A line of its own is where the caret is, and a marker is what was
+        // asked for there — the empty item or quotation the next words go in.
+        // Among other lines it is the marker without the space after it, there
+        // being nothing for the space to be in front of.
+        return lines.length === 1
+          ? indentOf(line) + prefix
+          : blanks
+            ? indentOf(line) + prefix.trimEnd()
+            : line;
       }
 
       return indentOf(line) + prefix + bare(line).trimStart();
@@ -151,9 +193,10 @@ function toggleOrdered(state: EditState): EditState {
         return bare(line);
       }
 
-      // Blank lines inside the block keep their place and do not take a number.
+      // Blank lines inside the block keep their place and do not take a number,
+      // and a blank line on its own is the first item, still to be written.
       if (!line.trim()) {
-        return line;
+        return lines.length === 1 ? `${indentOf(line)}1. ` : line;
       }
 
       number += 1;
@@ -185,7 +228,11 @@ export function toggleHeading(state: EditState, depth: number): EditState {
         return bare(line);
       }
 
-      return line.trim() ? `${indentOf(line)}${hashes} ${bare(line).trimStart()}` : line;
+      return line.trim()
+        ? `${indentOf(line)}${hashes} ${bare(line).trimStart()}`
+        : lines.length === 1
+          ? `${indentOf(line)}${hashes} `
+          : line;
     });
   });
 }

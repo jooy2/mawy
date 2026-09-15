@@ -2287,6 +2287,30 @@ describe('the document surface', () => {
     expect(drawn()).toEqual(['One', '', 'Two']);
   });
 
+  it('makes a list, a quotation or a heading on a line with nothing on it yet', async () => {
+    for (const [button, typed] of [
+      ['Bulleted list', '- x'],
+      ['Numbered list', '1. x'],
+      ['Task list', '- [ ] x'],
+      ['Quotation', '> x']
+    ] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor style={WIDE} defaultValue="One." mode="wysiwyg" onChange={onChange} />
+      );
+
+      put(bodyOf(screen), 'One.', 4);
+      await userEvent.keyboard('{Enter}');
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\n'));
+
+      await userEvent.click(page.getByRole('button', { name: button }));
+      await userEvent.keyboard('x');
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(`One.\n\n${typed}`));
+      await screen.unmount();
+    }
+  });
+
   it('gives a list item up onto a paragraph the document has', async () => {
     const onChange = vi.fn();
     const screen = await render(

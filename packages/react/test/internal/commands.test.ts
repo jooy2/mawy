@@ -115,14 +115,33 @@ describe('line markers', () => {
   });
 
   it('toggles a heading, and swaps one depth for another', () => {
-    expect(run('heading2', 'Title|')).toBe('«## Title»');
-    expect(run('heading3', '## Ti|tle')).toBe('«### Title»');
-    expect(run('heading2', '## Ti|tle')).toBe('«Title»');
-    expect(run('paragraph', '### Ti|tle')).toBe('«Title»');
+    expect(run('heading2', 'Title|')).toBe('## Title|');
+    expect(run('heading3', '## Ti|tle')).toBe('### Ti|tle');
+    expect(run('heading2', '## Ti|tle')).toBe('Ti|tle');
+    expect(run('paragraph', '### Ti|tle')).toBe('Ti|tle');
+  });
+
+  it('keeps a caret among the words it was among, and a whole line selected', () => {
+    // A caret selected into the whole line was typed over by the next letter,
+    // which on the drawn document is the marker and all.
+    expect(run('bulletList', 'one t|wo')).toBe('- one t|wo');
+    expect(run('taskList', '- one t|wo')).toBe('- [ ] one t|wo');
+    expect(run('bulletList', '- o«ne t»wo')).toBe('o«ne t»wo');
+    expect(run('orderedList', '|one')).toBe('1. |one');
+    expect(run('heading1', '«Title»')).toBe('«# Title»');
+  });
+
+  it('writes a marker on an empty line, for the words still to come', () => {
+    expect(run('bulletList', 'One.\n\n|')).toBe('One.\n\n- |');
+    expect(run('taskList', '|')).toBe('- [ ] |');
+    expect(run('orderedList', '|')).toBe('1. |');
+    expect(run('quote', '|')).toBe('> |');
+    expect(run('heading2', '|')).toBe('## |');
+    expect(run('bulletList', '  |')).toBe('  - |');
   });
 
   it('keeps the indentation a line already had', () => {
-    expect(run('quote', '  a|')).toBe('«  > a»');
+    expect(run('quote', '  a|')).toBe('  > a|');
   });
 
   /**
@@ -154,9 +173,9 @@ describe('line markers', () => {
     // the first character instead, so a document opening with a line ending
     // had its first line read as starting after that line ending and ending
     // before it, and the command wrote the line ending in twice.
-    expect(run('bulletList', '|\nWords.')).toBe('|\nWords.');
-    expect(run('heading1', '|\nWords.')).toBe('|\nWords.');
-    expect(run('quote', '|\nWords.')).toBe('«>»\nWords.');
+    expect(run('bulletList', '|\nWords.')).toBe('- |\nWords.');
+    expect(run('heading1', '|\nWords.')).toBe('# |\nWords.');
+    expect(run('quote', '|\nWords.')).toBe('> |\nWords.');
     expect(run('codeBlock', '|\nWords.')).toBe('«```\n\n```»\nWords.');
   });
 
@@ -266,7 +285,7 @@ describe('indenting', () => {
   });
 
   it('outdents from a caret too, because there is nothing else it could mean', () => {
-    expect(tab('  one|', true)).toBe('«one»');
+    expect(tab('  one|', true)).toBe('one|');
   });
 });
 

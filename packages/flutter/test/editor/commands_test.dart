@@ -93,10 +93,27 @@ void main() {
     });
 
     test('toggles a heading, and swaps one depth for another', () {
-      expect(run(MawyCommand.heading2, 'Title|'), '«## Title»');
-      expect(run(MawyCommand.heading3, '## Ti|tle'), '«### Title»');
-      expect(run(MawyCommand.heading2, '## Ti|tle'), '«Title»');
-      expect(run(MawyCommand.paragraph, '### Ti|tle'), '«Title»');
+      expect(run(MawyCommand.heading2, 'Title|'), '## Title|');
+      expect(run(MawyCommand.heading3, '## Ti|tle'), '### Ti|tle');
+      expect(run(MawyCommand.heading2, '## Ti|tle'), 'Ti|tle');
+      expect(run(MawyCommand.paragraph, '### Ti|tle'), 'Ti|tle');
+    });
+
+    test('keeps a caret among the words it was among, and a whole line selected', () {
+      expect(run(MawyCommand.bulletList, 'one t|wo'), '- one t|wo');
+      expect(run(MawyCommand.taskList, '- one t|wo'), '- [ ] one t|wo');
+      expect(run(MawyCommand.bulletList, '- o«ne t»wo'), 'o«ne t»wo');
+      expect(run(MawyCommand.orderedList, '|one'), '1. |one');
+      expect(run(MawyCommand.heading1, '«Title»'), '«# Title»');
+    });
+
+    test('writes a marker on an empty line, for the words still to come', () {
+      expect(run(MawyCommand.bulletList, 'One.\n\n|'), 'One.\n\n- |');
+      expect(run(MawyCommand.taskList, '|'), '- [ ] |');
+      expect(run(MawyCommand.orderedList, '|'), '1. |');
+      expect(run(MawyCommand.quote, '|'), '> |');
+      expect(run(MawyCommand.heading2, '|'), '## |');
+      expect(run(MawyCommand.bulletList, '  |'), '  - |');
     });
 
     test('marks a blank line inside a quotation and leaves one inside a list', () {
@@ -196,7 +213,7 @@ void main() {
     });
 
     test('outdents from a caret too, because there is nothing else it could mean', () {
-      expect(tab('  one|', out: true), '«one»');
+      expect(tab('  one|', out: true), 'one|');
     });
   });
 }
