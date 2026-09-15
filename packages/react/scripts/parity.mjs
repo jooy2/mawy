@@ -35,6 +35,7 @@ import {
   indent,
   runCommand,
   runTableCommand,
+  tableOfSize,
   toggleHeading
 } from '../src/internal/commands.ts';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../src/internal/search.ts';
@@ -239,8 +240,10 @@ const edits = JSON.parse(
   }
 
   const row = continueTable(state);
+  const sized = tableOfSize(state, 3, 4);
 
   out.continueTable = row && [row.value, row.start, row.end];
+  out.tableOfSize = sized && [sized.value, sized.start, sized.end];
   out.indent = [indented.value, indented.start, indented.end];
   out.outdent = [outdented.value, outdented.start, outdented.end];
 

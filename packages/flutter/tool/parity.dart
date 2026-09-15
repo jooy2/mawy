@@ -410,8 +410,10 @@ List<Object?> _edits() {
     }
 
     final EditState? row = continueTable(state);
+    final EditState? sized = tableOfSize(state, 3, 4);
 
     out['continueTable'] = row == null ? null : <Object?>[row.value, row.start, row.end];
+    out['tableOfSize'] = sized == null ? null : <Object?>[sized.value, sized.start, sized.end];
     out['indent'] = <Object?>[indented.value, indented.start, indented.end];
     out['outdent'] = <Object?>[outdented.value, outdented.start, outdented.end];
 

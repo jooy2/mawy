@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
+import 'package:mawy/src/editor/commands.dart' show tableOfSize;
 
 /// The commands, as arithmetic on a string.
 ///
@@ -125,6 +126,19 @@ void main() {
     test('reads a heading off the lines with something on them', () {
       expect(run(MawyCommand.heading2, '«## a\n\n## b»'), '«a\n\nb»');
       expect(run(MawyCommand.heading2, '«a\n\nb»'), '«## a\n\n## b»');
+    });
+  });
+
+  group('tables', () {
+    test('inserts a table of the size asked for, the header counted among the rows', () {
+      expect(
+        tableOfSize(const EditState('', 0, 0), 3, 1)?.value,
+        '|  |  |  |\n| --- | --- | --- |',
+      );
+      expect(
+        tableOfSize(const EditState('Intro.', 6, 6), 1, 3)?.value,
+        'Intro.\n\n|  |\n| --- |\n|  |\n|  |',
+      );
     });
   });
 

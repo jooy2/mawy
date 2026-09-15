@@ -32,7 +32,9 @@ import 'package:mawy/src/internal/focus_visible.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/overlay.dart';
 import 'package:mawy/src/internal/roving.dart';
+import 'package:mawy/src/internal/table_tools.dart';
 import 'package:mawy/src/internal/toolbar.dart';
+import 'package:mawy/src/markdown/ast.dart' show MdRange;
 import 'package:mawy/src/markdown/parse.dart' show MawyParseOptions;
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
@@ -852,6 +854,17 @@ class _MawyEditorState extends State<MawyEditor> {
     }
   }
 
+  /// An empty table of the size the toolbar's grid was pressed at.
+  void _insertTableSized(int columns, int rows) {
+    final EditState? after = widget.readOnly || !widget.parse.gfm
+        ? null
+        : tableOfSize(_state, columns, rows);
+
+    if (after != null) {
+      _apply(after);
+    }
+  }
+
   /// Whether a table command has anything to act on where the caret is, which
   /// is a parse of the document and so is asked when the menu opens or the key
   /// is pressed rather than on every build.
@@ -1054,6 +1067,19 @@ class _MawyEditorState extends State<MawyEditor> {
       currentMatch: _currentMatch(matches),
     );
 
+    final Widget tabled = _TableToolsHost(
+      controller: _controller,
+      focus: _focus,
+      scroll: _sourceScroll,
+      editableKey: _editable,
+      active: !widget.readOnly && widget.parse.gfm,
+      tokens: tokens,
+      strings: strings,
+      available: _tableAvailable,
+      onCommand: _runTable,
+      child: source,
+    );
+
     final Widget preview = _previewOf(tokens, strings);
 
     final bool floating = widget.frame == MawyFrame.floating;
@@ -1082,7 +1108,7 @@ class _MawyEditorState extends State<MawyEditor> {
           canRedo: showSource && !widget.readOnly && _history.value.canRedo,
           onTravel: _travel,
           editable: showSource && !widget.readOnly,
-          onTable: _runTable,
+          onInsertTable: _insertTableSized,
           tableAvailable: _tableAvailable,
           headingLevels: _headingLevels,
           onHeading: _heading,
@@ -1130,7 +1156,7 @@ class _MawyEditorState extends State<MawyEditor> {
               // A flex of a thousandth, so the share is a whole number of
               // them and the two panes always add up to the width. A
               // fractional `flex` is not a thing a `Row` has.
-              Flexible(flex: (_share * 1000).round(), child: source),
+              Flexible(flex: (_share * 1000).round(), child: tabled),
             if (showSource && showPreview)
               _Divider(
                 tokens: tokens,
@@ -1252,6 +1278,163 @@ class _MawyEditorState extends State<MawyEditor> {
 }
 
 /* -------------------------------------------------------------------------
+ * A table's own controls
+ * ---------------------------------------------------------------------- */
+
+/// The source, with the row and column controls hung beside the table the caret
+/// is in.
+///
+/// Over the line the table starts on, at the far end of the field, and under
+/// the line it ends on where there is no room above; never out of the field.
+/// Only while the source has the focus and can be changed: the controls are for
+/// the table being written in. Placed after the frame the caret moved in, since
+/// where a line is drawn is only known once the field has laid it out, and again
+/// whenever the field scrolls.
+class _TableToolsHost extends StatefulWidget {
+  const _TableToolsHost({
+    required this.controller,
+    required this.focus,
+    required this.scroll,
+    required this.editableKey,
+    required this.active,
+    required this.tokens,
+    required this.strings,
+    required this.available,
+    required this.onCommand,
+    required this.child,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focus;
+  final ScrollController scroll;
+  final GlobalKey<EditableTextState> editableKey;
+  final bool active;
+  final MawyTokens tokens;
+  final MawyStrings strings;
+  final bool Function(MawyTableCommand) available;
+  final ValueChanged<MawyTableCommand> onCommand;
+  final Widget child;
+
+  @override
+  State<_TableToolsHost> createState() => _TableToolsHostState();
+}
+
+class _TableToolsHostState extends State<_TableToolsHost> {
+  final GlobalKey _stack = GlobalKey(debugLabel: 'MawyEditor table tools');
+
+  /// How far down the field the bar is, or `null` while there is no bar.
+  double? _top;
+  bool _queued = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _listen(widget);
+  }
+
+  @override
+  void didUpdateWidget(_TableToolsHost old) {
+    super.didUpdateWidget(old);
+
+    if (old.controller != widget.controller ||
+        old.focus != widget.focus ||
+        old.scroll != widget.scroll) {
+      _forget(old);
+      _listen(widget);
+    }
+
+    _queue();
+  }
+
+  @override
+  void dispose() {
+    _forget(widget);
+    super.dispose();
+  }
+
+  void _listen(_TableToolsHost host) {
+    host.controller.addListener(_queue);
+    host.focus.addListener(_queue);
+    host.scroll.addListener(_queue);
+  }
+
+  void _forget(_TableToolsHost host) {
+    host.controller.removeListener(_queue);
+    host.focus.removeListener(_queue);
+    host.scroll.removeListener(_queue);
+  }
+
+  void _queue() {
+    if (_queued) {
+      return;
+    }
+
+    _queued = true;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      _queued = false;
+
+      if (mounted) {
+        _place();
+      }
+    });
+    // Asked for, so the callback has a frame to come after.
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _place() {
+    final TextSelection selection = widget.controller.selection;
+    final MdRange? table =
+        widget.active && widget.focus.hasFocus && selection.isValid && selection.isCollapsed
+        ? tableRangeAt(widget.controller.text, selection.baseOffset)
+        : null;
+    final RenderEditable? editable = widget.editableKey.currentState?.renderEditable;
+    final RenderObject? stack = _stack.currentContext?.findRenderObject();
+    double? top;
+
+    if (table != null &&
+        editable != null &&
+        editable.attached &&
+        stack is RenderBox &&
+        stack.hasSize) {
+      final Rect first = editable.getLocalRectForCaret(TextPosition(offset: table.start));
+      final Rect last = editable.getLocalRectForCaret(TextPosition(offset: table.end));
+      final double over = stack.globalToLocal(editable.localToGlobal(first.topLeft)).dy;
+      final double under = stack.globalToLocal(editable.localToGlobal(last.bottomLeft)).dy;
+      final double above = over - kMawyTableToolsHeight - 4;
+      final double most = stack.size.height - kMawyTableToolsHeight - 4;
+      final double wanted = above >= 4 ? above : under + 4;
+
+      top = wanted < 4 ? 4 : (most > 4 && wanted > most ? most : wanted);
+    }
+
+    if (top != _top) {
+      setState(() => _top = top);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      key: _stack,
+      children: <Widget>[
+        Positioned.fill(child: widget.child),
+        if (_top != null)
+          PositionedDirectional(
+            top: _top,
+            end: 16,
+            child: MawyTableTools(
+              tokens: widget.tokens,
+              strings: widget.strings,
+              available: widget.available,
+              onCommand: widget.onCommand,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/* -------------------------------------------------------------------------
  * The toolbar
  * ---------------------------------------------------------------------- */
 
@@ -1271,7 +1454,7 @@ class _Toolbar extends StatefulWidget {
     required this.canRedo,
     required this.onTravel,
     required this.editable,
-    required this.onTable,
+    required this.onInsertTable,
     required this.tableAvailable,
     required this.headingLevels,
     required this.onHeading,
@@ -1299,7 +1482,7 @@ class _Toolbar extends StatefulWidget {
   /// Whether there is a source showing that can be changed, which a menu of
   /// things to change in it needs before it is worth opening.
   final bool editable;
-  final ValueChanged<MawyTableCommand> onTable;
+  final void Function(int columns, int rows) onInsertTable;
   final bool Function(MawyTableCommand) tableAvailable;
   final List<int> headingLevels;
   final ValueChanged<int> onHeading;
@@ -1475,57 +1658,21 @@ class _ToolbarState extends State<_Toolbar> {
             tokens: widget.tokens,
             focusNode: next(),
             enabled: widget.editable,
-            // Built when the menu opens, because which entries apply depends on
-            // whether the caret is in a table, and reading that is a parse.
-            builder: (VoidCallback close) => MawyToolbarActions(
+            // A grid of sizes, and nothing else: what reshapes a table is hung
+            // beside the table the caret is in, where it has something to act
+            // on. Built when the menu opens, because whether a table can go
+            // where the caret is — not in a code block, not in another table —
+            // is a parse.
+            builder: (VoidCallback close) => MawyTableSizeGrid(
               tokens: widget.tokens,
-              actions: <MawyToolbarAction>[
-                for (final (MawyTableCommand command, String label, IconData icon)
-                    in <(MawyTableCommand, String, IconData)>[
-                      (MawyTableCommand.insertTable, widget.strings.tableInsert, LucideIcons.table),
-                      (
-                        MawyTableCommand.addRowBelow,
-                        widget.strings.tableRowBelow,
-                        LucideIcons.betweenHorizontalEnd,
-                      ),
-                      (
-                        MawyTableCommand.addRowAbove,
-                        widget.strings.tableRowAbove,
-                        LucideIcons.betweenHorizontalStart,
-                      ),
-                      (
-                        MawyTableCommand.addColumnAfter,
-                        widget.strings.tableColumnAfter,
-                        LucideIcons.betweenVerticalEnd,
-                      ),
-                      (
-                        MawyTableCommand.addColumnBefore,
-                        widget.strings.tableColumnBefore,
-                        LucideIcons.betweenVerticalStart,
-                      ),
-                      (
-                        MawyTableCommand.removeRow,
-                        widget.strings.tableRowRemove,
-                        LucideIcons.trash2,
-                      ),
-                      (
-                        MawyTableCommand.removeColumn,
-                        widget.strings.tableColumnRemove,
-                        LucideIcons.trash2,
-                      ),
-                    ])
-                  MawyToolbarAction(
-                    label,
-                    icon: icon,
-                    enabled: widget.tableAvailable(command),
-                    onPressed: () {
-                      // Shut first, so the focus the command puts back in the
-                      // source is not taken back by the panel closing.
-                      close();
-                      widget.onTable(command);
-                    },
-                  ),
-              ],
+              strings: widget.strings,
+              enabled: widget.tableAvailable(MawyTableCommand.insertTable),
+              onPick: (int columns, int rows) {
+                // Shut first, so the focus the insert puts back in the source
+                // is not taken back by the panel closing.
+                close();
+                widget.onInsertTable(columns, rows);
+              },
             ),
           ),
         );

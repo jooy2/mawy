@@ -8,13 +8,12 @@ import type {
   MawyMode
 } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
-import type { MawyCommand, MawyTableCommand } from '../../internal/commands.js';
+import type { MawyCommand } from '../../internal/commands.js';
 import { Actions, Choice, IconButton, Menu } from '../../internal/controls.js';
+import { TableSizeGrid } from '../../internal/table.js';
 import { tabStops, useRoving } from '../../internal/roving.js';
 import {
   BoldIcon,
-  ColumnAfterIcon,
-  ColumnBeforeIcon,
   BulletListIcon,
   CodeBlockIcon,
   CodeIcon,
@@ -38,9 +37,6 @@ import {
   ParagraphIcon,
   PreviewIcon,
   QuoteIcon,
-  RemoveIcon,
-  RowAboveIcon,
-  RowBelowIcon,
   RuleIcon,
   SaveIcon,
   SourceIcon,
@@ -87,10 +83,10 @@ export interface MawyEditorToolbarProps {
   onUndo?: () => void;
   /** A step forward again. Absent when there is none to put back. */
   onRedo?: () => void;
-  /** Runs a table command. */
-  onTable: (command: MawyTableCommand) => void;
-  /** Whether a table command has anything to act on where the caret is. */
-  tableAvailable: (command: MawyTableCommand) => boolean;
+  /** Inserts an empty table of this many columns and rows, the header among them. */
+  onInsertTable: (columns: number, rows: number) => void;
+  /** Whether a table can go where the caret is. Asked when the menu opens. */
+  tableInsertable: () => boolean;
   onSave: () => void;
 }
 
@@ -137,61 +133,6 @@ const COMMANDS: Partial<
   codeBlock: { command: 'codeBlock', icon: CodeBlockIcon, label: 'codeBlock' },
   rule: { command: 'rule', icon: RuleIcon, label: 'thematicBreak' }
 };
-
-/**
- * What the `table` menu holds, in the order it holds them, with the keys for
- * each. The keys are the editor's, in `MawyEditor.tsx`; they are written here
- * as well only so a screen reader can say them.
- */
-const TABLE_ACTIONS: readonly {
-  command: MawyTableCommand;
-  label: keyof MawyStrings;
-  icon: typeof TableIcon;
-  keys: string;
-}[] = [
-  {
-    command: 'insertTable',
-    label: 'tableInsert',
-    icon: TableIcon,
-    keys: 'Control+Alt+T Meta+Alt+T'
-  },
-  {
-    command: 'addRowBelow',
-    label: 'tableRowBelow',
-    icon: RowBelowIcon,
-    keys: 'Control+Enter Meta+Enter'
-  },
-  {
-    command: 'addRowAbove',
-    label: 'tableRowAbove',
-    icon: RowAboveIcon,
-    keys: 'Control+Shift+Enter Meta+Shift+Enter'
-  },
-  {
-    command: 'addColumnAfter',
-    label: 'tableColumnAfter',
-    icon: ColumnAfterIcon,
-    keys: 'Control+Alt+Enter Meta+Alt+Enter'
-  },
-  {
-    command: 'addColumnBefore',
-    label: 'tableColumnBefore',
-    icon: ColumnBeforeIcon,
-    keys: 'Control+Alt+Shift+Enter Meta+Alt+Shift+Enter'
-  },
-  {
-    command: 'removeRow',
-    label: 'tableRowRemove',
-    icon: RemoveIcon,
-    keys: 'Control+Shift+Backspace Meta+Shift+Backspace'
-  },
-  {
-    command: 'removeColumn',
-    label: 'tableColumnRemove',
-    icon: RemoveIcon,
-    keys: 'Control+Alt+Shift+Backspace Meta+Alt+Shift+Backspace'
-  }
-];
 
 /**
  * How many of a toolbar's groups fit across it, and what to do with the rest.
@@ -330,8 +271,8 @@ export function MawyEditorToolbar({
   onPickImage,
   onUndo,
   onRedo,
-  onTable,
-  tableAvailable,
+  onInsertTable,
+  tableInsertable,
   onSave
 }: MawyEditorToolbarProps): React.ReactElement {
   const { onKeyDown, itemProps } = useRoving();
@@ -487,19 +428,13 @@ export function MawyEditorToolbar({
           disabled={!editable}
           {...itemProps(at)}
         >
-          {/* Asked when the menu opens, because which of these apply depends
-              on whether the caret is in a table, and reading that is a parse. */}
+          {/* A grid of sizes, and nothing else: what reshapes a table is hung
+              beside the table the caret is in, where it has something to act
+              on. Asked when the menu opens, because whether a table can go
+              where the caret is — not in a code block, not in another table —
+              is a parse. */}
           {() => (
-            <Actions
-              label={strings.table}
-              actions={TABLE_ACTIONS.map(({ command, label, icon: Icon, keys }) => ({
-                label: strings[label],
-                icon: <Icon className="mawy-icon" aria-hidden="true" />,
-                keys,
-                disabled: !tableAvailable(command),
-                run: () => onTable(command)
-              }))}
-            />
+            <TableSizeGrid strings={strings} disabled={!tableInsertable()} onPick={onInsertTable} />
           )}
         </Menu>
       );

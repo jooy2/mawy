@@ -261,7 +261,7 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | `'heading'` | A menu of heading 1, 2, 3 and body text, or of the levels in `headingLevels` |
 | `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
-| `'table'` | A menu that inserts a table and adds or removes its rows and columns. See [tables](#tables) |
+| `'table'` | A grid that inserts an empty table of the size pressed. See [tables](#tables) |
 | `'find'` | Opens the find bar. See [finding](#finding) |
 | `'open'`, `'save'` | Reads a Markdown file in and writes one out. See [opening and saving](#opening-and-saving) |
 | `'colorScheme'` | Light, dark, or whatever the system says |
@@ -285,7 +285,9 @@ The React package solves the same problem with a menu at the end of the bar, and
 
 ## Tables
 
-The toolbar's `table` button is a menu of everything that makes a table or changes its shape, and each entry has a shortcut. What they write is a GitHub table: the alignment in the delimiter row and whatever is written in the other cells stay exactly as they were, because each command puts in or takes out one cell per line rather than writing the table out again.
+**The toolbar's `table` button asks for a size and inserts an empty table of it.** It opens a grid of ten columns and eight rows, lit from the corner to the cell under the pointer, and the header is counted as one of the rows. The arrows move what is lit and `Enter` inserts it, and a screen reader is given each size as a button of its own.
+
+**The rows and columns of a table are changed from a bar beside it.** While the caret is in a table and the editor has the focus, a small bar hangs over the table's top edge at its far end, or under its bottom edge where there is no room above: a row above or below, a column before or after, and deleting the row or the column the caret is in. It is on the drawn document over the table, and on the source over the line the table starts on. A press on it does not take the focus, so the next letter still goes into the cell the caret was in. On the drawn document every table has room above it for the bar, so the bar never covers the end of the paragraph before it. What they write is a GitHub table: the alignment in the delimiter row and whatever is written in the other cells stay exactly as they were, because each command puts in or takes out one cell per line rather than writing the table out again. Each has a shortcut:
 
 |                                       |                     |
 | ------------------------------------- | ------------------- |
@@ -299,7 +301,7 @@ The toolbar's `table` button is a menu of everything that makes a table or chang
 
 `Enter` adds a row and `Backspace` takes one away, with `Alt` meaning the column rather than the row and `Shift` the one above or the one the caret is in. A letter would be easier to remember, and nearly every letter is already taken: `Mod`+`Alt`+`I` opens a browser's developer tools, `Mod`+`Shift`+`T` reopens a tab, and on Windows `Ctrl`+`Alt` is `AltGr`, which types `€` and `@` on many European keyboards. `T` for a new table is one of the few letters `AltGr` leaves alone.
 
-The shortcuts only act inside a table, and outside one the keys are handed on to whatever else answers them. A new table has two empty columns, a header and one row, with a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. Inside a quotation or a list item the table goes inside it, with that container's prefix on every line, and inside a code block there is nowhere for one to go, so _Insert a table_ is disabled there. A row cannot go above the header and the last column cannot be removed, so those entries are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
+The shortcuts only act inside a table, and outside one the keys are handed on to whatever else answers them. A table made with `Mod`+`Alt`+`T` has two empty columns, a header and one row, and every new table has a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. Inside a quotation or a list item the table goes inside it, with that container's prefix on every line, and inside a code block or another table there is nowhere for one to go, so the grid is disabled there. A row cannot go above the header and the last column cannot be removed, so those buttons on the bar are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
 
 ::: fw react
 
@@ -309,7 +311,7 @@ On the drawn document, **`Enter` in a cell follows the rule it has in a list.** 
 
 ::: fw flutter
 
-There is no drawn document here, so `Enter` in a row of the source is a line ending, as it is in the React package's source. The commands behind the menu are the React package's under the same names, and the parity check diffs the two.
+There is no drawn document here, so `Enter` in a row of the source is a line ending, as it is in the React package's source. The commands behind the grid and the bar are the React package's under the same names, and the parity check diffs the two.
 
 :::
 

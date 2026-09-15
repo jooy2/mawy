@@ -6,6 +6,7 @@ import {
   indent,
   runCommand,
   runTableCommand,
+  tableOfSize,
   type EditState,
   type MawyCommand,
   type MawyTableCommand
@@ -358,6 +359,15 @@ describe('tables', () => {
     shown(runTableCommand(command, put(marked)));
 
   const TABLE = ['| a | b |', '| :-- | --: |', '| c | `d\\|e` |'].join('\n');
+
+  it('inserts a table of the size asked for, the header counted among the rows', () => {
+    expect(tableOfSize({ value: '', start: 0, end: 0 }, 3, 1)?.value).toBe(
+      '|  |  |  |\n| --- | --- | --- |'
+    );
+    expect(tableOfSize({ value: 'Intro.', start: 6, end: 6 }, 1, 3)?.value).toBe(
+      'Intro.\n\n|  |\n| --- |\n|  |\n|  |'
+    );
+  });
 
   it('inserts an empty table of two columns with a blank line either side', () => {
     expect(table('insertTable', 'Before.^After.')).toBe(

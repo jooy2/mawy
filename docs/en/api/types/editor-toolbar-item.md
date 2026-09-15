@@ -71,7 +71,7 @@ Everything except `mode`, `undo`, `redo`, `find`, `open`, `save`, `colorScheme` 
 
 `undo` and `redo` are the history, `Mod`+`Z` and `Mod`+`Shift`+`Z`, drawn disabled while there is nothing to take back or put back.
 
-`table` is a menu of the seven commands that insert a table and change its shape, each with a shortcut of its own; see [tables](../../guide/editor#tables).
+`table` is a grid that inserts an empty table of the size pressed. The rows and columns of a table are changed from a bar hung beside the table the caret is in, and each of those commands has a shortcut of its own; see [tables](../../guide/editor#tables).
 
 ::: fw react
 

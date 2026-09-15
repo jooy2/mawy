@@ -84,6 +84,11 @@ export interface MenuProps {
  */
 const Dismiss = React.createContext<(() => void) | null>(null);
 
+/** What shuts the panel a control is inside, where it is inside one. See `Dismiss`. */
+export function useDismiss(): (() => void) | null {
+  return React.useContext(Dismiss);
+}
+
 /**
  * A button and the panel it opens.
  *

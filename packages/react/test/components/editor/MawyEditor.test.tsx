@@ -3234,9 +3234,13 @@ describe('tables', () => {
     put(bodyOf(screen), 'Intro.', 6);
     await screen.getByRole('button', { name: 'Table' }).click();
 
-    // Nothing to add a row to yet.
-    await expect.element(screen.getByRole('button', { name: 'Add a row below' })).toBeDisabled();
-    await screen.getByRole('button', { name: 'Insert a table' }).click();
+    // A grid of sizes and nothing else: there is no table to add a row to yet.
+    expect(screen.container.querySelector('.mawy-menu-panel [aria-label="Add a row below"]')).toBe(
+      null
+    );
+    await screen
+      .getByRole('button', { name: 'Insert a table 2 columns wide and 2 rows tall' })
+      .click();
 
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith('Intro.\n\n|  |  |\n| --- | --- |\n|  |  |')
@@ -3249,6 +3253,101 @@ describe('tables', () => {
       expect(onChange).toHaveBeenLastCalledWith('Intro.\n\n| Name |  |\n| --- | --- |\n|  |  |')
     );
     expect(bodyOf(screen).querySelector('th')?.textContent).toBe('Name');
+  });
+
+  it('inserts a table of the size the grid is pressed at, by pointer or by the arrows', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Intro." mode="plain" onChange={onChange} style={WIDE} />
+    );
+
+    sourceOf(screen).focus();
+    sourceOf(screen).setSelectionRange(6, 6);
+    await screen.getByRole('button', { name: 'Table' }).click();
+    await screen
+      .getByRole('button', { name: 'Insert a table 3 columns wide and 4 rows tall' })
+      .click();
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        'Intro.\n\n|  |  |  |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n|  |  |  |'
+      )
+    );
+    await screen.unmount();
+
+    const again = vi.fn();
+    const keyboard = await render(
+      <MawyEditor defaultValue="" mode="plain" onChange={again} style={WIDE} />
+    );
+
+    await keyboard.getByRole('button', { name: 'Table' }).click();
+    // The tab stop is the size already lit, and the arrows grow it.
+    (
+      keyboard.container.querySelector('.mawy-table-grid-cell[tabindex="0"]') as HTMLElement
+    ).focus();
+    await userEvent.keyboard('{ArrowLeft}{ArrowUp}{Enter}');
+
+    await vi.waitFor(() => expect(again).toHaveBeenLastCalledWith('|  |\n| --- |'));
+  });
+
+  it('hangs the row and column controls beside the table the caret is in', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n| a | b |\n| - | - |\n| c | d |\n\nAfter.';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} style={WIDE} />
+    );
+    const tools = () => screen.container.querySelector('.mawy-table-tools');
+
+    put(bodyOf(screen), 'Intro.', 2);
+    await new Promise((done) => setTimeout(done, 30));
+    expect(tools()).toBe(null);
+
+    put(bodyOf(screen), 'c', 1);
+    await vi.waitFor(() => expect(tools()).not.toBe(null));
+
+    // Over the table's top edge, and not over the words above it.
+    const bar = tools()!.getBoundingClientRect();
+    const table = bodyOf(screen).querySelector('table')!.getBoundingClientRect();
+    const intro = bodyOf(screen).querySelector('p')!.getBoundingClientRect();
+
+    expect(bar.bottom).toBeLessThanOrEqual(table.top);
+    expect(bar.top).toBeGreaterThanOrEqual(intro.bottom);
+
+    // A press on it acts on the cell the caret is in and leaves the caret there.
+    await userEvent.click(page.getByRole('button', { name: 'Add a column after' }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        'Intro.\n\n| a |  | b |\n| - | --- | - |\n| c |  | d |\n\nAfter.'
+      )
+    );
+    expect(document.activeElement).toBe(bodyOf(screen));
+
+    // What has nothing to act on is offered and cannot be pressed: in the
+    // header, a row cannot go above it and it cannot be deleted.
+    put(bodyOf(screen), 'a', 1);
+    await vi.waitFor(() =>
+      expect(page.getByRole('button', { name: 'Add a row above' }).element()).toBeDisabled()
+    );
+    expect(page.getByRole('button', { name: 'Delete this row' }).element()).toBeDisabled();
+
+    // And on the source, beside the lines the table is written on.
+    await screen.unmount();
+
+    const plain = await render(
+      <MawyEditor defaultValue={source} mode="plain" onChange={onChange} style={WIDE} />
+    );
+
+    sourceOf(plain).focus();
+    sourceOf(plain).setSelectionRange(29, 29);
+    await vi.waitFor(() =>
+      expect(plain.container.querySelector('.mawy-table-tools')).not.toBe(null)
+    );
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete this row' }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Intro.\n\n| a | b |\n| - | - |\n\nAfter.')
+    );
+    expect(document.activeElement).toBe(sourceOf(plain));
   });
 
   it('grows and shrinks a table from the keyboard, keeping what is in its cells', async () => {

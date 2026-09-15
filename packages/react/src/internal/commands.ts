@@ -1263,7 +1263,7 @@ function verbatimAt(nodes: readonly MdNode[], offset: number): boolean {
  * block there is nothing to do: a table there is characters, and splitting the
  * block around one would change what the rest of the code is.
  */
-function insertTable(state: EditState): EditState | null {
+function insertTable(state: EditState, columns = 2, rows = 2): EditState | null {
   const { value, start, end } = state;
 
   if (tableAt(value, start)) {
@@ -1301,7 +1301,10 @@ function insertTable(state: EditState): EditState | null {
     : stop !== -1 && containerOf(below).mark.trim()
       ? `\n${blank}`
       : '';
-  const text = `${lead}${emptyRow(2)}\n${carry}| --- | --- |\n${carry}${emptyRow(2)}${tail}`;
+  const across = Math.max(1, Math.floor(columns));
+  const down = Math.max(1, Math.floor(rows));
+  const body = Array.from({ length: down - 1 }, () => `\n${carry}${emptyRow(across)}`).join('');
+  const text = `${lead}${emptyRow(across)}\n${carry}|${' --- |'.repeat(across)}${body}${tail}`;
   const caret = start + lead.length + 3;
 
   return { value: value.slice(0, start) + text + value.slice(end), start: caret, end: caret };
@@ -1411,6 +1414,34 @@ function removeColumn(state: EditState): EditState | null {
   });
 
   return caretAfter(next, table.lines[0].start, table.row, Math.max(0, column - 1));
+}
+
+/**
+ * A table of this many columns and rows, the header counted among the rows,
+ * where the caret is — or `null` where `insertTable` has nowhere to put one.
+ *
+ * What the toolbar's grid inserts. The keyboard's `Mod`+`Alt`+`T` is the two by
+ * two `insertTable` writes.
+ */
+export function tableOfSize(state: EditState, columns: number, rows: number): EditState | null {
+  return insertTable(state, columns, rows);
+}
+
+/**
+ * Where the table a place is inside starts and ends, or `null` outside one.
+ *
+ * What the editor hangs the table's own controls from. Answered without a parse
+ * for a document with no pipe in it, which is most of them.
+ */
+export function tableRangeAt(value: string, offset: number): { start: number; end: number } | null {
+  if (!value.includes('|')) {
+    return null;
+  }
+
+  const document = parseMarkdown(value);
+  const table = tableNodeAt([...document.root.children, ...document.footnotes], offset);
+
+  return table ? { start: table.range.start, end: table.range.end } : null;
 }
 
 /** A table command, or `null` where it has nothing to do. */

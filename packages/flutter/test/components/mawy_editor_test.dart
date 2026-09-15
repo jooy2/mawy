@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/editor/source_field.dart' show MawySourceField, MawySourceGutter;
 import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
-import 'package:mawy/src/internal/toolbar.dart'
-    show MawyToolbarAction, MawyToolbarActions, MawyToolbarButton;
+import 'package:mawy/src/internal/table_tools.dart' show MawyTableSizeGrid, MawyTableTools;
+import 'package:mawy/src/internal/toolbar.dart' show MawyToolbarButton;
 
 import '../support/host.dart';
 import '../support/spans.dart';
@@ -1179,12 +1179,7 @@ void main() {
       await tester.pump();
     }
 
-    List<MawyToolbarAction> entries(WidgetTester tester) =>
-        tester.widget<MawyToolbarActions>(find.byType(MawyToolbarActions)).actions;
-
-    testWidgets('inserts a table from the toolbar, and offers only what applies', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('inserts a table of the size the grid is pressed at', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 
       await tester.pumpWidget(
@@ -1196,46 +1191,44 @@ void main() {
       field.controller.selection = const TextSelection.collapsed(offset: 6);
       await press(tester, 'Table');
 
-      // Nothing to add a row to yet.
-      expect(entries(tester).map((MawyToolbarAction entry) => entry.enabled), <bool>[
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-      ]);
+      // A grid of sizes and nothing else: there is no table to add a row to yet.
+      expect(find.byType(MawyTableSizeGrid), findsOneWidget);
+      expect(find.bySemanticsLabel('Add a row below'), findsNothing);
 
-      await tester.tap(find.text('Insert a table'));
+      await tester.tap(find.bySemanticsLabel('Insert a table 3 columns wide and 4 rows tall'));
       await tester.pumpAndSettle();
 
-      expect(seen.last, 'Intro.\n\n|  |  |\n| --- | --- |\n|  |  |');
-      expect(find.byType(MawyToolbarActions), findsNothing);
+      expect(
+        seen.last,
+        'Intro.\n\n|  |  |  |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n|  |  |  |',
+      );
+      expect(find.byType(MawyTableSizeGrid), findsNothing);
+
+      // Inside a table there is nowhere for another to go.
+      await press(tester, 'Table');
+      expect(tester.widget<MawyTableSizeGrid>(find.byType(MawyTableSizeGrid)).enabled, isFalse);
+    });
+
+    testWidgets('grows the size with the arrows and inserts it with Enter', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: '', mode: MawyEditorMode.plain, onChange: seen.add)),
+      );
 
       await press(tester, 'Table');
-
-      // In the header now: a row cannot go above it, and it cannot be deleted.
-      expect(entries(tester).map((MawyToolbarAction entry) => entry.enabled), <bool>[
-        false,
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-      ]);
-
-      // The panel opens on the first entry that does anything, and the arrows
-      // step over the ones that do not.
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      // The grid has the focus as it opens, lit at two by two.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
 
-      expect(seen.last, 'Intro.\n\n|  |  |  |\n| --- | --- | --- |\n|  |  |  |');
+      expect(seen.last, '|  |\n| --- |');
     });
 
-    testWidgets('lets a screen reader press an entry', (WidgetTester tester) async {
+    testWidgets('lets a screen reader press a size', (WidgetTester tester) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
       final List<String> seen = <String>[];
 
@@ -1247,11 +1240,54 @@ void main() {
 
       field.controller.selection = const TextSelection.collapsed(offset: 6);
       await press(tester, 'Table');
-      tester.semantics.tap(find.semantics.byLabel('Insert a table'));
+      tester.semantics.tap(find.semantics.byLabel('Insert a table 2 columns wide and 2 rows tall'));
       await tester.pumpAndSettle();
 
       expect(seen.last, 'Intro.\n\n|  |  |\n| --- | --- |\n|  |  |');
       semantics.dispose();
+    });
+
+    testWidgets('hangs the row and column controls beside the table the caret is in', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+      const String source = 'Intro.\n\n| a | b |\n| - | - |\n| c | d |\n\nAfter.';
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: source, mode: MawyEditorMode.plain, onChange: seen.add)),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection.collapsed(offset: 2);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MawyTableTools), findsNothing);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 29);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MawyTableTools), findsOneWidget);
+
+      // Over the line the table starts on, and not over the table.
+      final Rect bar = tester.getRect(find.byType(MawyTableTools));
+      final RenderEditable editable = tester.state<EditableTextState>(_sourceField).renderEditable;
+      final double tableTop = editable
+          .localToGlobal(editable.getLocalRectForCaret(const TextPosition(offset: 8)).topLeft)
+          .dy;
+
+      expect(bar.bottom, lessThanOrEqualTo(tableTop));
+
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == 'Delete this row',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(seen.last, 'Intro.\n\n| a | b |\n| - | - |\n\nAfter.');
+      expect(field.focusNode.hasFocus, isTrue);
     });
 
     testWidgets('is not offered where nothing can be edited', (WidgetTester tester) async {

@@ -1359,7 +1359,7 @@ bool _verbatimAt(List<MdNode> nodes, int offset) {
 /// would end the container and the table would land after it. Inside a code
 /// block there is nothing to do: a table there is characters, and splitting the
 /// block around one would change what the rest of the code is.
-EditState? _insertTable(EditState state) {
+EditState? _insertTable(EditState state, {int columns = 2, int rows = 2}) {
   final String value = state.value;
   final int start = state.start;
   final int end = state.end;
@@ -1400,7 +1400,12 @@ EditState? _insertTable(EditState state) {
   final String tail = rest.trim().isNotEmpty
       ? '\n$blank\n$carry'
       : (stop != -1 && _containerOf(below).mark.trim().isNotEmpty ? '\n$blank' : '');
-  final String text = '$lead${_emptyRow(2)}\n$carry| --- | --- |\n$carry${_emptyRow(2)}$tail';
+  final int across = columns < 1 ? 1 : columns;
+  final int down = rows < 1 ? 1 : rows;
+  final String body = <String>[
+    for (int row = 1; row < down; row += 1) '\n$carry${_emptyRow(across)}',
+  ].join();
+  final String text = '$lead${_emptyRow(across)}\n$carry|${' --- |' * across}$body$tail';
   final int caret = start + lead.length + 3;
 
   return EditState(value.substring(0, start) + text + value.substring(end), caret, caret);
@@ -1513,6 +1518,33 @@ EditState? _removeColumn(EditState state) {
   });
 
   return _caretAfter(next, table.lines.first.start, table.row, column > 0 ? column - 1 : 0);
+}
+
+/// A table of [columns] columns and [rows] rows, the header counted among the
+/// rows, where the caret is — or `null` where [MawyTableCommand.insertTable] has
+/// nowhere to put one.
+///
+/// What the toolbar's grid inserts. The keyboard's `Mod`+`Alt`+`T` is the two by
+/// two [MawyTableCommand.insertTable] writes.
+EditState? tableOfSize(EditState state, int columns, int rows) =>
+    _insertTable(state, columns: columns, rows: rows);
+
+/// Where the table a place is inside starts and ends, or `null` outside one.
+///
+/// What the editor hangs the table's own controls from. Answered without a
+/// parse for a document with no pipe in it, which is most of them.
+MdRange? tableRangeAt(String value, int offset) {
+  if (!value.contains('|')) {
+    return null;
+  }
+
+  final MdDocument document = parseMarkdown(value);
+  final MdTable? table = _tableNodeAt(<MdNode>[
+    ...document.root.children,
+    ...document.footnotes,
+  ], offset);
+
+  return table?.range;
 }
 
 /// A table command, or `null` where it has nothing to do.

@@ -289,6 +289,10 @@ export interface MawyStrings {
   codeBlock: string;
   table: string;
   tableInsert: string;
+  /** `%C` is how many columns and `%R` how many rows, the header among them. */
+  tableSize: string;
+  /** The same, said to a screen reader for each size the grid offers. */
+  tableInsertSized: string;
   tableRowBelow: string;
   tableRowAbove: string;
   tableColumnAfter: string;

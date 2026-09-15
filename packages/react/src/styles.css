@@ -1814,6 +1814,7 @@
 }
 
 .mawy-root .mawy-editor-pane {
+  position: relative;
   display: flex;
   flex: 1 1 0;
   min-width: 0;
@@ -1975,6 +1976,87 @@
   content: var(--mawy-placeholder, '');
   color: var(--mawy-fg-subtle);
   pointer-events: none;
+}
+
+/* A table's own controls ---------------------------------------------------
+ *
+ * The rows and columns of the table the caret is in, hung beside that table.
+ * A raised bar rather than a row of bare buttons, because it sits over the
+ * document and has to read as something laid on it rather than as part of it.
+ */
+.mawy-root .mawy-table-tools {
+  position: absolute;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--mawy-border);
+  border-radius: var(--mawy-radius-md);
+  background: var(--mawy-bg-raised);
+  box-shadow: var(--mawy-shadow-1);
+}
+
+.mawy-root .mawy-table-tools .mawy-button {
+  width: 28px;
+  height: 28px;
+}
+
+.mawy-root .mawy-table-tools .mawy-toolbar-separator {
+  margin: 0 3px;
+}
+
+/* Room over every table on the drawn document for that bar, so the bar hangs
+ * in the space between the table and what is above it rather than over the
+ * end of the last line of a paragraph. Every table rather than only the one the
+ * caret is in: room that opened as the caret arrived would move the document
+ * under the pointer that had just pressed in it. */
+.mawy-root .mawy-document-body .mawy-md-table-scroll {
+  margin-top: 38px;
+}
+
+/* The toolbar's grid of table sizes. */
+.mawy-root .mawy-table-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mawy-root .mawy-table-grid-cells {
+  display: grid;
+  grid-template-columns: repeat(var(--mawy-grid-columns, 10), 18px);
+  gap: 3px;
+}
+
+.mawy-root .mawy-table-grid-cell {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--mawy-border-strong);
+  border-radius: 3px;
+  background: var(--mawy-bg);
+  cursor: pointer;
+}
+
+.mawy-root .mawy-table-grid-cell[data-mawy-lit] {
+  border-color: var(--mawy-accent);
+  background: var(--mawy-accent-soft);
+}
+
+.mawy-root .mawy-table-grid-cell:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mawy-root .mawy-table-grid-cell:focus-visible {
+  outline-offset: 1px;
+}
+
+.mawy-root .mawy-table-grid-size {
+  margin: 0;
+  color: var(--mawy-fg-muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 /* The source surface ------------------------------------------------------ */

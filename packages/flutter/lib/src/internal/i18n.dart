@@ -97,6 +97,8 @@ final class MawyStrings {
     required this.codeBlock,
     required this.table,
     required this.tableInsert,
+    required this.tableSize,
+    required this.tableInsertSized,
     required this.tableRowBelow,
     required this.tableRowAbove,
     required this.tableColumnAfter,
@@ -312,6 +314,14 @@ final class MawyStrings {
   /// The editor: Insert a table.
   final String tableInsert;
 
+  /// The editor: how large a table the grid has lit. `%C` is how many columns
+  /// and `%R` how many rows, the header among them.
+  final String tableSize;
+
+  /// The editor: the same, said to a screen reader for each size the grid
+  /// offers. `%C` and `%R`.
+  final String tableInsertSized;
+
   /// The editor: Add a row below.
   final String tableRowBelow;
 
@@ -472,6 +482,8 @@ final class MawyStrings {
     String? codeBlock,
     String? table,
     String? tableInsert,
+    String? tableSize,
+    String? tableInsertSized,
     String? tableRowBelow,
     String? tableRowAbove,
     String? tableColumnAfter,
@@ -566,6 +578,8 @@ final class MawyStrings {
       codeBlock: codeBlock ?? this.codeBlock,
       table: table ?? this.table,
       tableInsert: tableInsert ?? this.tableInsert,
+      tableSize: tableSize ?? this.tableSize,
+      tableInsertSized: tableInsertSized ?? this.tableInsertSized,
       tableRowBelow: tableRowBelow ?? this.tableRowBelow,
       tableRowAbove: tableRowAbove ?? this.tableRowAbove,
       tableColumnAfter: tableColumnAfter ?? this.tableColumnAfter,
@@ -666,6 +680,8 @@ final class MawyStrings {
       other.codeBlock == codeBlock &&
       other.table == table &&
       other.tableInsert == tableInsert &&
+      other.tableSize == tableSize &&
+      other.tableInsertSized == tableInsertSized &&
       other.tableRowBelow == tableRowBelow &&
       other.tableRowAbove == tableRowAbove &&
       other.tableColumnAfter == tableColumnAfter &&
@@ -761,6 +777,8 @@ final class MawyStrings {
     codeBlock,
     table,
     tableInsert,
+    tableSize,
+    tableInsertSized,
     tableRowBelow,
     tableRowAbove,
     tableColumnAfter,
@@ -857,6 +875,8 @@ const MawyStrings _en = MawyStrings._(
   codeBlock: 'Code block',
   table: 'Table',
   tableInsert: 'Insert a table',
+  tableSize: '%C × %R',
+  tableInsertSized: 'Insert a table %C columns wide and %R rows tall',
   tableRowBelow: 'Add a row below',
   tableRowAbove: 'Add a row above',
   tableColumnAfter: 'Add a column after',
@@ -952,6 +972,8 @@ const MawyStrings _ko = MawyStrings._(
   codeBlock: '코드 블록',
   table: '표',
   tableInsert: '표 넣기',
+  tableSize: '%C × %R',
+  tableInsertSized: '%C열 %R행 표 넣기',
   tableRowBelow: '아래에 행 추가',
   tableRowAbove: '위에 행 추가',
   tableColumnAfter: '뒤에 열 추가',

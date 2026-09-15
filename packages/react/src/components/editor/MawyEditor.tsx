@@ -33,6 +33,8 @@ import { fill } from '../../internal/i18n.js';
 import { useStrings } from '../../internal/strings.js';
 import {
   commandActive,
+  tableOfSize,
+  tableRangeAt,
   continueList,
   headingActive,
   toggleHeading,
@@ -78,7 +80,9 @@ interface MawyUpload extends MawyPlace {
   waiting: string | null;
 }
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
-import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
+import { caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
+import { rowHeight, rowRect } from '../../internal/source.js';
+import { TableTools } from '../../internal/table.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
@@ -186,6 +190,17 @@ const SHIFTED: Record<string, MawyCommand> = {
   Digit8: 'bulletList',
   Digit9: 'taskList'
 };
+
+/** Which line of the source an offset is on, counted from zero. */
+function lineAt(value: string, offset: number): number {
+  let line = 0;
+
+  for (let at = value.indexOf('\n'); at !== -1 && at < offset; at = value.indexOf('\n', at + 1)) {
+    line += 1;
+  }
+
+  return line;
+}
 
 /** One empty list for every render that holds no formatting, rather than one each. */
 const NOTHING_HELD: readonly MawyCommand[] = [];
@@ -1150,6 +1165,141 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [run, tableAfter]
   );
 
+  /** An empty table of the size the toolbar's grid was pressed at. */
+  const insertTableSized = React.useCallback(
+    (columns: number, rows: number) => {
+      const before = readOnly || parse?.gfm === false ? null : stateNow();
+      const after = before && tableOfSize(before, columns, rows);
+
+      if (before && after) {
+        run(before, after);
+      }
+    },
+    [parse?.gfm, readOnly, run, stateNow]
+  );
+
+  /*
+   * The table the caret is in, and the controls hung beside it.
+   *
+   * Only while the editor has the focus and something in it can be edited:
+   * the controls are for the table being written in, and a bar left over a
+   * table nobody is in is a bar over somebody's reading.
+   */
+  const sourcePane = React.useRef<HTMLDivElement>(null);
+  const documentPane = React.useRef<HTMLDivElement>(null);
+  const tools = React.useRef<HTMLDivElement>(null);
+  const tableHere = React.useMemo(
+    () =>
+      editable && focused && parse?.gfm !== false && selection.start === selection.end
+        ? tableRangeAt(text, selection.start)
+        : null,
+    [editable, focused, parse?.gfm, selection.end, selection.start, text]
+  );
+  const [toolsAt, setToolsAt] = React.useState<{ top: number; end: number } | null>(null);
+
+  /**
+   * Where the bar goes: over the table's top edge at its far end, or under its
+   * bottom edge where the top is too near the top of the pane, and never out of
+   * the pane. Measured rather than laid out, because the table is inside a
+   * surface that scrolls — a textarea's lines, or the drawn document — and the
+   * bar is not.
+   */
+  const placeTools = React.useCallback(() => {
+    const pane = showDocument ? documentPane.current : sourcePane.current;
+
+    if (!tableHere || !pane) {
+      setToolsAt(null);
+
+      return;
+    }
+
+    const room = pane.getBoundingClientRect();
+    const rtl = getComputedStyle(pane).direction === 'rtl';
+    let edges: { top: number; bottom: number; left: number; right: number } | null;
+
+    if (showDocument) {
+      const table = [...(drawn.current?.querySelectorAll('.mawy-md-table-scroll') ?? [])].find(
+        (each) => rangeOf(each)?.start === tableHere.start
+      );
+
+      edges = table?.getBoundingClientRect() ?? null;
+    } else {
+      const lines = pane.querySelector('.mawy-source-lines');
+      const height = lines ? rowHeight(lines) : 0;
+      const first = lines ? lineAt(text, tableHere.start) : 0;
+      const last = lines ? lineAt(text, tableHere.end) : 0;
+      const top = lines && rowRect(lines, first, height);
+      const bottom = lines && rowRect(lines, last, height);
+
+      edges =
+        top && bottom
+          ? { top: top.top, bottom: bottom.bottom, left: room.left + 16, right: room.right - 16 }
+          : null;
+    }
+
+    if (!edges) {
+      setToolsAt(null);
+
+      return;
+    }
+
+    const tall = tools.current?.offsetHeight || 34;
+    const above = edges.top - room.top - tall - 4;
+    // Kept inside a pane that has a height of its own to scroll in. An editor
+    // given no height is as tall as what is in it, and there is nothing to keep
+    // the bar inside.
+    const top = Math.min(
+      Math.max(4, above < 4 ? edges.bottom - room.top + 4 : above),
+      room.height > tall + 8 ? room.height - tall - 4 : Infinity
+    );
+    const end = Math.max(4, rtl ? edges.left - room.left : room.right - edges.right);
+
+    setToolsAt((was) => (was && was.top === top && was.end === end ? was : { top, end }));
+  }, [showDocument, tableHere, text]);
+
+  React.useLayoutEffect(() => {
+    placeTools();
+  });
+
+  React.useEffect(() => {
+    const pane = showDocument ? documentPane.current : sourcePane.current;
+
+    if (!tableHere || !pane) {
+      return;
+    }
+
+    // Captured, because a scroll does not bubble and what scrolls is inside.
+    // And whatever changes size under the table without a render — a picture
+    // above it arriving, a pane dragged wider — moves the table and not the bar.
+    const content = showDocument ? drawn.current : pane.querySelector('.mawy-source-lines');
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => placeTools());
+
+    pane.addEventListener('scroll', placeTools, true);
+    observer?.observe(pane);
+
+    if (content) {
+      observer?.observe(content);
+    }
+
+    return () => {
+      pane.removeEventListener('scroll', placeTools, true);
+      observer?.disconnect();
+    };
+  }, [placeTools, showDocument, tableHere]);
+
+  const tableTools =
+    tableHere && toolsAt ? (
+      <TableTools
+        ref={tools}
+        strings={strings}
+        top={toolsAt.top}
+        end={toolsAt.end}
+        available={(name) => tableAfter(name) !== null}
+        onCommand={tableCommand}
+      />
+    ) : null;
+
   /* ---------------------------------------------------------------------
    * Putting an image in
    * ------------------------------------------------------------------ */
@@ -2095,10 +2245,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           finding={finding && showSource}
           onOpen={readOnly ? undefined : openFile}
           onPickImage={onUploadImage ? pickImage : undefined}
-          onTable={tableCommand}
+          onInsertTable={insertTableSized}
           onUndo={canUndo ? () => travel(true) : undefined}
           onRedo={canRedo ? () => travel(false) : undefined}
-          tableAvailable={(name) => tableAfter(name) !== null}
+          tableInsertable={() => tableAfter('insertTable') !== null}
           onSave={save}
         />
       </React.Fragment>
@@ -2191,7 +2341,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       >
         {inside && toolbarPlacement === 'top' ? chrome : null}
         {showSource ? (
-          <div className="mawy-editor-pane">
+          <div className="mawy-editor-pane" ref={sourcePane}>
             <MawyEditorSource
               ref={source}
               value={text}
@@ -2209,11 +2359,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               escapeHint={strings.sourceEscape}
               placeholder={placeholder ?? strings.editorPlaceholder}
             />
+            {tableTools}
           </div>
         ) : null}
 
         {showDocument ? (
-          <div className="mawy-editor-pane">
+          <div className="mawy-editor-pane" ref={documentPane}>
             <MawyEditorDocument
               ref={drawn}
               value={text}
@@ -2247,6 +2398,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               }
               onImages={onUploadImage ? addImages : undefined}
             />
+            {tableTools}
           </div>
         ) : null}
 
