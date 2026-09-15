@@ -1523,7 +1523,16 @@ export function renderBlocks(
             tabIndex={context.editing ? undefined : 0}
             {...origin(block, context)}
           >
-            <table className="mawy-md-table">
+            <table
+              className="mawy-md-table"
+              // How many columns, for the drawn document's stylesheet, which
+              // gives each the same width and the table a width they fit in.
+              style={
+                context.editing
+                  ? ({ '--mawy-table-columns': block.align.length } as React.CSSProperties)
+                  : undefined
+              }
+            >
               {header.length ? (
                 <thead>{header.map((row, at) => renderRow(row, at, context, block.align))}</thead>
               ) : null}

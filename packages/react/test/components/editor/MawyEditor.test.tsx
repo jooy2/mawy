@@ -3426,6 +3426,43 @@ describe('tables', () => {
     expect(document.activeElement).toBe(sourceOf(plain));
   });
 
+  it('keeps a table the same shape while its cells are typed into', async () => {
+    const screen = await render(
+      <MawyEditor
+        style={{ width: 900, height: 500 }}
+        mode="wysiwyg"
+        defaultValue={'|  |  |  |\n| --- | --- | --- |\n|  |  |  |'}
+      />
+    );
+    const body = bodyOf(screen);
+    const boxes = () =>
+      [...body.querySelectorAll('th, td')].map((cell) => {
+        const box = cell.getBoundingClientRect();
+
+        return [Math.round(box.width), Math.round(box.height)];
+      });
+    const empty = boxes();
+
+    // Every column the same width, and an empty cell a line of text tall.
+    expect(new Set(empty.map(([width]) => width)).size).toBe(1);
+    expect(empty[0][1]).toBeGreaterThan(30);
+
+    const cell = body.querySelectorAll('th')[1];
+    const range = document.createRange();
+
+    body.focus();
+    range.setStart(cell, 0);
+    range.collapse(true);
+    document.getSelection()?.removeAllRanges();
+    document.getSelection()?.addRange(range);
+    await userEvent.keyboard('Words in one cell');
+
+    await vi.waitFor(() =>
+      expect(body.querySelectorAll('th')[1].textContent).toBe('Words in one cell')
+    );
+    expect(boxes()).toEqual(empty);
+  });
+
   it('grows and shrinks a table from the keyboard, keeping what is in its cells', async () => {
     const onChange = vi.fn();
     const source = '| a | **b** |\n| :-- | --: |\n| c | d |';

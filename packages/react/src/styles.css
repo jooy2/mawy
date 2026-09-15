@@ -2015,6 +2015,26 @@
   margin-top: 38px;
 }
 
+/* A table being written in keeps its shape while it is written in.
+ *
+ * Laid out by what is in the cells, a table on the drawn document moved every
+ * column but the one being typed into with every letter, and a cell with
+ * nothing in it was its padding and nothing else — shorter than the caret put
+ * inside it. A Markdown table has no column widths to say anything else with,
+ * so every column is the same width, and the table is as wide as the document
+ * or as wide as its columns need to be read, whichever is wider, in the box it
+ * already scrolls inside. Every cell is at least a line of text tall. The
+ * preview and the viewer lay a table out by what is in it, as a reader wants. */
+.mawy-root .mawy-document-body .mawy-md-table {
+  width: max(100%, calc(var(--mawy-table-columns, 1) * 7em));
+  table-layout: fixed;
+}
+
+.mawy-root .mawy-document-body .mawy-md-table :is(th, td) {
+  height: calc(1lh + 1em + 1px);
+  overflow-wrap: anywhere;
+}
+
 /* The toolbar's grid of table sizes. */
 .mawy-root .mawy-table-grid {
   display: flex;

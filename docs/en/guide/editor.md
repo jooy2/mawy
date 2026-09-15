@@ -305,6 +305,8 @@ The shortcuts only act inside a table, and outside one the keys are handed on to
 
 ::: fw react
 
+**A table on the drawn document keeps its shape while it is written in.** Every column is the same width, and the table is as wide as the document or as wide as its columns need to be read, scrolling sideways past that. An empty cell is a line of text tall, so the caret put in it has room and typing the first letter does not move anything. A Markdown table has no column widths to say anything else with, and the preview and the viewer still lay a table out by what is in it.
+
 On the drawn document, **`Enter` in a cell follows the rule it has in a list.** It adds a row under this one with the caret in the same column, and on a row that is still empty, the row goes and the caret moves to a line of its own after the table, still inside the quotation or list item the table is in. That is the way out of a table at the end of a document, which otherwise has nowhere after it for a caret to go. Typing into an empty cell writes the words between the spaces, so `|  |` becomes `| Name |` rather than `|  Name|`.
 
 :::
