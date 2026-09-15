@@ -1275,10 +1275,8 @@ class _MawyEditorState extends State<MawyEditor> {
     return true;
   }
 
-  /// `Tab` and `Shift`+`Tab`: the next cell or the one before in a table, and
-  /// indentation everywhere else. See [nextCell].
-  void _indent({required bool out}) =>
-      _apply(nextCell(_state, back: out) ?? indent(_state, out: out));
+  /// `Tab` and `Shift`+`Tab`. See [indent].
+  void _indent({required bool out}) => _apply(indent(_state, out: out));
 }
 
 /* -------------------------------------------------------------------------

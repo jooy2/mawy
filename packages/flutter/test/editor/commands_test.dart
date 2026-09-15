@@ -297,6 +297,23 @@ void main() {
       expect(list(MawyCommand.bulletList, 'a^ | x'), '| - a^ | x');
     });
 
+    test(
+      'nests the item on a line of a cell with Tab, and leaves the rest of a table to indent',
+      () {
+        String nested(String marked, {bool out = false}) {
+          final EditState after = indent(row(marked), out: out);
+
+          return '${after.value.substring(0, after.start)}^${after.value.substring(after.start)}'
+              .substring(head.length);
+        }
+
+        expect(nested('| - a<br>- b^ | x |'), '| - a<br>  - b^ | x |');
+        expect(nested('| - a<br>  - b^ | x |', out: true), '| - a<br>- b^ | x |');
+        expect(nested('| - a^<br>- b | x |'), '| - a^<br>- b | x |');
+        expect(nested('| a^ | x |'), '| a  ^ | x |');
+      },
+    );
+
     test('sees the list the lines of a cell are in', () {
       expect(commandActive(MawyCommand.orderedList, row('| 1. a<br>2. b^ | x |')), isTrue);
       expect(commandActive(MawyCommand.bulletList, row('| 1. a<br>2. b^ | x |')), isFalse);

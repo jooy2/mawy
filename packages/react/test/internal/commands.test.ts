@@ -319,6 +319,21 @@ describe('lists in a cell', () => {
     expect(list('bulletList', 'a^ | x')).toBe('| - a^ | x');
   });
 
+  it('nests the item on a line of a cell with Tab, and leaves the rest of a table to indent', () => {
+    const nested = (marked: string, out = false): string => {
+      const { value, start } = indent(row(marked), out);
+
+      return `${value.slice(0, start)}^${value.slice(start)}`.slice(HEAD.length);
+    };
+
+    expect(nested('| - a<br>- b^ | x |')).toBe('| - a<br>  - b^ | x |');
+    expect(nested('| - a<br>  - b^ | x |', true)).toBe('| - a<br>- b^ | x |');
+    // The first line has nothing above it to nest under.
+    expect(nested('| - a^<br>- b | x |')).toBe('| - a^<br>- b | x |');
+    // And words that are not an item are indented the way words are.
+    expect(nested('| a^ | x |')).toBe('| a  ^ | x |');
+  });
+
   it('sees the list the lines of a cell are in', () => {
     expect(commandActive('orderedList', row('| 1. a<br>2. b^ | x |'))).toBe(true);
     expect(commandActive('bulletList', row('| 1. a<br>2. b^ | x |'))).toBe(false);

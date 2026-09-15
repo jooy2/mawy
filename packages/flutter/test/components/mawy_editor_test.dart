@@ -1369,42 +1369,33 @@ void main() {
       expect(seen.last, '| a | b |\n| --- | --- |\n| c | d |');
     });
 
-    testWidgets('moves between the cells with Tab, and grows the table from the last', (
+    testWidgets('nests a line of a cell written as a list item with Tab', (
       WidgetTester tester,
     ) async {
       final List<String> seen = <String>[];
+      const String source = '| a | b |\n| - | - |\n| - c<br>- d | e |';
 
       await tester.pumpWidget(
-        host(
-          MawyEditor(
-            defaultValue: '| a | b |\n| - | - |',
-            mode: MawyEditorMode.plain,
-            onChange: seen.add,
-          ),
-        ),
+        host(MawyEditor(defaultValue: source, mode: MawyEditorMode.plain, onChange: seen.add)),
       );
 
       final EditableText field = tester.widget(_sourceField);
 
       field.focusNode.requestFocus();
-      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      field.controller.selection = TextSelection.collapsed(offset: source.indexOf('d |') + 1);
       await tester.pump();
 
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
-      expect(field.controller.selection.baseOffset, 7);
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
-      expect(seen.last, '| a | b |\n| - | - |\n|  |  |');
-      expect(field.controller.selection.baseOffset, 23);
+      expect(seen.last, '| a | b |\n| - | - |\n| - c<br>  - d | e |');
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
       await tester.pump();
-      expect(field.controller.selection.baseOffset, 7);
-      expect(field.focusNode.hasPrimaryFocus, isTrue);
+
+      expect(seen.last, source);
     });
 
     testWidgets('acts on as many rows as the selection covers, and says so', (

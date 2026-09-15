@@ -3509,44 +3509,53 @@ describe('tables', () => {
     );
   });
 
-  it('moves between the cells with Tab, grows the table from the last, and goes back with Shift', async () => {
+  it('nests a line of a cell written as a list item with Tab, and moves on from any other', async () => {
     for (const mode of ['wysiwyg', 'plain'] as const) {
       const onChange = vi.fn();
+      const source = '| a | b |\n| - | - |\n| - c<br>- d | e |';
       const screen = await render(
-        <MawyEditor defaultValue={'| a | b |\n| - | - |'} mode={mode} onChange={onChange} />
+        <MawyEditor defaultValue={source} mode={mode} onChange={onChange} />
       );
-      const typed = async (text: string) => {
-        await userEvent.keyboard(text);
-      };
 
       if (mode === 'wysiwyg') {
-        put(bodyOf(screen), 'a', 1);
+        // The drawn line is the item's words, whether or not its marker is drawn.
+        const cell = bodyOf(screen).querySelector('td') as HTMLElement;
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        let last: Text | null = null;
+
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          last = node as Text;
+        }
+
+        bodyOf(screen).focus();
+        document.getSelection()?.collapse(last, last!.data.length);
       } else {
         sourceOf(screen).focus();
-        sourceOf(screen).setSelectionRange(3, 3);
+        sourceOf(screen).setSelectionRange(source.indexOf('d |') + 1, source.indexOf('d |') + 1);
       }
 
       await new Promise((done) => setTimeout(done, 30));
-      await typed('{Tab}!');
-      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a | b! |\n| - | - |'));
-
-      // The last cell: a row under it, and the caret in its first cell. The
-      // drawn document writes a letter into an empty cell between its spaces;
-      // the source writes it where the caret is, which is after them.
-      const row = mode === 'wysiwyg' ? '| c |  |' : '|  c|  |';
-
-      await typed('{Tab}c');
+      await userEvent.keyboard('{Tab}');
       await vi.waitFor(() =>
-        expect(onChange).toHaveBeenLastCalledWith(`| a | b! |\n| - | - |\n${row}`)
+        expect(onChange).toHaveBeenLastCalledWith('| a | b |\n| - | - |\n| - c<br>  - d | e |')
       );
 
-      await typed('{Shift>}{Tab}{/Shift}?');
-      await vi.waitFor(() =>
-        expect(onChange).toHaveBeenLastCalledWith(`| a | b!? |\n| - | - |\n${row}`)
-      );
+      await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(source));
 
       await screen.unmount();
     }
+
+    // A cell with no item in it is not the drawn document's to keep the key in.
+    const plain = await render(<MawyEditor defaultValue={'| a | b |\n| - | - |'} mode="wysiwyg" />);
+
+    put(bodyOf(plain), 'b', 1);
+    await new Promise((done) => setTimeout(done, 30));
+
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+
+    bodyOf(plain).dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(false);
   });
 
   it('selects cells rather than text when a drag leaves the cell it started in', async () => {

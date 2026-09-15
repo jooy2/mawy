@@ -32,7 +32,6 @@ import {
   continueList,
   headingActive,
   indent,
-  nextCell,
   runCommand,
   runTableCommand,
   tableAlignAt,
@@ -249,15 +248,10 @@ const edits = JSON.parse(
 
   out.tableOfSize = sized && [sized.value, sized.start, sized.end];
 
-  const forwards = nextCell(state, false);
-  const backwards = nextCell(state, true);
-
   const span = tableSpanAt(value, start, end);
 
   out.tableSpanAt = span && [span.top, span.bottom, span.left, span.right, span.rows, span.columns];
   out.tableAlignAt = tableAlignAt(value, start, end);
-  out.nextCell = forwards && [forwards.value, forwards.start, forwards.end];
-  out.previousCell = backwards && [backwards.value, backwards.start, backwards.end];
   out.indent = [indented.value, indented.start, indented.end];
   out.outdent = [outdented.value, outdented.start, outdented.end];
 

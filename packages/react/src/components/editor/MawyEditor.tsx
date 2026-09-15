@@ -41,7 +41,6 @@ import {
   headingActive,
   toggleHeading,
   indent,
-  nextCell,
   runCommand,
   runTableCommand,
   type EditState,
@@ -1985,15 +1984,24 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           return;
         }
 
-        // In a table cell it is the next cell, or the one before, and `Tab` in
-        // the last cell adds a row. See `nextCell`.
+        // In a table cell, only on a line of the cell written as a list item,
+        // where it nests the item. Anywhere else in a table it moves on, as it
+        // does from a paragraph. See `indent`.
         if (host.closest('td, th')) {
-          const cell = nextCell(state, event.shiftKey);
+          const listed = (['bulletList', 'orderedList', 'taskList'] as const).some((command) =>
+            commandActive(command, state)
+          );
+
+          if (!listed) {
+            return;
+          }
 
           event.preventDefault();
 
-          if (cell) {
-            run(state, cell);
+          const next = indent(state, event.shiftKey);
+
+          if (next.value !== state.value) {
+            run(state, next);
           }
 
           return;
@@ -2015,7 +2023,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
 
       event.preventDefault();
-      apply(state, nextCell(state, event.shiftKey) ?? indent(state, event.shiftKey));
+      apply(state, indent(state, event.shiftKey));
 
       return;
     }

@@ -289,16 +289,15 @@ The React package solves the same problem with a menu at the end of the bar, and
 
 **The rows and columns of a table are changed from a bar beside the caret.** While the caret is in a table and the editor has the focus, a small bar floats a little under the cell the caret is in, starting where the caret is across, or over the cell where there is no room under it on the screen: a row above or below, a column before or after, deleting the row or the column the caret is in, and aligning that column left, in the middle or right. On the source it floats under the line the caret is on. It follows the caret, so in a table longer than the screen it is beside the row being written in rather than at the table's far end. Because it lies over the row under the caret, a press meant for that row can land on it, so what adds is at the end nearest the caret and what deletes is at the far end; where there is no room for the bar on the far side of the caret, it runs back from the caret with its buttons the other way round, and the delete buttons are still the far end. A press on it does not take the focus, so the next letter still goes into the cell the caret was in. What they write is a GitHub table: the alignment in the delimiter row and whatever is written in the other cells stay exactly as they were, because each command puts in or takes out one cell per line rather than writing the table out again. Each has a shortcut:
 
-|                                       |                               |
-| ------------------------------------- | ----------------------------- |
-| `Mod` + `Alt` + `T`                   | Insert a table                |
-| `Mod` + `Enter`                       | Add a row below               |
-| `Mod` + `Shift` + `Enter`             | Add a row above               |
-| `Mod` + `Alt` + `Enter`               | Add a column after            |
-| `Mod` + `Alt` + `Shift` + `Enter`     | Add a column before           |
-| `Mod` + `Shift` + `Backspace`         | Delete this row               |
-| `Mod` + `Alt` + `Shift` + `Backspace` | Delete this column            |
-| `Tab` / `Shift` + `Tab`               | The next cell, the one before |
+|                                       |                     |
+| ------------------------------------- | ------------------- |
+| `Mod` + `Alt` + `T`                   | Insert a table      |
+| `Mod` + `Enter`                       | Add a row below     |
+| `Mod` + `Shift` + `Enter`             | Add a row above     |
+| `Mod` + `Alt` + `Enter`               | Add a column after  |
+| `Mod` + `Alt` + `Shift` + `Enter`     | Add a column before |
+| `Mod` + `Shift` + `Backspace`         | Delete this row     |
+| `Mod` + `Alt` + `Shift` + `Backspace` | Delete this column  |
 
 `Enter` adds a row and `Backspace` takes one away, with `Alt` meaning the column rather than the row and `Shift` the one above or the one the caret is in. A letter would be easier to remember, and nearly every letter is already taken: `Mod`+`Alt`+`I` opens a browser's developer tools, `Mod`+`Shift`+`T` reopens a tab, and on Windows `Ctrl`+`Alt` is `AltGr`, which types `€` and `@` on many European keyboards. `T` for a new table is one of the few letters `AltGr` leaves alone.
 
@@ -306,15 +305,13 @@ The React package solves the same problem with a menu at the end of the bar, and
 
 **Cells are selected as cells.** A drag that starts in one cell and reaches another selects the rectangle of cells between them rather than the text the browser would have run across, and the drawn document marks that rectangle. On the source a selection from a place in one cell to a place in another covers the same rectangle. With more than one cell selected, every button on the bar acts on as many rows or columns as the selection covers and says how many, `Delete these 2 rows` or `Add 3 columns after`, and one more empties the cells. `Delete`, `Backspace` and a cut empty them on the drawn document too, leaving the table its shape, and a letter typed over them empties them and starts the first. The keys for the rows and the columns act on the selection the same way. The header is never deleted, and neither is every column.
 
-**`Tab` goes to the next cell** and `Shift`+`Tab` to the one before, across the row and then down to the first cell of the next, on the source and the drawn document alike. `Tab` in the last cell adds a row under it and goes to its first cell, and `Shift`+`Tab` in the first cell stays there. The caret lands after what is in the cell. `Escape` and then `Tab` still moves the focus on.
-
 The shortcuts only act inside a table, and outside one the keys are handed on to whatever else answers them. A table made with `Mod`+`Alt`+`T` has two empty columns, a header and one row, and every new table has a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. Inside a quotation or a list item the table goes inside it, with that container's prefix on every line, and inside a code block or another table there is nowhere for one to go, so the grid is disabled there. A row cannot go above the header and the last column cannot be removed, so those buttons on the bar are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
 
 ::: fw react
 
 **A cell holds one line of words, and no block.** A row of a GitHub table is one line of the file, so a cell can hold bold, italic, code, links and pictures, and line breaks written `<br>`, but not a heading, a quotation, a code block or a list: the first line that opens with `- ` is where the table ends. So with the caret in a table, the heading menu and the buttons for those blocks are disabled and their keys do nothing, where they used to write their marker at the front of the row and break the table. Text pasted into a cell stays on the cell's one line: each line ending becomes `<br>` and each `|` is escaped.
 
-**A list in a cell is written as lines of the cell.** A list cannot be put in a cell, but the way one reads can. The list buttons and their keys write an item's marker at the start of the line of the cell the caret is on, between the `<br>`s the cell is written with, and take it off again; with cells selected they number or mark every line of every cell. `Enter` on a line that opens with a marker carries it onto the line it starts, one higher for a number, and on a line with nothing after its marker it gives the marker up, as it does in a list. Every renderer draws the markers as the characters they are, so `1. one<br>2. two` reads as a numbered list on GitHub too, without the indentation a list would have. A space typed after the last word of a line, a marker's among them, is drawn while the caret is after it, where Markdown keeps none.
+**A list in a cell is written as lines of the cell.** A list cannot be put in a cell, but the way one reads can. The list buttons and their keys write an item's marker at the start of the line of the cell the caret is on, between the `<br>`s the cell is written with, and take it off again; with cells selected they number or mark every line of every cell. `Enter` on a line that opens with a marker carries it onto the line it starts, one higher for a number, and on a line with nothing after its marker it gives the marker up, as it does in a list. `Tab` on such a line nests it under the line above by writing two spaces in front of its marker, and `Shift`+`Tab` takes them back off; the first line of a cell has nothing above it to nest under. `Tab` does not go from cell to cell, because a list in a cell needs it. Every renderer draws the markers as the characters they are, so `1. one<br>2. two` reads as a numbered list on GitHub too, without the indentation a list would have. A space typed after the last word of a line, a marker's among them, is drawn while the caret is after it, where Markdown keeps none.
 
 **A table on the drawn document keeps its shape while it is written in.** Every column is the same width, and the table is as wide as the document or as wide as its columns need to be read, scrolling sideways past that. An empty cell is a line of text tall, so the caret put in it has room and typing the first letter does not move anything. A Markdown table has no column widths to say anything else with, and the preview and the viewer still lay a table out by what is in it.
 
@@ -511,7 +508,7 @@ Capturing `Tab` in a textarea creates a keyboard trap: somebody who cannot use a
 
 **Press `Escape`, then `Tab`, and the focus moves on.** One `Escape` arms it and anything else typed disarms it again. It is the rule CodeMirror, Monaco and GitHub's own editor all use, so anybody who has met one of those already knows it. The surface also announces it to a screen reader.
 
-The drawn document captures `Tab` only in a list item, where it nests the item the way it does on the source, and in a table cell, where it goes to the next cell. On both surfaces `Tab` in a table is the next cell rather than indentation. Everywhere else it is one focusable element, and `Tab` moves straight out of it.
+The drawn document captures `Tab` only in a list item and on a line of a table cell written as a list item, where it nests the item the way it does on the source. Everywhere else it is one focusable element, and `Tab` moves straight out of it.
 
 ## Undo
 

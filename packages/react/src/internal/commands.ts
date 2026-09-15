@@ -783,6 +783,12 @@ function outdentOf(line: string): number {
  * moves.
  */
 export function indent(state: EditState, out: boolean): EditState {
+  const cells = indentCells(state, out);
+
+  if (cells) {
+    return cells;
+  }
+
   const nested = nest(state, out);
 
   if (nested) {
@@ -1978,6 +1984,88 @@ function toggleCellList(state: EditState, command: ListCommand): EditState {
   return { value: next, start: move(state.start), end: move(state.end) };
 }
 
+/**
+ * `Tab` and `Shift`+`Tab` in a table: the lines of the cells a selection covers
+ * that open with a list item's marker, nested two spaces further in or brought
+ * two back out. `null` where the selection is not all in one table, or covers
+ * no such line, and `Tab` is what it is everywhere else.
+ *
+ * Two spaces in front of the marker, which is how a nested item is written
+ * everywhere else. The first line of a cell has no line above it to nest under, and the parser
+ * takes its spaces off anyway.
+ */
+function indentCells(state: EditState, out: boolean): EditState | null {
+  const { value, start, end } = state;
+  const lines = cellLinesAt(state);
+  const table = lines ? tableAt(value, start) : null;
+
+  if (
+    !lines ||
+    !table ||
+    (start !== end && tableAt(value, end)?.lines[0].start !== table.lines[0].start)
+  ) {
+    return null;
+  }
+
+  const edits: { from: number; to: number; text: string }[] = [];
+  let listed = false;
+
+  for (const line of lines) {
+    const text = value.slice(line.from, line.to);
+    const lead = text.length - text.replace(/^ +/, '').length;
+
+    if (!CELL_MARKER.test(text.slice(lead).trimStart())) {
+      continue;
+    }
+
+    // An item with nowhere to go takes the key and does nothing, as the first
+    // item of a list does.
+    listed = true;
+
+    if (line.first) {
+      continue;
+    }
+
+    if (!out) {
+      edits.push({ from: line.from, to: line.from, text: INDENT });
+    } else if (lead) {
+      edits.push({ from: line.from, to: line.from + Math.min(lead, INDENT.length), text: '' });
+    }
+  }
+
+  if (!listed) {
+    return null;
+  }
+
+  let next = value;
+
+  for (let index = edits.length - 1; index >= 0; index -= 1) {
+    const edit = edits[index];
+
+    next = next.slice(0, edit.from) + edit.text + next.slice(edit.to);
+  }
+
+  const move = (at: number): number => {
+    let shift = 0;
+
+    for (const edit of edits) {
+      if (at < edit.from) {
+        break;
+      }
+
+      if (at < edit.to) {
+        return edit.from + shift;
+      }
+
+      shift += edit.text.length - (edit.to - edit.from);
+    }
+
+    return at + shift;
+  };
+
+  return { value: next, start: move(start), end: move(end) };
+}
+
 /** Whether every line with words on it, of the cells a selection covers, is an item of this list. */
 function cellListActive(state: EditState, command: ListCommand): boolean {
   const lines = cellLinesAt(state);
@@ -1986,57 +2074,6 @@ function cellListActive(state: EditState, command: ListCommand): boolean {
     .filter((text) => text.trim());
 
   return content.length > 0 && content.every((text) => CELL_MARKERS[command].test(text));
-}
-
-/**
- * `Tab` in a table, which is the next cell, and `Shift`+`Tab`, the one before —
- * or `null` outside a table, where `Tab` is what it is everywhere else.
- *
- * Across the row and then down to the first cell of the next, the way a table
- * is read. `Tab` in the last cell adds a row under it and goes to the row's
- * first cell, which is how a table is grown without taking a hand off the keys;
- * `Shift`+`Tab` in the first cell stays there. The caret lands after what is in
- * the cell it arrives at, where the next letter carries on the words. A
- * selection over more than one line is not in a cell and is left to `indent`.
- */
-export function nextCell(state: EditState, back: boolean): EditState | null {
-  const { value, start, end } = state;
-
-  if (value.slice(start, end).includes('\n')) {
-    return null;
-  }
-
-  const table = tableAt(value, start);
-
-  if (!table) {
-    return null;
-  }
-
-  const anchor = table.lines[0].start;
-  // The rows a caret can be in, which is every line but the delimiter row's.
-  const rows = table.lines.map((_, index) => index).filter((index) => index !== 1);
-  const at = rows.indexOf(table.row);
-  const last = table.columns - 1;
-
-  if (back) {
-    if (table.column > 0) {
-      return caretAfter(value, anchor, table.row, Math.min(table.column, last) - 1);
-    }
-
-    return at > 0 ? caretAfter(value, anchor, rows[at - 1], last) : { value, start, end: start };
-  }
-
-  if (table.column < last) {
-    return caretAfter(value, anchor, table.row, table.column + 1);
-  }
-
-  if (at < rows.length - 1) {
-    return caretAfter(value, anchor, rows[at + 1], 0);
-  }
-
-  const grown = addRow({ value, start, end: start }, true);
-
-  return grown && caretAfter(grown.value, anchor, table.row === 0 ? 2 : table.row + 1, 0);
 }
 
 /**

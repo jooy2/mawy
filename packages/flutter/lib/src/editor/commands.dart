@@ -786,6 +786,12 @@ int _outdentOf(String line) {
 /// line with no indentation left is not an error — the rest of the block still
 /// moves.
 EditState indent(EditState state, {required bool out}) {
+  final EditState? cells = _indentCells(state, out: out);
+
+  if (cells != null) {
+    return cells;
+  }
+
   final EditState? nested = _nest(state, out: out);
 
   if (nested != null) {
@@ -2112,6 +2118,86 @@ EditState _toggleCellList(EditState state, MawyCommand command) {
   return EditState(next, move(state.start), move(state.end));
 }
 
+/// `Tab` and `Shift`+`Tab` in a table: the lines of the cells a selection covers
+/// that open with a list item's marker, nested two spaces further in or brought
+/// two back out. `null` where the selection is not all in one table, or covers
+/// no such line, and `Tab` is what it is everywhere else.
+///
+/// Two spaces in front of the marker, which is how a nested item is written
+/// everywhere else. The first line of a cell has no line above it to nest under, and the parser
+/// takes its spaces off anyway.
+EditState? _indentCells(EditState state, {required bool out}) {
+  final String value = state.value;
+  final int start = state.start;
+  final int end = state.end;
+  final List<_CellLine>? lines = _cellLinesAt(state);
+  final _TableAt? table = lines == null ? null : _tableAt(value, start);
+
+  if (lines == null ||
+      table == null ||
+      (start != end && _tableAt(value, end)?.lines.first.start != table.lines.first.start)) {
+    return null;
+  }
+
+  final List<({int from, int to, String text})> edits = <({int from, int to, String text})>[];
+  bool listed = false;
+
+  for (final _CellLine line in lines) {
+    final String text = value.substring(line.from, line.to);
+    final int lead = text.length - text.replaceFirst(RegExp('^ +'), '').length;
+
+    if (!_cellMarker.hasMatch(text.substring(lead).trimLeft())) {
+      continue;
+    }
+
+    // An item with nowhere to go takes the key and does nothing, as the first
+    // item of a list does.
+    listed = true;
+
+    if (line.first) {
+      continue;
+    }
+
+    if (!out) {
+      edits.add((from: line.from, to: line.from, text: _indentWidth));
+    } else if (lead > 0) {
+      edits.add((from: line.from, to: line.from + math.min(lead, _indentWidth.length), text: ''));
+    }
+  }
+
+  if (!listed) {
+    return null;
+  }
+
+  String next = value;
+
+  for (int index = edits.length - 1; index >= 0; index -= 1) {
+    final ({int from, int to, String text}) edit = edits[index];
+
+    next = next.substring(0, edit.from) + edit.text + next.substring(edit.to);
+  }
+
+  int move(int at) {
+    int shift = 0;
+
+    for (final ({int from, int to, String text}) edit in edits) {
+      if (at < edit.from) {
+        break;
+      }
+
+      if (at < edit.to) {
+        return edit.from + shift;
+      }
+
+      shift += edit.text.length - (edit.to - edit.from);
+    }
+
+    return at + shift;
+  }
+
+  return EditState(next, move(start), move(end));
+}
+
 /// Whether every line with words on it, of the cells a selection covers, is an item of this list.
 bool _cellListActive(EditState state, MawyCommand command) {
   final Iterable<String> content = (_cellLinesAt(state) ?? const <_CellLine>[])
@@ -2119,63 +2205,6 @@ bool _cellListActive(EditState state, MawyCommand command) {
       .where((String text) => text.trim().isNotEmpty);
 
   return content.isNotEmpty && content.every(_cellMarkers[command]!.hasMatch);
-}
-
-/// `Tab` in a table, which is the next cell, and `Shift`+`Tab` ([back]), the
-/// one before — or `null` outside a table, where `Tab` is what it is everywhere
-/// else.
-///
-/// Across the row and then down to the first cell of the next, the way a table
-/// is read. `Tab` in the last cell adds a row under it and goes to the row's
-/// first cell, which is how a table is grown without taking a hand off the keys;
-/// `Shift`+`Tab` in the first cell stays there. The caret lands after what is in
-/// the cell it arrives at. A selection over more than one line is not in a cell
-/// and is left to [indent].
-EditState? nextCell(EditState state, {required bool back}) {
-  final String value = state.value;
-  final int start = state.start;
-  final int end = state.end;
-
-  if (value.substring(start, end).contains('\n')) {
-    return null;
-  }
-
-  final _TableAt? table = _tableAt(value, start);
-
-  if (table == null) {
-    return null;
-  }
-
-  final int anchor = table.lines[0].start;
-  // The rows a caret can be in, which is every line but the delimiter row's.
-  final List<int> rows = <int>[
-    for (int index = 0; index < table.lines.length; index += 1)
-      if (index != 1) index,
-  ];
-  final int at = rows.indexOf(table.row);
-  final int last = table.columns - 1;
-
-  if (back) {
-    if (table.column > 0) {
-      return _caretAfter(value, anchor, table.row, (table.column < last ? table.column : last) - 1);
-    }
-
-    return at > 0 ? _caretAfter(value, anchor, rows[at - 1], last) : EditState(value, start, start);
-  }
-
-  if (table.column < last) {
-    return _caretAfter(value, anchor, table.row, table.column + 1);
-  }
-
-  if (at < rows.length - 1) {
-    return _caretAfter(value, anchor, rows[at + 1], 0);
-  }
-
-  final EditState? grown = _addRow(EditState(value, start, start), below: true);
-
-  return grown == null
-      ? null
-      : _caretAfter(grown.value, anchor, table.row == 0 ? 2 : table.row + 1, 0);
 }
 
 /// A table of [columns] columns and [rows] rows, the header counted among the

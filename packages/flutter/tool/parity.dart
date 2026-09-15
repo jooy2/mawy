@@ -413,9 +413,6 @@ List<Object?> _edits() {
 
     out['tableOfSize'] = sized == null ? null : <Object?>[sized.value, sized.start, sized.end];
 
-    final EditState? forwards = nextCell(state, back: false);
-    final EditState? backwards = nextCell(state, back: true);
-
     final ({int top, int bottom, int left, int right, int rows, int columns})? span = tableSpanAt(
       state.value,
       state.start,
@@ -426,12 +423,6 @@ List<Object?> _edits() {
         ? null
         : <Object?>[span.top, span.bottom, span.left, span.right, span.rows, span.columns];
     out['tableAlignAt'] = tableAlignAt(state.value, state.start, state.end);
-    out['nextCell'] = forwards == null
-        ? null
-        : <Object?>[forwards.value, forwards.start, forwards.end];
-    out['previousCell'] = backwards == null
-        ? null
-        : <Object?>[backwards.value, backwards.start, backwards.end];
     out['indent'] = <Object?>[indented.value, indented.start, indented.end];
     out['outdent'] = <Object?>[outdented.value, outdented.start, outdented.end];
 
