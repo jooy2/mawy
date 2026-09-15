@@ -130,5 +130,11 @@
   "markdown": "| Planting | Checked |\n| - | - |\n| sedge<br>rush | weekly<br/> |",
   "says": ["sedge", "rush", "weekly"],
   "omits": ["<br>", "<br/>"]
+ },
+ {
+  "why": "A line of a table cell written as a list item is drawn with the marker a list would have, and nested by the spaces in front of it. A cell holds no list, so the parser reads words; the drawing is the renderer's.",
+  "markdown": "| Steps | Done |\n| - | - |\n| - dig<br>  - deeper<br>1. plant | - |",
+  "says": ["dig", "deeper", "plant", "\u2022", "\u25e6", "1."],
+  "omits": ["- dig", "- deeper"]
  }
 ]

@@ -46,6 +46,7 @@ import type {
   MdListItem,
   MdRange,
   MdTableRow,
+  MdText,
   MdTextDirective
 } from './ast.js';
 import { toPlainText } from './inline.js';
@@ -294,7 +295,15 @@ export function firstImage(nodes: readonly { type: string }[]): MdImage | null {
  * string wrapped in an element that carries no attributes.
  */
 function marked(node: MdInline, value: string, context: RenderContext): React.ReactNode {
-  const matches = context.found?.at.get(node);
+  // A run the renderer cut the front off keeps the matches of the run it was
+  // cut from, moved back by what was cut. See `cellItems`.
+  const from = (node as CutText).from;
+  const matches = context.found?.at
+    .get(from?.node ?? node)
+    ?.map((match) =>
+      from ? { ...match, start: match.start - from.skip, end: match.end - from.skip } : match
+    )
+    .filter((match) => match.start >= 0);
 
   if (!matches?.length) {
     return value;
@@ -668,6 +677,10 @@ function renderInline(nodes: MdInline[], context: RenderContext): React.ReactNod
 function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.ReactNode {
   return nodes.map((node, place) => {
     const index = first + place;
+
+    if ((node as unknown as CellItem).type === 'cellItem') {
+      return renderCellItem(node as unknown as CellItem, index, context);
+    }
 
     switch (node.type) {
       case 'text':
@@ -1356,6 +1369,122 @@ function cellContents(nodes: MdInline[]): MdInline[] {
     : nodes;
 }
 
+/**
+ * The front of a line of a table cell written as a list item: its marker, and
+ * how far in the line is nested.
+ *
+ * Not a node the parser makes. A cell of a GitHub table holds no block, so
+ * `- one<br>- two` is words to every parser, this one included, and the trees
+ * both packages print for the parity check say so. The renderer draws such a
+ * line the way the list it reads as would be drawn: a bullet for `-`, `*` or
+ * `+`, a box for a task, the number for a numbered one, each two spaces in
+ * front of the marker one step further in. GitHub draws the characters, and
+ * that is the difference: the words are the same words in both, and what the
+ * marker is drawn as is not something a reader copies.
+ */
+interface CellItem {
+  type: 'cellItem';
+  range: MdRange;
+  /** How many steps in, at two spaces a step. */
+  depth: number;
+  /** `true` or `false` for a task, `null` for any other item. */
+  checked: boolean | null;
+  /** What a numbered item is numbered, `null` for a bullet. */
+  ordinal: string | null;
+}
+
+/** A run of text with its front cut off, and the run it was cut from. See `marked`. */
+interface CutText extends MdText {
+  from?: { node: MdInline; skip: number };
+}
+
+/** A list item's marker at the start of a line of a cell. See `CellItem`. */
+const CELL_ITEM = /^( *)(?:[-*+] (?:\[([ xX])\] )?|(\d{1,9}[.)]) )/;
+
+/** The bullets a nested list steps through, the way a browser's own do. */
+const BULLETS = ['\u2022', '\u25e6', '\u25aa'];
+
+/**
+ * A cell's contents with the front of each line written as a list item drawn
+ * as one. See `CellItem`.
+ *
+ * Only a line with something after its marker: `- ` on its own is a dash
+ * somebody is part of the way through typing, and `| - |` is how a great many
+ * tables say there is nothing in a cell.
+ */
+function cellItems(nodes: MdInline[]): MdInline[] {
+  const out: MdInline[] = [];
+  let starts = true;
+
+  nodes.forEach((node, index) => {
+    const next = nodes[index + 1];
+    const found = starts && node.type === 'text' ? CELL_ITEM.exec(node.value) : null;
+
+    starts = node.type === 'break';
+
+    if (
+      !found ||
+      node.type !== 'text' ||
+      (node.value.length === found[0].length && (!next || next.type === 'break'))
+    ) {
+      out.push(node);
+
+      return;
+    }
+
+    const end = node.range.start + found[0].length;
+    const item: CellItem = {
+      type: 'cellItem',
+      range: { start: node.range.start, end },
+      depth: Math.floor(found[1].length / 2),
+      checked: found[2] === undefined ? null : found[2] !== ' ',
+      ordinal: found[3] ?? null
+    };
+
+    out.push(item as unknown as MdInline);
+
+    if (node.value.length > found[0].length) {
+      const rest: CutText = {
+        type: 'text',
+        value: node.value.slice(found[0].length),
+        range: { start: end, end: node.range.end },
+        from: { node, skip: found[0].length }
+      };
+
+      out.push(rest);
+    }
+  });
+
+  return out;
+}
+
+function renderCellItem(item: CellItem, index: number, context: RenderContext): React.ReactNode {
+  return (
+    <span
+      key={index}
+      className="mawy-md-cell-item"
+      data-mawy-atom=""
+      contentEditable={context.editing ? false : undefined}
+      style={item.depth ? { marginInlineStart: `${item.depth * 1.25}em` } : undefined}
+      {...origin(item, context)}
+    >
+      {item.checked !== null ? (
+        <input
+          type="checkbox"
+          className="mawy-md-checkbox"
+          checked={item.checked}
+          readOnly
+          disabled
+          tabIndex={-1}
+          aria-label={context.strings.task}
+        />
+      ) : (
+        (item.ordinal ?? BULLETS[item.depth % BULLETS.length])
+      )}
+    </span>
+  );
+}
+
 function renderRow(
   row: MdTableRow,
   index: number,
@@ -1375,7 +1504,7 @@ function renderRow(
             align[column] ? { textAlign: align[column] as 'left' | 'center' | 'right' } : undefined
           }
         >
-          {renderInline(cellContents(cell.children), context)}
+          {renderInline(cellItems(cellContents(cell.children)), context)}
           {spacesAfter(cell.children, context)}
           {/* A break at the end of a cell ends a line and starts none, so the
               line after it — which is where the caret is when it has just

@@ -359,7 +359,18 @@ TextStyle _inlineCodeStyle(MawyRenderContext context, TextStyle style) {
 /// document nobody is searching goes on being one span rather than a span
 /// holding one child that holds the text.
 InlineSpan _marked(MdInline node, String value, MawyRenderContext context, TextStyle style) {
-  final List<MawyDocumentMatch>? matches = context.found?.at[node];
+  // A run the renderer cut the front off keeps the matches of the run it was
+  // cut from, moved back by what was cut. See [_cellItems].
+  final _CutText? cut = node is _CutText ? node : null;
+  final List<MawyDocumentMatch>? matches = cut == null
+      ? context.found?.at[node]
+      : context.found?.at[cut.from]
+            ?.map(
+              (MawyDocumentMatch match) =>
+                  MawyDocumentMatch(match.start - cut.skip, match.end - cut.skip, match.index),
+            )
+            .where((MawyDocumentMatch match) => match.start >= 0)
+            .toList();
 
   if (matches == null || matches.isEmpty) {
     return TextSpan(text: value, style: style);
@@ -394,6 +405,10 @@ InlineSpan _marked(MdInline node, String value, MawyRenderContext context, TextS
 }
 
 InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style) {
+  if (node is _CellItem) {
+    return _cellItemSpan(node, context, style);
+  }
+
   if (node is MdText) {
     return _marked(node, node.value, context, style);
   }
@@ -1303,7 +1318,7 @@ class _Table extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: em * 0.8, vertical: em * 0.5),
                     child: Text.rich(
                       renderInline(
-                        _cellContents(cell.value.children),
+                        _cellItems(_cellContents(cell.value.children)),
                         context,
                         row.header ? cellStyle.copyWith(fontWeight: FontWeight.w600) : cellStyle,
                       ),
@@ -1336,6 +1351,117 @@ List<MdInline> _cellContents(List<MdInline> nodes) {
   return nodes.any(breaks)
       ? <MdInline>[for (final MdInline node in nodes) breaks(node) ? MdBreak(node.range) : node]
       : nodes;
+}
+
+/// The front of a line of a table cell written as a list item: its marker, and
+/// how far in the line is nested.
+///
+/// Not a node the parser makes. A cell of a GitHub table holds no block, so
+/// `- one<br>- two` is words to every parser, this one included, and the trees
+/// both packages print for the parity check say so. The renderer draws such a
+/// line the way the list it reads as would be drawn: a bullet for `-`, `*` or
+/// `+`, a box for a task, the number for a numbered one, each two spaces in
+/// front of the marker one step further in. GitHub draws the characters, and
+/// that is the difference: the words are the same words in both. The React
+/// package draws a cell the same way.
+class _CellItem extends MdInline {
+  _CellItem(super.range, {required this.depth, required this.checked, required this.ordinal});
+
+  /// How many steps in, at two spaces a step.
+  final int depth;
+
+  /// `true` or `false` for a task, `null` for any other item.
+  final bool? checked;
+
+  /// What a numbered item is numbered, `null` for a bullet.
+  final String? ordinal;
+}
+
+/// A run of text with its front cut off, and the run it was cut from. See [_marked].
+class _CutText extends MdText {
+  _CutText(super.range, super.value, {required this.from, required this.skip});
+
+  final MdInline from;
+  final int skip;
+}
+
+/// A list item's marker at the start of a line of a cell. See [_CellItem].
+final RegExp _cellItem = RegExp(r'^( *)(?:[-*+] (?:\[([ xX])\] )?|(\d{1,9}[.)]) )');
+
+/// The bullets a nested list steps through.
+const List<String> _bullets = <String>['\u2022', '\u25e6', '\u25aa'];
+
+/// A cell's contents with the front of each line written as a list item drawn
+/// as one. See [_CellItem].
+///
+/// Only a line with something after its marker: `- ` on its own is a dash
+/// somebody is part of the way through typing, and `| - |` is how a great many
+/// tables say there is nothing in a cell.
+List<MdInline> _cellItems(List<MdInline> nodes) {
+  final List<MdInline> out = <MdInline>[];
+  bool starts = true;
+
+  for (int index = 0; index < nodes.length; index += 1) {
+    final MdInline node = nodes[index];
+    final MdInline? next = index + 1 < nodes.length ? nodes[index + 1] : null;
+    final RegExpMatch? found = starts && node is MdText ? _cellItem.firstMatch(node.value) : null;
+
+    starts = node is MdBreak;
+
+    if (found == null ||
+        node is! MdText ||
+        (node.value.length == found.end && (next == null || next is MdBreak))) {
+      out.add(node);
+      continue;
+    }
+
+    final int end = node.range.start + found.end;
+
+    out.add(
+      _CellItem(
+        MdRange(node.range.start, end),
+        depth: found.group(1)!.length ~/ 2,
+        checked: found.group(2) == null ? null : found.group(2) != ' ',
+        ordinal: found.group(3),
+      ),
+    );
+
+    if (node.value.length > found.end) {
+      out.add(
+        _CutText(
+          MdRange(end, node.range.end),
+          node.value.substring(found.end),
+          from: node,
+          skip: found.end,
+        ),
+      );
+    }
+  }
+
+  return out;
+}
+
+InlineSpan _cellItemSpan(_CellItem item, MawyRenderContext context, TextStyle style) {
+  final double em = style.fontSize ?? _em(context);
+  final Color muted = context.tokens.foregroundSubtle;
+  final Widget mark = item.checked == null
+      ? Text(
+          item.ordinal ?? _bullets[item.depth % _bullets.length],
+          style: style.copyWith(color: muted),
+        )
+      : Icon(
+          item.checked! ? LucideIcons.squareCheck : LucideIcons.square,
+          size: em,
+          color: item.checked! ? context.tokens.accent : muted,
+        );
+
+  return WidgetSpan(
+    alignment: PlaceholderAlignment.middle,
+    child: Padding(
+      padding: EdgeInsetsDirectional.only(start: item.depth * em * 1.25, end: em * 0.35),
+      child: mark,
+    ),
+  );
 }
 
 /* -------------------------------------------------------------------------

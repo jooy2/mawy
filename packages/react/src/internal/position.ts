@@ -229,7 +229,7 @@ export function domAt(
   // The end of a drawn thing with no text of its own — a line break, a picture
   // — is after it rather than in it: a caret put inside a `<br>` is drawn in
   // front of it, on the line before the one the break starts.
-  if (own && own.end === offset && ATOMS.test(host.tagName) && host.parentNode) {
+  if (own && own.end === offset && atom(host) && host.parentNode) {
     return {
       node: host.parentNode,
       offset: [...host.parentNode.childNodes].indexOf(host as ChildNode) + 1
@@ -267,13 +267,15 @@ export function domAt(
   // nothing written after it yet, at the end of a table cell — is a place of its
   // own, on the line the break starts, and the end of the text before the break
   // is on the line above it.
-  for (const atom of host.querySelectorAll('br[data-mawy-range], img[data-mawy-range]')) {
-    const range = rangeOf(atom);
+  for (const each of host.querySelectorAll(
+    'br[data-mawy-range], img[data-mawy-range], [data-mawy-atom][data-mawy-range]'
+  )) {
+    const range = rangeOf(each);
 
-    if (range && range.end === offset && atom.parentNode) {
+    if (range && range.end === offset && each.parentNode) {
       return {
-        node: atom.parentNode,
-        offset: [...atom.parentNode.childNodes].indexOf(atom as ChildNode) + 1
+        node: each.parentNode,
+        offset: [...each.parentNode.childNodes].indexOf(each as ChildNode) + 1
       };
     }
   }
@@ -281,8 +283,14 @@ export function domAt(
   return fallback ?? (host === root ? null : { node: host, offset: 0 });
 }
 
-/** What is drawn as one character with no text of its own. */
-const ATOMS = /^(?:BR|IMG)$/;
+/**
+ * What is drawn as one thing with no text of its own a caret goes into: a line
+ * break, a picture, and whatever the renderer marks as one, which is the marker
+ * of a line of a cell written as a list item.
+ */
+function atom(element: Element): boolean {
+  return /^(?:BR|IMG)$/.test(element.tagName) || element.hasAttribute('data-mawy-atom');
+}
 
 /** The character a point on the page is over, in whichever way the browser has. */
 export function caretFromPoint(x: number, y: number): { node: Node; offset: number } | null {

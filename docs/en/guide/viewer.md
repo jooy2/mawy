@@ -134,6 +134,8 @@ MawyViewer(
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. The CommonMark specification says it is not, while chat clients and issue trackers treat it as one. A reader who has never written Markdown expects the latter, so this is an option rather than a fixed behaviour.
 - **`definitionLists`** (default `true`) — whether `: ` under a line of text is a term and what it means. See below.
 
+**A line of a table cell written as a list item is drawn as one.** A cell of a GitHub table holds no block, so `- dig<br>  - deeper<br>- [x] water` is words to every parser, this one included, and GitHub draws the dashes. This package draws each such line with the marker the list it reads as would have: a bullet for `-`, `*` or `+`, a checkbox for a task, the number for a numbered item, and each two spaces in front of the marker one step further in. The words are the same words either way; only the markers are drawn differently. A line that is a marker and nothing else, such as the `-` many tables put in an empty cell, stays a dash.
+
 ### CommonMark coverage
 
 **640 of the specification's 652 examples**, run against the parser on every change. CommonMark ships a test suite with the specification, so the coverage can be stated as a number. It is in `packages/react/test/internal/markdown/commonmark.test.ts`, beside the list of the other 12.

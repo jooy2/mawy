@@ -1345,6 +1345,22 @@
   accent-color: var(--mawy-accent);
 }
 
+/* A line of a table cell written as a list item, its marker drawn the way the
+ * list it reads as would draw it. A cell holds no list, so there is no list's
+ * gutter to hang the marker in, and it sits at the front of the line instead,
+ * set off from the words by the space it was written with. */
+.mawy-root .mawy-md-cell-item {
+  display: inline-block;
+  min-width: 0.9em;
+  margin-inline-end: 0.35em;
+  color: var(--mawy-fg-muted);
+  user-select: none;
+}
+
+.mawy-root .mawy-md-cell-item .mawy-md-checkbox {
+  margin-inline: 0;
+}
+
 /* Quotations and alerts ---------------------------------------------------- */
 
 .mawy-root .mawy-md blockquote {

@@ -417,8 +417,11 @@ function atomAt(root: HTMLElement, node: Node, offset: number, back: boolean): H
         ? node.childNodes[back ? offset - 1 : offset]
         : null;
 
+  // The marker a line of a cell written as a list item is drawn with has a
+  // glyph in it, and is one thing all the same: `Backspace` after it takes the
+  // marker and the spaces in front of it, the way it gives up a list item.
   return beside?.nodeType === 1 &&
-    !beside.textContent &&
+    (!beside.textContent || (beside as HTMLElement).hasAttribute('data-mawy-atom')) &&
     (beside as HTMLElement).hasAttribute('data-mawy-range') &&
     root.contains(beside)
     ? (beside as HTMLElement)

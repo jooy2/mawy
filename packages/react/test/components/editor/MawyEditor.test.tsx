@@ -3850,6 +3850,33 @@ describe('tables', () => {
     expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(2);
   });
 
+  it('draws a line of a cell written as a list item with its marker, and gives it up with Backspace', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'| a | b |\n| - | - |\n| - one<br>  - two | x |'}
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+    const cell = () => bodyOf(screen).querySelector('td') as HTMLElement;
+
+    // A bullet in place of each marker, the second a step further in, and the
+    // words after them as they are.
+    expect(cell().textContent).toBe('\u2022one\u25e6two');
+
+    const two = [...cell().childNodes].find((node) => node.textContent === 'two') as Text;
+
+    bodyOf(screen).focus();
+    document.getSelection()?.collapse(two, 0);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Backspace}');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a | b |\n| - | - |\n| - one<br>two | x |')
+    );
+  });
+
   it('draws a space typed after the last words of a line, where Markdown keeps none', async () => {
     const onChange = vi.fn();
     const screen = await render(
