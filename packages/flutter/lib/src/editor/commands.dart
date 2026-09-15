@@ -1076,6 +1076,9 @@ enum MawyTableCommand {
 
   /// The same, on the right.
   alignRight,
+
+  /// The whole table. See [removeBlock].
+  removeTable,
 }
 
 /// One cell's run, between the pipes and not including them.
@@ -1748,6 +1751,48 @@ EditState? _clearCells(EditState state) {
   return _caretAfter(next, table.lines.first.start, span.top, span.left);
 }
 
+/// The table the caret is in, taken out. See [removeBlock].
+EditState? _removeTable(EditState state) {
+  final _TableAt? table = _tableAt(state.value, state.start);
+
+  return table == null
+      ? null
+      : removeBlock(state.value, table.lines.first.start, table.lines.last.end);
+}
+
+/// A block taken out of the document, and the caret where it was.
+///
+/// The lines it is written on go whole, a container's prefix with them, so a
+/// table inside a quotation leaves no `>` behind on a line of its own. Of the
+/// blank lines that set it off from the blocks either side, one stays where
+/// there was one on both sides, since two blocks still need it between them; at
+/// the start or the end of the document there is nothing on one side to be set
+/// off from, and it goes too.
+EditState removeBlock(String value, int start, int end) {
+  bool blank(String line) => RegExp(r'^[ \t>]*$').hasMatch(line);
+  final int from = _lineStartOf(value, start);
+  final int newline = value.indexOf('\n', end);
+  int to = newline == -1 ? value.length : newline + 1;
+
+  if (to < value.length) {
+    final int stop = value.indexOf('\n', to);
+    final String after = value.substring(to, stop == -1 ? value.length : stop);
+    final String? before = from > 0
+        ? value.substring(_lineStartOf(value, from - 1), from - 1)
+        : null;
+
+    if (blank(after) && (before == null || blank(before))) {
+      to = stop == -1 ? value.length : stop + 1;
+    }
+  }
+
+  final String head = to >= value.length
+      ? value.substring(0, from).replaceFirst(RegExp(r'(?:\n[ \t>]*)*\n$'), '')
+      : value.substring(0, from);
+
+  return EditState(head + value.substring(to), head.length, head.length);
+}
+
 /// How a delimiter cell aligns its column: `left`, `center`, `right` or `none`.
 String _alignOf(String cell) {
   final String text = cell.trim();
@@ -2248,5 +2293,6 @@ EditState? runTableCommand(MawyTableCommand command, EditState state) {
     MawyTableCommand.alignLeft => _alignColumns(state, 'left'),
     MawyTableCommand.alignCenter => _alignColumns(state, 'center'),
     MawyTableCommand.alignRight => _alignColumns(state, 'right'),
+    MawyTableCommand.removeTable => _removeTable(state),
   };
 }

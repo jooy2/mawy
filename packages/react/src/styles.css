@@ -399,6 +399,18 @@
   color: var(--mawy-caution);
 }
 
+/* A control that takes something away whole — a table, a picture, a block —
+ * in the colour the palette gives a warning, so it is not pressed on the way to
+ * the one beside it. */
+.mawy-root .mawy-button[data-mawy-danger] {
+  color: var(--mawy-caution);
+}
+
+.mawy-root .mawy-button[data-mawy-danger]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--mawy-caution) 12%, transparent);
+  color: var(--mawy-caution);
+}
+
 .mawy-root .mawy-button:disabled {
   opacity: 0.4;
   cursor: default;

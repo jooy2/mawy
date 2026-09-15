@@ -212,6 +212,28 @@ void main() {
     });
   });
 
+  group('removing a table', () {
+    String? removed(String marked) {
+      final int at = marked.indexOf('^');
+      final EditState? after = runTableCommand(
+        MawyTableCommand.removeTable,
+        EditState(marked.replaceFirst('^', ''), at, at),
+      );
+
+      return after == null
+          ? null
+          : '${after.value.substring(0, after.start)}^${after.value.substring(after.start)}';
+    }
+
+    test('takes its lines out, and one of the blank lines either side of it', () {
+      expect(removed('Intro.\n\n| a^ |\n| - |\n\nAfter.'), 'Intro.\n\n^After.');
+      expect(removed('Intro.\n\n| a^ |\n| - |'), 'Intro.^');
+      expect(removed('| a^ |\n| - |\n\nAfter.'), '^After.');
+      expect(removed('> Intro.\n>\n> | a^ |\n> | - |\n>\n> After.'), '> Intro.\n>\n^> After.');
+      expect(removed('Words.^'), isNull);
+    });
+  });
+
   group('aligning columns', () {
     const String v = '| a | b | c |\n| :-- | --- | --: |\n| d | e | f |';
     EditState over(String from, String to) =>

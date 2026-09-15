@@ -256,7 +256,8 @@ export interface TableToolsProps {
  * With cells selected, each acts on as many rows or columns as the selection
  * covers and says how many, and one more empties the cells. The three after
  * the columns align the columns the selection covers, and what deletes or
- * empties is at the end away from the caret. See `ADD_TOOLS`.
+ * empties is at the end away from the caret, the table itself last, in red. See
+ * `ADD_TOOLS`.
  */
 export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(function TableTools(
   { strings, top, left, rows, columns, align, reversed = false, available, onCommand },
@@ -307,7 +308,18 @@ export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(func
         onClick={() => onCommand('clearCells')}
       />
     ) : null,
-    ...REMOVE_TOOLS.map(tool)
+    ...REMOVE_TOOLS.map(tool),
+    rule('table'),
+    // The whole table, last and in red: the one control on the bar that takes
+    // away more than a row or a column.
+    <IconButton
+      key="removeTable"
+      label={strings.tableRemove}
+      icon={<RemoveIcon className="mawy-icon" aria-hidden="true" />}
+      data-mawy-danger=""
+      disabled={!available('removeTable')}
+      onClick={() => onCommand('removeTable')}
+    />
   ];
 
   return (

@@ -67,6 +67,7 @@ class MawyToolbarButton extends StatefulWidget {
     required this.onPressed,
     this.pressed = false,
     this.enabled = true,
+    this.danger = false,
     this.focusNode,
     this.autofocus = false,
     super.key,
@@ -92,6 +93,10 @@ class MawyToolbarButton extends StatefulWidget {
   /// A disabled button is still drawn and still in the row — one that leaves
   /// the layout is one the focus walks past and the eye looks for.
   final bool enabled;
+
+  /// Whether it takes something away whole, which draws it in the palette's
+  /// warning colour so it is not pressed on the way to the one beside it.
+  final bool danger;
 
   /// The node the row's [MawyRoving] gave this control, where it is in one.
   ///
@@ -310,7 +315,9 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
                   child: Icon(
                     widget.icon,
                     size: 16,
-                    color: widget.pressed
+                    color: widget.danger
+                        ? tokens.caution
+                        : widget.pressed
                         ? tokens.accent
                         : (lit ? tokens.foreground : tokens.foregroundMuted),
                   ),

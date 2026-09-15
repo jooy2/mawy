@@ -1040,7 +1040,8 @@ export type MawyTableCommand =
   | 'clearCells'
   | 'alignLeft'
   | 'alignCenter'
-  | 'alignRight';
+  | 'alignRight'
+  | 'removeTable';
 
 /** How a column of a table is aligned, as the colons in its delimiter cell say. */
 export type MawyColumnAlign = 'left' | 'center' | 'right' | 'none';
@@ -1651,6 +1652,40 @@ function clearCells(state: EditState): EditState | null {
   return caretAfter(next, table.lines[0].start, span.top, span.left);
 }
 
+/**
+ * A block taken out of the document, and the caret where it was.
+ *
+ * The lines it is written on go whole, a container's prefix with them, so a
+ * table inside a quotation leaves no `>` behind on a line of its own. Of the
+ * blank lines that set it off from the blocks either side, one stays where
+ * there was one on both sides, since two blocks still need it between them; at
+ * the start or the end of the document there is nothing on one side to be set
+ * off from, and it goes too.
+ */
+export function removeBlock(value: string, start: number, end: number): EditState {
+  const blank = (line: string) => /^[ \t>]*$/.test(line);
+  const from = lineStartOf(value, start);
+  const newline = value.indexOf('\n', end);
+  let to = newline === -1 ? value.length : newline + 1;
+
+  if (to < value.length) {
+    const stop = value.indexOf('\n', to);
+    const after = value.slice(to, stop === -1 ? value.length : stop);
+    const before = from > 0 ? value.slice(lineStartOf(value, from - 1), from - 1) : null;
+
+    if (blank(after) && (before === null || blank(before))) {
+      to = stop === -1 ? value.length : stop + 1;
+    }
+  }
+
+  const head =
+    to >= value.length
+      ? value.slice(0, from).replace(/(?:\n[ \t>]*)*\n$/, '')
+      : value.slice(0, from);
+
+  return { value: head + value.slice(to), start: head.length, end: head.length };
+}
+
 /** How a delimiter cell aligns its column. */
 function alignOf(cell: string): MawyColumnAlign {
   const text = cell.trim();
@@ -2129,6 +2164,14 @@ export function runTableCommand(command: MawyTableCommand, state: EditState): Ed
       return alignColumns(state, 'center');
     case 'alignRight':
       return alignColumns(state, 'right');
+    case 'removeTable': {
+      const table = tableAt(state.value, state.start);
+
+      return (
+        table &&
+        removeBlock(state.value, table.lines[0].start, table.lines[table.lines.length - 1].end)
+      );
+    }
     default:
       return null;
   }

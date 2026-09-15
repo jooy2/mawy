@@ -3470,6 +3470,7 @@ describe('tables', () => {
       const caret = document.getSelection()!.getRangeAt(0).getClientRects()[0].left;
       const apart = (name: string) => Math.abs(middle(name) - caret);
 
+      expect(apart('Delete the table')).toBeGreaterThan(apart('Delete this column'));
       expect(apart('Delete this row')).toBeGreaterThan(apart('Add a row above'));
       expect(apart('Delete this column')).toBeGreaterThan(apart('Align right'));
       expect(bodyOf(screen).querySelectorAll('td')[index].textContent).toBe(cell);
@@ -3477,6 +3478,23 @@ describe('tables', () => {
         screen.container.querySelector('.mawy-table-tools')!.hasAttribute('data-mawy-reversed')
       ).toBe(index === 3);
     }
+  });
+
+  it('deletes the whole table from the end of the bar', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'Intro.\n\n| a | b |\n| - | - |\n| c | d |\n\nAfter.'}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+
+    put(bodyOf(screen), 'c', 1);
+    await userEvent.click(page.getByRole('button', { name: 'Delete the table' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Intro.\n\nAfter.'));
+    expect(bodyOf(screen).querySelector('table')).toBe(null);
   });
 
   it('aligns the column the caret is in from the bar, and shows how it is aligned', async () => {

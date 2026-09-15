@@ -238,15 +238,21 @@ class MawyTableTools extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget button(MawyTableCommand command, IconData icon, String label, {bool pressed = false}) =>
-        MawyToolbarButton(
-          icon: icon,
-          label: label,
-          tokens: tokens,
-          pressed: pressed,
-          enabled: available(command),
-          onPressed: () => onCommand(command),
-        );
+    Widget button(
+      MawyTableCommand command,
+      IconData icon,
+      String label, {
+      bool pressed = false,
+      bool danger = false,
+    }) => MawyToolbarButton(
+      icon: icon,
+      label: label,
+      tokens: tokens,
+      pressed: pressed,
+      danger: danger,
+      enabled: available(command),
+      onPressed: () => onCommand(command),
+    );
     String counted(String one, String many, int count) =>
         count > 1 ? many.replaceAll('%N', '$count') : one;
     Widget rule() => Container(
@@ -310,6 +316,10 @@ class MawyTableTools extends StatelessWidget {
         LucideIcons.trash2,
         counted(strings.tableColumnRemove, strings.tableColumnsRemove, columns),
       ),
+      rule(),
+      // The whole table, last and in red: the one control on the bar that takes
+      // away more than a row or a column.
+      button(MawyTableCommand.removeTable, LucideIcons.trash2, strings.tableRemove, danger: true),
     ];
 
     return Semantics(

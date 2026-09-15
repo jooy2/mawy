@@ -1326,9 +1326,38 @@ void main() {
         double apart(String label) => (middle(label) - caret).abs();
 
         expect(tester.widget<MawyTableTools>(find.byType(MawyTableTools)).reversed, reversed);
+        expect(apart('Delete the table'), greaterThan(apart('Delete this column')));
         expect(apart('Delete this row'), greaterThan(apart('Add a row above')));
         expect(apart('Delete this column'), greaterThan(apart('Align right')));
       }
+    });
+
+    testWidgets('deletes the whole table from the end of the bar', (WidgetTester tester) async {
+      final List<String> seen = <String>[];
+      const String source = 'Intro.\n\n| a | b |\n| - | - |\n| c | d |\n\nAfter.';
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: source, mode: MawyEditorMode.plain, onChange: seen.add)),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = TextSelection.collapsed(offset: source.indexOf('c |') + 1);
+      await tester.pumpAndSettle();
+
+      final MawyToolbarButton remove = tester.widget(
+        find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == 'Delete the table',
+        ),
+      );
+
+      expect(remove.danger, isTrue);
+
+      await tester.tap(find.byWidget(remove));
+      await tester.pumpAndSettle();
+
+      expect(seen.last, 'Intro.\n\nAfter.');
     });
 
     testWidgets('aligns the column the caret is in from the bar, and shows how it is aligned', (

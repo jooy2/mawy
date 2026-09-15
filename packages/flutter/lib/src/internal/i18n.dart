@@ -115,6 +115,7 @@ final class MawyStrings {
     required this.tableAlignLeft,
     required this.tableAlignCenter,
     required this.tableAlignRight,
+    required this.tableRemove,
     required this.thematicBreak,
     required this.status,
     required this.statusPosition,
@@ -380,6 +381,9 @@ final class MawyStrings {
   /// The editor: Align the columns the selection covers right.
   final String tableAlignRight;
 
+  /// The editor: Delete the table the caret is in.
+  final String tableRemove;
+
   /// The editor: Divider.
   final String thematicBreak;
 
@@ -540,6 +544,7 @@ final class MawyStrings {
     String? tableAlignLeft,
     String? tableAlignCenter,
     String? tableAlignRight,
+    String? tableRemove,
     String? thematicBreak,
     String? status,
     String? statusPosition,
@@ -646,6 +651,7 @@ final class MawyStrings {
       tableAlignLeft: tableAlignLeft ?? this.tableAlignLeft,
       tableAlignCenter: tableAlignCenter ?? this.tableAlignCenter,
       tableAlignRight: tableAlignRight ?? this.tableAlignRight,
+      tableRemove: tableRemove ?? this.tableRemove,
       thematicBreak: thematicBreak ?? this.thematicBreak,
       status: status ?? this.status,
       statusPosition: statusPosition ?? this.statusPosition,
@@ -758,6 +764,7 @@ final class MawyStrings {
       other.tableAlignLeft == tableAlignLeft &&
       other.tableAlignCenter == tableAlignCenter &&
       other.tableAlignRight == tableAlignRight &&
+      other.tableRemove == tableRemove &&
       other.thematicBreak == thematicBreak &&
       other.status == status &&
       other.statusPosition == statusPosition &&
@@ -865,6 +872,7 @@ final class MawyStrings {
     tableAlignLeft,
     tableAlignCenter,
     tableAlignRight,
+    tableRemove,
     thematicBreak,
     status,
     statusPosition,
@@ -973,6 +981,7 @@ const MawyStrings _en = MawyStrings._(
   tableAlignLeft: 'Align left',
   tableAlignCenter: 'Align center',
   tableAlignRight: 'Align right',
+  tableRemove: 'Delete the table',
   thematicBreak: 'Divider',
   status: 'Document statistics',
   statusPosition: 'Ln %L, Col %C',
@@ -1080,6 +1089,7 @@ const MawyStrings _ko = MawyStrings._(
   tableAlignLeft: '왼쪽 정렬',
   tableAlignCenter: '가운데 정렬',
   tableAlignRight: '오른쪽 정렬',
+  tableRemove: '표 삭제',
   thematicBreak: '구분선',
   status: '문서 통계',
   statusPosition: '%L행 %C열',

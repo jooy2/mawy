@@ -191,7 +191,8 @@ const TABLE_COMMANDS = [
   'clearCells',
   'alignLeft',
   'alignCenter',
-  'alignRight'
+  'alignRight',
+  'removeTable'
 ];
 
 /**

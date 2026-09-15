@@ -245,6 +245,27 @@ describe('in a table', () => {
   });
 });
 
+describe('removing a table', () => {
+  const removed = (marked: string): string | null => {
+    const at = marked.indexOf('^');
+    const after = runTableCommand('removeTable', {
+      value: marked.replace('^', ''),
+      start: at,
+      end: at
+    });
+
+    return after && `${after.value.slice(0, after.start)}^${after.value.slice(after.start)}`;
+  };
+
+  it('takes its lines out, and one of the blank lines either side of it', () => {
+    expect(removed('Intro.\n\n| a^ |\n| - |\n\nAfter.')).toBe('Intro.\n\n^After.');
+    expect(removed('Intro.\n\n| a^ |\n| - |')).toBe('Intro.^');
+    expect(removed('| a^ |\n| - |\n\nAfter.')).toBe('^After.');
+    expect(removed('> Intro.\n>\n> | a^ |\n> | - |\n>\n> After.')).toBe('> Intro.\n>\n^> After.');
+    expect(removed('Words.^')).toBe(null);
+  });
+});
+
 describe('aligning columns', () => {
   const v = '| a | b | c |\n| :-- | --- | --: |\n| d | e | f |';
   const over = (from: string, to: string) => ({

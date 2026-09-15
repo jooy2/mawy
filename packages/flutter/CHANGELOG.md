@@ -6,6 +6,8 @@
 
 ### Added
 
+- **The whole table is deleted from the end of its bar.** A last control, in red and set off from the rest, takes out the lines the table is written on and one of the blank lines that set it off, leaving the caret where the table was. `MawyTableCommand` gained `removeTable`, `MawyToolbarButton` a `danger` that draws it in `MawyTokens.caution`, and `MawyStrings` `tableRemove`. It is the React package's arithmetic, and the parity check compares the two.
+
 - **A line of a table cell written as a list item is drawn as one.** `- dig<br>  - deeper<br>- [x] water` in a cell was drawn as its dashes and brackets. Each such line is drawn with a bullet, a checkbox or its number in place of the marker now, a step further in for every two spaces in front of the marker; a line that is only a marker, such as the `-` of an empty cell, is left a dash. The parser still reads words, as GitHub does, and the React package draws a cell the same way.
 
 - **A column of a table is aligned from the bar beside the caret.** Three controls after the column controls write GitHub's colons into the delimiter cell of the column the caret is in, `:---` for left, `:---:` for the middle and `---:` for right, keeping as many dashes as there were; the one the column already has is drawn pressed, and pressing it again takes the colons off. With cells selected they align every column the selection covers. `MawyTableCommand` gained `alignLeft`, `alignCenter` and `alignRight`, `MawyTableTools` an `align`, and `MawyStrings` `tableAlignLeft`, `tableAlignCenter` and `tableAlignRight`. It is the React package's arithmetic, and the parity check compares the two.
