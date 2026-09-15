@@ -369,7 +369,7 @@ function toggleCodeBlock(state: EditState): EditState {
  * no fence to take off, and not a document with no fence in it at all, which is
  * the common case and is answered without a parse.
  */
-function fencedAt(value: string, offset: number): MdCode | null {
+export function fencedAt(value: string, offset: number): MdCode | null {
   if (!value.includes('```') && !value.includes('~~~')) {
     return null;
   }

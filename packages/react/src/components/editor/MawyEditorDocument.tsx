@@ -37,7 +37,7 @@ import {
 } from '../../internal/editing.js';
 import { fileFromDataUrl, pastedImagesIn } from '../../internal/images.js';
 import { pasteFromHtml } from '../../internal/markdown/paste.js';
-import { caretFromPoint, domAt, sourceAt } from '../../internal/position.js';
+import { caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
   value: string;
@@ -359,7 +359,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         firstImage: picture,
         source: value,
         reveal,
-        live: LIVE
+        live: LIVE,
+        editing: true
       }),
       [
         html,
@@ -818,6 +819,137 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       return true;
     };
 
+    /**
+     * A paragraph opened under the last block, or over the first, where that
+     * block has no line of text around it for a caret to go to.
+     *
+     * A code block, a divider, raw HTML drawn as elements and a table all end
+     * where their own characters end, and one of them ending the document left
+     * nowhere after it: a press below put the caret back inside the block, or
+     * on nothing at all under a divider, and the arrows stopped at its last
+     * line. So the blank lines a paragraph is written with are written, and the
+     * caret is put on it. `null` where the block has somewhere to go already.
+     */
+    const opened = (element: HTMLElement, below: boolean, tables = true): MawyEdit | null => {
+      const edge = below ? lastBlock(element) : element.firstElementChild;
+      const range = edge ? rangeOf(edge) : null;
+      const kind = edge ? blockKind(edge) : '';
+
+      if (!edge || !range || !CLOSED_BLOCK.test(kind) || (kind === 'table' && !tables)) {
+        return null;
+      }
+
+      if (below) {
+        if (value.slice(range.end).trim()) {
+          return null;
+        }
+
+        const tail = value.endsWith('\n') ? '\n' : '\n\n';
+
+        return { value: value + tail, caret: value.length + tail.length, betweenBlocks: true };
+      }
+
+      return value.slice(0, range.start).trim()
+        ? null
+        : { value: `\n\n${value}`, caret: 0, betweenBlocks: true };
+    };
+
+    /**
+     * The arrows at the edges of what a caret can reach, and at the edges of a
+     * run of formatting.
+     *
+     * Past the last line of a code block or the last row of a table that ends
+     * the document, `ArrowDown` opens a paragraph under it, and `ArrowUp` over
+     * the first block does the same above. See `opened`.
+     *
+     * At the end of a code span, a bold run or any other formatting, the caret
+     * is at one place on the page and at two in the document — in front of the
+     * closing marker and after it — and a caret put down there was always the
+     * first of those, so a code span at the end of a paragraph could not be
+     * typed out of. `ArrowRight` there moves the caret past the marker without
+     * moving it on the page, the way a caret is kept beside a space the page
+     * does not draw (see `MawyAim`), and the next `ArrowRight` goes on as
+     * usual. `ArrowLeft` at the start is the same, read the other way.
+     */
+    const navigate = (event: React.KeyboardEvent<HTMLElement>): void => {
+      const element = root.current;
+      const selection = element?.ownerDocument.getSelection();
+      const modified = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey;
+      const node = selection?.anchorNode;
+
+      if (
+        !element ||
+        readOnly ||
+        modified ||
+        composing.current ||
+        !selection?.isCollapsed ||
+        !node ||
+        !element.contains(node) ||
+        !/^Arrow(?:Up|Down|Left|Right)$/.test(event.key)
+      ) {
+        return;
+      }
+
+      const offset = selection.anchorOffset;
+      const forwards = event.key === 'ArrowDown' || event.key === 'ArrowRight';
+      const across = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+      const host = node.nodeType === 1 ? (node as Element) : node.parentElement;
+      const holder = host?.closest('pre, tr');
+
+      if (holder && element.contains(holder) && edgeOf(holder, node, offset, forwards, across)) {
+        const edit = opened(element, forwards);
+
+        if (edit) {
+          event.preventDefault();
+          onEdit(edit);
+        }
+
+        return;
+      }
+
+      if (!across) {
+        return;
+      }
+
+      const at = documentAt(element, node, offset, value, aim.current);
+
+      for (
+        let mark = host;
+        mark && mark !== element && INLINE_MARK.test(mark.tagName) && !mark.closest('pre');
+        mark = mark.parentElement
+      ) {
+        const probe = element.ownerDocument.createRange();
+
+        probe.selectNodeContents(mark);
+
+        if (forwards) {
+          probe.setStart(node, offset);
+        } else {
+          probe.setEnd(node, offset);
+        }
+
+        if (probe.toString()) {
+          return;
+        }
+
+        const range = rangeOf(mark);
+        const past = range && (forwards ? range.end : range.start);
+
+        if (
+          past !== null &&
+          past !== undefined &&
+          at !== null &&
+          (forwards ? at < past : at > past)
+        ) {
+          event.preventDefault();
+          aim.current = { value, at: past, node, offset };
+          onSelect({ start: past, end: past });
+
+          return;
+        }
+      }
+    };
+
     /** Whether a point on the page is lower than everything the document draws. */
     const belowAll = (element: HTMLElement, y: number) => {
       const last = element.lastElementChild;
@@ -868,6 +1000,14 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           );
 
       if (!point || !element.contains(point.node) || !put(element, point)) {
+        const edit = opened(element, true, false);
+
+        if (edit) {
+          onEdit(edit);
+
+          return;
+        }
+
         put(element, domAt(element, value.length, value));
       }
     };
@@ -896,6 +1036,17 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         return;
       }
 
+      // Below a code block, a divider or drawn HTML, a paragraph to type in.
+      // Below a table the caret goes into its last cell, as it always has, and
+      // `Enter` on a row still empty or `ArrowDown` is the way out of it.
+      const edit = opened(element, true, false);
+
+      if (edit) {
+        onEdit(edit);
+
+        return;
+      }
+
       put(element, domAt(element, value.length, value));
     };
 
@@ -917,7 +1068,10 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           role="textbox"
           aria-multiline="true"
           aria-label={label}
-          onKeyDown={onKeyDown}
+          onKeyDown={(event) => {
+            navigate(event);
+            onKeyDown(event);
+          }}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
           <React.Fragment key={generation}>{content}</React.Fragment>
@@ -926,6 +1080,69 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     );
   }
 );
+
+/** The formatting a caret can be at the edge of, drawn as an element of its own. */
+const INLINE_MARK = /^(?:CODE|STRONG|EM|DEL|S)$/;
+
+/** The blocks with no line of text around them for a caret to go on to. See `opened`. */
+const CLOSED_BLOCK = /^(?:code|rule|html|table)$/;
+
+/** What kind of block an element drawn straight under the document is. */
+function blockKind(element: Element): string {
+  return element.matches('.mawy-md-pre')
+    ? 'code'
+    : element.matches('hr')
+      ? 'rule'
+      : element.matches('.mawy-md-html')
+        ? 'html'
+        : element.matches('table, .mawy-md-table-scroll')
+          ? 'table'
+          : '';
+}
+
+/** The last block the document draws, which is before the notes when there are any. */
+function lastBlock(element: HTMLElement): Element | null {
+  let last = element.lastElementChild;
+
+  while (last && !last.hasAttribute('data-mawy-range')) {
+    last = last.previousElementSibling;
+  }
+
+  return last;
+}
+
+/**
+ * Whether a caret is on the last line of a code block or the last row of a
+ * table, going down, or on the first going up — and, for the arrows across, at
+ * the very end or the very start of it.
+ */
+function edgeOf(
+  holder: Element,
+  node: Node,
+  offset: number,
+  forwards: boolean,
+  across: boolean
+): boolean {
+  if (holder.tagName === 'TR') {
+    const rows = holder.closest('table')?.querySelectorAll('tr');
+
+    return !across && Boolean(rows?.length) && rows![forwards ? rows!.length - 1 : 0] === holder;
+  }
+
+  const range = holder.ownerDocument.createRange();
+
+  range.selectNodeContents(holder);
+
+  if (forwards) {
+    range.setStart(node, offset);
+  } else {
+    range.setEnd(node, offset);
+  }
+
+  const rest = range.toString();
+
+  return across ? !rest.replace(/\n$/, '') : !rest.replace(/\n$/, '').includes('\n');
+}
 
 /** What a composition changed: a run of text, or an empty block's contents. */
 function contentOf(host: Node): string {

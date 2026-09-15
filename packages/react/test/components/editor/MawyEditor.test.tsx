@@ -2548,6 +2548,122 @@ describe('the document surface', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\nx'));
   });
 
+  it('draws an empty code block a line tall, and gives it no focus of its own', async () => {
+    const screen = await render(<MawyEditor defaultValue={'```\n\n```'} mode="wysiwyg" />);
+    const code = bodyOf(screen).querySelector('code') as HTMLElement;
+
+    // An inline element with nothing in it makes no line, and the caret put in
+    // one was drawn half under the box's bottom border.
+    expect(code.getBoundingClientRect().height).toBeGreaterThan(10);
+    // The tab stop a viewer gives a code block is a second focusable element
+    // inside the one being edited, and a press in it drew a ring around it.
+    expect(bodyOf(screen).querySelector('pre')?.hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('leaves a code block by Enter on its last line, when that line is empty', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor style={WIDE} defaultValue="One." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'One.', 4);
+    await userEvent.keyboard('{Enter}');
+    await userEvent.click(page.getByRole('button', { name: 'Code block' }));
+    await userEvent.keyboard('code{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\n```\ncode\n\n```'));
+
+    await userEvent.keyboard('{Enter}x');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('One.\n\n```\ncode\n```\n\nx')
+    );
+    expect(bodyOf(screen).querySelector('code')?.textContent).toBe('code');
+  });
+
+  it('takes a code block off with Backspace at its start', async () => {
+    for (const [source, typed] of [
+      ['One.\n\n```\n\n```', 'One.\n\nx'],
+      ['One.\n\n```\ncode\n```', 'One.\n\nxcode']
+    ]) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+      );
+      const code = bodyOf(screen).querySelector('code') as HTMLElement;
+      const range = document.createRange();
+
+      bodyOf(screen).focus();
+      range.setStart(code.firstChild ?? code, 0);
+      range.collapse(true);
+      document.getSelection()?.removeAllRanges();
+      document.getSelection()?.addRange(range);
+
+      await userEvent.keyboard('{Backspace}x');
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(typed));
+      expect(bodyOf(screen).querySelector('pre')).toBeNull();
+      await screen.unmount();
+    }
+  });
+
+  it('opens a paragraph past a code block at either end of the document', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'```\ncode\n```'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'code', 2);
+    await userEvent.keyboard('{ArrowDown}x');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('```\ncode\n```\n\nx'));
+
+    put(bodyOf(screen), 'code', 0);
+    await userEvent.keyboard('{ArrowUp}y');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('y\n\n```\ncode\n```\n\nx'));
+  });
+
+  it('opens a paragraph for a press below a code block or a divider that ends the document', async () => {
+    for (const source of ['```\ncode\n```', 'Words.\n\n---']) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor
+          style={{ height: 344 }}
+          modes={['wysiwyg']}
+          defaultValue={source}
+          onChange={onChange}
+        />
+      );
+      const pane = screen.container.querySelector('.mawy-document') as HTMLElement;
+
+      await userEvent.click(page.elementLocator(pane), {
+        position: { x: 40, y: pane.clientHeight - 12 }
+      });
+      await userEvent.keyboard('x');
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(`${source}\n\nx`));
+      await screen.unmount();
+    }
+  });
+
+  it('moves past the end of a code span or a bold run, so what is typed next is outside it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="A `code` and **bold**" mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'code', 4);
+    await userEvent.keyboard('{ArrowRight}!');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('A `code`! and **bold**'));
+
+    put(bodyOf(screen), 'bold', 4);
+    await userEvent.keyboard('{ArrowRight}.');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('A `code`! and **bold**.'));
+
+    // Pressed where there is nothing to move past, the arrow is the browser's.
+    put(bodyOf(screen), 'bold', 2);
+    await userEvent.keyboard('{ArrowRight}-');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('A `code`! and **bol-d**.'));
+  });
+
   it('carries a quotation down, and a code block takes one newline', async () => {
     const quoted = vi.fn();
     const quote = await render(

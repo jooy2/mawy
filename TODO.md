@@ -44,15 +44,10 @@ something to read before starting rather than a job waiting for somebody.
 
 ## Confirmed
 
-- **Nothing can be typed after a divider that ends a document, on `wysiwyg`.**
-  A press below `Words.\n\n---` puts the caret at the end of the document, and
-  `domAt` in `packages/react/src/internal/position.ts` can only place that on
-  the `<hr>` itself, where `editFor` in `internal/editing.ts` finds no block to
-  write into. The keystroke goes nowhere in Chromium, Firefox and WebKit alike.
-  A document that ends in a paragraph, a list, a code block or a table takes
-  the keystroke. The caret needs somewhere to be after the rule, and `withRoom`
-  in `components/editor/MawyEditorDocument.tsx`, which draws one empty paragraph
-  where the last edit left the caret, is the mechanism closest to that.
+Nothing confirmed is waiting. The last finding here was that nothing could be
+typed after a divider that ends a document on `wysiwyg`, and a press below a
+divider, a code block or drawn HTML that ends a document opens a paragraph
+under it now.
 
 Before that, the last of it was what the React editor gained for an application
 moving from MDXEditor and the Flutter editor did not, and the seven toolbar

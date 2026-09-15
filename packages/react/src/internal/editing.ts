@@ -16,7 +16,7 @@
  * backspace there removes a separator rather than a letter.
  */
 
-import { continueList, continueTable } from './commands.js';
+import { containerOf, continueList, continueTable, fencedAt, runCommand } from './commands.js';
 import type { MdRange } from './markdown/ast.js';
 import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
 import { markdownFromHtml } from './markdown/paste.js';
@@ -455,6 +455,21 @@ function deleteBefore(
     return removeAtom(value, atom);
   }
 
+  // At the start of a code block the fences go, and what was in the block is a
+  // paragraph — which is what `Backspace` at the start of any other block with
+  // a marker does to the marker. There is no joining a code block to what is
+  // above it, and with nothing to join and nothing to take, a block with
+  // nothing in it could not be got rid of at all.
+  const block = blockAt(root, node);
+
+  if (block?.tagName === 'PRE') {
+    const back = before(root, node, offset);
+
+    if (!back || !block.contains(back.node)) {
+      return fencedAt(value, caret) ? unfenced(value, caret) : null;
+    }
+  }
+
   const top = topOf(root, node);
   const empty = emptyAt(top);
 
@@ -571,6 +586,71 @@ function deleteAfter(
   return { value: value.slice(0, from) + value.slice(Math.max(to, from + 1)), caret };
 }
 
+/** The fenced code block a caret is in, taken off, with the caret kept among its characters. */
+function unfenced(value: string, caret: number): MawyEdit {
+  const after = runCommand('codeBlock', { value, start: caret, end: caret });
+
+  return { value: after.value, caret: after.start };
+}
+
+/** A line that closes a fence, once whatever holds the block is taken off it. */
+const CLOSING = /^(?:`{3,}|~{3,})[ \t]*$/;
+
+/**
+ * `Enter` on the last line of a code block, when that line is empty: the way
+ * out of the block.
+ *
+ * Everything in a code block is the characters it is, so `Enter` there is a
+ * line ending, and a block with nothing after it had nowhere below it for a
+ * caret to go — what was typed next went into the block for good. The rule is
+ * the list's: `Enter` on an item still empty gives the item up, and `Enter` on
+ * a last line still empty gives that line up and leaves the caret on a
+ * paragraph under the block, inside whatever holds the block.
+ *
+ * Not on the only line of a block, which is an empty block somebody has just
+ * made and is about to type into.
+ */
+function leaveCode(
+  value: string,
+  start: number,
+  end: number,
+  options: MarkdownOptions
+): MawyEdit | null {
+  const code = start === end ? fencedAt(value, start) : null;
+
+  if (!code) {
+    return null;
+  }
+
+  const lineStart = start > 0 ? value.lastIndexOf('\n', start - 1) + 1 : 0;
+  const newline = value.indexOf('\n', start);
+
+  if (newline === -1 || lineStart <= code.content.start) {
+    return null;
+  }
+
+  const next = value.indexOf('\n', newline + 1);
+  const closing = value.slice(newline + 1, next === -1 ? value.length : next);
+  const { carry, mark } = containerOf(closing);
+
+  if (containerOf(value.slice(lineStart, newline)).mark.trim() || !CLOSING.test(mark)) {
+    return null;
+  }
+
+  const without = value.slice(0, lineStart - 1) + value.slice(newline);
+  const fenceEnd = lineStart + closing.length;
+  const text = `\n${carry.trimEnd()}\n${carry}`;
+
+  return settle(
+    {
+      value: without.slice(0, fenceEnd) + text + without.slice(fenceEnd),
+      caret: fenceEnd + text.length,
+      betweenBlocks: true
+    },
+    options
+  );
+}
+
 /** A quotation carries its own marker down the way a list carries a bullet. */
 const QUOTED = /^((?:[ \t]*>[ \t]?)+)(.*)$/;
 
@@ -635,7 +715,7 @@ function breakAt(
   }
 
   if (tag === 'PRE') {
-    return splice(value, start, end, '\n');
+    return leaveCode(value, start, end, options) ?? splice(value, start, end, '\n');
   }
 
   if (start === end) {

@@ -210,6 +210,17 @@ export interface RenderContext {
    * `headingLevel`. One, so that it is `h1`, unless the drawing says otherwise.
    */
   headingBase?: number;
+  /**
+   * Whether the drawing is the surface being typed into.
+   *
+   * The editor's drawn document is one `textbox`, and a caret moves through a
+   * code block or a wide table the way it moves through a paragraph. The tab
+   * stop a viewer gives each of those so that a keyboard can scroll them is a
+   * second focusable element inside the one being edited: a press in the block
+   * gave it the focus, and the ring drawn around it said the caret had gone
+   * somewhere other than the document.
+   */
+  editing?: boolean;
 }
 
 /**
@@ -1188,7 +1199,7 @@ export function drawnCode(
           whether it overflows is a question about the width it is drawn at, and
           answering it would mean measuring every code block on every resize —
           which is a great deal of work to save a keyboard one press. */}
-      <pre tabIndex={0}>
+      <pre tabIndex={context.editing ? undefined : 0}>
         {/* The range on the `code` rather than only on the box around it: the
             box holds the fences and the copy button as well, and a caret in an
             empty block would otherwise have the backticks for an address. */}
@@ -1509,7 +1520,7 @@ export function renderBlocks(
           <div
             key={index}
             className="mawy-md-table-scroll"
-            tabIndex={0}
+            tabIndex={context.editing ? undefined : 0}
             {...origin(block, context)}
           >
             <table className="mawy-md-table">

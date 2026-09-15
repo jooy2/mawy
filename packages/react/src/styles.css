@@ -1961,6 +1961,16 @@
   min-height: calc(1em * var(--mawy-doc-line-height));
 }
 
+/* An empty code block too. Its `code` is an inline element with nothing in it,
+ * which makes no line at all, so the box was its padding and nothing else and
+ * the caret put inside it was drawn half under the bottom border. One line of
+ * the block's own height, as tall as the line typed into it will be. */
+.mawy-root .mawy-document-body .mawy-md-pre code:empty {
+  display: inline-block;
+  min-height: calc(1em * 1.6);
+  vertical-align: top;
+}
+
 .mawy-root .mawy-document-body > p:only-child:empty::before {
   content: var(--mawy-placeholder, '');
   color: var(--mawy-fg-subtle);
