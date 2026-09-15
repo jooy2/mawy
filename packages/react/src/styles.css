@@ -2268,6 +2268,17 @@
   background: var(--mawy-find-current);
 }
 
+/* The same marks on the drawn document, where nothing can be put around a
+ * match in a tree React owns, so they are ranges the browser paints instead.
+ * See `drawnFind.ts`. */
+.mawy-root .mawy-document-body ::highlight(mawy-find) {
+  background-color: var(--mawy-find);
+}
+
+.mawy-root .mawy-document-body ::highlight(mawy-find-current) {
+  background-color: var(--mawy-find-current);
+}
+
 /* A code block's own syntax, from whichever highlighter drew it -------------
  *
  * Thirteen names and eight colours: `constant` reads as a number because that

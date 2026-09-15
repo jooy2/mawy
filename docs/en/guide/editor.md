@@ -474,7 +474,9 @@ Replace and replace all are on the second row. Replace all is one pass over the 
 
 ::: fw react
 
-The bar is only offered where there is a source to search, which is `plain` and `split`. In `preview` and `wysiwyg` the document is drawn as elements, and the browser's own find works on it.
+The bar is offered wherever the document can be edited: `plain`, `split` and `wysiwyg`. In `preview` the document is drawn as elements, and the browser's own find works on it.
+
+**On `wysiwyg` the bar finds what the page draws.** The search is still over the Markdown, which is what a replacement is written into, but a match counts only where every one of its characters is drawn as itself. The `bold` in a link's address is not drawn, so it is not counted, not stepped to and not replaced, and the count is the count a reader can see. A match cannot straddle two runs of formatting, so `hello` is not found across `he**llo**`. Matches are marked with the CSS Custom Highlight API rather than with elements, because the drawn document is React's tree and an element put around a match would be one React did not make. In a browser without that API the bar still counts and steps, and the match is selected when the bar closes. Stepping leaves the focus in the bar, and closing it puts the focus back on the document with the match selected.
 
 :::
 

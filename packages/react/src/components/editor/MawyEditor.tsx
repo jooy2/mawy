@@ -88,6 +88,7 @@ import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
 import { FindBar } from '../../internal/find.js';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../../internal/search.js';
+import { drawnMatches, paintMatches, rangeFor, unpaintMatches } from '../../internal/drawnFind.js';
 import {
   MAWY_ACCEPT,
   acceptsFile,
@@ -1926,7 +1927,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     // Before the shift branch, because `Cmd`+`Shift`+`F` is not a shifted
     // shortcut of anything and should open the same bar.
-    if (key === 'f' && showSource) {
+    if (key === 'f' && (showSource || showDocument)) {
       event.preventDefault();
       openFind();
 
@@ -2068,9 +2069,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * Finding, and replacing
    * ------------------------------------------------------------------ */
 
-  const matches = React.useMemo(
+  const searched = React.useMemo(
     () => (finding ? findMatches(text, query, matchCase) : []),
     [finding, text, query, matchCase]
+  );
+  /**
+   * What the find bar counts and steps through. On the drawn document, only
+   * the matches the page draws as themselves — see `drawnMatches` — so the
+   * count is the count a reader can see.
+   */
+  const matches = React.useMemo(
+    () =>
+      showDocument && searched.length
+        ? drawnMatches(text, searched, {
+            gfm: parse?.gfm ?? true,
+            breaks: parse?.breaks ?? false,
+            definitionLists: parse?.definitionLists ?? true
+          })
+        : searched,
+    [parse?.breaks, parse?.definitionLists, parse?.gfm, searched, showDocument, text]
   );
 
   /**
@@ -2092,6 +2109,32 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       const match = matches[index];
       const element = source.current;
 
+      if (match && showDocument) {
+        // The editor's own record of the selection moves and the page's does
+        // not, for the reason given below: a selection put inside the drawn
+        // document is a focus taken from the find bar. The match is marked,
+        // brought into view, and selected on the page when the bar closes.
+        const drawnDocument = drawn.current;
+        const pane = drawnDocument?.parentElement;
+        const box = drawnDocument && rangeFor(drawnDocument, text, match)?.getBoundingClientRect();
+
+        setSelection({ start: match.start, end: match.end });
+
+        if (pane && box) {
+          const view = pane.getBoundingClientRect();
+
+          if (box.top < view.top || box.bottom > view.bottom) {
+            pane.scrollTop += box.top - view.top - view.height / 3;
+          }
+        }
+
+        if (!finding) {
+          focusDrawn(match.start, match.end);
+        }
+
+        return;
+      }
+
       if (!match || !element) {
         return;
       }
@@ -2110,7 +2153,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       element.setSelectionRange(match.start, match.end);
       readSelection();
     },
-    [finding, matches, readSelection]
+    [finding, focusDrawn, matches, readSelection, showDocument, text]
   );
 
   const step = React.useCallback(
@@ -2126,7 +2169,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
   const openFind = React.useCallback(() => {
     const element = source.current;
-    const selected = element ? text.slice(element.selectionStart, element.selectionEnd) : '';
+    const selected = showDocument
+      ? text.slice(selection.start, selection.end)
+      : element
+        ? text.slice(element.selectionStart, element.selectionEnd)
+        : '';
 
     // What is selected is nearly always what somebody is about to look for, and
     // a selection that spans lines is nearly always not.
@@ -2135,11 +2182,41 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     }
 
     setFinding(true);
-  }, [text]);
+  }, [selection.end, selection.start, showDocument, text]);
 
   const closeFind = React.useCallback(() => {
     setFinding(false);
+
+    if (showDocument) {
+      focusDrawn(selection.start, selection.end);
+
+      return;
+    }
+
     source.current?.focus();
+  }, [focusDrawn, selection.end, selection.start, showDocument]);
+
+  /**
+   * The matches marked on the drawn document while the find bar is open, and
+   * taken away when it closes. After every render, because what the page draws
+   * changes under the marks with every keystroke in the find box and every step.
+   */
+  const painter = React.useRef({});
+
+  React.useLayoutEffect(() => {
+    const element = drawn.current;
+
+    if (finding && showDocument && element) {
+      paintMatches(painter.current, element, text, matches, currentMatch);
+    } else {
+      unpaintMatches(painter.current);
+    }
+  });
+
+  React.useEffect(() => {
+    const owner = painter.current;
+
+    return () => unpaintMatches(owner);
   }, []);
 
   /* ---------------------------------------------------------------------
@@ -2241,8 +2318,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             }
           }}
           editable={editable}
-          onFind={showSource ? openFind : undefined}
-          finding={finding && showSource}
+          onFind={showSource || showDocument ? openFind : undefined}
+          finding={finding && (showSource || showDocument)}
           onOpen={readOnly ? undefined : openFile}
           onPickImage={onUploadImage ? pickImage : undefined}
           onInsertTable={insertTableSized}
@@ -2253,7 +2330,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         />
       </React.Fragment>
     ) : null,
-    finding && showSource ? (
+    finding && (showSource || showDocument) ? (
       <React.Fragment key="find">
         <FindBar
           query={query}
@@ -2274,6 +2351,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
             const next = replaceMatch(text, match, replacement);
 
+            // Written without a selection put on the page, which on the drawn
+            // document would take the focus from the replacement being typed.
+            if (showDocument) {
+              setRoom(null);
+              setSelection({ start: match.start, end: next.caret });
+              write(next.value);
+
+              return;
+            }
+
             apply(
               { value: text, ...selection },
               {
@@ -2284,6 +2371,26 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             );
           }}
           onReplaceAll={() => {
+            // On the drawn document, the matches it counted and nothing hidden
+            // in an address or a marker besides.
+            if (showDocument) {
+              let out = '';
+              let at = 0;
+
+              for (const match of matches) {
+                out += text.slice(at, match.start) + replacement;
+                at = match.end;
+              }
+
+              if (matches.length) {
+                setRoom(null);
+                setSelection({ start: selection.start, end: selection.start });
+                write(out + text.slice(at));
+              }
+
+              return;
+            }
+
             const next = replaceAll(text, query, replacement, matchCase);
 
             if (next.count) {

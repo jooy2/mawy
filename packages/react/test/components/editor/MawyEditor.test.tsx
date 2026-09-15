@@ -1179,6 +1179,82 @@ describe('finding', () => {
     field.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
+  it('finds on the drawn document what the page draws, and marks it there', async () => {
+    const source = 'A **bold** word, [a link](https://bold.example) and bold.';
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} style={WIDE} />
+    );
+
+    put(bodyOf(screen), 'A ', 1);
+    bodyOf(screen).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true, cancelable: true })
+    );
+    await vi.waitFor(() => expect(document.activeElement).toBe(findField(screen)));
+
+    type(findField(screen), 'bold');
+
+    // Not the one in the address, which the page does not draw.
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('1 of 2')
+    );
+
+    if (typeof CSS !== 'undefined' && 'highlights' in CSS) {
+      await vi.waitFor(() => expect(CSS.highlights.get('mawy-find')?.size).toBe(2));
+      expect(CSS.highlights.get('mawy-find-current')?.size).toBe(1);
+    }
+
+    // Stepping leaves the focus in the bar, and closing it selects the match.
+    // The first press goes to the match after the caret, and the second on.
+    for (let press = 0; press < 2; press += 1) {
+      findField(screen).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      );
+      await new Promise((done) => setTimeout(done, 30));
+    }
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-find-count')?.textContent).toBe('2 of 2')
+    );
+    expect(document.activeElement).toBe(findField(screen));
+
+    findField(screen).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    );
+    await vi.waitFor(() => expect(document.activeElement).toBe(bodyOf(screen)));
+    expect(document.getSelection()?.getRangeAt(0).toString()).toBe('bold');
+
+    if (typeof CSS !== 'undefined' && 'highlights' in CSS) {
+      expect(CSS.highlights.has('mawy-find')).toBe(false);
+    }
+  });
+
+  it('replaces on the drawn document what it counted and nothing hidden', async () => {
+    const source = 'A **bold** word, [a link](https://bold.example) and bold.';
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} style={WIDE} />
+    );
+
+    await userEvent.click(page.getByRole('button', { name: 'Find' }));
+    type(findField(screen), 'bold');
+    type(screen.container.querySelectorAll('.mawy-find-input')[1] as HTMLInputElement, 'b');
+
+    await userEvent.click(page.getByRole('button', { name: 'Replace', exact: true }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        'A **b** word, [a link](https://bold.example) and bold.'
+      )
+    );
+
+    await userEvent.click(page.getByRole('button', { name: 'Replace all' }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        'A **b** word, [a link](https://bold.example) and b.'
+      )
+    );
+  });
+
   it('opens on the shortcut, takes the focus, and counts what it found', async () => {
     const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
 
