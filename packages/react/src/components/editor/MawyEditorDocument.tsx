@@ -13,9 +13,9 @@ import type {
   MawyParseOptions,
   MawyUrlResolver
 } from '../../types.js';
-import type { MawyCommand } from '../../internal/commands.js';
+import { indent, type MawyCommand } from '../../internal/commands.js';
 import type { MawyStrings } from '../../internal/i18n.js';
-import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
+import type { MdBlock, MdList, MdNode, MdRange } from '../../internal/markdown/ast.js';
 import { useHighlighter } from '../../internal/highlighter.js';
 import { LIVE } from '../../internal/markdown/live.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
@@ -35,6 +35,7 @@ import {
   forLabel,
   heldText,
   inLabel,
+  listKept,
   markdownFor,
   openedAt,
   toggledTask,
@@ -138,6 +139,11 @@ export interface MawyEditorDocumentProps {
    * `heldText`.
    */
   held: readonly MawyCommand[];
+  /**
+   * Where the caret is in an empty list item `Tab` is holding a level in until
+   * something is written in it, or `null`. See `nestingWaits`.
+   */
+  nested: number | null;
   /**
    * Files on the clipboard, put in as images. Absent when the application has
    * not said where an image goes, which is when there is nothing to be done
@@ -287,6 +293,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       room,
       aim,
       held,
+      nested,
       onImages
     },
     ref
@@ -342,11 +349,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       onSelect,
       onImages,
       options,
-      held
+      held,
+      nested
     });
 
     React.useLayoutEffect(() => {
-      latest.current = { value, readOnly, onEdit, onSelect, onImages, options, held };
+      latest.current = { value, readOnly, onEdit, onSelect, onImages, options, held, nested };
       selectionRef.current = selection;
     });
 
@@ -360,8 +368,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     // until the document has a fenced code block with a language on it.
     const highlighter = useHighlighter(highlight, document_);
     const blocks = React.useMemo(
-      () => withRoom(document_.root.children, room, value),
-      [document_, room, value]
+      () => withNesting(withRoom(document_.root.children, room, value), nested),
+      [document_, nested, room, value]
     );
     const footnotes = React.useMemo(
       () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
@@ -600,7 +608,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           aim.current,
           now.options,
           drag.current,
-          now.held
+          now.held,
+          now.nested
         );
 
         if (edit) {
@@ -707,7 +716,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
             : cell
               ? text.replace(/\r?\n/g, '<br>').replace(/(?<!\\)\|/g, '\\|')
               : text,
-          aim.current
+          aim.current,
+          now.nested
         );
 
         if (edit) {
@@ -969,6 +979,25 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         // change back.
         restore(was.host, was.before);
 
+        // Into an empty list item held a level in, which goes in with what was
+        // composed into it, the way it does with a keystroke. See
+        // `nestingWaits`.
+        const inward =
+          !was.before && nested === was.start
+            ? indent({ value, start: was.start, end: was.start }, false)
+            : null;
+
+        if (inward && inward.value !== value) {
+          onEdit(
+            heldText(inward.value, inward.start, after, held) ?? {
+              value: inward.value.slice(0, inward.start) + after + inward.value.slice(inward.start),
+              caret: inward.start + (caret - was.start)
+            }
+          );
+
+          return;
+        }
+
         // An empty table cell is spaces between two pipes, and composing into
         // one gives the spaces back around the words the way typing into one
         // does. See `editFor`.
@@ -1011,10 +1040,17 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         }
 
         if (point !== null) {
-          onEdit({
-            value: value.slice(0, point) + typed + value.slice(point),
-            caret: point + typed.length
-          });
+          onEdit(
+            listKept(
+              value,
+              point,
+              {
+                value: value.slice(0, point) + typed + value.slice(point),
+                caret: point + typed.length
+              },
+              options
+            )
+          );
 
           return;
         }
@@ -1026,13 +1062,21 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           : openedAt(element, was.host, value, was.start);
         const shift = opened.at - was.start;
 
-        onEdit({
-          value:
-            opened.value.slice(0, opened.at) +
-            after +
-            opened.value.slice(opened.at + was.before.length),
-          caret: caret + shift
-        });
+        // And under a list the way a keystroke is. See `listKept`.
+        onEdit(
+          listKept(
+            value,
+            was.start,
+            {
+              value:
+                opened.value.slice(0, opened.at) +
+                after +
+                opened.value.slice(opened.at + was.before.length),
+              caret: caret + shift
+            },
+            options
+          )
+        );
       };
 
       element.addEventListener('compositionstart', opened);
@@ -1042,7 +1086,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('compositionstart', opened);
         element.removeEventListener('compositionend', closed);
       };
-    }, [value, readOnly, onEdit, aim, held]);
+    }, [value, readOnly, onEdit, aim, held, nested, options]);
 
     /**
      * The caret, put down by a press rather than by the browser, and whether
@@ -1901,4 +1945,74 @@ function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBloc
 
 function empty(at: number): MdBlock {
   return { type: 'paragraph', range: { start: at, end: at }, children: [] };
+}
+
+/**
+ * The document's blocks, with the empty list item `Tab` is holding a level in
+ * drawn there: as the first item of a list inside the item above it, which is
+ * where the first letter typed into it will write it. See `nestingWaits`.
+ *
+ * The item keeps its own range, and the item above is drawn as reaching to the
+ * end of it, which is the shape the parser gives an item with a list inside
+ * it; a place on the page and a place in the document still say the same
+ * thing about each other. Only the path down to the item is copied.
+ */
+function withNesting(blocks: MdBlock[], at: number | null): MdBlock[] {
+  if (at === null) {
+    return blocks;
+  }
+
+  let moved = false;
+
+  const visit = <T extends MdNode>(nodes: readonly T[]): T[] =>
+    nodes.map((node) => {
+      if (moved || at < node.range.start || at > node.range.end || !('children' in node)) {
+        return node;
+      }
+
+      if (node.type === 'list') {
+        const items = node.children;
+        const index = items.findIndex(
+          (item) => item.range.start <= at && at <= item.range.end && !item.children.length
+        );
+
+        if (index > 0) {
+          const item = items[index];
+          const above = items[index - 1];
+          const inner: MdList = {
+            type: 'list',
+            // From the end of the item above rather than the start of this one,
+            // or the list and its one empty item are the same range, and the
+            // list is taken for the marker the caret is in and written out as
+            // its characters. See `revealedIn`.
+            range: { start: above.range.end, end: item.range.end },
+            ordered: node.ordered,
+            start: 1,
+            loose: false,
+            children: [item]
+          };
+
+          moved = true;
+
+          return {
+            ...node,
+            children: [
+              ...items.slice(0, index - 1),
+              {
+                ...above,
+                range: { start: above.range.start, end: item.range.end },
+                children: [...above.children, inner]
+              },
+              ...items.slice(index + 1)
+            ]
+          };
+        }
+      }
+
+      const children = visit(node.children as MdNode[]);
+
+      return moved ? ({ ...node, children } as T) : node;
+    });
+
+  return visit(blocks);
 }

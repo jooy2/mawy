@@ -20,6 +20,7 @@ import {
   containerOf,
   continueList,
   fencedAt,
+  indent,
   runCommand,
   runTableCommand,
   tableSpanAt,
@@ -845,6 +846,12 @@ function breakAt(
   }
 
   if (start === end) {
+    const outward = movedOut(value, start, options);
+
+    if (outward) {
+      return outward;
+    }
+
     const item = continueList({ value, start, end }, options.definitionLists ?? true);
 
     if (item) {
@@ -874,6 +881,215 @@ function breakAt(
     { ...splice(opened.value, start + shift, end + shift, '\n\n'), betweenBlocks: true },
     options
   );
+}
+
+/** A line that opens a list item, or is a list item's marker so far. */
+const OPENS_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
+
+/** The top-level list a place in a document is inside, where it is inside one. */
+function listAt(value: string, at: number, options: MarkdownOptions): MdRange | null {
+  const list = parseMarkdown(value, options).root.children.find(
+    (block) => block.type === 'list' && block.range.start <= at && at <= block.range.end
+  );
+
+  return list ? list.range : null;
+}
+
+/**
+ * An edit to a line under a list, written so the list above keeps the shape it
+ * had.
+ *
+ * Giving up an item leaves the caret on an empty paragraph under the list, a
+ * blank line away from it. A marker typed there joins that list, since a blank
+ * line between two items does not end a list in CommonMark, and the list it
+ * joins becomes loose: every item a paragraph, every item further apart, and
+ * the new one a gap away from the rest. So a line that has just become an item
+ * of the list above it loses the blank line in front of it and is the next
+ * item, the way it looks it should be.
+ *
+ * The other way round as well. A line under a list that was an item and has
+ * stopped being one — a letter typed straight after its `-` — is the last
+ * item's lazy continuation to the parser, and its words would be drawn at the
+ * end of that item; a blank line in front of it keeps it the paragraph it
+ * reads as.
+ *
+ * Only a line the edit made one or the other, and only under a list at the top
+ * of the document, so a list written loose on purpose is left loose.
+ */
+export function listKept(
+  was: string,
+  at: number,
+  edit: MawyEdit,
+  options: MarkdownOptions
+): MawyEdit {
+  const { value, caret } = edit;
+  const lineStart = caret > 0 ? value.lastIndexOf('\n', caret - 1) + 1 : 0;
+  const line = lineAround(value, caret);
+
+  if (lineStart < 2 || edit.value === was) {
+    return edit;
+  }
+
+  const aboveStart = value.lastIndexOf('\n', lineStart - 2) + 1;
+  const above = value.slice(aboveStart, lineStart - 1);
+
+  const wasItem = OPENS_ITEM.test(lineAround(was, at));
+
+  // Asked of the text before the parser, which is what spares a keystroke in
+  // the words of an item already there the parse.
+  if (OPENS_ITEM.test(line) && !wasItem && !above.trim() && aboveStart > 0) {
+    const joined = lineAround(value, aboveStart - 1).trim()
+      ? listAt(value, lineStart, options)
+      : null;
+
+    if (!joined || joined.start >= aboveStart || listAt(was, at, options)) {
+      return edit;
+    }
+
+    const next = value.slice(0, aboveStart) + value.slice(lineStart);
+
+    return listAt(next, aboveStart, options)?.start === joined.start
+      ? { value: next, caret: caret - (lineStart - aboveStart) }
+      : edit;
+  }
+
+  if (
+    !OPENS_ITEM.test(line) &&
+    above.trim() &&
+    !/^[ \t]/.test(line) &&
+    wasItem &&
+    listAt(value, lineStart, options)
+  ) {
+    const next = `${value.slice(0, lineStart)}\n${value.slice(lineStart)}`;
+
+    return listAt(next, lineStart + 1, options) ? edit : { value: next, caret: caret + 1 };
+  }
+
+  return edit;
+}
+
+/** The line a place in a document is on, without its line ending. */
+function lineAround(value: string, at: number): string {
+  const start = at > 0 ? value.lastIndexOf('\n', at - 1) + 1 : 0;
+  const stop = value.indexOf('\n', at);
+
+  return value.slice(start, stop === -1 ? value.length : stop);
+}
+
+/** A list item's marker with nothing written after it yet. */
+const EMPTY_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]+\[[ xX]\])?[ \t]*$/;
+
+/** The innermost list item a place is inside. */
+function itemAt(nodes: readonly MdNode[], at: number): MdNode | null {
+  for (const node of nodes) {
+    if (at < node.range.start || at > node.range.end) {
+      continue;
+    }
+
+    const inside = 'children' in node ? itemAt(node.children as MdNode[], at) : null;
+
+    if (inside) {
+      return inside;
+    }
+
+    if (node.type === 'listItem') {
+      return node;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Whether `Tab` on a list item has to wait for the item's first words before it
+ * is written, given what it would write.
+ *
+ * An item with nothing in it cannot begin a list inside the item above it.
+ * CommonMark does not let an empty item interrupt a paragraph, so the line the
+ * item was moved in to is read as the end of that paragraph instead: `- one`
+ * over `  - ` is `one` underlined, which is a heading, and `1. one` over
+ * `   1. ` is `one 1.`. On the drawn document that was a heading or a stray
+ * number appearing in the item above, with the caret nowhere to be seen.
+ *
+ * So on the drawn document the item is held a level in until something is
+ * written in it, the way formatting is held for what is typed next, and drawn
+ * where it is held; the first letter writes the item where it was moved to and
+ * the letter in it, which the parser reads as the item it looks like. Only
+ * where the parser would not read it: an empty item that joins a list already
+ * inside the item above is an item as it is, and is written straight away.
+ */
+export function nestingWaits(
+  state: { value: string; start: number; end: number },
+  next: { value: string; start: number },
+  options: MarkdownOptions
+): boolean {
+  const lineStart = state.start > 0 ? state.value.lastIndexOf('\n', state.start - 1) + 1 : 0;
+  const line = lineAround(state.value, state.start);
+
+  if (
+    state.start !== state.end ||
+    next.value === state.value ||
+    !EMPTY_ITEM.test(line) ||
+    state.start !== lineStart + line.length
+  ) {
+    return false;
+  }
+
+  const moved = next.start > 0 ? next.value.lastIndexOf('\n', next.start - 1) + 1 : 0;
+  const item = itemAt(parseMarkdown(next.value, options).root.children, next.start);
+
+  return !item || item.range.start < moved;
+}
+
+/**
+ * `Enter` on an item with nothing in it inside another item: the item a level
+ * out rather than given up, or `null` where it is not one of those.
+ *
+ * Giving an item up takes the caret out of the list altogether, which from
+ * three levels in is three levels at once; every editor with nested lists
+ * steps out one level at a time instead, so a list is left the way it was
+ * written into. At the outermost level there is nowhere further out, and the
+ * marker is given up as it was. Only where what the item is moved out to is an
+ * item the parser reads, and only for an item indented by spaces, which is the
+ * only kind `Tab` writes.
+ */
+function movedOut(value: string, at: number, options: MarkdownOptions): MawyEdit | null {
+  const lineStart = at > 0 ? value.lastIndexOf('\n', at - 1) + 1 : 0;
+  const line = lineAround(value, at);
+
+  if (!/^ +\S/.test(line) || !EMPTY_ITEM.test(line) || at !== lineStart + line.length) {
+    return null;
+  }
+
+  const next = indent({ value, start: at, end: at }, true);
+
+  if (next.value === value) {
+    return null;
+  }
+
+  const moved = next.start > 0 ? next.value.lastIndexOf('\n', next.start - 1) + 1 : 0;
+  const item = itemAt(parseMarkdown(next.value, options).root.children, next.start);
+
+  return item && item.range.start >= moved ? { value: next.value, caret: next.start } : null;
+}
+
+/**
+ * The document with the empty item the caret is in moved a level in, where
+ * that is what is being held for it, and the caret after its marker there; or
+ * `null`. See `nestingWaits`.
+ */
+function movedIn(
+  value: string,
+  place: { start: number; end: number },
+  nested: number | null
+): { value: string; start: number } | null {
+  if (nested === null || place.start !== place.end || place.start !== nested) {
+    return null;
+  }
+
+  const next = indent({ value, start: place.start, end: place.end }, false);
+
+  return next.value === value ? null : next;
 }
 
 /** The formatting that is written around the words it covers, by command. */
@@ -1370,15 +1586,20 @@ export function markdownFor(
  */
 export function editForText(
   root: HTMLElement,
-  value: string,
+  current: string,
   text: string,
-  aim: MawyAim | null
+  aim: MawyAim | null,
+  nested: number | null = null
 ): MawyEdit | null {
-  const place = placeOf(root, value, aim);
+  const found = placeOf(root, current, aim);
 
-  if (!place || !text) {
+  if (!found || !text) {
     return null;
   }
+
+  const inward = movedIn(current, found, nested);
+  const value = inward ? inward.value : current;
+  const place = inward ? { ...found, start: inward.start, end: inward.start } : found;
 
   if (place.start !== place.end) {
     return typedOver(value, place.start, place.end, text);
@@ -1418,13 +1639,14 @@ export function typedOver(value: string, start: number, end: number, text: strin
 export function editFor(
   event: InputEvent,
   root: HTMLElement,
-  value: string,
+  current: string,
   aim: MawyAim | null,
   options: MarkdownOptions = {},
   drag: MawyDrag = { taken: null },
-  held: readonly MawyCommand[] = []
+  held: readonly MawyCommand[] = [],
+  nested: number | null = null
 ): MawyEdit | null {
-  const place = placeOf(root, value, aim);
+  const found = placeOf(root, current, aim);
   // Whatever a drag left waiting is for the drop that follows it immediately,
   // and this is that drop or it is not. Read and cleared before anything else,
   // so that no later event can be answered with it.
@@ -1432,9 +1654,17 @@ export function editFor(
 
   drag.taken = null;
 
-  if (!place) {
+  if (!found) {
     return null;
   }
+
+  // Words written into an empty item held a level in are written a level in,
+  // and the item moved in with them. See `nestingWaits`.
+  const inward = /^insert(?:Text|ReplacementText|FromDrop)$/.test(event.inputType)
+    ? movedIn(current, found, nested)
+    : null;
+  const value = inward ? inward.value : current;
+  const place = inward ? { ...found, start: inward.start, end: inward.start } : found;
 
   const { start, end } = place;
   const range = { startContainer: place.node, startOffset: place.offset };
@@ -1504,7 +1734,12 @@ export function editFor(
           ? ruleFor(opened.value, opened.at, event.data)
           : null;
 
-      return rule ?? splice(opened.value, opened.at, opened.at + (end - start), event.data);
+      return listKept(
+        value,
+        start,
+        rule ?? splice(opened.value, opened.at, opened.at + (end - start), event.data),
+        options
+      );
     }
 
     case 'insertReplacementText':

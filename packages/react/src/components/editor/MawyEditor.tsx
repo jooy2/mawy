@@ -47,7 +47,13 @@ import {
   type MawyCommand,
   type MawyTableCommand
 } from '../../internal/commands.js';
-import { marksAt, wraps, type MawyAim, type MawyEdit } from '../../internal/editing.js';
+import {
+  marksAt,
+  nestingWaits,
+  wraps,
+  type MawyAim,
+  type MawyEdit
+} from '../../internal/editing.js';
 import {
   fileFromDataUrl,
   imageFilesIn,
@@ -1104,6 +1110,21 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     selection.start === selection.end
       ? holding.commands
       : NOTHING_HELD;
+  /**
+   * An empty list item on the drawn document `Tab` has moved a level in and
+   * nothing has been written into yet, with the document and the place it was
+   * pressed in. See `nestingWaits`. Let go of, as held formatting is, by a
+   * caret put somewhere else or a document changed some other way.
+   */
+  const [nesting, setNesting] = React.useState<{ value: string; at: number } | null>(null);
+  const nests =
+    showDocument &&
+    nesting &&
+    nesting.value === text &&
+    nesting.at === selection.start &&
+    selection.start === selection.end
+      ? nesting.at
+      : null;
   /** The formatting in force where the caret is, read once for every button. */
   const marks = React.useMemo(
     () =>
@@ -2273,11 +2294,33 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
         event.preventDefault();
 
+        // An empty item already held a level in goes no further in, and comes
+        // back out without anything being written. See `nestingWaits`.
+        if (nests !== null) {
+          if (event.shiftKey) {
+            setNesting(null);
+            pending.current = [state.start, state.end];
+          }
+
+          return;
+        }
+
         const next = indent(state, event.shiftKey);
 
-        if (next.value !== state.value) {
-          run(state, next);
+        if (next.value === state.value) {
+          return;
         }
+
+        if (!event.shiftKey && nestingWaits(state, next, parse ?? {})) {
+          // Drawn a level in, which takes the item the caret is in off the
+          // page and draws another, so the caret is put back in that one.
+          setNesting({ value: state.value, at: state.start });
+          pending.current = [state.start, state.end];
+
+          return;
+        }
+
+        run(state, next);
 
         return;
       }
@@ -2289,6 +2332,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     }
 
     if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey) {
+      // An empty item held a level in steps back out, the way one written a
+      // level in does, and nothing is written. See `movedOut`.
+      if (nests !== null) {
+        event.preventDefault();
+        setNesting(null);
+        pending.current = [state.start, state.end];
+
+        return;
+      }
+
       // Carrying a list marker down is a thing done to a line of Markdown. In
       // the drawn document `Enter` is an `insertParagraph`, which the surface
       // answers for in the container it was pressed in — this one is a list,
@@ -2910,6 +2963,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               room={room}
               aim={aim}
               held={holds}
+              nested={nests}
               onImages={onUploadImage ? addImages : undefined}
               onTarget={readTarget}
             />

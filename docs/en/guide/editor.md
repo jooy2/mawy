@@ -135,19 +135,19 @@ A caret in a place the page cannot draw is the same problem. Markdown does not k
 
 `Enter` is a different thing in every container it is pressed in, because a blank line means something different in each:
 
-| Where           | What `Enter` does                                                        |
-| --------------- | ------------------------------------------------------------------------ |
-| Between blocks  | A blank line                                                             |
-| In a list item  | A new item, marker carried down. On an item still empty, the marker goes |
-| In a quotation  | Ends the paragraph. Continuing it takes a _blank quoted line_            |
-| In a code block | A newline and nothing else                                               |
-| In a table      | A line break inside the cell, written `<br>`                             |
+| Where           | What `Enter` does                                                       |
+| --------------- | ----------------------------------------------------------------------- |
+| Between blocks  | A blank line                                                            |
+| In a list item  | A new item, marker carried down. Empty, a level out, or the marker goes |
+| In a quotation  | Ends the paragraph. Continuing it takes a _blank quoted line_           |
+| In a code block | A newline and nothing else                                              |
+| In a table      | A line break inside the cell, written `<br>`                            |
 
 `Backspace` at the start of a block joins it to the one before it: two list items run together, a paragraph joins the heading above it. Two joins are refused. Joining a table cell to the cell beside it would remove the pipe between them, and joining a code block to whatever is above it would remove the fence.
 
 **An empty paragraph is a pair of blank lines.** Markdown has no empty paragraph, but it has blank lines, and those are what this surface draws. The blank line two blocks need between them is nothing on the page. Every second blank line past it is a paragraph with nothing in it, which is exactly what `Enter` at the end of a paragraph writes: a line to type on and a blank line under it. So pressing `Enter` three times draws three empty paragraphs, the source has the six line endings that make them, and they are still there when the caret goes somewhere else. At either end of the document the first blank line counts too, because there is nothing on that side to be separated from. A second blank line left between two sections by hand is not a paragraph, so a document written elsewhere is drawn the way it was.
 
-`Backspace` in an empty paragraph takes that paragraph out and nothing else, and at the start of a block with one above it, it takes the one above. `Delete` does the same from the other side. Giving a list item up leaves the caret on a paragraph of this kind rather than on the line under the list, where the next letter would have been the item's lazy continuation. The preview and the viewer draw the same source the way every Markdown renderer does, with the blank lines as the separators they are.
+`Backspace` in an empty paragraph takes that paragraph out and nothing else, and at the start of a block with one above it, it takes the one above. `Delete` does the same from the other side. Giving a list item up leaves the caret on a paragraph of this kind rather than on the line under the list, where the next letter would have been the item's lazy continuation. A marker typed on that paragraph carries the list on: the blank line goes and the line is the list's next item, where CommonMark would have joined it to the list as a loose one, every item a paragraph and a gap away from the next. A letter typed straight after the marker, as in `-1`, puts the blank line back, and the line is a paragraph again. The preview and the viewer draw the same source the way every Markdown renderer does, with the blank lines as the separators they are.
 
 **A code block can be left the way a list can.** `Enter` on its last line, when that line is empty, gives the line up and puts the caret on a paragraph under the block, and `Backspace` at the start of a block takes its fences off and leaves what was in it as a paragraph. A code block, a divider or drawn HTML that ends the document has no line after it for a caret to go to, so a press below one opens a paragraph there, and `ArrowDown` on the last line of a code block or the last row of a table that ends the document does the same; `ArrowUp` over one that starts the document opens a paragraph above it. An empty code block is drawn a line tall, so the caret in it can be seen.
 
@@ -511,6 +511,8 @@ On the source surface, `Tab` indents and `Shift`+`Tab` takes it back. With nothi
 The width is **two spaces**, which Markdown requires. A nested list item has to clear its parent's marker, and under `- ` that is two columns. Four would become an indented code block the moment the list above it ends. Going back takes a tab or up to two spaces off the front of each line, and a line with nothing left to take is not an error. The rest of the block still moves.
 
 **On a list item, `Tab` makes it an item of the one above it**, and `Shift`+`Tab` makes it that item's sibling again. Two spaces is the width of a bullet and not of a number: `1. ` is three columns, and an item indented two under it is still an item of the outer list. So the item goes in to where the words of the item above it start, and back out to where the item it is in starts, and it takes what it holds with it: the lines it runs on over and the items nested in it. A number is counted rather than kept. An item that becomes the first of a list inside another is `1.`, one that joins a list already there takes that list's next number, and one that comes back out takes the number after the item it was in. The first item of a list has no item above it to go into, so `Tab` there does nothing rather than writing two spaces into its words, and an item of the outermost list has nowhere further out to go.
+
+On the drawn document, **an item with nothing in it yet is held a level in rather than written there.** CommonMark does not let an empty item begin a list inside the item above it. A `-` indented under `- one` with nothing after it underlines `one`, which makes it a heading, and a `1.` indented under `1. one` is read as more of its words, `one 1.`. So `Tab` draws the item a level in and writes nothing, `Shift`+`Tab` or `Enter` brings it back out, and the first letter typed or composed into it writes the item where it was moved to along with the letter. An empty item that joins a list already inside the item above is an item the parser reads, and is written straight away.
 
 Capturing `Tab` in a textarea creates a keyboard trap: somebody who cannot use a pointer would have no way to leave the editor. So there is a key that lets you out.
 

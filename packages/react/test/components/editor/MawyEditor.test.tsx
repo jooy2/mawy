@@ -2498,6 +2498,169 @@ describe('the document surface', () => {
     expect(document.activeElement).not.toBe(bodyOf(paragraph));
   });
 
+  it('holds an empty item a level in until its first words, rather than writing what reads as something else', async () => {
+    // `- one` over `  - ` is `one` underlined, a heading, and `1. one` over
+    // `   1. ` is `one 1.`. An item with nothing in it cannot begin a list inside
+    // the item above, so it waits for its first letter to be written there.
+    for (const [source, typed, written] of [
+      ['- one\n- ', 'x', '- one\n  - x'],
+      ['1. one\n2. ', 'x', '1. one\n   1. x']
+    ] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+      );
+      const body = bodyOf(screen);
+
+      put(body, '', 0);
+      await new Promise((done) => setTimeout(done, 30));
+      await userEvent.keyboard('{Tab}');
+
+      // Drawn a level in, with nothing written and nothing drawn as a heading.
+      await vi.waitFor(() => expect(body.querySelectorAll('li li')).toHaveLength(1));
+      expect(onChange).not.toHaveBeenCalled();
+      expect(body.querySelector('h2')).toBeNull();
+      expect(body.querySelector('li')?.firstChild?.textContent).toBe('one');
+
+      // And back out with `Shift`+`Tab`, and in again.
+      await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+      await vi.waitFor(() => expect(body.querySelectorAll('li li')).toHaveLength(0));
+      await userEvent.keyboard('{Tab}');
+      await vi.waitFor(() => expect(body.querySelectorAll('li li')).toHaveLength(1));
+
+      await userEvent.keyboard(typed);
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(written));
+      expect(body.querySelectorAll('li li')).toHaveLength(1);
+      await screen.unmount();
+    }
+
+    // Composed into, the same way.
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'- one\n- '} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, '', 0);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Tab}');
+    await vi.waitFor(() => expect(body.querySelectorAll('li li')).toHaveLength(1));
+
+    const item = body.querySelector('li li') as HTMLElement;
+    const selection = document.getSelection() as Selection;
+
+    selection.collapse(item, 0);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    item.textContent = '가';
+    selection.collapse(item.firstChild, 1);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '가' }));
+
+    expect(onChange).toHaveBeenLastCalledWith('- one\n  - 가');
+  });
+
+  it('writes an empty item into a list already inside the item above straight away', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'- one\n  - two\n- '} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), '', 0);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Tab}');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- one\n  - two\n  - '));
+  });
+
+  it('steps an empty item out a level at a time with Enter, and gives it up at the outermost', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'1. one\n   - two\n     - three'}
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'three', 5);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('1. one\n   - two\n     - three\n     - ')
+    );
+
+    // Out to the list the item was inside, and out beside the numbered item,
+    // keeping the marker it has as `Shift`+`Tab` does; then out of the list
+    // altogether.
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('1. one\n   - two\n     - three\n   - ')
+    );
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('1. one\n   - two\n     - three\n- ')
+    );
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(body.querySelectorAll('ol > li')).toHaveLength(1));
+    expect(onChange.mock.lastCall![0]).toMatch(/^1\. one\n {3}- two\n {5}- three\n\n/);
+
+    // An item held a level in steps back out the same way, with nothing written.
+    await screen.unmount();
+
+    const held = vi.fn();
+    const holding = await render(
+      <MawyEditor defaultValue={'- one\n- '} mode="wysiwyg" onChange={held} />
+    );
+
+    put(bodyOf(holding), '', 0);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Tab}');
+    await vi.waitFor(() => expect(bodyOf(holding).querySelectorAll('li li')).toHaveLength(1));
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(bodyOf(holding).querySelectorAll('li li')).toHaveLength(0));
+    expect(held).not.toHaveBeenCalled();
+  });
+
+  it('carries a list on from a marker typed under it once it has been given up', async () => {
+    // Given up with `Enter` twice, the list is a blank line away, and a marker
+    // typed there joins it as CommonMark says. What it joins is the next item,
+    // rather than a loose list with a gap between every item.
+    for (const [source, saying, typed, written] of [
+      ['- one\n- two', 'two', '- three', '- one\n- two\n- three'],
+      ['1. one\n2. two', 'two', '3. three', '1. one\n2. two\n3. three']
+    ] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+      );
+      const body = bodyOf(screen);
+
+      put(body, saying, saying.length);
+      await new Promise((done) => setTimeout(done, 30));
+      await userEvent.keyboard('{Enter}{Enter}');
+      await userEvent.keyboard(typed);
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(written));
+      expect(body.querySelectorAll('li')).toHaveLength(3);
+      expect(body.querySelector('li p')).toBeNull();
+      await screen.unmount();
+    }
+
+    // And a line that stops being an item on the next letter is a paragraph
+    // under the list again, rather than words at the end of its last item.
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'- one\n- two'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'two', 3);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Enter}{Enter}-1');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- one\n- two\n\n-1'));
+    expect(bodyOf(screen).querySelectorAll('li')).toHaveLength(2);
+  });
+
   it('makes a list, a quotation or a heading on a line with nothing on it yet', async () => {
     for (const [button, typed] of [
       ['Bulleted list', '- x'],
