@@ -32,6 +32,8 @@
 
 ### Fixed
 
+- **The editor's preview is as wide as its pane.** It kept to the viewer's measure, 44rem, which in `preview` on a wide screen was a narrow column in the middle of an empty pane. It takes `--mawy-doc-edit-measure` now, the property the drawn document takes, which is no measure at all unless an application gives one.
+
 - **A space typed after the last word of a paragraph, a heading, a list item or a table cell on `wysiwyg` is on the page.** Markdown keeps no whitespace at the end of a block, so the space was in the document and nowhere on the page, and the caret stayed where it was until the next word arrived; in a cell, `1.` and a space looked like a keystroke that did nothing. The spaces between the last word and the caret are drawn while the caret is after them.
 
 - **`ArrowUp` and `ArrowDown` move up and down a table on `wysiwyg`.** A browser moving a caret down out of a cell moves it into the next cell of the same row, which is the next thing in the tree, so the arrows went across a table rather than down it, and into one from the line above or below they went to the last cell of the row. They go a line of the cell at a time now, then to the cell above or below in the same column at the caret's place across, and from the last row or the header to the line after or before the table.

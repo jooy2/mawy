@@ -1957,6 +1957,15 @@
   color: var(--mawy-fg);
 }
 
+/* The editor's preview, as wide as its pane like the document written in, and
+ * given a measure by the same property. The viewer keeps to a measure because
+ * a column is what reading wants; beside a source, or instead of one, a column
+ * in the middle of a wide pane was the preview of a narrower document than the
+ * one being written. */
+.mawy-root .mawy-editor-preview .mawy-md {
+  max-width: var(--mawy-doc-edit-measure);
+}
+
 /* The document, edited in place ------------------------------------------- */
 
 .mawy-root .mawy-document {

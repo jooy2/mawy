@@ -530,7 +530,10 @@ class _MawyEditorState extends State<MawyEditor> {
             parse: widget.parse,
             colorScheme: _scheme,
             tokens: widget.tokens,
-            typography: _type,
+            // As wide as the pane, like the source beside it: a column in the
+            // middle of a wide pane is the preview of a narrower document than
+            // the one being written.
+            typography: _type.copyWith(measure: MawyMeasure.full),
             toolbar: const <MawyViewerToolbarItem>[],
             locale: widget.locale,
             strings: strings,

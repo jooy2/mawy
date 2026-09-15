@@ -24,6 +24,8 @@
 
 ### Fixed
 
+- **The editor's preview is as wide as its pane.** It kept to the typography's measure, which in `preview` on a wide screen was a narrow column in the middle of an empty pane. It is drawn with `MawyMeasure.full` now, as the source beside it is.
+
 - **Deleting a column of a table written without its outer pipes left something that was not a table.** `a | b` over `--- | ---` lost its last pipe with its second column, so the header became a paragraph and the delimiter row under it a heading's underline. Every line keeps a pipe now, and the first column goes without leaving the space the next one was written after.
 
 - **The blocks do nothing in a table, and the toolbar says so.** A cell of a GitHub table holds one line of words, so a heading, a quotation, a code block or a divider has nowhere to go in one, and the commands wrote their marker at the front of the row instead, which ended the table on that line. With either end of the selection in a table they leave the document as it was now, their buttons and the heading menu are disabled, and their keys do nothing. The list commands write the lines of a cell instead; see below. The commands are the React package's, and the parity check compares the two.

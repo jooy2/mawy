@@ -65,7 +65,7 @@ The bar's position lasts as long as the reader is on the page, and there is no p
 
 Below the width at which the two panes stack instead of sitting side by side, the bar is not drawn.
 
-**The preview is read-only, and nothing is edited from it.** A click there does not move the caret in the source, and that is the difference between this pane and `wysiwyg`, which is the one surface that edits the drawn document. If a click in the preview moved the caret, it would be unclear which pane you are writing in. Links, checkboxes and a code block's copy button still work, and everything else can be selected and copied like any other page.
+**The preview is read-only, and nothing is edited from it.** A click there does not move the caret in the source, and that is the difference between this pane and `wysiwyg`, which is the one surface that edits the drawn document. If a click in the preview moved the caret, it would be unclear which pane you are writing in. Links, checkboxes and a code block's copy button still work, and everything else can be selected and copied like any other page. It is as wide as its pane, where the viewer keeps to a measure, because it is the document being written rather than a page being read.
 
 ## The source surface
 
@@ -121,7 +121,7 @@ There is no second model behind it. What is on screen is a drawing of the Markdo
 
 **A task's checkbox ticks and unticks it.** On the drawn document a press on the box writes `[x]` or `[ ]` into the source, in a task list and on a line of a table cell written as a task, and leaves the caret where it was. The preview and the viewer are a document being read, and their boxes cannot be pressed; neither can the drawn document's with `readOnly`.
 
-**The document is as wide as its pane**, where the preview and the viewer keep to the measure, because the edges of what can be typed in are the edges of the editor. `--mawy-doc-edit-measure` gives it a measure of its own, and a press in the room either side of that measure still puts the caret on the line beside it. No ring is drawn around the document while it has the focus, which is the source surface's rule as well: the caret already says where the focus is.
+**The document is as wide as its pane**, and so is the preview, where the viewer keeps to the measure, because the edges of what can be typed in are the edges of the editor and the preview is that document. `--mawy-doc-edit-measure` gives both a measure of their own, and a press in the room either side of that measure still puts the caret on the line beside it. No ring is drawn around the document while it has the focus, which is the source surface's rule as well: the caret already says where the focus is.
 
 What works: typing and deleting **anywhere there is text to type in**, meaning a paragraph, a heading, a list item, a quotation, a table cell or a code block. So do replacing a selection, `Shift`+`Enter` for a hard break, the shorthands that turn into formatting as they are typed, and every command on the toolbar. The toolbar commands needed no new code, because they are pure functions of the source and its selection and name no surface at all.
 

@@ -134,6 +134,11 @@ void main() {
 
       expect(find.byType(EditableText), findsNothing);
       expect(find.byType(MawyViewer), findsOneWidget);
+      // As wide as its pane, where the viewer on its own keeps to a measure.
+      expect(
+        tester.widget<MawyViewer>(find.byType(MawyViewer)).typography?.measure,
+        MawyMeasure.full,
+      );
     });
 
     testWidgets('switches when the toolbar says so', (WidgetTester tester) async {

@@ -280,6 +280,15 @@ describe('a source surface longer than the screen', () => {
     expect(later!.top).toBeGreaterThan(cold!.top);
   });
 
+  it('draws the preview as wide as its pane, where the viewer keeps to a measure', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue="# Title" mode="preview" style={{ width: 1400 }} />
+    );
+    const page = screen.container.querySelector('.mawy-editor-preview .mawy-md') as HTMLElement;
+
+    expect(getComputedStyle(page).maxWidth).toBe('none');
+  });
+
   it('lines the preview up with a block whose line is not coloured', async () => {
     const screen = await render(
       <MawyEditor defaultValue={HUGE} defaultMode="split" style={{ height: '20rem' }} />
