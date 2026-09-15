@@ -2287,6 +2287,46 @@ describe('the document surface', () => {
     expect(drawn()).toEqual(['One', '', 'Two']);
   });
 
+  it('makes a list item an item of the one above it with Tab, and brings it back', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <div>
+        <MawyEditor defaultValue={'1. one\n2. two'} mode="wysiwyg" onChange={onChange} />
+        <button type="button">Outside</button>
+      </div>
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'two', 3);
+    await userEvent.keyboard('{Tab}');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('1. one\n   1. two'));
+    expect(body.querySelectorAll('ol ol li')).toHaveLength(1);
+    expect(document.activeElement).toBe(body);
+
+    await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('1. one\n2. two'));
+
+    // Typing carries on where the caret was.
+    await userEvent.keyboard('!');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('1. one\n2. two!'));
+
+    // Outside a list `Tab` is still the way on through the page.
+    await screen.unmount();
+
+    const paragraph = await render(
+      <div>
+        <MawyEditor defaultValue="Words." mode="wysiwyg" />
+        <button type="button">Outside</button>
+      </div>
+    );
+
+    put(bodyOf(paragraph), 'Words.', 2);
+    await userEvent.keyboard('{Tab}');
+
+    expect(document.activeElement).not.toBe(bodyOf(paragraph));
+  });
+
   it('makes a list, a quotation or a heading on a line with nothing on it yet', async () => {
     for (const [button, typed] of [
       ['Bulleted list', '- x'],

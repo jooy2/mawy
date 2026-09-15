@@ -660,6 +660,12 @@ int _outdentOf(String line) {
 /// line with no indentation left is not an error — the rest of the block still
 /// moves.
 EditState indent(EditState state, {required bool out}) {
+  final EditState? nested = _nest(state, out: out);
+
+  if (nested != null) {
+    return nested;
+  }
+
   final bool spans = state.value.substring(state.start, state.end).contains('\n');
 
   if (!out && !spans && state.start == state.end) {
@@ -676,6 +682,218 @@ EditState indent(EditState state, {required bool out}) {
         .map((String line) => out ? line.substring(_outdentOf(line)) : _indentWidth + line)
         .toList(),
   );
+}
+
+/// A line that opens a list item, cut into the parts [_nest] moves and counts.
+final RegExp _itemLine = RegExp(r'^( *)(?:[-*+]|(\d{1,9})([.)]))[ \t]+');
+
+final RegExp _leadingSpaces = RegExp(r'^ *');
+
+/// How many spaces a line opens with.
+int _spacesOf(String text) => _leadingSpaces.firstMatch(text)!.group(0)!.length;
+
+/// `Tab` on a list item, which makes it an item of the one above it, and
+/// `Shift`+`Tab`, which makes it that one's sibling again — or `null` where the
+/// caret is not on an item, and the plain rules below apply.
+///
+/// Two spaces is the width of a bullet and not of a number: `1. ` is three
+/// columns, and an item indented two under it is still an item of the outer
+/// list. So an item goes in to where the words of the item above it start, and
+/// back out to where the item it is in starts. Whatever the item holds goes
+/// with it — the lines it runs on over and the items nested in it.
+///
+/// A number is counted rather than kept: an item that becomes the first of a
+/// list inside another is `1.`, one that joins a list already there is the next
+/// number of it, and one that comes back out is the number after the item it
+/// was in.
+///
+/// The first item of a list has no item above it to go into, and `Tab` there
+/// does nothing, rather than writing two spaces into the words. An item
+/// indented by a tab is left to the plain rules.
+EditState? _nest(EditState state, {required bool out}) {
+  final String value = state.value;
+  final int start = state.start;
+  final int end = state.end;
+
+  if (value.substring(start, end).contains('\n')) {
+    return null;
+  }
+
+  final List<({int start, String text})> lines = <({int start, String text})>[];
+  int cursor = 0;
+
+  for (final String text in value.split('\n')) {
+    lines.add((start: cursor, text: text));
+    cursor += text.length + 1;
+  }
+
+  int at = 0;
+
+  while (at < lines.length - 1 && lines[at + 1].start <= start) {
+    at += 1;
+  }
+
+  RegExpMatch? item = _itemLine.firstMatch(lines[at].text);
+
+  // A line the item runs on over is that item's, for `Tab` as for `Enter`.
+  if (item == null) {
+    final ({int first, RegExpMatch item})? owner = _ownerOf(value, lines[at].start, start);
+
+    at = owner == null ? -1 : lines.indexWhere((line) => line.start == owner.first);
+    item = at == -1 ? null : _itemLine.firstMatch(lines[at].text);
+
+    if (item == null) {
+      return null;
+    }
+  }
+
+  if (RegExp(r'^[ \t]*\t').hasMatch(lines[at].text)) {
+    return null;
+  }
+
+  final int own = item.group(1)!.length;
+  int last = at;
+
+  // What the item holds: the lines under it indented past it, and the blank
+  // lines between those.
+  for (int index = at + 1; index < lines.length; index += 1) {
+    final String text = lines[index].text;
+
+    if (text.trim().isEmpty) {
+      continue;
+    }
+
+    if (_spacesOf(text) <= own) {
+      break;
+    }
+
+    last = index;
+  }
+
+  int target = -1;
+  int? number;
+
+  if (!out) {
+    /// The last number of each list the item above holds, by how far in it is.
+    final Map<int, int?> counted = <int, int?>{};
+
+    for (int index = at - 1; index >= 0; index -= 1) {
+      final String text = lines[index].text;
+
+      if (text.trim().isEmpty) {
+        continue;
+      }
+
+      final int spaces = _spacesOf(text);
+      final RegExpMatch? above = _itemLine.firstMatch(text);
+
+      if (spaces > own) {
+        // Met from below, so the first item at a depth is the last of its list.
+        if (above != null && !counted.containsKey(spaces)) {
+          counted[spaces] = above.group(2) == null ? null : int.parse(above.group(2)!);
+        }
+
+        continue;
+      }
+
+      if (spaces < own || above == null) {
+        return state;
+      }
+
+      target = above.group(0)!.length;
+      break;
+    }
+
+    if (target == -1) {
+      return state;
+    }
+
+    final int? before = counted[target];
+
+    number = item.group(2) == null ? null : (before == null ? 1 : before + 1);
+  } else {
+    for (int index = at - 1; index >= 0; index -= 1) {
+      final String text = lines[index].text;
+
+      if (text.trim().isEmpty) {
+        continue;
+      }
+
+      final int spaces = _spacesOf(text);
+
+      if (spaces >= own) {
+        continue;
+      }
+
+      final RegExpMatch? above = _itemLine.firstMatch(text);
+
+      if (above == null || above.group(0)!.length > own) {
+        return null;
+      }
+
+      target = spaces;
+      number = item.group(2) == null
+          ? null
+          : above.group(2) != null
+          ? int.parse(above.group(2)!) + 1
+          : int.parse(item.group(2)!);
+      break;
+    }
+
+    // An item of the outermost list has nowhere further out to go, and its
+    // indentation, and that of the lines it runs on over, is the item's own.
+    if (target == -1) {
+      return state;
+    }
+  }
+
+  final int shift = target - own;
+  final List<({int start, String was, String text})> moved =
+      <({int start, String was, String text})>[
+        for (int index = at; index <= last; index += 1)
+          (
+            start: lines[index].start,
+            was: lines[index].text,
+            text: _moved(lines[index].text, shift, index == at ? number : null),
+          ),
+      ];
+  final int from = lines[at].start;
+  final int to = lines[last].start + lines[last].text.length;
+  final String block = moved.map((line) => line.text).join('\n');
+
+  int carry(int offset) {
+    int before = from;
+
+    for (final ({int start, String was, String text}) line in moved) {
+      if (offset <= line.start + line.was.length) {
+        final int into = offset - line.start;
+
+        return before + _shifted(line.was, line.text, into < 0 ? 0 : into);
+      }
+
+      before += line.text.length + 1;
+    }
+
+    return offset + block.length - (to - from);
+  }
+
+  return EditState(
+    value.substring(0, from) + block + value.substring(to),
+    carry(start),
+    carry(end),
+  );
+}
+
+/// One line of an item [_nest] is moving, moved, and its number counted.
+String _moved(String text, int shift, int? number) {
+  final int spaces = _spacesOf(text);
+  String out = shift > 0 ? ' ' * shift + text : text.substring(-shift < spaces ? -shift : spaces);
+
+  if (number != null) {
+    out = out.replaceFirst(RegExp(r'\d{1,9}(?=[.)])'), '$number');
+  }
+
+  return out;
 }
 
 /* -------------------------------------------------------------------------

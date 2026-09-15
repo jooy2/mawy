@@ -288,5 +288,45 @@
   "- one\n\n  ```\n  code\n  ```",
   19,
   19
+ ],
+ [
+  "- one\n- two",
+  10,
+  10
+ ],
+ [
+  "1. one\n2. two",
+  12,
+  12
+ ],
+ [
+  "1. one\n   1. two",
+  15,
+  15
+ ],
+ [
+  "1. one\n   1. a\n   2. b\n2. two",
+  28,
+  28
+ ],
+ [
+  "- one\n- two\n  more\n  - three\n- four",
+  10,
+  10
+ ],
+ [
+  "- one\n- two\n  more",
+  16,
+  16
+ ],
+ [
+  "- one\n- two",
+  4,
+  4
+ ],
+ [
+  "- one\n  - two",
+  12,
+  12
  ]
 ]

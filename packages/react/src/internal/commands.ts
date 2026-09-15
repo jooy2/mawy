@@ -652,6 +652,12 @@ function outdentOf(line: string): number {
  * moves.
  */
 export function indent(state: EditState, out: boolean): EditState {
+  const nested = nest(state, out);
+
+  if (nested) {
+    return nested;
+  }
+
   const spans = state.value.slice(state.start, state.end).includes('\n');
 
   if (!out && !spans && state.start === state.end) {
@@ -665,6 +671,213 @@ export function indent(state: EditState, out: boolean): EditState {
   return mapLines(state, (lines) =>
     lines.map((line) => (out ? line.slice(outdentOf(line)) : INDENT + line))
   );
+}
+
+/** A line that opens a list item, cut into the parts `nest` moves and counts. */
+const ITEM_LINE = /^( *)(?:[-*+]|(\d{1,9})([.)]))[ \t]+/;
+
+/** The lines of a document, each with where it starts. */
+function linesOf(value: string): { start: number; text: string }[] {
+  const out: { start: number; text: string }[] = [];
+  let start = 0;
+
+  for (const text of value.split('\n')) {
+    out.push({ start, text });
+    start += text.length + 1;
+  }
+
+  return out;
+}
+
+/** How many spaces a line opens with. */
+function spacesOf(text: string): number {
+  return /^ */.exec(text)?.[0].length ?? 0;
+}
+
+/**
+ * `Tab` on a list item, which makes it an item of the one above it, and
+ * `Shift`+`Tab`, which makes it that one's sibling again — or `null` where the
+ * caret is not on an item, and the plain rules below apply.
+ *
+ * Two spaces is the width of a bullet and not of a number: `1. ` is three
+ * columns, and an item indented two under it is still an item of the outer
+ * list. So an item goes in to where the words of the item above it start, and
+ * back out to where the item it is in starts. Whatever the item holds goes with
+ * it — the lines it runs on over and the items nested in it — or they would be
+ * left behind in the item it came from.
+ *
+ * A number is counted rather than kept: an item that becomes the first of a
+ * list inside another is `1.`, one that joins a list already there is the next
+ * number of it, and one that comes back out is the number after the item it
+ * was in.
+ *
+ * The first item of a list has no item above it to go into, and `Tab` there
+ * does nothing, rather than writing two spaces into the words. An item
+ * indented by a tab is left to the plain rules, since what a tab is worth in
+ * columns is the parser's question.
+ */
+function nest(state: EditState, out: boolean): EditState | null {
+  const { value, start, end } = state;
+
+  if (value.slice(start, end).includes('\n')) {
+    return null;
+  }
+
+  const lines = linesOf(value);
+  let at = lines.findIndex(
+    (line, index) => index === lines.length - 1 || lines[index + 1].start > start
+  );
+  let item = ITEM_LINE.exec(lines[at].text);
+
+  // A line the item runs on over is that item's, for `Tab` as for `Enter`.
+  if (!item) {
+    const owner = ownerOf(value, lines[at].start, start);
+
+    at = owner ? lines.findIndex((line) => line.start === owner.first) : -1;
+    item = at === -1 ? null : ITEM_LINE.exec(lines[at].text);
+
+    if (!item) {
+      return null;
+    }
+  }
+
+  if (/^[ \t]*\t/.test(lines[at].text)) {
+    return null;
+  }
+
+  const own = item[1].length;
+  let last = at;
+
+  // What the item holds: the lines under it indented past it, and the blank
+  // lines between those.
+  for (let index = at + 1; index < lines.length; index += 1) {
+    const text = lines[index].text;
+
+    if (!text.trim()) {
+      continue;
+    }
+
+    if (spacesOf(text) <= own) {
+      break;
+    }
+
+    last = index;
+  }
+
+  let target = -1;
+  let number: number | null = null;
+
+  if (!out) {
+    /** The last number of each list the item above holds, by how far in it is. */
+    const counted = new Map<number, number | null>();
+
+    for (let index = at - 1; index >= 0; index -= 1) {
+      const text = lines[index].text;
+
+      if (!text.trim()) {
+        continue;
+      }
+
+      const spaces = spacesOf(text);
+      const above = ITEM_LINE.exec(text);
+
+      if (spaces > own) {
+        // Met from below, so the first item at a depth is the last of its list.
+        if (above && !counted.has(spaces)) {
+          counted.set(spaces, above[2] ? Number.parseInt(above[2], 10) : null);
+        }
+
+        continue;
+      }
+
+      if (spaces < own || !above) {
+        return state;
+      }
+
+      target = above[0].length;
+      break;
+    }
+
+    if (target === -1) {
+      return state;
+    }
+
+    const before = counted.get(target);
+
+    number = item[2] ? (before === undefined || before === null ? 1 : before + 1) : null;
+  } else {
+    for (let index = at - 1; index >= 0; index -= 1) {
+      const text = lines[index].text;
+
+      if (!text.trim()) {
+        continue;
+      }
+
+      const spaces = spacesOf(text);
+
+      if (spaces >= own) {
+        continue;
+      }
+
+      const above = ITEM_LINE.exec(text);
+
+      if (!above || above[0].length > own) {
+        return null;
+      }
+
+      target = spaces;
+      number = item[2]
+        ? above[2]
+          ? Number.parseInt(above[2], 10) + 1
+          : Number.parseInt(item[2], 10)
+        : null;
+      break;
+    }
+
+    // An item of the outermost list has nowhere further out to go, and its
+    // indentation, and that of the lines it runs on over, is the item's own.
+    if (target === -1) {
+      return state;
+    }
+  }
+
+  const shift = target - own;
+  const moved = lines.slice(at, last + 1).map((line, index) => {
+    let text =
+      shift > 0
+        ? ' '.repeat(shift) + line.text
+        : line.text.slice(Math.min(-shift, spacesOf(line.text)));
+
+    if (index === 0 && number !== null) {
+      text = text.replace(/\d{1,9}(?=[.)])/, String(number));
+    }
+
+    return { start: line.start, was: line.text, text };
+  });
+  const from = lines[at].start;
+  const to = lines[last].start + lines[last].text.length;
+  const block = moved.map((line) => line.text).join('\n');
+
+  /** A place in the document, carried to the line it was on once that has moved. */
+  const carry = (offset: number): number => {
+    let before = from;
+
+    for (const line of moved) {
+      if (offset <= line.start + line.was.length) {
+        return before + shifted(line.was, line.text, Math.max(0, offset - line.start));
+      }
+
+      before += line.text.length + 1;
+    }
+
+    return offset + block.length - (to - from);
+  };
+
+  return {
+    value: value.slice(0, from) + block + value.slice(to),
+    start: carry(start),
+    end: carry(end)
+  };
 }
 
 /* -------------------------------------------------------------------------

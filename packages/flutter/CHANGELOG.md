@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **`Tab` makes a list item an item of the one above it, and `Shift`+`Tab` brings it back.** `Tab` wrote two spaces where the caret was, which in an item's words is two spaces in its words, and under a numbered item two spaces do not nest at all, since `1. ` is three columns wide. On a list item it moves the item in to where the words of the item above start, or back out to where the item it is in starts, and takes along the lines it runs on over and the items nested in it. A number is counted: `1.` for the first item of a list inside another, and the next number of a list the item joins or comes back out into. The first item of a list and an item of the outermost list have nowhere to go, and the key does nothing there. It is the React package's `indent`, and the parity check compares the two.
+
 ### Fixed
 
 - **`Enter` on the line a list item runs on over carries the list on.** An item's words can run over more than one line, after a hard break or wrapped by hand, and that second line has no marker of its own, so `Enter` at its end was a plain line ending instead of the next item. The marker is read off the first line of the item the parser says the line is in. Code inside an item is still the characters it is.

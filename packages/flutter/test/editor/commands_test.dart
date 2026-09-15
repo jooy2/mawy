@@ -222,5 +222,30 @@ void main() {
     test('outdents from a caret too, because there is nothing else it could mean', () {
       expect(tab('  one|', out: true), 'one|');
     });
+
+    test('makes a list item an item of the one above it, and back', () {
+      expect(tab('- one\n- tw|o'), '- one\n  - tw|o');
+      expect(tab('- one\n  - tw|o', out: true), '- one\n- tw|o');
+      expect(tab('1. one\n2. tw|o'), '1. one\n   1. tw|o');
+      expect(tab('1. one\n   1. tw|o', out: true), '1. one\n2. tw|o');
+    });
+
+    test('counts a list an item joins on from its last number', () {
+      expect(tab('1. one\n   1. a\n   2. b\n2. tw|o'), '1. one\n   1. a\n   2. b\n   3. tw|o');
+    });
+
+    test('takes what an item holds with it', () {
+      expect(
+        tab('- one\n- tw|o\n  more\n  - three\n- four'),
+        '- one\n  - tw|o\n    more\n    - three\n- four',
+      );
+      expect(tab('- one\n- two\n  mo|re'), '- one\n  - two\n    mo|re');
+    });
+
+    test('leaves the first item of a list where it is, and an outermost item too', () {
+      expect(tab('- on|e\n- two'), '- on|e\n- two');
+      expect(tab('Words.\n\n- on|e'), 'Words.\n\n- on|e');
+      expect(tab('- one\n  mo|re', out: true), '- one\n  mo|re');
+    });
   });
 }

@@ -482,11 +482,13 @@ On the source surface, `Tab` indents and `Shift`+`Tab` takes it back. With nothi
 
 The width is **two spaces**, which Markdown requires. A nested list item has to clear its parent's marker, and under `- ` that is two columns. Four would become an indented code block the moment the list above it ends. Going back takes a tab or up to two spaces off the front of each line, and a line with nothing left to take is not an error. The rest of the block still moves.
 
+**On a list item, `Tab` makes it an item of the one above it**, and `Shift`+`Tab` makes it that item's sibling again. Two spaces is the width of a bullet and not of a number: `1. ` is three columns, and an item indented two under it is still an item of the outer list. So the item goes in to where the words of the item above it start, and back out to where the item it is in starts, and it takes what it holds with it: the lines it runs on over and the items nested in it. A number is counted rather than kept. An item that becomes the first of a list inside another is `1.`, one that joins a list already there takes that list's next number, and one that comes back out takes the number after the item it was in. The first item of a list has no item above it to go into, so `Tab` there does nothing rather than writing two spaces into its words, and an item of the outermost list has nowhere further out to go.
+
 Capturing `Tab` in a textarea creates a keyboard trap: somebody who cannot use a pointer would have no way to leave the editor. So there is a key that lets you out.
 
 **Press `Escape`, then `Tab`, and the focus moves on.** One `Escape` arms it and anything else typed disarms it again. It is the rule CodeMirror, Monaco and GitHub's own editor all use, so anybody who has met one of those already knows it. The surface also announces it to a screen reader.
 
-The drawn document does not capture `Tab` at all. It is one focusable element, so `Tab` moves straight out of it.
+The drawn document captures `Tab` only in a list item, where it nests the item the way it does on the source. Everywhere else it is one focusable element, and `Tab` moves straight out of it.
 
 ## Undo
 

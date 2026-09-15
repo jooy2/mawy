@@ -1628,7 +1628,32 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     leaving.current = false;
 
     if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
-      if (wasLeaving || showDocument) {
+      if (wasLeaving) {
+        return;
+      }
+
+      if (showDocument) {
+        // The drawn document is one stop on the way through a page, and `Tab`
+        // moves on from it — except in a list item, where it is what makes the
+        // item an item of the one above, and `Shift`+`Tab` what brings it back.
+        // A first item that has nowhere to go takes the key and does nothing,
+        // rather than sending the focus off the page in the middle of a list.
+        const element = drawn.current;
+        const anchor = element?.ownerDocument.getSelection()?.anchorNode ?? null;
+        const host = anchor?.nodeType === 1 ? (anchor as Element) : (anchor?.parentElement ?? null);
+
+        if (!element || !host || !element.contains(host) || !host.closest('li')) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const next = indent(state, event.shiftKey);
+
+        if (next.value !== state.value) {
+          run(state, next);
+        }
+
         return;
       }
 

@@ -6,6 +6,8 @@
 
 ### Added
 
+- **`Tab` makes a list item an item of the one above it, and `Shift`+`Tab` brings it back.** On the source `Tab` wrote two spaces where the caret was, which in an item's words is two spaces in its words, and under a numbered item two spaces do not nest at all, since `1. ` is three columns wide. On the drawn document `Tab` moved the focus off the editor. On a list item, on either surface, it moves the item in to where the words of the item above start, or back out to where the item it is in starts, and takes along the lines it runs on over and the items nested in it. A number is counted: `1.` for the first item of a list inside another, and the next number of a list the item joins or comes back out into. The first item of a list and an item of the outermost list have nowhere to go, and the key does nothing there. Outside a list the drawn document still lets `Tab` move the focus on.
+
 - **The first words written into an empty document on `wysiwyg` are its heading.** A document is nearly always begun with its title, and an empty page took the title as a paragraph that had to be turned into a heading afterwards. The first character typed or composed into a document with nothing in it is written after `# ` now, or after the marker of the first level `headingLevels` offers. A marker typed first is left alone, so a document can still open with a list, a quotation or a heading of a level somebody chose, and `Mod`+`0` turns the heading back into body text. The source surface writes what is typed and nothing else. `startWithHeading={false}` turns it off, for an editor that is a comment box rather than a page.
 
 ### Fixed

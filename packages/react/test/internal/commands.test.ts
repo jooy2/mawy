@@ -299,6 +299,32 @@ describe('indenting', () => {
   it('outdents from a caret too, because there is nothing else it could mean', () => {
     expect(tab('  one|', true)).toBe('one|');
   });
+
+  it('makes a list item an item of the one above it, and back', () => {
+    expect(tab('- one\n- tw|o')).toBe('- one\n  - tw|o');
+    expect(tab('- one\n  - tw|o', true)).toBe('- one\n- tw|o');
+    // A number is three columns wide, and two spaces under it is still an item
+    // of the outer list.
+    expect(tab('1. one\n2. tw|o')).toBe('1. one\n   1. tw|o');
+    expect(tab('1. one\n   1. tw|o', true)).toBe('1. one\n2. tw|o');
+  });
+
+  it('counts a list an item joins on from its last number', () => {
+    expect(tab('1. one\n   1. a\n   2. b\n2. tw|o')).toBe('1. one\n   1. a\n   2. b\n   3. tw|o');
+  });
+
+  it('takes what an item holds with it', () => {
+    expect(tab('- one\n- tw|o\n  more\n  - three\n- four')).toBe(
+      '- one\n  - tw|o\n    more\n    - three\n- four'
+    );
+    expect(tab('- one\n- two\n  mo|re')).toBe('- one\n  - two\n    mo|re');
+  });
+
+  it('leaves the first item of a list where it is, and an outermost item too', () => {
+    expect(tab('- on|e\n- two')).toBe('- on|e\n- two');
+    expect(tab('- one\n  mo|re', true)).toBe('- one\n  mo|re');
+    expect(tab('Words.\n\n- on|e')).toBe('Words.\n\n- on|e');
+  });
 });
 
 /**
