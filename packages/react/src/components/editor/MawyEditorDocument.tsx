@@ -597,10 +597,15 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        // Into a table cell, on the one line a cell is: a line ending would end
+        // the row, so each is the `<br>` a cell writes one with, and a pipe is
+        // escaped, or it would be the edge of a cell of its own.
+        const cell = Boolean(where && /^T[DH]$/.test(blockAt(element, where)?.tagName ?? ''));
+        const text = markdownFor(event.clipboardData, literal);
         const edit = editForText(
           element,
           now.value,
-          markdownFor(event.clipboardData, literal),
+          cell ? text.replace(/\r?\n/g, '<br>').replace(/(?<!\\)\|/g, '\\|') : text,
           aim.current
         );
 

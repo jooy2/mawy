@@ -966,7 +966,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       pending.current = [after.start, after.end];
       setRoom(null);
       setSelection({ start: after.start, end: after.end });
-      write(after.value);
+
+      // A command with nothing to do is not a change, and an application told
+      // about one would save a document nobody touched.
+      if (after.value !== before.value) {
+        write(after.value);
+      }
     },
     [apply, showDocument, write]
   );
@@ -1197,6 +1202,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [editable, focused, parse?.gfm, selection.end, selection.start, text]
   );
   const [toolsAt, setToolsAt] = React.useState<{ top: number; end: number } | null>(null);
+  /** Whether the caret is in a table, which is where a toolbar's blocks have nothing to make. */
+  const caretInTable = React.useMemo(
+    () => editable && tableRangeAt(text, selection.start) !== null,
+    [editable, selection.start, text]
+  );
 
   /**
    * Where the bar goes: over the table's top edge at its far end, or under its
@@ -2318,6 +2328,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             }
           }}
           editable={editable}
+          inTable={caretInTable}
           onFind={showSource || showDocument ? openFind : undefined}
           finding={finding && (showSource || showDocument)}
           onOpen={readOnly ? undefined : openFile}

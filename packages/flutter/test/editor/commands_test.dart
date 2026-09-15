@@ -130,6 +130,31 @@ void main() {
   });
 
   group('tables', () {
+    test('makes no block of a row, which a cell has no room for', () {
+      const EditState state = EditState('Intro.\n\n| a | b |\n| - | - |', 12, 12);
+
+      for (final MawyCommand command in <MawyCommand>[
+        MawyCommand.heading1,
+        MawyCommand.paragraph,
+        MawyCommand.quote,
+        MawyCommand.bulletList,
+        MawyCommand.orderedList,
+        MawyCommand.taskList,
+        MawyCommand.codeBlock,
+        MawyCommand.rule,
+      ]) {
+        expect(identical(runCommand(command, state), state), isTrue, reason: command.name);
+      }
+
+      expect(
+        runCommand(
+          MawyCommand.bold,
+          const EditState('Intro.\n\n| a | b |\n| - | - |', 10, 11),
+        ).value,
+        'Intro.\n\n| **a** | b |\n| - | - |',
+      );
+    });
+
     test('inserts a table of the size asked for, the header counted among the rows', () {
       expect(
         tableOfSize(const EditState('', 0, 0), 3, 1)?.value,

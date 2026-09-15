@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **The blocks do nothing in a table, and the toolbar says so.** A cell of a GitHub table holds one line of words, so a list, a heading, a quotation, a code block or a divider has nowhere to go in one, and the commands wrote their marker at the front of the row instead, which ended the table on that line. With either end of the selection in a table they leave the document as it was now, their buttons and the heading menu are disabled, and their keys do nothing. The commands are the React package's, and the parity check compares the two.
+
 - **A bare `<br>` in a table cell is drawn as a line break.** Raw HTML is drawn as its characters, and a cell written with two lines, which GitHub tables write as `<br>` because a row is one line of the file, showed `<br>` between them. In a cell there is no other way to write a line break, so it is drawn as one there and nowhere else. The React package draws it the same way, and a case in `tool/drawn.json` holds both to it.
 
 - **The code block command puts the caret inside the block it makes, and takes a block off from anywhere inside it.** With nothing selected it came out selecting the whole block it had written, fences and all, which the next letter typed over. The caret is inside now, among the characters it was among. Pressed again from anywhere inside a fenced block, the command takes the fences off rather than writing a second block into the first, and the toolbar's button is drawn pressed while the caret is in one.

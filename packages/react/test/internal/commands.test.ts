@@ -188,6 +188,30 @@ describe('line markers', () => {
   });
 });
 
+describe('in a table', () => {
+  it('makes no block of a row, which a cell has no room for', () => {
+    const state = { value: 'Intro.\n\n| a | b |\n| - | - |', start: 12, end: 12 };
+
+    for (const command of [
+      'heading1',
+      'paragraph',
+      'quote',
+      'bulletList',
+      'orderedList',
+      'taskList',
+      'codeBlock',
+      'rule'
+    ] as const) {
+      expect(runCommand(command, state)).toBe(state);
+    }
+
+    // The words in a cell are still words.
+    expect(runCommand('bold', { ...state, start: 10, end: 11 }).value).toBe(
+      'Intro.\n\n| **a** | b |\n| - | - |'
+    );
+  });
+});
+
 describe('blocks', () => {
   it('fences a block and unfences it', () => {
     expect(run('codeBlock', 'a«\nb»')).toBe('«```\na\nb\n```»');

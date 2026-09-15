@@ -216,6 +216,11 @@ function toggleOrdered(state: EditState): EditState {
  * on the way in, too — `# ` on its own is a heading with nothing in it.
  */
 export function toggleHeading(state: EditState, depth: number): EditState {
+  // A heading is a block, and a cell of a table holds none. See `BLOCK_COMMANDS`.
+  if (inTable(state)) {
+    return state;
+  }
+
   const hashes = '#'.repeat(depth);
   const already = new RegExp(`^[ \\t]*${hashes} `);
 
@@ -416,7 +421,47 @@ function insertRule(state: EditState): EditState {
  * The table of them
  * ---------------------------------------------------------------------- */
 
+/**
+ * The commands that make a block of the lines they touch, rather than mark up
+ * the words.
+ *
+ * A cell of a table holds one line of words and nothing else — a row is one
+ * line of the file — so none of these has anything to make there. Run from a
+ * cell, each wrote its marker at the front of the row, and a row that opens
+ * with `- ` is not a row: the table ended on that line. So from a table they do
+ * nothing, and `blockCommand` is what a toolbar asks to draw them disabled.
+ */
+const BLOCK_COMMANDS: ReadonlySet<MawyCommand> = new Set<MawyCommand>([
+  'heading1',
+  'heading2',
+  'heading3',
+  'paragraph',
+  'quote',
+  'bulletList',
+  'orderedList',
+  'taskList',
+  'codeBlock',
+  'rule'
+]);
+
+/** Whether a command makes a block of its lines. See `BLOCK_COMMANDS`. */
+export function blockCommand(command: MawyCommand): boolean {
+  return BLOCK_COMMANDS.has(command);
+}
+
+/** Whether either end of the selection is in a table. */
+function inTable(state: EditState): boolean {
+  return (
+    tableAt(state.value, state.start) !== null ||
+    (state.end !== state.start && tableAt(state.value, state.end) !== null)
+  );
+}
+
 export function runCommand(command: MawyCommand, state: EditState): EditState {
+  if (BLOCK_COMMANDS.has(command) && inTable(state)) {
+    return state;
+  }
+
   switch (command) {
     case 'bold':
       return toggleWrap(state, '**');

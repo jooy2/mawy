@@ -250,6 +250,11 @@ EditState _toggleOrdered(EditState state) {
 /// any of the six. [runCommand] reaches the first three and body text through
 /// this; an editor told to offer other levels calls it directly.
 EditState toggleHeading(EditState state, int depth) {
+  // A heading is a block, and a cell of a table holds none. See [_blockCommands].
+  if (_inTable(state)) {
+    return state;
+  }
+
   final String hashes = '#' * depth;
   final RegExp already = RegExp('^[ \\t]*$hashes ');
 
@@ -466,8 +471,41 @@ EditState _insertRule(EditState state) {
  * The commands themselves
  * ---------------------------------------------------------------------- */
 
+/// The commands that make a block of the lines they touch, rather than mark up
+/// the words.
+///
+/// A cell of a table holds one line of words and nothing else — a row is one
+/// line of the file — so none of these has anything to make there. Run from a
+/// cell, each wrote its marker at the front of the row, and a row that opens
+/// with `- ` is not a row: the table ended on that line. So from a table they
+/// do nothing, and [blockCommand] is what a toolbar asks to draw them disabled.
+const Set<MawyCommand> _blockCommands = <MawyCommand>{
+  MawyCommand.heading1,
+  MawyCommand.heading2,
+  MawyCommand.heading3,
+  MawyCommand.paragraph,
+  MawyCommand.quote,
+  MawyCommand.bulletList,
+  MawyCommand.orderedList,
+  MawyCommand.taskList,
+  MawyCommand.codeBlock,
+  MawyCommand.rule,
+};
+
+/// Whether [command] makes a block of its lines. See [_blockCommands].
+bool blockCommand(MawyCommand command) => _blockCommands.contains(command);
+
+/// Whether either end of the selection is in a table.
+bool _inTable(EditState state) =>
+    _tableAt(state.value, state.start) != null ||
+    (state.end != state.start && _tableAt(state.value, state.end) != null);
+
 /// What [command] makes of [state].
 EditState runCommand(MawyCommand command, EditState state) {
+  if (_blockCommands.contains(command) && _inTable(state)) {
+    return state;
+  }
+
   return switch (command) {
     MawyCommand.bold => _toggleWrap(state, '**'),
     MawyCommand.italic => _toggleWrap(state, '_'),

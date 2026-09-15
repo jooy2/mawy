@@ -1290,6 +1290,39 @@ void main() {
       expect(field.focusNode.hasFocus, isTrue);
     });
 
+    testWidgets('offers no block to make in a table', (WidgetTester tester) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'Intro.\n\n| a | b |\n| - | - |',
+            mode: MawyEditorMode.plain,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      MawyToolbarButton button(String label) => tester.widget(
+        find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == label,
+        ),
+      );
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pumpAndSettle();
+
+      expect(button('Bulleted list').enabled, isTrue);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 12);
+      await tester.pumpAndSettle();
+
+      expect(button('Bulleted list').enabled, isFalse);
+      expect(button('Heading').enabled, isFalse);
+      expect(button('Bold').enabled, isTrue);
+    });
+
     testWidgets('is not offered where nothing can be edited', (WidgetTester tester) async {
       MawyToolbarButton table() => tester.widget(
         find.byWidgetPredicate(

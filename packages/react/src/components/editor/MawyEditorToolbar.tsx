@@ -8,7 +8,7 @@ import type {
   MawyMode
 } from '../../types.js';
 import type { MawyStrings } from '../../internal/i18n.js';
-import type { MawyCommand } from '../../internal/commands.js';
+import { blockCommand, type MawyCommand } from '../../internal/commands.js';
 import { Actions, Choice, IconButton, Menu } from '../../internal/controls.js';
 import { TableSizeGrid } from '../../internal/table.js';
 import { tabStops, useRoving } from '../../internal/roving.js';
@@ -69,6 +69,11 @@ export interface MawyEditorToolbarProps {
   headingActive: (depth: MawyHeadingLevel) => boolean;
   /** Off in the modes that have nothing to format. */
   editable: boolean;
+  /**
+   * Whether the caret is in a table, where the commands that make a block have
+   * nothing to make. See `BLOCK_COMMANDS`.
+   */
+  inTable?: boolean;
   /** Opens the find bar. Absent in the modes that have no source to search. */
   onFind?: () => void;
   finding: boolean;
@@ -265,6 +270,7 @@ export function MawyEditorToolbar({
   onHeading,
   headingActive,
   editable,
+  inTable = false,
   onFind,
   finding,
   onOpen,
@@ -361,6 +367,7 @@ export function MawyEditorToolbar({
           key={key}
           label={strings.heading}
           icon={<HeadingIcon className="mawy-icon" aria-hidden="true" />}
+          disabled={inTable}
           {...itemProps(at)}
         >
           <Choice<string>
@@ -552,7 +559,7 @@ export function MawyEditorToolbar({
         icon={<Icon className="mawy-icon" aria-hidden="true" />}
         pressed={on}
         aria-pressed={on}
-        disabled={!editable}
+        disabled={!editable || (inTable && blockCommand(entry.command))}
         data-mawy-toolbar-item=""
         onClick={() => onCommand(entry.command)}
         {...itemProps(at)}

@@ -3426,6 +3426,40 @@ describe('tables', () => {
     expect(document.activeElement).toBe(sourceOf(plain));
   });
 
+  it('offers no block to make in a cell, and pastes into one on the line a cell is', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n| a | b |\n| - | - |';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} style={WIDE} />
+    );
+
+    put(bodyOf(screen), 'b', 1);
+
+    await vi.waitFor(() =>
+      expect(page.getByRole('button', { name: 'Bulleted list' }).element()).toBeDisabled()
+    );
+    expect(page.getByRole('button', { name: 'Heading' }).element()).toBeDisabled();
+    expect(page.getByRole('button', { name: 'Bold' }).element()).not.toBeDisabled();
+
+    // The key does nothing either, where it used to put `- ` in front of the row.
+    await userEvent.keyboard('{ControlOrMeta>}{Shift>}8{/Shift}{/ControlOrMeta}');
+    await new Promise((done) => setTimeout(done, 30));
+    expect(onChange).not.toHaveBeenCalled();
+
+    const clipboard = new DataTransfer();
+
+    clipboard.setData('text/plain', 'one\ntwo | three');
+    put(bodyOf(screen), 'b', 1);
+    bodyOf(screen).dispatchEvent(clipboardEvent(clipboard));
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        'Intro.\n\n| a | bone<br>two \\| three |\n| - | - |'
+      )
+    );
+    expect(bodyOf(screen).querySelectorAll('td, th')).toHaveLength(2);
+  });
+
   it('keeps a table the same shape while its cells are typed into', async () => {
     const screen = await render(
       <MawyEditor
