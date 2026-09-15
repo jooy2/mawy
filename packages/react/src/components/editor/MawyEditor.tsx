@@ -1610,9 +1610,14 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
   /** The document the last render was given, for an edit a bar made against an older one. */
   const latestText = React.useRef(text);
+  /** The caret, and what puts the focus back on it, as the last render had them. */
+  const latestSelection = React.useRef(selection);
+  const latestFocus = React.useRef(focusDrawn);
 
   React.useLayoutEffect(() => {
     latestText.current = text;
+    latestSelection.current = selection;
+    latestFocus.current = focusDrawn;
   });
 
   const blockEdit = React.useCallback(
@@ -1628,9 +1633,14 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
 
       if (refocus) {
+        // At the caret the edit left, or the one the document had: a field
+        // that took the focus took the page's selection with it, and the
+        // document given the focus back on its own puts the caret at its start.
         // After whatever handed the focus to a control of its own on the way
-        // out, which a menu picking a value does.
-        requestAnimationFrame(() => drawn.current?.focus({ preventScroll: true }));
+        // out, which a menu picking a value does, and after the edit is drawn.
+        const caret = edit ? { start: edit.caret, end: edit.caret } : latestSelection.current;
+
+        requestAnimationFrame(() => latestFocus.current(caret.start, caret.end));
       }
     },
     [applyEdit, readOnly]

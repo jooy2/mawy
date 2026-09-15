@@ -1948,13 +1948,21 @@ describe('the document surface', () => {
       expect(onChange).toHaveBeenLastCalledWith('[Words](https://example.org) here.')
     );
 
-    // And `Escape` gives a new one up with nothing written.
+    // And `Escape` gives a new one up with nothing written. Off the link first,
+    // or the button is asking for that link's address.
     put(bodyOf(screen), ' here.', 6);
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-block-tools')).toBeNull());
     await screen.getByRole('button', { name: 'Link' }).click();
     await vi.waitFor(() => expect(document.activeElement).toBe(address.element()));
     await userEvent.keyboard('{Escape}');
     await vi.waitFor(() => expect(screen.container.querySelector('.mawy-block-tools')).toBeNull());
     expect(onChange).toHaveBeenCalledTimes(1);
+
+    // With the caret back where it was, rather than at the start of the document.
+    await userEvent.keyboard('!');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('[Words](https://example.org) here.!')
+    );
   });
 
   it('writes raw HTML out when the caret is inside it, and edits it there', async () => {
