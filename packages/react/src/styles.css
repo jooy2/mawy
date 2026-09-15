@@ -2043,6 +2043,40 @@
   margin: 0 3px;
 }
 
+/* The fields on a link's bar and a picture's, drawn the way the find bar's are.
+ * The bar keeps inside the pane it floats in, and a field gives up width before
+ * the buttons beside it do. */
+.mawy-root .mawy-block-tools {
+  max-width: calc(100% - 8px);
+}
+
+.mawy-root .mawy-block-field {
+  flex: 1 1 11em;
+  width: 11em;
+  min-width: 4em;
+  height: 26px;
+  margin: 0 2px;
+  padding: 0 8px;
+  border: 1px solid var(--mawy-border-strong);
+  border-radius: var(--mawy-radius-sm);
+  background: var(--mawy-bg);
+  color: var(--mawy-fg);
+  font: inherit;
+  font-size: 0.85em;
+}
+
+.mawy-root .mawy-block-address {
+  flex-basis: 16em;
+  width: 16em;
+}
+
+.mawy-root .mawy-block-field:focus-visible,
+.mawy-root .mawy-block-field:focus {
+  border-color: var(--mawy-accent);
+  outline: 2px solid var(--mawy-accent-soft);
+  outline-offset: 0;
+}
+
 /* A menu on a floating bar, a code block's languages, runs down over what is
  * under the bar and scrolls where it is longer than a screen can show. */
 .mawy-root .mawy-block-tools .mawy-menu-panel {
