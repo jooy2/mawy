@@ -1325,9 +1325,17 @@ class _TableToolsHost extends StatefulWidget {
 
 class _TableToolsHostState extends State<_TableToolsHost> {
   final GlobalKey _stack = GlobalKey(debugLabel: 'MawyEditor table tools');
+  final GlobalKey _bar = GlobalKey(debugLabel: 'MawyEditor table tools bar');
 
   /// How far down the field the bar is, or `null` while there is no bar.
   double? _top;
+
+  /// How far across it is, from the left.
+  double _left = 0;
+
+  /// How wide the bar was when it was placed, which is a guess until it has
+  /// been laid out once.
+  double? _wide;
 
   /// How many rows and columns the selection covers.
   int _rows = 1;
@@ -1408,30 +1416,52 @@ class _TableToolsHostState extends State<_TableToolsHost> {
         : tableSpanAt(text, selection.start, selection.end);
     final RenderEditable? editable = widget.editableKey.currentState?.renderEditable;
     final RenderObject? stack = _stack.currentContext?.findRenderObject();
+    final double? measured = _bar.currentContext?.size?.width;
+    final double wide = measured ?? _wide ?? 280;
     double? top;
+    double left = _left;
 
+    // Under the line the caret is on, across from the caret, and over the line
+    // where there is no room under it: beside the row being written in rather
+    // than at the table's edge, which in a long table is a long way from it.
     if (table != null &&
         editable != null &&
         editable.attached &&
         stack is RenderBox &&
         stack.hasSize) {
-      final Rect first = editable.getLocalRectForCaret(TextPosition(offset: table.start));
-      final Rect last = editable.getLocalRectForCaret(TextPosition(offset: table.end));
-      final double over = stack.globalToLocal(editable.localToGlobal(first.topLeft)).dy;
-      final double under = stack.globalToLocal(editable.localToGlobal(last.bottomLeft)).dy;
-      final double above = over - kMawyTableToolsHeight - 4;
+      final Rect caret = editable.getLocalRectForCaret(
+        TextPosition(offset: selection.extentOffset),
+      );
+      final Offset head = stack.globalToLocal(editable.localToGlobal(caret.topLeft));
+      final double foot = stack.globalToLocal(editable.localToGlobal(caret.bottomLeft)).dy;
+      final double below = foot + 8;
+      final double above = head.dy - 8 - kMawyTableToolsHeight;
       final double most = stack.size.height - kMawyTableToolsHeight - 4;
-      final double wanted = above >= 4 ? above : under + 4;
+      final bool rtl = Directionality.of(context) == TextDirection.rtl;
 
-      top = wanted < 4 ? 4 : (most > 4 && wanted > most ? most : wanted);
+      top = below <= most || above < 4 ? math.max(4, math.min(below, most)) : above;
+      left = math.max(
+        4,
+        math.min(rtl ? head.dx - wide + 12 : head.dx - 12, stack.size.width - wide - 4),
+      );
     }
 
-    if (top != _top || (span?.rows ?? 1) != _rows || (span?.columns ?? 1) != _columns) {
+    if (top != _top ||
+        left != _left ||
+        (span?.rows ?? 1) != _rows ||
+        (span?.columns ?? 1) != _columns) {
       setState(() {
         _top = top;
+        _left = left;
+        _wide = wide;
         _rows = span?.rows ?? 1;
         _columns = span?.columns ?? 1;
       });
+    }
+
+    // Placed by a guess at its width, and placed again once it has one.
+    if (top != null && measured == null) {
+      _queue();
     }
   }
 
@@ -1445,10 +1475,11 @@ class _TableToolsHostState extends State<_TableToolsHost> {
       children: <Widget>[
         widget.child,
         if (_top != null)
-          PositionedDirectional(
+          Positioned(
             top: _top,
-            end: 16,
+            left: _left,
             child: MawyTableTools(
+              key: _bar,
               tokens: widget.tokens,
               strings: widget.strings,
               available: widget.available,

@@ -3366,7 +3366,7 @@ describe('tables', () => {
     await vi.waitFor(() => expect(again).toHaveBeenLastCalledWith('|  |\n| --- |'));
   });
 
-  it('hangs the row and column controls beside the table the caret is in', async () => {
+  it('hangs the row and column controls under the cell the caret is in', async () => {
     const onChange = vi.fn();
     const source = 'Intro.\n\n| a | b |\n| - | - |\n| c | d |\n\nAfter.';
     const screen = await render(
@@ -3381,13 +3381,16 @@ describe('tables', () => {
     put(bodyOf(screen), 'c', 1);
     await vi.waitFor(() => expect(tools()).not.toBe(null));
 
-    // Over the table's top edge, and not over the words above it.
-    const bar = tools()!.getBoundingClientRect();
-    const table = bodyOf(screen).querySelector('table')!.getBoundingClientRect();
-    const intro = bodyOf(screen).querySelector('p')!.getBoundingClientRect();
+    // Under the cell, and across from the caret rather than at the table's far
+    // end, which in a long table is nowhere near the row being written in.
+    await vi.waitFor(() => {
+      const bar = tools()!.getBoundingClientRect();
+      const cell = bodyOf(screen).querySelectorAll('td')[0].getBoundingClientRect();
 
-    expect(bar.bottom).toBeLessThanOrEqual(table.top);
-    expect(bar.top).toBeGreaterThanOrEqual(intro.bottom);
+      expect(bar.top).toBeGreaterThanOrEqual(cell.bottom);
+      expect(bar.top - cell.bottom).toBeLessThan(16);
+      expect(bar.left).toBeLessThan(cell.right);
+    });
 
     // A press on it acts on the cell the caret is in and leaves the caret there.
     await userEvent.click(page.getByRole('button', { name: 'Add a column after' }));
@@ -3406,7 +3409,7 @@ describe('tables', () => {
     );
     expect(page.getByRole('button', { name: 'Delete this row' }).element()).toBeDisabled();
 
-    // And on the source, beside the lines the table is written on.
+    // And on the source, under the line the caret is on.
     await screen.unmount();
 
     const plain = await render(
@@ -3417,6 +3420,16 @@ describe('tables', () => {
     sourceOf(plain).setSelectionRange(29, 29);
     await vi.waitFor(() =>
       expect(plain.container.querySelector('.mawy-table-tools')).not.toBe(null)
+    );
+
+    const line = [
+      ...plain.container.querySelectorAll('.mawy-source-line')
+    ][4].getBoundingClientRect();
+
+    await vi.waitFor(() =>
+      expect(
+        plain.container.querySelector('.mawy-table-tools')!.getBoundingClientRect().top
+      ).toBeGreaterThanOrEqual(line.bottom)
     );
 
     await userEvent.click(page.getByRole('button', { name: 'Delete this row' }));

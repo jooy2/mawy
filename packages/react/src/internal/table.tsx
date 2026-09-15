@@ -193,9 +193,9 @@ const TABLE_TOOLS: readonly (
 
 export interface TableToolsProps {
   strings: MawyStrings;
-  /** Where the bar is, from the top and the inline end of the pane it is in. */
+  /** Where the bar is, from the top and the left of the pane it is in. */
   top: number;
-  end: number;
+  left: number;
   /** How many rows and columns the selected cells cover, one each for a caret. */
   rows: number;
   columns: number;
@@ -205,11 +205,11 @@ export interface TableToolsProps {
 }
 
 /**
- * The row and column controls, hung beside the table the caret is in.
+ * The row and column controls, hung beside the caret in a table.
  *
- * Over the table's top edge at its far end, and under its bottom edge where
- * there is no room above: out of the cells being typed into, and near enough
- * the table to read as its own. A press on the bar does not take the focus, so
+ * Under the cell the caret is in, and over it where there is no room under it:
+ * out of the words being typed, and where the pointer already is in a table
+ * too long to reach the end of. A press on the bar does not take the focus, so
  * the caret the command acts on is still in the cell it was in and the next
  * letter goes there. Each button is named in a tooltip and to a screen reader,
  * and each command is also a key, which `aria-keyshortcuts` says.
@@ -218,7 +218,7 @@ export interface TableToolsProps {
  * covers and says how many, and one more empties the cells.
  */
 export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(function TableTools(
-  { strings, top, end, rows, columns, available, onCommand },
+  { strings, top, left, rows, columns, available, onCommand },
   ref
 ) {
   return (
@@ -228,7 +228,7 @@ export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(func
       role="toolbar"
       aria-label={strings.table}
       lang={strings.lang}
-      style={{ top, insetInlineEnd: end }}
+      style={{ top, left }}
       onMouseDown={(event) => event.preventDefault()}
     >
       {TABLE_TOOLS.map((tool, index) => {

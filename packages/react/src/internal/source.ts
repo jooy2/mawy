@@ -151,3 +151,94 @@ export function rowRect(lines: Element, line: number, lineHeight: number): DOMRe
 
   return new DOMRect(box.x, box.top - leading, box.width, lineHeight);
 }
+
+/**
+ * Where the caret is drawn in the source, as the row it is on with no width,
+ * at the place across it the caret is — in the page's own coordinates.
+ *
+ * `rowRect` for one place in a line rather than the whole of it, asked of the
+ * same copy of the text and grown into its row the same way. What the table's
+ * controls are hung under. `null` where the line is not on the tree.
+ */
+export function caretRect(
+  lines: Element,
+  line: number,
+  column: number,
+  lineHeight: number
+): DOMRect | null {
+  const chunk = lines.children[chunkOf(line)];
+
+  if (!chunk) {
+    return null;
+  }
+
+  const nth = line - chunkOf(line) * SOURCE_CHUNK;
+  const cold = chunk.firstElementChild;
+  const document = lines.ownerDocument;
+  let node: Node | null = null;
+  let offset = 0;
+
+  if (!cold || !cold.classList.contains('mawy-source-cold')) {
+    const row = chunk.querySelectorAll<HTMLElement>('.mawy-source-line')[nth];
+
+    if (!row) {
+      return null;
+    }
+
+    const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+    let left = column;
+
+    for (let each = walker.nextNode(); each; each = walker.nextNode()) {
+      const length = (each as Text).data.length;
+
+      if (left <= length) {
+        node = each;
+        offset = left;
+        break;
+      }
+
+      left -= length;
+    }
+
+    if (!node) {
+      // A line with nothing in it has no text to stand in; the caret is at its start.
+      const box = row.getBoundingClientRect();
+
+      return new DOMRect(box.left, box.top, 0, box.height);
+    }
+  } else {
+    const text = cold.firstChild;
+
+    if (!text || text.nodeType !== 3) {
+      return null;
+    }
+
+    let start = 0;
+
+    for (let each = 0; each < nth; each += 1) {
+      start = (text as Text).data.indexOf('\n', start) + 1;
+
+      if (start === 0) {
+        return null;
+      }
+    }
+
+    node = text;
+    offset = Math.min(start + column, (text as Text).data.length);
+  }
+
+  const range = document.createRange();
+
+  range.setStart(node, offset);
+  range.collapse(true);
+
+  const box = range.getClientRects()[0];
+
+  if (!box) {
+    return null;
+  }
+
+  const height = lineHeight || box.height;
+
+  return new DOMRect(box.left, box.top - (height - box.height) / 2, 0, height);
+}

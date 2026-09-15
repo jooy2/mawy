@@ -6,6 +6,8 @@
 
 ### Added
 
+- **The bar of a table's controls floats beside the caret.** It hung over the line the table starts on at the source's far edge, which in a table longer than the field was a scroll away from the row being written in. It floats a little under the line the caret is on now, starting where the caret is across, and over the line where there is no room under it.
+
 - **A list in a table cell is written as lines of the cell.** A cell of a GitHub table holds no block, but it can hold lines that read as a list. With the caret in a cell, `bulletList`, `orderedList` and `taskList` write an item's marker at the start of the line of the cell the caret is on, between the `<br>`s the cell is written with, and take it off again, and with cells selected they mark or number every line of every cell, numbering again in each. Their buttons stay enabled in a table and are pressed on a cell's lines that are already that list. It is the React package's arithmetic, and the parity check compares the two.
 
 - **The rows and columns of a table are changed for every cell a selection covers.** The table commands acted on the cell the caret was in whatever was selected. A selection from a place in one cell to a place in another covers the rectangle of cells between them now, and the bar beside the table acts on as many rows or columns as that covers, says how many, and has one more control that empties the cells. The keys act on a selection the same way. It is the React package's arithmetic, and the parity check compares the two. `MawyStrings` gained `tableRowsAbove`, `tableRowsBelow`, `tableColumnsBefore`, `tableColumnsAfter`, `tableRowsRemove`, `tableColumnsRemove` and `tableCellsClear`.

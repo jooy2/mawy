@@ -1501,8 +1501,10 @@ function lineInCell(selection: Selection, cell: Element, forwards: boolean): boo
 /**
  * The place on the first line of a block, or its last, nearest a point across.
  *
- * Asked of the page at that point, and the block's own edge where the page
- * answers with somewhere else — a block out of view answers with nothing.
+ * Asked of the page at that point first, which is one question. Where the page
+ * answers with somewhere else — the bar of a table's controls is over the
+ * point, or the block is out of view — each place in the block's text is
+ * measured instead, and the block's own edge is the answer where it has none.
  */
 function lineOf(block: Element, first: boolean, x: number): { node: Node; offset: number } {
   const box = block.getBoundingClientRect();
@@ -1522,7 +1524,34 @@ function lineOf(block: Element, first: boolean, x: number): { node: Node; offset
 
   block.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
 
-  return { node: block, offset: first ? 0 : block.childNodes.length };
+  const range = block.ownerDocument.createRange();
+  const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+  let best: { node: Node; offset: number; top: number; apart: number } | null = null;
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    for (let offset = 0; offset <= (node as Text).data.length; offset += 1) {
+      range.setStart(node, offset);
+      range.collapse(true);
+
+      const place = range.getClientRects()[0];
+
+      if (!place) {
+        continue;
+      }
+
+      const apart = Math.abs(place.left - x);
+      const higher = best && (first ? place.top < best.top - 1 : place.top > best.top + 1);
+      const level = best && Math.abs(place.top - best.top) <= 1;
+
+      if (!best || higher || (level && apart < best.apart)) {
+        best = { node, offset, top: place.top, apart };
+      }
+    }
+  }
+
+  return best
+    ? { node: best.node, offset: best.offset }
+    : { node: block, offset: first ? 0 : block.childNodes.length };
 }
 
 /** The cell under a cell, or over it, in the same column. */

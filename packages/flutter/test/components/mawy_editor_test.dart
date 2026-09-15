@@ -1247,7 +1247,7 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets('hangs the row and column controls beside the table the caret is in', (
+    testWidgets('hangs the row and column controls under the line the caret is on', (
       WidgetTester tester,
     ) async {
       final List<String> seen = <String>[];
@@ -1270,14 +1270,15 @@ void main() {
 
       expect(find.byType(MawyTableTools), findsOneWidget);
 
-      // Over the line the table starts on, and not over the table.
+      // Under the line, and across from the caret rather than at the far edge.
       final Rect bar = tester.getRect(find.byType(MawyTableTools));
       final RenderEditable editable = tester.state<EditableTextState>(_sourceField).renderEditable;
-      final double tableTop = editable
-          .localToGlobal(editable.getLocalRectForCaret(const TextPosition(offset: 8)).topLeft)
-          .dy;
+      final Rect caret = editable.getLocalRectForCaret(const TextPosition(offset: 29));
+      final Offset foot = editable.localToGlobal(caret.bottomLeft);
 
-      expect(bar.bottom, lessThanOrEqualTo(tableTop));
+      expect(bar.top, greaterThanOrEqualTo(foot.dy));
+      expect(bar.top - foot.dy, lessThan(16));
+      expect(bar.left, lessThan(foot.dx));
 
       await tester.tap(
         find.byWidgetPredicate(

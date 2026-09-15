@@ -2006,15 +2006,6 @@
   margin: 0 3px;
 }
 
-/* Room over every table on the drawn document for that bar, so the bar hangs
- * in the space between the table and what is above it rather than over the
- * end of the last line of a paragraph. Every table rather than only the one the
- * caret is in: room that opened as the caret arrived would move the document
- * under the pointer that had just pressed in it. */
-.mawy-root .mawy-document-body .mawy-md-table-scroll {
-  margin-top: 38px;
-}
-
 /* Cells selected across a table, marked as the rectangle the commands act on,
  * with the browser's own mark of the text under it taken away. */
 .mawy-root .mawy-table-cells {

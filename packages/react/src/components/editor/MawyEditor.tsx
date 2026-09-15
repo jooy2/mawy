@@ -83,7 +83,7 @@ interface MawyUpload extends MawyPlace {
 }
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
-import { rowHeight, rowRect } from '../../internal/source.js';
+import { caretRect, rowHeight } from '../../internal/source.js';
 import { TableTools } from '../../internal/table.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
 import { MawyViewer } from '../viewer/index.js';
@@ -1217,7 +1217,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   /** Whether that is more than one cell, which the drawn document marks as cells. */
   const cellsSelected =
     showDocument && tableSpan !== null && tableSpan.rows * tableSpan.columns > 1;
-  const [toolsAt, setToolsAt] = React.useState<{ top: number; end: number } | null>(null);
+  const [toolsAt, setToolsAt] = React.useState<{ top: number; left: number } | null>(null);
   /** Where the mark over the selected cells is drawn, in the pane it is drawn in. */
   const [cellsAt, setCellsAt] = React.useState<{
     top: number;
@@ -1232,11 +1232,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   );
 
   /**
-   * Where the bar goes: over the table's top edge at its far end, or under its
-   * bottom edge where the top is too near the top of the pane, and never out of
-   * the pane. Measured rather than laid out, because the table is inside a
-   * surface that scrolls — a textarea's lines, or the drawn document — and the
-   * bar is not.
+   * Where the bar goes: under the cell the caret is in, or under the cells
+   * selected, starting at the caret across, and over them where there is no
+   * room under them in the pane or on the screen. On the source it goes under
+   * the line the caret is on.
+   *
+   * Beside the caret rather than at the table's far end, which in a table
+   * longer than the screen is a long way from the row being written in, and
+   * under the cell rather than over the line being typed. Measured rather than
+   * laid out, because the table is inside a surface that scrolls — a
+   * textarea's lines, or the drawn document — and the bar is not.
    */
   const placeTools = React.useCallback(() => {
     const pane = showDocument ? documentPane.current : sourcePane.current;
@@ -1250,14 +1255,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     const room = pane.getBoundingClientRect();
     const rtl = getComputedStyle(pane).direction === 'rtl';
-    let edges: { top: number; bottom: number; left: number; right: number } | null;
+    let anchor: { top: number; bottom: number; x: number } | null = null;
 
     if (showDocument) {
       const table = [...(drawn.current?.querySelectorAll('.mawy-md-table-scroll') ?? [])].find(
         (each) => rangeOf(each)?.start === tableHere.start
       );
-
-      edges = table?.getBoundingClientRect() ?? null;
 
       // The selected cells, as one box from the first of them to the last. A
       // row of the table is a line of it, and the delimiter line has no row on
@@ -1277,6 +1280,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           height: Math.max(one.bottom, other.bottom) - Math.min(one.top, other.top)
         };
 
+        anchor = {
+          top: box.top + room.top,
+          bottom: box.top + box.height + room.top,
+          x: rtl ? box.left + box.width + room.left : box.left + room.left
+        };
         setCellsAt((was) =>
           was &&
           was.top === box.top &&
@@ -1288,40 +1296,62 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         );
       } else {
         setCellsAt(null);
+
+        const selection = pane.ownerDocument.getSelection();
+        const node = selection?.focusNode;
+        const cell = (node?.nodeType === 1 ? (node as Element) : node?.parentElement)?.closest(
+          'td, th'
+        );
+
+        if (cell && table?.contains(cell)) {
+          const box = cell.getBoundingClientRect();
+          const caret = selection?.rangeCount ? selection.getRangeAt(0).getClientRects()[0] : null;
+
+          anchor = { top: box.top, bottom: box.bottom, x: caret?.left ?? box.left };
+        }
       }
     } else {
       const lines = pane.querySelector('.mawy-source-lines');
-      const height = lines ? rowHeight(lines) : 0;
-      const first = lines ? lineAt(text, tableHere.start) : 0;
-      const last = lines ? lineAt(text, tableHere.end) : 0;
-      const top = lines && rowRect(lines, first, height);
-      const bottom = lines && rowRect(lines, last, height);
+      const at = selection.end;
+      const caret =
+        lines &&
+        caretRect(
+          lines,
+          lineAt(text, at),
+          at - text.lastIndexOf('\n', at - 1) - 1,
+          rowHeight(lines)
+        );
 
-      edges =
-        top && bottom
-          ? { top: top.top, bottom: bottom.bottom, left: room.left + 16, right: room.right - 16 }
-          : null;
+      anchor = caret && { top: caret.top, bottom: caret.bottom, x: caret.left };
     }
 
-    if (!edges) {
+    if (!anchor) {
       setToolsAt(null);
 
       return;
     }
 
     const tall = tools.current?.offsetHeight || 34;
-    const above = edges.top - room.top - tall - 4;
-    // Kept inside a pane that has a height of its own to scroll in. An editor
-    // given no height is as tall as what is in it, and there is nothing to keep
-    // the bar inside.
-    const top = Math.min(
-      Math.max(4, above < 4 ? edges.bottom - room.top + 4 : above),
-      room.height > tall + 8 ? room.height - tall - 4 : Infinity
+    const wide = tools.current?.offsetWidth || 280;
+    // Inside the pane where the pane has a height of its own to scroll in, and
+    // inside the screen. An editor given no height is as tall as what is in it,
+    // and there is nothing of the pane to keep the bar inside.
+    const floor = Math.min(
+      room.height > tall + 8 ? room.height : Infinity,
+      (pane.ownerDocument.defaultView?.innerHeight ?? Infinity) - room.top
     );
-    const end = Math.max(4, rtl ? edges.left - room.left : room.right - edges.right);
+    const ceiling = Math.max(0, -room.top);
+    const below = anchor.bottom - room.top + 8;
+    const above = anchor.top - room.top - 8 - tall;
+    const top =
+      below + tall <= floor - 4 || above < ceiling + 4
+        ? Math.max(ceiling + 4, Math.min(below, floor - tall - 4))
+        : above;
+    const across = (rtl ? anchor.x - wide + 12 : anchor.x - 12) - room.left;
+    const left = Math.max(4, Math.min(across, room.width - wide - 4));
 
-    setToolsAt((was) => (was && was.top === top && was.end === end ? was : { top, end }));
-  }, [cellsSelected, showDocument, tableHere, tableSpan, text]);
+    setToolsAt((was) => (was && was.top === top && was.left === left ? was : { top, left }));
+  }, [cellsSelected, selection.end, showDocument, tableHere, tableSpan, text]);
 
   React.useLayoutEffect(() => {
     placeTools();
@@ -1360,7 +1390,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         ref={tools}
         strings={strings}
         top={toolsAt.top}
-        end={toolsAt.end}
+        left={toolsAt.left}
         rows={tableSpan?.rows ?? 1}
         columns={tableSpan?.columns ?? 1}
         available={(name) => tableAfter(name) !== null}
