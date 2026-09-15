@@ -1958,6 +1958,9 @@ describe('the document surface', () => {
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith('[Words](https://example.org) here.')
     );
+    // The focus goes back to the document a frame after the edit, at the end
+    // of the link's words; a caret put anywhere before then is put back there.
+    await vi.waitFor(() => expect(document.activeElement).toBe(bodyOf(screen)));
 
     // And `Escape` gives a new one up with nothing written. Off the link first,
     // or the button is asking for that link's address.
@@ -1970,6 +1973,7 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
 
     // With the caret back where it was, rather than at the start of the document.
+    await vi.waitFor(() => expect(document.activeElement).toBe(bodyOf(screen)));
     await userEvent.keyboard('!');
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith('[Words](https://example.org) here.!')
