@@ -1507,6 +1507,20 @@ describe('the status bar', () => {
  * application is given and the thing that has to be right.
  */
 describe('the document surface', () => {
+  it('fills its pane, and draws no ring around itself while it has the focus', async () => {
+    const screen = await render(
+      <MawyEditor style={{ height: 344, width: 1200 }} modes={['wysiwyg']} defaultValue="Words." />
+    );
+    const pane = screen.container.querySelector('.mawy-document') as HTMLElement;
+
+    put(bodyOf(screen), 'Words.', 2);
+
+    expect(bodyOf(screen).getBoundingClientRect().width).toBe(pane.clientWidth);
+    expect(getComputedStyle(bodyOf(screen)).outlineStyle).toBe('none');
+
+    await screen.unmount();
+  });
+
   /**
    * The editable element is as tall as what is written in it, and the pane
    * around it fills the editor and scrolls. A press on the part of the pane the
@@ -1550,7 +1564,9 @@ describe('the document surface', () => {
     // A measure narrower than the editor, so there is room either side.
     const screen = await render(
       <MawyEditor
-        style={{ height: 344, width: 400, '--mawy-doc-measure': '14rem' } as React.CSSProperties}
+        style={
+          { height: 344, width: 400, '--mawy-doc-edit-measure': '14rem' } as React.CSSProperties
+        }
         modes={['wysiwyg']}
         defaultValue={'One line\n\nTwo'}
         onChange={onChange}
@@ -1578,7 +1594,9 @@ describe('the document surface', () => {
     const source = '[A link](https://example.com) first';
     const screen = await render(
       <MawyEditor
-        style={{ height: 344, width: 400, '--mawy-doc-measure': '14rem' } as React.CSSProperties}
+        style={
+          { height: 344, width: 400, '--mawy-doc-edit-measure': '14rem' } as React.CSSProperties
+        }
         modes={['wysiwyg']}
         defaultValue={source}
         onChange={onChange}

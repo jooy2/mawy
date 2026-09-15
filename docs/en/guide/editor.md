@@ -119,6 +119,8 @@ There is no second model behind it. What is on screen is a drawing of the Markdo
 <MawyEditor defaultValue={document} modes={['plain', 'split', 'preview']} />
 ```
 
+**The document is as wide as its pane**, where the preview and the viewer keep to the measure, because the edges of what can be typed in are the edges of the editor. `--mawy-doc-edit-measure` gives it a measure of its own, and a press in the room either side of that measure still puts the caret on the line beside it. No ring is drawn around the document while it has the focus, which is the source surface's rule as well: the caret already says where the focus is.
+
 What works: typing and deleting **anywhere there is text to type in**, meaning a paragraph, a heading, a list item, a quotation, a table cell or a code block. So do replacing a selection, `Shift`+`Enter` for a hard break, the shorthands that turn into formatting as they are typed, and every command on the toolbar. The toolbar commands needed no new code, because they are pure functions of the source and its selection and name no surface at all.
 
 Edits land on the **drawn** character rather than the written one, which is the core of this surface. The caret after `bold` in `**bold**` has an asterisk in front of it in the file and a `d` in front of it on the page. `Backspace` there takes the `d`. An image and a hard break come out in one piece, because each is one character to a reader and invisible to a walk over the runs of text.

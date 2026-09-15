@@ -41,6 +41,10 @@
   --mawy-doc-line-height: 1.7;
   --mawy-doc-letter-spacing: 0em;
   --mawy-doc-measure: 44rem;
+  /* The same, for the document while it is being written in. The whole pane,
+   * because the edges of what can be typed in are the edges of the editor
+   * rather than a column somewhere inside it. */
+  --mawy-doc-edit-measure: none;
 
   --mawy-radius-sm: 6px;
   --mawy-radius-md: 9px;
@@ -1918,16 +1922,18 @@
  * part of the pane is still the document: a drag that starts there selects, and
  * the menu a right click opens there can paste. Where the pane is as tall as
  * what is in it, the percentage has nothing to resolve against and does
- * nothing. `MawyEditorDocument` answers the room either side of the measure. */
+ * nothing. `MawyEditorDocument` answers the room either side of a measure, where
+ * `--mawy-doc-edit-measure` gives it one.
+ *
+ * No ring while it has the focus, which is the source surface's rule too. A
+ * `contenteditable` matches `:focus-visible` however the focus arrived, so a
+ * ring drawn there came back around the whole document with every press and
+ * every command — and what says where the focus is in a place to type is the
+ * caret, which is already blinking in it. */
 .mawy-root .mawy-document-body {
+  max-width: var(--mawy-doc-edit-measure);
   min-height: 100%;
   outline: none;
-}
-
-.mawy-root .mawy-document-body:focus-visible {
-  outline: 2px solid var(--mawy-accent);
-  outline-offset: -4px;
-  border-radius: var(--mawy-radius-md);
 }
 
 /* A block with nothing in it is still somewhere the caret has to be able to
