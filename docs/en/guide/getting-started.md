@@ -59,13 +59,13 @@ The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_i
 
 | What you import         | Gzipped |
 | ----------------------- | ------- |
-| `MawyViewer`            | 30.6 kB |
-| `MawyEditor`            | 67.4 kB |
+| `MawyViewer`            | 31.3 kB |
+| `MawyEditor`            | 71.7 kB |
 | `mawy-react/markdown`   | 10.9 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
-| `mawy-react/styles.css` | 6.8 kB  |
+| `mawy-react/styles.css` | 7.0 kB  |
 
-React is not counted, because your application already has it. `lucide-react` is counted, because it installs with the package. **A page that only reads documents does not ship the editor.** The toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, which saves 37 kB.
+React is not counted, because your application already has it. `lucide-react` is counted, because it installs with the package. **A page that only reads documents does not ship the editor.** The toolbar, the undo history, the paste pipeline and every `contenteditable` surface fall out of the bundle, which saves 40 kB.
 
 `mawy-react/markdown` is the parser on its own, for an application that wants a document's outline or its footnotes without drawing anything. `mawy-react/server` ships **nothing at all** to a browser: it draws the document on a server and sends HTML, so it has no size to record here.
 

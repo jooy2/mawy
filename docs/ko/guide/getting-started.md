@@ -59,13 +59,13 @@ flutter pub add mawy
 
 | 가져오는 것             | gzip    |
 | ----------------------- | ------- |
-| `MawyViewer`            | 30.6 kB |
-| `MawyEditor`            | 67.4 kB |
+| `MawyViewer`            | 31.3 kB |
+| `MawyEditor`            | 71.7 kB |
 | `mawy-react/markdown`   | 10.9 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
-| `mawy-react/styles.css` | 6.8 kB  |
+| `mawy-react/styles.css` | 7.0 kB  |
 
-React는 애플리케이션에 이미 있으므로 세지 않았고, `lucide-react`는 이 패키지와 함께 설치되므로 셌습니다. **문서를 읽기만 하는 페이지는 에디터를 싣지 않습니다.** 툴바와 되돌리기 기록, 붙여넣기 경로, `contenteditable` 화면이 모두 번들에서 빠져 37 kB가 줄어듭니다.
+React는 애플리케이션에 이미 있으므로 세지 않았고, `lucide-react`는 이 패키지와 함께 설치되므로 셌습니다. **문서를 읽기만 하는 페이지는 에디터를 싣지 않습니다.** 툴바와 되돌리기 기록, 붙여넣기 경로, `contenteditable` 화면이 모두 번들에서 빠져 40 kB가 줄어듭니다.
 
 `mawy-react/markdown`은 파서만 따로 가져오는 진입점입니다. 아무것도 그리지 않고 문서의 목차나 각주만 필요한 애플리케이션을 위한 것입니다. `mawy-react/server`는 서버에서 문서를 그려 HTML로 내보내므로 브라우저로 **아무것도** 보내지 않습니다. 잴 값이 없어서 표에도 넣지 않았습니다.
 
