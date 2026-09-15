@@ -151,7 +151,12 @@ function linesOf(
   let at = 0;
 
   for (const line of value.split('\n')) {
-    const found = text.indexOf(line, cursor);
+    // Spaces the editor draws where the page would not show one are no-break
+    // spaces on the page and spaces in the document. See `spaces` in `render.tsx`.
+    const found =
+      line.includes('\u00a0') && !text.includes(line, cursor)
+        ? text.indexOf(line.replace(/\u00a0/g, ' '), cursor)
+        : text.indexOf(line, cursor);
 
     if (found === -1 || found + line.length > range.end) {
       break;

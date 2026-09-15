@@ -374,6 +374,33 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       () => (focused ? revealedIn(document_.root.children, selection.start, selection.end) : null),
       [document_, focused, selection.start, selection.end]
     );
+    /**
+     * The spaces the caret is after at the end of a line, which the page is
+     * told to draw. See `spaces` in `render.tsx`.
+     *
+     * Two numbers rather than an object, so that a caret moving about a
+     * document with no such spaces in front of it does not draw the document
+     * again at every step.
+     */
+    const [spacesFrom, spacesTo] = React.useMemo(() => {
+      const at = selection.start;
+      let from = at;
+
+      while (from > 0 && (value[from - 1] === ' ' || value[from - 1] === '\t')) {
+        from -= 1;
+      }
+
+      const stop = value.indexOf('\n', at);
+      const rest = value.slice(at, stop === -1 ? value.length : stop);
+
+      return focused && selection.end === at && from < at && /^[ \t]*(?:\||$)/.test(rest)
+        ? [from, at]
+        : [-1, -1];
+    }, [focused, selection.end, selection.start, value]);
+    const spaces = React.useMemo(
+      () => (spacesFrom === -1 ? null : { start: spacesFrom, end: spacesTo }),
+      [spacesFrom, spacesTo]
+    );
     /** Which picture is fetched with the page rather than when it is reached. */
     const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
     const context: RenderContext = React.useMemo(
@@ -393,6 +420,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         firstImage: picture,
         source: value,
         reveal,
+        spaces,
         live: LIVE,
         editing: true
       }),
@@ -411,7 +439,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         images,
         picture,
         value,
-        reveal
+        reveal,
+        spaces
       ]
     );
 

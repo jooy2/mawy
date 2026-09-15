@@ -44,6 +44,11 @@ import { ruleFor } from './rules.js';
  * So the place the caret was *meant* to be is kept beside the place it went,
  * and is answered with instead for as long as the caret has not moved off that
  * spot and the document is still the one it was measured against.
+ *
+ * The spaces at the end of a block or a cell are drawn now while the caret is
+ * after them (see `spaces` in `render.tsx`). This is still the answer for the
+ * places the page has nothing to draw: the end of a line a paragraph goes on
+ * after, and the far side of a run of formatting's closing marker.
  */
 export interface MawyAim {
   /** The document this was measured against. */

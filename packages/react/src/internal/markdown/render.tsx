@@ -221,6 +221,18 @@ export interface RenderContext {
    * somewhere other than the document.
    */
   editing?: boolean;
+  /**
+   * Spaces between the last words of a line and the caret after them, which
+   * the editor's drawn document draws where the parser leaves them out.
+   *
+   * Markdown keeps no whitespace at the end of a block or a cell, so a space
+   * typed after the last word was in the file and nowhere on the page: the
+   * caret stayed where it was, and a list marker typed into a cell, `1.` and
+   * a space, looked like a keystroke that did nothing. Drawn as no-break
+   * spaces, because a space at the end of a line is the one a browser does
+   * not draw either. Unset everywhere else.
+   */
+  spaces?: MdRange | null;
 }
 
 /**
@@ -1318,6 +1330,18 @@ export function isLineBreakHtml(node: MdInline): boolean {
   return node.type === 'inlineHtml' && /^<br\s*\/?>$/i.test(node.value.trim());
 }
 
+/** The spaces the caret is after at the end of a line, where these are its last words. See `spaces`. */
+function spacesAfter(nodes: readonly MdInline[], context: RenderContext): React.ReactNode {
+  const { spaces } = context;
+  const last = nodes[nodes.length - 1];
+
+  return spaces && last && last.range.end === spaces.start ? (
+    <span {...origin({ range: spaces }, context)}>
+      {'\u00a0'.repeat(spaces.end - spaces.start)}
+    </span>
+  ) : null;
+}
+
 /**
  * A cell's contents, with a bare `<br>` read as the line break it is.
  *
@@ -1352,6 +1376,7 @@ function renderRow(
           }
         >
           {renderInline(cellContents(cell.children), context)}
+          {spacesAfter(cell.children, context)}
           {/* A break at the end of a cell ends a line and starts none, so the
               line after it — which is where the caret is when it has just
               been written — would be nowhere on the page. One more, saying
@@ -1463,16 +1488,21 @@ export function renderBlocks(
             {...origin(block, context)}
           >
             {renderInline(block.children, context)}
+            {spacesAfter(block.children, context)}
           </Tag>
         );
       }
 
       case 'paragraph':
         return tight ? (
-          <React.Fragment key={index}>{renderInline(block.children, context)}</React.Fragment>
+          <React.Fragment key={index}>
+            {renderInline(block.children, context)}
+            {spacesAfter(block.children, context)}
+          </React.Fragment>
         ) : (
           <p key={index} {...origin(block, context)}>
             {renderInline(block.children, context)}
+            {spacesAfter(block.children, context)}
           </p>
         );
 

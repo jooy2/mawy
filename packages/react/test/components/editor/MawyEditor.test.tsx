@@ -3721,6 +3721,49 @@ describe('tables', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it('draws a space typed after the last words of a line, where Markdown keeps none', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'Hello\n\n| a | b |\n| - | - |'}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+    const body = bodyOf(screen);
+    const across = () => document.getSelection()!.getRangeAt(0).getClientRects()[0]?.left ?? 0;
+
+    put(body, 'Hello', 5);
+    await new Promise((done) => setTimeout(done, 30));
+
+    const before = across();
+
+    await userEvent.keyboard(' ');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Hello \n\n| a | b |\n| - | - |')
+    );
+
+    // On the page, with the caret after it, and gone again once there is a
+    // word after it to show it.
+    expect(body.querySelector('p')?.textContent).toBe('Hello\u00a0');
+    expect(across()).toBeGreaterThan(before);
+    await userEvent.keyboard('w');
+    await vi.waitFor(() => expect(body.querySelector('p')?.textContent).toBe('Hello w'));
+
+    // And in a cell, where `1.` and a space are the start of a list's line.
+    put(body, 'b', 1);
+    await userEvent.keyboard(' 1. ');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Hello w\n\n| a | b 1.  |\n| - | - |')
+    );
+    expect(body.querySelectorAll('th')[1].textContent).toBe('b 1.\u00a0');
+    await userEvent.keyboard('x');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Hello w\n\n| a | b 1. x |\n| - | - |')
+    );
+  });
+
   it('writes a line break into a cell on Enter, and what comes next on the line it starts', async () => {
     const onChange = vi.fn();
     const screen = await render(
