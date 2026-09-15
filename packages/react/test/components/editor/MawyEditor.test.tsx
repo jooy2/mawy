@@ -2582,45 +2582,28 @@ describe('the document surface', () => {
     put(body, '', 0);
     type(body, 'insertText', 'Hello');
 
-    // Its heading, which is what a document is begun with. See the test below.
-    expect(onChange).toHaveBeenLastCalledWith('# Hello');
-  });
+    // A paragraph, as it is anywhere else, and a heading once it is written as
+    // one.
+    expect(onChange).toHaveBeenLastCalledWith('Hello');
+    await screen.unmount();
 
-  it('writes the first words of an empty document as its heading', async () => {
-    const cases: [React.ComponentProps<typeof MawyEditor>, string, string][] = [
-      [{}, 'Title', '# Title'],
-      // The first level the menu offers, where that is not the first there is.
-      [{ headingLevels: [2, 3, 4] }, 'Title', '## Title'],
-      // A marker typed first is a block somebody chose.
-      [{}, '-', '-'],
-      [{}, '>', '>'],
-      [{ startWithHeading: false }, 'Words', 'Words']
-    ];
+    for (const [typed, written] of [
+      ['Words', 'Words'],
+      ['# Title', '# Title'],
+      ['-', '-']
+    ] as const) {
+      const changed = vi.fn();
+      const empty = await render(<MawyEditor mode="wysiwyg" onChange={changed} />);
 
-    for (const [props, typed, written] of cases) {
-      const onChange = vi.fn();
-      const screen = await render(<MawyEditor {...props} mode="wysiwyg" onChange={onChange} />);
-
-      put(bodyOf(screen), '', 0);
+      put(bodyOf(empty), '', 0);
       await userEvent.keyboard(typed);
 
-      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(written));
-      await screen.unmount();
+      await vi.waitFor(() => expect(changed).toHaveBeenLastCalledWith(written));
+      await empty.unmount();
     }
-
-    // And the characters after the first go where they are typed, in the
-    // heading, rather than each after a marker of its own.
-    const onChange = vi.fn();
-    const screen = await render(
-      <MawyEditor defaultValue="Words." mode="wysiwyg" onChange={onChange} />
-    );
-
-    put(bodyOf(screen), 'Words.', 6);
-    await userEvent.keyboard('!');
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Words.!'));
   });
 
-  it('composes the first words of an empty document into its heading', async () => {
+  it('composes the first words of an empty document into a paragraph', async () => {
     const onChange = vi.fn();
     const screen = await render(<MawyEditor mode="wysiwyg" onChange={onChange} />);
     const body = bodyOf(screen);
@@ -2645,8 +2628,8 @@ describe('the document surface', () => {
     selection.addRange(after);
     body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '제목' }));
 
-    expect(onChange).toHaveBeenLastCalledWith('# 제목');
-    await vi.waitFor(() => expect(body.querySelector('h1')?.textContent).toBe('제목'));
+    expect(onChange).toHaveBeenLastCalledWith('제목');
+    await vi.waitFor(() => expect(body.querySelector('p')?.textContent).toBe('제목'));
   });
 
   it('types inside a list item, a quotation, a table cell and a code block', async () => {

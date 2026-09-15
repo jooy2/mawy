@@ -477,26 +477,6 @@ export interface MawyEditorProps extends Omit<
    * @default [1, 2, 3]
    */
   headingLevels?: readonly MawyHeadingLevel[];
-
-  /**
-   * Whether the first words written into an empty document on `wysiwyg` are
-   * its heading.
-   *
-   * A document is nearly always begun with its title, and an empty page that
-   * takes the title as a paragraph leaves it to be turned into one afterwards.
-   * So the first character typed or composed into a document with nothing in it
-   * is written after the marker of the first level `headingLevels` offers —
-   * `# ` by default, `## ` for an editor offering `[2, 3, 4]`. A marker typed
-   * first is left alone, so a document can still open with a list or a
-   * quotation, and `Mod`+`0` turns the heading back into body text. The source
-   * surface writes what is typed and nothing else.
-   *
-   * Off for an editor that is a comment box rather than a page, or for any
-   * document that does not begin with a title.
-   *
-   * @default true
-   */
-  startWithHeading?: boolean;
   fonts?: readonly MawyFont[];
   typography?: Partial<MawyTypography>;
   defaultTypography?: Partial<MawyTypography>;
@@ -596,7 +576,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     anchorPrefix,
     headingBase,
     headingLevels = DEFAULT_HEADING_LEVELS,
-    startWithHeading = true,
     onSave,
     accept = MAWY_ACCEPT,
     fileDrop = false,
@@ -2931,11 +2910,6 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               room={room}
               aim={aim}
               held={holds}
-              lead={
-                startWithHeading && headingLevels.length
-                  ? `${'#'.repeat(Math.min(...headingLevels))} `
-                  : ''
-              }
               onImages={onUploadImage ? addImages : undefined}
               onTarget={readTarget}
             />

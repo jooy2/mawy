@@ -35,7 +35,6 @@ import {
   forLabel,
   heldText,
   inLabel,
-  leadFor,
   markdownFor,
   openedAt,
   toggledTask,
@@ -134,11 +133,6 @@ export interface MawyEditorDocumentProps {
    * layout effect, and what reads it is an event handler rather than a render.
    */
   aim: React.RefObject<MawyAim | null>;
-  /**
-   * What the first words written into an empty document are written after:
-   * a heading's marker, or nothing. See `MawyEditor.startWithHeading`.
-   */
-  lead: string;
   /**
    * Formatting the caret has been told to hold until something is typed. See
    * `heldText`.
@@ -292,7 +286,6 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       strings,
       room,
       aim,
-      lead,
       held,
       onImages
     },
@@ -349,12 +342,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       onSelect,
       onImages,
       options,
-      lead,
       held
     });
 
     React.useLayoutEffect(() => {
-      latest.current = { value, readOnly, onEdit, onSelect, onImages, options, lead, held };
+      latest.current = { value, readOnly, onEdit, onSelect, onImages, options, held };
       selectionRef.current = selection;
     });
 
@@ -608,7 +600,6 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           aim.current,
           now.options,
           drag.current,
-          now.lead,
           now.held
         );
 
@@ -1033,15 +1024,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         const opened = was.before
           ? { value, at: was.start }
           : openedAt(element, was.host, value, was.start);
-        // And into an empty document after its heading's marker, the way a
-        // keystroke is. See `MawyEditor.startWithHeading`.
-        const heading = lead && !value.trim() && !was.before ? leadFor(lead, after) : '';
-        const shift = opened.at - was.start + heading.length;
+        const shift = opened.at - was.start;
 
         onEdit({
           value:
             opened.value.slice(0, opened.at) +
-            heading +
             after +
             opened.value.slice(opened.at + was.before.length),
           caret: caret + shift
@@ -1055,7 +1042,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('compositionstart', opened);
         element.removeEventListener('compositionend', closed);
       };
-    }, [value, readOnly, onEdit, aim, lead, held]);
+    }, [value, readOnly, onEdit, aim, held]);
 
     /**
      * The caret, put down by a press rather than by the browser, and whether

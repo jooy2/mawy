@@ -1046,24 +1046,6 @@ export function heldText(
 }
 
 /**
- * The characters that open a line of Markdown as something other than a
- * paragraph, which a document is allowed to begin with. See `leadFor`.
- */
-const OPENS_BLOCK = /^[#>*+\-`~|:<]/;
-
-/**
- * The heading's marker the first words of an empty document are written
- * after, or nothing when those words begin a block of their own.
- *
- * `-` typed into an empty document is a list about to be written, `#` a
- * heading of a level somebody chose, and a heading's marker in front of either
- * would take that choice away. See `MawyEditor.startWithHeading`.
- */
-export function leadFor(lead: string, text: string): string {
-  return text.trim() && !OPENS_BLOCK.test(text) ? lead : '';
-}
-
-/**
  * Where a place on the page is in the document, preferring the caret's own
  * answer over the page's wherever it has one. See `MawyAim`.
  */
@@ -1440,7 +1422,6 @@ export function editFor(
   aim: MawyAim | null,
   options: MarkdownOptions = {},
   drag: MawyDrag = { taken: null },
-  lead = '',
   held: readonly MawyCommand[] = []
 ): MawyEdit | null {
   const place = placeOf(root, value, aim);
@@ -1505,24 +1486,13 @@ export function editFor(
         };
       }
 
-      // The first words of an empty document, after its heading's marker.
-      const heading = lead && !value.trim() ? leadFor(lead, event.data) : '';
       // Formatting the caret was told to hold, around what is typed. See
       // `heldText`.
       const formatted =
         start === end && tag !== 'PRE' ? heldText(value, start, event.data, held) : null;
 
       if (formatted) {
-        return heading
-          ? {
-              value: formatted.value.slice(0, start) + heading + formatted.value.slice(start),
-              caret: formatted.caret + heading.length
-            }
-          : formatted;
-      }
-
-      if (heading) {
-        return splice(value, start, end, heading + event.data);
+        return formatted;
       }
 
       // Into an empty paragraph with the blank lines that keep it one, where it
