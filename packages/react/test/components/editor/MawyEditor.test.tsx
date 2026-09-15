@@ -3498,29 +3498,36 @@ describe('tables', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(source));
   });
 
-  it('carries Enter down a row, and leaves the table from a row still empty', async () => {
+  it('writes a line break into a cell on Enter, and what comes next on the line it starts', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <MawyEditor defaultValue={'| a |\n| --- |\n| b |'} mode="wysiwyg" onChange={onChange} />
     );
+    const cell = () => bodyOf(screen).querySelector('td') as HTMLElement;
 
     put(bodyOf(screen), 'b', 1);
-    type(bodyOf(screen), 'insertParagraph');
+    await userEvent.keyboard('{Enter}');
 
+    // `<br>`, which is the one way a cell holds a second line: a line ending
+    // would end the row. And drawn as the break it is, with the caret on the
+    // line it starts.
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b<br> |'));
+    await vi.waitFor(() => expect(cell().querySelector('br')).not.toBe(null));
+    expect(cell().textContent).toBe('b');
+    expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(2);
+
+    await userEvent.keyboard('c');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b<br>c |'));
+    expect(cell().textContent).toBe('bc');
+
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}d');
     await vi.waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b |\n|  |')
+      expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b<br>c<br>d |')
     );
-    await vi.waitFor(() => expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(3));
 
-    type(bodyOf(screen), 'insertParagraph');
-
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b |\n\n'));
-
-    type(bodyOf(screen), 'insertText', 'After.');
-
-    await vi.waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b |\n\nAfter.')
-    );
+    // Taken back out in one piece.
+    await userEvent.keyboard('{Backspace}{Backspace}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b<br>c |'));
   });
 
   /*
@@ -3541,7 +3548,7 @@ describe('tables', () => {
 
     put(bodyOf(screen), 'c', 1);
     await new Promise((done) => setTimeout(done, 30));
-    await userEvent.keyboard('{Enter}');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith('| a | b |\n| --- | --- |\n| c | d |\n|  |  |')
     );
@@ -3557,37 +3564,6 @@ describe('tables', () => {
         '| a |  | b |\n| --- | --- | --- |\n| c |  | d |\n| xy |  |  |'
       )
     );
-  });
-
-  it('leaves a table in a quotation or a list item for a line still inside it', async () => {
-    for (const [source, left] of [
-      ['> | a |\n> | - |\n> | x |', '> | a |\n> | - |\n> | x |\n>\n> After'],
-      ['- item\n\n  | a |\n  | - |\n  | x |', '- item\n\n  | a |\n  | - |\n  | x |\n\n  After']
-    ]) {
-      const onChange = vi.fn();
-      const screen = await render(
-        <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
-      );
-
-      put(bodyOf(screen), 'x', 1);
-      type(bodyOf(screen), 'insertParagraph');
-      await vi.waitFor(() => expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(3));
-      type(bodyOf(screen), 'insertParagraph');
-      await vi.waitFor(() => expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(2));
-
-      for (const character of 'After') {
-        const before = onChange.mock.calls.length;
-
-        type(bodyOf(screen), 'insertText', character);
-        await vi.waitFor(() => expect(onChange.mock.calls.length).toBeGreaterThan(before));
-      }
-
-      expect(onChange).toHaveBeenLastCalledWith(left);
-      // Still one quotation, or one list with the words in its item.
-      expect(bodyOf(screen).querySelectorAll('blockquote, ul')).toHaveLength(1);
-
-      await screen.unmount();
-    }
   });
 
   it('composes into an empty cell the way it types into one', async () => {

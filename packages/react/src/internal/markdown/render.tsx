@@ -1307,6 +1307,31 @@ function renderListItem(
   );
 }
 
+/**
+ * Whether a piece of inline HTML is a bare line break.
+ *
+ * In a table cell it is the only way there is to write one: a row is one line
+ * of the file, so a hard break, which is a line ending, ends the row. Every
+ * GitHub table with two lines in a cell is written with it.
+ */
+export function isLineBreakHtml(node: MdInline): boolean {
+  return node.type === 'inlineHtml' && /^<br\s*\/?>$/i.test(node.value.trim());
+}
+
+/**
+ * A cell's contents, with a bare `<br>` read as the line break it is.
+ *
+ * Under every policy, `escape` included, because in a cell there is no other
+ * way to write one and nothing else a `<br>` could mean: it has no attributes
+ * to be unsafe with and no content to hide. Everywhere else it is raw HTML and
+ * the policy decides. The Flutter package reads a cell the same way.
+ */
+function cellContents(nodes: MdInline[]): MdInline[] {
+  return nodes.some(isLineBreakHtml)
+    ? nodes.map((node) => (isLineBreakHtml(node) ? { type: 'break', range: node.range } : node))
+    : nodes;
+}
+
 function renderRow(
   row: MdTableRow,
   index: number,
@@ -1326,7 +1351,17 @@ function renderRow(
             align[column] ? { textAlign: align[column] as 'left' | 'center' | 'right' } : undefined
           }
         >
-          {renderInline(cell.children, context)}
+          {renderInline(cellContents(cell.children), context)}
+          {/* A break at the end of a cell ends a line and starts none, so the
+              line after it — which is where the caret is when it has just
+              been written — would be nowhere on the page. One more, saying
+              nowhere it came from, draws that line on the surface being
+              written in. */}
+          {context.editing &&
+          cell.children.length &&
+          isLineBreakHtml(cell.children[cell.children.length - 1]) ? (
+            <br />
+          ) : null}
         </Cell>
       ))}
     </tr>

@@ -219,6 +219,17 @@ export function domAt(
   text: string
 ): { node: Node; offset: number } | null {
   const host: Element = drawnAt(root, offset) ?? root;
+  const own = host === root ? null : rangeOf(host);
+
+  // The end of a drawn thing with no text of its own — a line break, a picture
+  // — is after it rather than in it: a caret put inside a `<br>` is drawn in
+  // front of it, on the line before the one the break starts.
+  if (own && own.end === offset && ATOMS.test(host.tagName) && host.parentNode) {
+    return {
+      node: host.parentNode,
+      offset: [...host.parentNode.childNodes].indexOf(host as ChildNode) + 1
+    };
+  }
 
   // The root's own document rather than the global one, which is what every
   // other place in this library that reaches for a document uses. An editor
@@ -247,8 +258,26 @@ export function domAt(
     }
   }
 
+  // Just after a drawn thing with no text of its own — a line break with
+  // nothing written after it yet, at the end of a table cell — is a place of its
+  // own, on the line the break starts, and the end of the text before the break
+  // is on the line above it.
+  for (const atom of host.querySelectorAll('br[data-mawy-range], img[data-mawy-range]')) {
+    const range = rangeOf(atom);
+
+    if (range && range.end === offset && atom.parentNode) {
+      return {
+        node: atom.parentNode,
+        offset: [...atom.parentNode.childNodes].indexOf(atom as ChildNode) + 1
+      };
+    }
+  }
+
   return fallback ?? (host === root ? null : { node: host, offset: 0 });
 }
+
+/** What is drawn as one character with no text of its own. */
+const ATOMS = /^(?:BR|IMG)$/;
 
 /** The character a point on the page is over, in whichever way the browser has. */
 export function caretFromPoint(x: number, y: number): { node: Node; offset: number } | null {

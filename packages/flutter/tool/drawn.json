@@ -124,5 +124,11 @@
   "images": "text",
   "says": ["Build passing.", "1", "A note."],
   "omits": ["https://"]
+ },
+ {
+  "why": "A line break written as `<br>` in a table cell, which is the only way a cell holds two lines, is the break it is in both packages rather than the characters.",
+  "markdown": "| Planting | Checked |\n| - | - |\n| sedge<br>rush | weekly<br/> |",
+  "says": ["sedge", "rush", "weekly"],
+  "omits": ["<br>", "<br/>"]
  }
 ]

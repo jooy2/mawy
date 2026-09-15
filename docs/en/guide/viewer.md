@@ -367,7 +367,7 @@ A footnote's number and the way back from a note are this library's own and stay
 
 ::: fw flutter
 
-**Raw HTML is shown as the characters it was written with, and there is no option to change that.** Flutter has no HTML to draw it as, which is why the Flutter package has no `html` prop. The rest of this section applies to the React package only.
+**Raw HTML is shown as the characters it was written with, and there is no option to change that.** Flutter has no HTML to draw it as, which is why the Flutter package has no `html` prop. The one exception is a bare `<br>` inside a table cell, which is drawn as a line break because a cell has no other way to hold one. The rest of this section applies to the React package only.
 
 **Links are not opened either.** A tapped link does nothing until the application defines what opening one means, through `onLinkTap`. Handing a URL to the platform is not a viewer's decision. The scheme allowlist has already run, and the application handles the rest.
 
@@ -379,7 +379,7 @@ A footnote's number and the way back from a note are this library's own and stay
 
 | `html` | What a `<div>` in the document becomes |
 | --- | --- |
-| `'escape'` _(default)_ | the characters it was written with, shown as text |
+| `'escape'` _(default)_ | the characters it was written with, shown as text. A bare `<br>` inside a table cell is drawn as a line break under every policy, since a cell has no other way to hold one |
 | `'sanitize'` | a real `<div>`, with everything outside an allowlist of elements, attributes and URL schemes removed |
 | `'raw'` | a real `<div>`, exactly as written, **including anything in it that runs** |
 

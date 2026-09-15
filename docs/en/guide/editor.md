@@ -129,13 +129,13 @@ A caret in a place the page cannot draw is the same problem. Markdown does not k
 
 `Enter` is a different thing in every container it is pressed in, because a blank line means something different in each:
 
-| Where | What `Enter` does |
-| --- | --- |
-| Between blocks | A blank line |
-| In a list item | A new item, marker carried down. On an item still empty, the marker goes |
-| In a quotation | Ends the paragraph. Continuing it takes a _blank quoted line_ |
-| In a code block | A newline and nothing else |
-| In a table | A new row under this one. On a row still empty, the row goes and the caret leaves the table |
+| Where           | What `Enter` does                                                        |
+| --------------- | ------------------------------------------------------------------------ |
+| Between blocks  | A blank line                                                             |
+| In a list item  | A new item, marker carried down. On an item still empty, the marker goes |
+| In a quotation  | Ends the paragraph. Continuing it takes a _blank quoted line_            |
+| In a code block | A newline and nothing else                                               |
+| In a table      | A line break inside the cell, written `<br>`                             |
 
 `Backspace` at the start of a block joins it to the one before it: two list items run together, a paragraph joins the heading above it. Two joins are refused. Joining a table cell to the cell beside it would remove the pipe between them, and joining a code block to whatever is above it would remove the fence.
 
@@ -307,7 +307,7 @@ The shortcuts only act inside a table, and outside one the keys are handed on to
 
 **A table on the drawn document keeps its shape while it is written in.** Every column is the same width, and the table is as wide as the document or as wide as its columns need to be read, scrolling sideways past that. An empty cell is a line of text tall, so the caret put in it has room and typing the first letter does not move anything. A Markdown table has no column widths to say anything else with, and the preview and the viewer still lay a table out by what is in it.
 
-On the drawn document, **`Enter` in a cell follows the rule it has in a list.** It adds a row under this one with the caret in the same column, and on a row that is still empty, the row goes and the caret moves to a line of its own after the table, still inside the quotation or list item the table is in. That is the way out of a table at the end of a document, which otherwise has nowhere after it for a caret to go. Typing into an empty cell writes the words between the spaces, so `|  |` becomes `| Name |` rather than `|  Name|`.
+On the drawn document, **`Enter` in a cell starts a new line in that cell**, and so does `Shift`+`Enter`. A row of a table is one line of the file, so the line ending `Enter` writes everywhere else would end the row, and what is written instead is `<br>`, which is how every GitHub table puts two lines in a cell. Inside a table cell a bare `<br>` is drawn as the line break it is under every `html` policy, `escape` included, and by the Flutter package too, because in a cell there is no other way to write one. `Backspace` after it takes it out in one piece. `Mod`+`Enter` is the row under this one, and `ArrowDown` on the last row of a table that ends the document is the way out of it. Typing into an empty cell writes the words between the spaces, so `|  |` becomes `| Name |` rather than `|  Name|`.
 
 :::
 

@@ -16,14 +16,7 @@
  * backspace there removes a separator rather than a letter.
  */
 
-import {
-  containerOf,
-  continueList,
-  continueTable,
-  fencedAt,
-  runCommand,
-  type MawyCommand
-} from './commands.js';
+import { containerOf, continueList, fencedAt, runCommand, type MawyCommand } from './commands.js';
 import type { MdNode, MdRange } from './markdown/ast.js';
 import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
 import { markdownFromHtml } from './markdown/paste.js';
@@ -707,18 +700,13 @@ function breakAt(
   const block = blockAt(root, node);
   const tag = block?.tagName;
 
+  // A line break, the one way a cell holds a second line. A row of a table is
+  // one line of the file, so the line ending `Enter` writes everywhere else
+  // would end the row; `<br>` is what every GitHub table writes instead, and
+  // the renderer reads one in a cell as the break it is. `Mod`+`Enter` is the
+  // row under this one, and `Tab` the next cell.
   if (tag === 'TD' || tag === 'TH') {
-    const row = continueTable({ value, start, end });
-
-    // A row carried down keeps the caret in the table; a row given up leaves it
-    // on a line of its own after it, where nothing is drawn yet — unless that
-    // line is a quotation's `> `, which is drawn as its marker the way `Enter`
-    // at the end of a quoted paragraph already leaves one.
-    const line = row?.value.slice(row.value.lastIndexOf('\n', row.start - 1) + 1, row.start);
-
-    return row
-      ? settle({ value: row.value, caret: row.start, betweenBlocks: !line?.trim() }, options)
-      : null;
+    return splice(value, start, end, '<br>');
   }
 
   if (tag === 'PRE') {
@@ -1339,7 +1327,7 @@ export function editFor(
       const block = blockAt(root, range.startContainer);
 
       if (block?.tagName === 'TD' || block?.tagName === 'TH') {
-        return null;
+        return splice(value, start, end, '<br>');
       }
 
       // Two spaces and a newline: the hard break nearly every Markdown file in

@@ -19,6 +19,7 @@ import { LIVE } from '../../internal/markdown/live.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import {
   firstImage,
+  isLineBreakHtml,
   renderBlocks,
   renderFootnotes,
   type RenderContext
@@ -212,7 +213,7 @@ function revealedIn(nodes: readonly MdNode[], start: number, end: number): MdRan
       node.type === 'link' ||
       node.type === 'image' ||
       node.type === 'html' ||
-      node.type === 'inlineHtml' ||
+      (node.type === 'inlineHtml' && !isLineBreakHtml(node)) ||
       emptyBlock(node)
     ) {
       return { start: node.range.start, end: node.range.end };

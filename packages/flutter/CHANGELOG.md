@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- **A bare `<br>` in a table cell is drawn as a line break.** Raw HTML is drawn as its characters, and a cell written with two lines, which GitHub tables write as `<br>` because a row is one line of the file, showed `<br>` between them. In a cell there is no other way to write a line break, so it is drawn as one there and nowhere else. The React package draws it the same way, and a case in `tool/drawn.json` holds both to it.
+
 - **The code block command puts the caret inside the block it makes, and takes a block off from anywhere inside it.** With nothing selected it came out selecting the whole block it had written, fences and all, which the next letter typed over. The caret is inside now, among the characters it was among. Pressed again from anywhere inside a fenced block, the command takes the fences off rather than writing a second block into the first, and the toolbar's button is drawn pressed while the caret is in one.
 
 - **`Enter` on the line a list item runs on over carries the list on.** An item's words can run over more than one line, after a hard break or wrapped by hand, and that second line has no marker of its own, so `Enter` at its end was a plain line ending instead of the next item. The marker is read off the first line of the item the parser says the line is in. Code inside an item is still the characters it is.

@@ -1303,7 +1303,7 @@ class _Table extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: em * 0.8, vertical: em * 0.5),
                     child: Text.rich(
                       renderInline(
-                        cell.value.children,
+                        _cellContents(cell.value.children),
                         context,
                         row.header ? cellStyle.copyWith(fontWeight: FontWeight.w600) : cellStyle,
                       ),
@@ -1318,6 +1318,24 @@ class _Table extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A cell's contents, with a bare `<br>` read as the line break it is.
+///
+/// In a table cell it is the only way there is to write one: a row is one line
+/// of the file, so a hard break, which is a line ending, ends the row. Every
+/// GitHub table with two lines in a cell is written with it, and there is
+/// nothing else a `<br>` could mean there. Everywhere else raw HTML is the
+/// characters it was written with, as it has always been in this package. The
+/// React package reads a cell the same way, under every policy.
+List<MdInline> _cellContents(List<MdInline> nodes) {
+  bool breaks(MdInline node) =>
+      node is MdInlineHtml &&
+      RegExp(r'^<br\s*/?>$', caseSensitive: false).hasMatch(node.value.trim());
+
+  return nodes.any(breaks)
+      ? <MdInline>[for (final MdInline node in nodes) breaks(node) ? MdBreak(node.range) : node]
+      : nodes;
 }
 
 /* -------------------------------------------------------------------------
