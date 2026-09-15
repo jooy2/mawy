@@ -1009,28 +1009,183 @@ function placeOf(
 
   const range = selection.getRangeAt(0);
 
-  if (
-    !root.contains(range.startContainer) ||
-    !root.contains(range.endContainer) ||
-    !blockAt(root, range.startContainer) ||
-    !blockAt(root, range.endContainer)
-  ) {
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) {
     return null;
   }
 
-  const head = documentAt(root, range.startContainer, range.startOffset, value, aim);
-  const tail = documentAt(root, range.endContainer, range.endOffset, value, aim);
+  if (range.collapsed) {
+    const at = blockAt(root, range.startContainer)
+      ? documentAt(root, range.startContainer, range.startOffset, value, aim)
+      : null;
 
-  if (head === null || tail === null) {
+    return at === null
+      ? null
+      : { start: at, end: at, node: range.startContainer, offset: range.startOffset };
+  }
+
+  // Everything the document draws, from before its first character to after its
+  // last, is the whole document: the heading's `#` in front of the first word
+  // and the fence after the last line as well, which the drawn characters on
+  // their own would have left behind. `Mod`+`A` selects this, and it ends
+  // wherever the browser likes — on the document itself, or in the last note's
+  // way back, which is in no block at all — so it is asked about by what is on
+  // either side of it rather than by where it ends.
+  if (
+    !textBeside(root, range.startContainer, range.startOffset, true) &&
+    !textBeside(root, range.endContainer, range.endOffset, false)
+  ) {
+    const first = textBeside(root, range.startContainer, range.startOffset, false);
+
+    return first ? { start: 0, end: value.length, node: first, offset: 0 } : null;
+  }
+
+  // An end that is in no block is moved in, to the nearest run of text that is,
+  // so a selection dragged out past a note or onto the document's own edge
+  // still deletes what it covers.
+  const head = endOf(root, range.startContainer, range.startOffset, value, aim, false);
+  const tail = endOf(root, range.endContainer, range.endOffset, value, aim, true);
+
+  if (!head || !tail) {
     return null;
   }
 
   return {
-    start: Math.min(head, tail),
-    end: Math.max(head, tail),
-    node: range.startContainer,
-    offset: range.startOffset
+    start: Math.min(head.at, tail.at),
+    end: Math.max(head.at, tail.at),
+    node: head.node,
+    offset: head.offset
   };
+}
+
+/** A run taken out, with the markers of anything it took whole. See `widened`. */
+function deleted(value: string, start: number, end: number): MawyEdit {
+  const run = widened(value, start, end);
+
+  return splice(value, run.start, run.end, '');
+}
+
+/**
+ * The run of text drawn beside a place, going either way, that is inside a
+ * block — or `null` where there is none.
+ *
+ * A place can be between two elements rather than inside a run of text: a
+ * selection of everything starts and ends on the document itself. What is
+ * beside it is then what is in the child after the place, or before it.
+ */
+function textBeside(root: HTMLElement, node: Node, offset: number, back: boolean): Text | null {
+  const place = root.ownerDocument.createRange();
+  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let found: Text | null = null;
+
+  place.setStart(node, offset);
+
+  for (let at = walker.nextNode() as Text | null; at; at = walker.nextNode() as Text | null) {
+    if (!at.data.length || !blockAt(root, at)) {
+      continue;
+    }
+
+    const beside =
+      at === node
+        ? back
+          ? offset > 0
+          : offset < at.data.length
+        : back
+          ? place.comparePoint(at, at.data.length) < 0
+          : place.comparePoint(at, 0) > 0;
+
+    if (beside) {
+      found = at;
+
+      // Going forwards the first is the answer; going back it is the last.
+      if (!back) {
+        break;
+      }
+    } else if (back && found) {
+      break;
+    }
+  }
+
+  return found;
+}
+
+/** One end of a selection in the document's offsets, moved into a block where it is not in one. */
+function endOf(
+  root: HTMLElement,
+  node: Node,
+  offset: number,
+  value: string,
+  aim: MawyAim | null,
+  back: boolean
+): { at: number; node: Node; offset: number } | null {
+  if (blockAt(root, node)) {
+    const at = documentAt(root, node, offset, value, aim);
+
+    if (at !== null) {
+      return { at, node, offset };
+    }
+  }
+
+  const text = textBeside(root, node, offset, back);
+  const edge = text ? (back ? text.data.length : 0) : 0;
+  const at = text ? sourceAt(root, text, edge, value) : null;
+
+  return text && at !== null ? { at, node: text, offset: edge } : null;
+}
+
+/**
+ * A run being deleted, grown to take the markers of any formatting whose words
+ * it takes all of.
+ *
+ * The drawn characters of `**bold**` are four of its eight, and selecting the
+ * word and deleting it took those four and left `****` behind, drawn as
+ * itself, or as a divider on a line of its own. A link's words taken whole
+ * leave `[](url)` the same way. Only what is taken whole grows the run: part of
+ * a bold word deleted is part of a bold word, and the rest of it stays bold.
+ */
+function widened(value: string, start: number, end: number): { start: number; end: number } {
+  if (!/[*_~`[]/.test(value.slice(Math.max(0, start - 3), Math.min(value.length, end + 3)))) {
+    return { start, end };
+  }
+
+  const document = parseMarkdown(value);
+  let from = start;
+  let to = end;
+
+  const walk = (nodes: readonly MdNode[]) => {
+    for (const node of nodes) {
+      if (node.range.end < from || node.range.start > to) {
+        continue;
+      }
+
+      const children = 'children' in node ? (node.children as MdNode[]) : [];
+      let words: MdRange | null = null;
+
+      if (node.type === 'inlineCode') {
+        const ticks = /^`+/.exec(value.slice(node.range.start))?.[0].length ?? 1;
+
+        words = { start: node.range.start + ticks, end: node.range.end - ticks };
+      } else if (
+        (node.type === 'strong' ||
+          node.type === 'emphasis' ||
+          node.type === 'delete' ||
+          node.type === 'link') &&
+        children.length
+      ) {
+        words = { start: children[0].range.start, end: children[children.length - 1].range.end };
+      }
+
+      if (words && words.start >= from && words.end <= to) {
+        from = Math.min(from, node.range.start);
+        to = Math.max(to, node.range.end);
+      }
+
+      walk(children);
+    }
+  };
+
+  walk([...document.root.children, ...document.footnotes]);
+
+  return { start: from, end: to };
 }
 
 /**
@@ -1196,12 +1351,12 @@ export function editFor(
     case 'deleteContentBackward':
       return start === end
         ? deleteBefore(root, value, range.startContainer, range.startOffset, start)
-        : splice(value, start, end, '');
+        : deleted(value, start, end);
 
     case 'deleteContentForward':
       return start === end
         ? deleteAfter(root, value, range.startContainer, range.startOffset, start)
-        : splice(value, start, end, '');
+        : deleted(value, start, end);
 
     // The run is on the clipboard by the time this arrives — the browser puts
     // it there before it asks — so what is left is taking it out of the
@@ -1209,7 +1364,7 @@ export function editFor(
     // event was refused like any other the switch did not name, and a cut was
     // a copy.
     case 'deleteByCut':
-      return start === end ? null : splice(value, start, end, '');
+      return start === end ? null : deleted(value, start, end);
 
     // A word, a line, or whatever the platform means by those on the keyboard
     // in front of the reader. The browser has already worked out which
@@ -1226,7 +1381,7 @@ export function editFor(
       const target = start === end ? targetOf(event, root, value, aim) : { start, end };
 
       return target && target.start !== target.end
-        ? splice(value, target.start, target.end, '')
+        ? deleted(value, target.start, target.end)
         : null;
     }
 

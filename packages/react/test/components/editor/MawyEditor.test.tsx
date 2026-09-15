@@ -2158,21 +2158,52 @@ describe('the document surface', () => {
     });
   }
 
-  it('takes exactly the characters the range covered, and no markup around them', async () => {
+  it('takes the markers of formatting whose words it takes all of, and no more', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <MawyEditor defaultValue="A **bold** word." mode="wysiwyg" onChange={onChange} />
     );
     const body = bodyOf(screen);
 
-    // The drawn run says `bold` and the document says `**bold**`. The four
-    // drawn characters are what the browser pointed at, so the four written
-    // ones are what goes — the same answer a selection over them already gets,
-    // rather than a second opinion about how much of the emphasis was meant.
+    // The drawn run says `bold` and the document says `**bold**`. Taking the
+    // four drawn characters and leaving the four written ones drew `****` as
+    // itself — the same answer a selection over them gets, which is that a
+    // bold word deleted whole goes whole.
     put(body, 'bold', 4);
     deleteTargeting(body, 'deleteWordBackward', runSaying(body, 'bold'), 0, 4);
 
-    expect(onChange).toHaveBeenLastCalledWith('A **** word.');
+    expect(onChange).toHaveBeenLastCalledWith('A  word.');
+
+    // Part of a bold word is part of it, and what is left stays bold.
+    const partly = vi.fn();
+    const again = await render(
+      <MawyEditor defaultValue="A **bold** word." mode="wysiwyg" onChange={partly} />
+    );
+
+    put(bodyOf(again), 'bold', 0, 2);
+    type(bodyOf(again), 'deleteContentBackward');
+
+    expect(partly).toHaveBeenLastCalledWith('A **ld** word.');
+  });
+
+  it('deletes everything a selection of the whole document holds', async () => {
+    for (const source of [
+      '# **Title** here\n\n- a _b_\n- c\n\nend `x`',
+      'Words[^1] here.\n\n[^1]: A note.'
+    ]) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+      );
+
+      put(bodyOf(screen), source.startsWith('#') ? ' here' : 'Words', 1);
+      // The end of it is wherever the browser likes: on the document itself, or
+      // in the last note's way back, which is in no block at all.
+      await userEvent.keyboard('{ControlOrMeta>}a{/ControlOrMeta}{Backspace}');
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(''));
+      await screen.unmount();
+    }
   });
 
   it('changes nothing when the browser offers no range to go on', async () => {
