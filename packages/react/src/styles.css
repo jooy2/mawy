@@ -2009,6 +2009,21 @@
   vertical-align: top;
 }
 
+/* A directive's label written as `[]`, which is somewhere the words deleted out
+ * of it can be typed back, and so a line tall rather than nothing at all. */
+.mawy-root .mawy-document-body .mawy-md-directive-label:empty {
+  display: inline-block;
+  min-width: 1px;
+  min-height: 1lh;
+  vertical-align: top;
+}
+
+/* The name over an alert is this library's word for its kind and nothing of
+ * the document, so it is not drawn as somewhere to type. */
+.mawy-root .mawy-document-body .mawy-md-alert-label {
+  cursor: default;
+}
+
 /* A picture pressed is selected, so that `Delete` and the next letter act on
  * it, and drawn without the selection's tint over it: its bar already says
  * which picture is being acted on. The tint a browser lays over a selected

@@ -32,7 +32,9 @@ import {
   documentAt,
   editFor,
   editForText,
+  forLabel,
   heldText,
+  inLabel,
   leadFor,
   markdownFor,
   openedAt,
@@ -631,7 +633,10 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
         const selection = element.ownerDocument.getSelection();
         const where = selection?.anchorNode;
-        const literal = Boolean(where && blockAt(element, where)?.tagName === 'PRE');
+        // A directive's label takes words and nothing else, the way a code
+        // block takes characters and nothing else. See `forLabel`.
+        const label = Boolean(where && inLabel(element, where));
+        const literal = Boolean(where && blockAt(element, where)?.tagName === 'PRE') || label;
         const images = now.onImages && !literal ? pastedImagesIn(event.clipboardData) : [];
 
         /**
@@ -706,7 +711,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         const edit = editForText(
           element,
           now.value,
-          cell ? text.replace(/\r?\n/g, '<br>').replace(/(?<!\\)\|/g, '\\|') : text,
+          label
+            ? forLabel(text)
+            : cell
+              ? text.replace(/\r?\n/g, '<br>').replace(/(?<!\\)\|/g, '\\|')
+              : text,
           aim.current
         );
 
@@ -989,24 +998,32 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        // Where in the document what was composed goes, where it went in at one
+        // place in a run that had words in it already: the place in the run,
+        // asked of the run as React drew it again just above. Counted from where
+        // the run starts, it was wrong wherever the run is not the characters it
+        // was written with — a `\[` drawn as `[` — and the whole run was written
+        // back as it was drawn, which took the backslash out.
+        const point = typed && was.before ? sourceAt(element, was.host, was.offset, value) : null;
+
         // Formatting the caret was holding, around what was composed, the way it
         // is around a keystroke. See `heldText`.
         const formatted =
-          held.length &&
-          grown > 0 &&
-          blockAt(element, was.host)?.tagName !== 'PRE' &&
-          after.slice(0, was.offset) === was.before.slice(0, was.offset) &&
-          after.slice(was.offset + grown) === was.before.slice(was.offset)
-            ? heldText(
-                value,
-                was.start + was.offset,
-                after.slice(was.offset, was.offset + grown),
-                held
-              )
+          held.length && typed && blockAt(element, was.host)?.tagName !== 'PRE'
+            ? heldText(value, point ?? was.start + was.offset, typed, held)
             : null;
 
         if (formatted) {
           onEdit(formatted);
+
+          return;
+        }
+
+        if (point !== null) {
+          onEdit({
+            value: value.slice(0, point) + typed + value.slice(point),
+            caret: point + typed.length
+          });
 
           return;
         }

@@ -11,9 +11,9 @@
  * end of whatever element holds it, and the text itself is the search term — a
  * `<strong>` drawn from `**bold**` contains `bold` at exactly one place inside
  * those eight characters. That is exact for anything written as the characters
- * it reads as, and it falls back to the left-hand bound for the rest: a run
- * with a decoded `&amp;` or a backslash escape in it lands a character or two
- * early rather than in the wrong paragraph.
+ * it reads as, and for a run with a backslash escape in it, and it falls back to
+ * the left-hand bound for the rest: a run with a decoded `&amp;` in it lands a
+ * character or two early rather than in the wrong paragraph.
  */
 
 import type { MdRange } from './markdown/ast.js';
@@ -134,10 +134,17 @@ export function sourceAt(root: Element, node: Node, offset: number, text: string
  * is found on its own, starting after the last one — which is exact, and is
  * also how the offsets inside it stay right across the `> ` in the middle.
  *
+ * A line with a backslash escape in it is not the characters it was written
+ * with, since `\[` is drawn as `[`, and is found a second way: with a backslash
+ * allowed in front of each character that can be escaped, and cut into a row
+ * either side of each backslash the search stepped over. A caret beside the
+ * bracket is then beside it in the document too, rather than wherever the count
+ * from the start of the run had got to.
+ *
  * What is left over is a line that is not the characters it was written with at
- * all, because a character reference or a backslash escape was decoded on the
- * way in. Nothing can say where those went; the search stops there and the
- * count carries on from the last thing that was certain.
+ * all, because a character reference was decoded on the way in. Nothing can say
+ * where that went; the search stops there and the count carries on from the
+ * last thing that was certain.
  */
 function linesOf(
   host: Element,
@@ -153,24 +160,98 @@ function linesOf(
   for (const line of value.split('\n')) {
     // Spaces the editor draws where the page would not show one are no-break
     // spaces on the page and spaces in the document. See `spaces` in `render.tsx`.
-    const found =
-      line.includes('\u00a0') && !text.includes(line, cursor)
-        ? text.indexOf(line.replace(/\u00a0/g, ' '), cursor)
-        : text.indexOf(line, cursor);
+    const spaced = line.includes('\u00a0') && !text.includes(line, cursor);
+    const sought = spaced ? line.replace(/\u00a0/g, ' ') : line;
+    const found = text.indexOf(sought, cursor);
+    const escaped =
+      found === -1 || found + line.length > range.end
+        ? escapedLine(text, sought, cursor, range.end)
+        : null;
 
-    if (found === -1 || found + line.length > range.end) {
+    if (escaped) {
+      rows.push(...escaped.pieces.map((piece) => ({ ...piece, at: at + piece.at })));
+    } else if (found === -1 || found + line.length > range.end) {
       break;
+    } else {
+      rows.push({ at, from: found, length: line.length });
     }
 
-    rows.push({ at, from: found, length: line.length });
+    const end = escaped ? escaped.end : found + line.length;
+
     at += line.length + 1;
 
-    const newline = text.indexOf('\n', found + line.length);
+    const newline = text.indexOf('\n', end);
 
-    cursor = newline === -1 ? found + line.length : newline + 1;
+    cursor = newline === -1 ? end : newline + 1;
   }
 
   return rows;
+}
+
+/** What a backslash can escape in CommonMark: every ASCII punctuation character. */
+const ESCAPABLE = /[!-/:-@[-`{-~]/;
+
+/**
+ * A line drawn from characters with backslash escapes among them, found in the
+ * document at or after `cursor` and ending by `limit`, as the rows either side
+ * of each backslash. `null` where it is not there that way either.
+ */
+function escapedLine(
+  text: string,
+  line: string,
+  cursor: number,
+  limit: number
+): { pieces: { at: number; from: number; length: number }[]; end: number } | null {
+  // Only as far as the element the line is drawn in reaches, which is what
+  // keeps a line that is not in the document this way either from being a
+  // search to the end of it.
+  const within = text.slice(cursor, limit);
+
+  if (!line || !within.includes('\\')) {
+    return null;
+  }
+
+  const pattern = [...line]
+    .map((character) => {
+      const literal = character.replace(/[\\^$.*+?()[\]{}|/-]/g, '\\$&');
+
+      return ESCAPABLE.test(character) ? `\\\\?${literal}` : literal;
+    })
+    .join('');
+  const match = new RegExp(pattern, 'u').exec(within);
+
+  if (!match) {
+    return null;
+  }
+
+  const start = cursor + match.index;
+  const pieces: { at: number; from: number; length: number }[] = [];
+  const written = match[0];
+  let piece = { at: 0, from: start, length: 0 };
+
+  for (let source = 0, drawn = 0; source < written.length;) {
+    if (written[source] === '\\' && written[source + 1] === line[drawn] && line[drawn] !== '\\') {
+      pieces.push(piece);
+      source += 1;
+      piece = { at: drawn, from: start + source, length: 0 };
+
+      continue;
+    }
+
+    if (written[source] === '\\' && line[drawn] === '\\' && written[source + 1] === '\\') {
+      pieces.push(piece);
+      source += 1;
+      piece = { at: drawn, from: start + source, length: 0 };
+    }
+
+    piece.length += 1;
+    source += 1;
+    drawn += 1;
+  }
+
+  pieces.push(piece);
+
+  return { pieces, end: start + written.length };
 }
 
 /**

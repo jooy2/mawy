@@ -525,6 +525,7 @@ function Directive({
     registered && Object.hasOwn(registered, node.name) ? registered[node.name] : undefined;
   const label = kind === 'container' ? (node as MdContainerDirective).label : node.children;
   const source = context.source?.slice(node.range.start, node.range.end) ?? '';
+  const drawnLabel = label.length ? renderInline(label as MdInline[], context) : null;
 
   if (!Component) {
     const Tag = kind === 'text' ? 'span' : 'div';
@@ -541,12 +542,59 @@ function Directive({
       name={node.name}
       kind={kind}
       attributes={node.attributes}
-      label={label.length ? renderInline(label as MdInline[], context) : null}
+      label={
+        kind !== 'text' && context.editing
+          ? labelToEdit(node, label as MdInline[], source, drawnLabel)
+          : drawnLabel
+      }
       range={node.range}
       source={source}
     >
       {kind === 'container' ? renderBlocks((node as MdContainerDirective).children, context) : null}
     </Component>
+  );
+}
+
+/**
+ * A container's or a leaf's `[label]` on the editor's drawn document, inside an
+ * element that says which characters of the document it was drawn from.
+ *
+ * The label reaches the page through the application's component, which puts
+ * it in elements of its own that say nothing about where they came from, so a
+ * caret in it was in no part of the document: a letter typed there was
+ * refused, and a composition was thrown away. Said here, it is a line of words
+ * like any other, and the title a callout is written with is typed where it is
+ * read.
+ *
+ * A label written as `[]` is drawn as the empty place it is, so that the words
+ * deleted out of one can be typed back. One not written at all has nowhere in
+ * the document to type into, and stays `null`. A text directive's label is in
+ * the middle of a sentence, and the sentence around it already says where it
+ * came from.
+ */
+function labelToEdit(
+  node: MdContainerDirective | MdLeafDirective | MdTextDirective,
+  label: MdInline[],
+  source: string,
+  drawn: React.ReactNode
+): React.ReactNode {
+  const empty = label.length ? null : /^[ \t>]*:+[A-Za-z][A-Za-z0-9_-]*\[\]/.exec(source);
+  const start = label.length
+    ? label[0].range.start
+    : empty
+      ? node.range.start + empty[0].length - 1
+      : -1;
+
+  if (start === -1) {
+    return drawn;
+  }
+
+  const end = label.length ? label[label.length - 1].range.end : start;
+
+  return (
+    <span className="mawy-md-directive-label" data-mawy-range={`${start},${end}`}>
+      {drawn}
+    </span>
   );
 }
 
@@ -1700,7 +1748,15 @@ export function renderBlocks(
             data-mawy-alert={block.alert}
             {...origin(block, context)}
           >
-            <p className="mawy-md-alert-label">
+            {/* The kind's name is this library's words and not the document's,
+                so on the surface being typed into there is nothing in it a
+                caret could be in: a letter typed there went into the `[!NOTE]`
+                it was drawn in place of. The alert's bar is where the kind is
+                changed. */}
+            <p
+              className="mawy-md-alert-label"
+              contentEditable={context.editing ? false : undefined}
+            >
               <Icon className="mawy-icon" aria-hidden="true" />
               {label}
             </p>

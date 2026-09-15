@@ -101,7 +101,13 @@ export interface MawyEdit {
  */
 const BLOCKS =
   'p, h1, h2, h3, h4, h5, h6, li, dt, dd, td, th, blockquote, pre, .mawy-md-html-source, ' +
-  '.mawy-md-directive-source, .mawy-md-source';
+  '.mawy-md-directive-source, .mawy-md-source, .mawy-md-directive-label';
+
+/**
+ * A directive's `[label]`, which is one line of words inside the brackets on
+ * the line that opens the directive. See `labelToEdit` in `render.tsx`.
+ */
+const LABEL = '.mawy-md-directive-label';
 
 /**
  * Where an edit cannot go, whatever it is.
@@ -118,11 +124,22 @@ const BLOCKS =
  * the better reason: what is drawn there is the characters of the source, one
  * for one, so a position inside it is a position inside the document and an
  * edit lands exactly where it was typed.
+ *
+ * The name over an alert is the other thing on the page that is not the
+ * document: `Note` is this library's word for `[!NOTE]`. It is drawn with no
+ * editing inside it, and this is what keeps `Backspace` at the start of the
+ * alert's first line from reaching into it for a character to take.
  */
-const INERT = '.mawy-md-html';
+const INERT = '.mawy-md-html, .mawy-md-alert-label';
 
-/** Blocks nothing joins across: the edge of one is not a character. */
-const CLOSED = /^(?:TD|TH|PRE)$/;
+/**
+ * Blocks nothing joins across: the edge of one is not a character.
+ *
+ * A directive's label among them, since what lies between it and the line
+ * before or after it is the directive's own `:::name[` or `]{…}`, and taking
+ * that out to join the two takes the directive apart.
+ */
+const CLOSED = `td, th, pre, ${LABEL}`;
 
 export function blockAt(root: HTMLElement, node: Node): HTMLElement | null {
   const from = node.nodeType === 1 ? (node as HTMLElement) : node.parentElement;
@@ -136,9 +153,23 @@ export function blockAt(root: HTMLElement, node: Node): HTMLElement | null {
   return block && root.contains(block) ? block : null;
 }
 
+/**
+ * Words written into a directive's label: on the one line the label is, with
+ * each bracket escaped, or it would close the label or open one inside it and
+ * the rest of the line would stop being the directive.
+ */
+export function forLabel(text: string): string {
+  return text.replace(/\r?\n/g, ' ').replace(/[[\]]/g, '\\$&');
+}
+
+/** Whether a place on the page is inside a directive's label. See `forLabel`. */
+export function inLabel(root: HTMLElement, node: Node): boolean {
+  return Boolean(blockAt(root, node)?.matches(LABEL));
+}
+
 /** Whether what lies between two blocks is something to delete. */
 function joins(here: HTMLElement | null, there: HTMLElement | null): boolean {
-  return Boolean(here && there && !CLOSED.test(here.tagName) && !CLOSED.test(there.tagName));
+  return Boolean(here && there && !here.matches(CLOSED) && !there.matches(CLOSED));
 }
 
 function splice(value: string, start: number, end: number, text: string): MawyEdit {
@@ -794,6 +825,12 @@ function breakAt(
   const block = blockAt(root, node);
   const tag = block?.tagName;
 
+  // A directive's label is on the line the directive opens with, and a line
+  // ending in it would end that line and the label with it.
+  if (block?.matches(LABEL)) {
+    return null;
+  }
+
   // A line break, the one way a cell holds a second line. A row of a table is
   // one line of the file, so the line ending `Enter` writes everywhere else
   // would end the row; `<br>` is what every GitHub table writes instead, and
@@ -1440,6 +1477,17 @@ export function editFor(
       const block = blockAt(root, range.startContainer);
       const tag = block?.tagName;
 
+      // A directive's label is words and nothing else, with its brackets
+      // escaped. See `forLabel`.
+      if (block?.matches(LABEL)) {
+        const text = forLabel(event.data);
+
+        return (
+          (start === end ? heldText(value, start, text, held) : null) ??
+          splice(value, start, end, text)
+        );
+      }
+
       // An empty cell is spaces between two pipes, and the parser puts it after
       // all of them. Typed there as it is, `|  |` becomes `|  a|`; so the
       // spaces are given back around the words instead, the way a cell with
@@ -1497,6 +1545,10 @@ export function editFor(
 
     case 'insertLineBreak': {
       const block = blockAt(root, range.startContainer);
+
+      if (block?.matches(LABEL)) {
+        return null;
+      }
 
       if (block?.tagName === 'TD' || block?.tagName === 'TH') {
         return splice(value, start, end, '<br>');

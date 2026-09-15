@@ -3137,6 +3137,17 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('A **bold한** word.');
   });
 
+  it('composes into words with a backslash escape in them, and keeps the backslash', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'A \\* b'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    // Drawn `A * b`, which is one character short of what it was written with.
+    compose(bodyOf(screen), 'A * b', 5, '한');
+    expect(onChange).toHaveBeenLastCalledWith('A \\* b한');
+  });
+
   it('leaves the tree to the browser while a composition is running', async () => {
     const screen = await render(<MawyEditor defaultValue="Hello." mode="wysiwyg" />);
     const body = bodyOf(screen);
@@ -3440,6 +3451,91 @@ describe('the bars over a code block and an alert', () => {
     sourceOf(source).setSelectionRange(8, 8);
     await new Promise((done) => setTimeout(done, 50));
     expect(source.container.querySelector('.mawy-block-tools')).toBe(null);
+  });
+
+  it('draws the name over an alert as no place to type', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n> [!IMPORTANT]\n> Worth knowing.';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const label = body.querySelector('.mawy-md-alert-label') as HTMLElement;
+
+    // `Important` is this library's word for `[!IMPORTANT]`, and a letter
+    // typed into it went into the marker it stands for.
+    expect(label).toHaveAttribute('contenteditable', 'false');
+
+    body.focus();
+    document.getSelection()?.collapse(label.lastChild, 3);
+    type(body, 'insertText', 'x');
+    expect(onChange).not.toHaveBeenCalled();
+
+    // Nor is it a character for `Backspace` at the start of the alert to take.
+    put(body, 'Worth knowing.', 0);
+    type(body, 'deleteContentBackward');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('edits the label a directive is written with where it is drawn', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n:::callout[Some title]{kind=note}\nInside.\n:::';
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        onChange={onChange}
+        directives={{
+          callout: ({ label, children }) => (
+            <aside>
+              {label ? <strong>{label}</strong> : null}
+              {children}
+            </aside>
+          )
+        }}
+      />
+    );
+    const body = bodyOf(screen);
+
+    // Typed, and composed, at the caret in the label.
+    put(body, 'Some title', 4);
+    type(body, 'insertText', '!');
+    expect(onChange).toHaveBeenLastCalledWith(source.replace('Some title', 'Some! title'));
+
+    await vi.waitFor(() => expect(body.querySelector('strong')?.textContent).toBe('Some! title'));
+
+    const words = body.querySelector('strong .mawy-md-directive-label')!.firstChild as Text;
+    const selection = document.getSelection() as Selection;
+
+    selection.collapse(words, 11);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    words.data = 'Some! title 제목';
+    selection.collapse(words, 14);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: ' 제목' }));
+    expect(onChange).toHaveBeenLastCalledWith(source.replace('Some title', 'Some! title 제목'));
+
+    // A bracket is escaped, or it would close the label and the line would
+    // stop being the directive, and the caret goes on after it.
+    await vi.waitFor(() =>
+      expect(body.querySelector('strong')?.textContent).toBe('Some! title 제목')
+    );
+    put(body, 'Some! title 제목', 14);
+    type(body, 'insertText', ']');
+    expect(onChange).toHaveBeenLastCalledWith(source.replace('Some title', 'Some! title 제목\\]'));
+    await vi.waitFor(() =>
+      expect(body.querySelector('strong')?.textContent).toBe('Some! title 제목]')
+    );
+    type(body, 'insertText', '?');
+    expect(onChange).toHaveBeenLastCalledWith(source.replace('Some title', 'Some! title 제목\\]?'));
+
+    // `Enter` in it, and `Backspace` at the start of the line under it, leave
+    // the line the directive opens with alone.
+    const calls = onChange.mock.calls.length;
+
+    type(body, 'insertParagraph');
+    put(body, 'Inside.', 0);
+    type(body, 'deleteContentBackward');
+    expect(onChange).toHaveBeenCalledTimes(calls);
   });
 });
 

@@ -88,6 +88,33 @@ describe('a run of text', () => {
     expect(answer).toBeGreaterThanOrEqual(0);
     expect(answer).toBeLessThanOrEqual(source.length);
   });
+
+  it('is found across a backslash escape, either side of the backslash', async () => {
+    // `\*` is drawn as `*`, so the words are not the characters they were
+    // written with. Each side of the backslash is found where it was written.
+    const source = 'Five \\* six \\[seven\\] eight';
+    const screen = await render(<MawyViewer value={source} />);
+    const words = 'Five * six [seven] eight';
+
+    expect(at(screen.container, source, words, 3)).toBe(3);
+    expect(at(screen.container, source, words, 6)).toBe(source.indexOf('* six') + 1);
+    // In front of the bracket is in front of its backslash, and after it is
+    // after both.
+    expect(at(screen.container, source, words, 11)).toBe(source.indexOf('\\[seven'));
+    expect(at(screen.container, source, words, 12)).toBe(source.indexOf('seven'));
+    expect(at(screen.container, source, words, words.length)).toBe(source.length);
+
+    const text = screen.container.querySelector('p')!.firstChild as Text;
+
+    expect(domAt(screen.container, source.indexOf('six'), source)).toEqual({
+      node: text,
+      offset: words.indexOf('six')
+    });
+    expect(domAt(screen.container, source.length, source)).toEqual({
+      node: text,
+      offset: words.length
+    });
+  });
 });
 
 describe('a place that is not text', () => {
