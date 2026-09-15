@@ -276,6 +276,37 @@ void main() {
   });
 
   group('the toolbar', () {
+    testWidgets('keeps the name of a button against either edge inside the editor', (
+      WidgetTester tester,
+    ) async {
+      // The surface switch is against the editor's own edge, and a name hung
+      // from the middle of its first button was drawn half off the screen.
+      await tester.pumpWidget(host(const MawyEditor(defaultValue: document)));
+
+      final TestGesture pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+
+      await pointer.addPointer(location: const Offset(400, 700));
+      addTearDown(pointer.removePointer);
+
+      for (final String label in <String>['Source', 'Side by side']) {
+        final Finder button = find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == label,
+        );
+
+        await pointer.moveTo(tester.getCenter(button));
+        await tester.pumpAndSettle();
+
+        final Rect tip = tester.getRect(
+          find.ancestor(of: find.text(label), matching: find.byType(Container)).first,
+        );
+
+        expect(tip.left, greaterThanOrEqualTo(0), reason: label);
+
+        await pointer.moveTo(const Offset(400, 700));
+        await tester.pumpAndSettle();
+      }
+    });
+
     testWidgets('runs a command on the selection', (WidgetTester tester) async {
       String? written;
 

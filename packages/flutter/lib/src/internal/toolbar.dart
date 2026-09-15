@@ -142,34 +142,31 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
     }
 
     final bool up = MawyOpensUp.of(context);
+    final double across = _hang(overlay);
+    final TextStyle style = TextStyle(
+      color: widget.tokens.background,
+      fontSize: 11.5,
+      fontWeight: FontWeight.w500,
+      height: 1.45,
+    );
 
     _tip = OverlayEntry(
       builder: (BuildContext context) => IgnorePointer(
         child: CompositedTransformFollower(
           link: _link,
-          targetAnchor: up ? Alignment.topCenter : Alignment.bottomCenter,
-          followerAnchor: up ? Alignment.bottomCenter : Alignment.topCenter,
+          targetAnchor: Alignment(across, up ? -1 : 1),
+          followerAnchor: Alignment(across, up ? 1 : -1),
           offset: Offset(0, up ? -6 : 6),
           child: Align(
-            alignment: up ? Alignment.bottomCenter : Alignment.topCenter,
+            alignment: Alignment(across, up ? 1 : -1),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 220),
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              constraints: const BoxConstraints(maxWidth: _tipWidth),
+              padding: const EdgeInsets.symmetric(horizontal: _tipPadding, vertical: 3),
               decoration: BoxDecoration(
                 color: widget.tokens.foreground,
                 borderRadius: BorderRadius.circular(MawyRadius.small),
               ),
-              child: Text(
-                widget.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: widget.tokens.background,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  height: 1.45,
-                ),
-              ),
+              child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
             ),
           ),
         ),
@@ -177,6 +174,55 @@ class _MawyToolbarButtonState extends State<MawyToolbarButton> {
     );
 
     overlay.insert(_tip!);
+  }
+
+  static const double _tipWidth = 220;
+  static const double _tipPadding = 7;
+
+  /// Where across its button the tip hangs from: `0` for the middle, `-1` for
+  /// the left end and `1` for the right.
+  ///
+  /// The middle, unless half the name reaches past an edge of the overlay it is
+  /// drawn in, and then the end of the button nearer that edge. A toolbar opens
+  /// with the surface switch against the editor's own edge, and the name of the
+  /// first button was drawn half off the screen — cut to its last letters in a
+  /// frame the width of the editor. The React package's stylesheet hangs the
+  /// same buttons from their own start for the same reason.
+  ///
+  /// Measured with the words rather than guessed at, because a name in another
+  /// language is another width, and in the overlay's own coordinates, because
+  /// that is what the tip is clipped to.
+  double _hang(OverlayState overlay) {
+    final RenderObject? button = context.findRenderObject();
+    final RenderObject? room = overlay.context.findRenderObject();
+
+    if (button is! RenderBox || room is! RenderBox || !button.hasSize || !room.hasSize) {
+      return 0;
+    }
+
+    final TextPainter words = TextPainter(
+      text: TextSpan(
+        text: widget.label,
+        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, height: 1.45),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: _tipWidth - _tipPadding * 2);
+    final double half = (words.width + _tipPadding * 2) / 2;
+
+    words.dispose();
+
+    final double middle = button.localToGlobal(button.size.center(Offset.zero), ancestor: room).dx;
+
+    if (middle - half < 0) {
+      return -1;
+    }
+
+    if (middle + half > room.size.width) {
+      return 1;
+    }
+
+    return 0;
   }
 
   void _hideTip() {

@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **The name of the first button on the editor's toolbar is drawn inside the editor.** A tooltip hangs from the middle of its button, and the surface switch is against the editor's own edge, so the name of the first mode reached past it and was cut off by any box that clips its content, the site's own demos among them. The first two buttons of the first group hang theirs from their own start now, the way the last two already hung theirs from their end, and both are said in logical sides so a toolbar in a right-to-left page does the same from the other edge.
+
 ## 1.5.0 (2026-09-13)
 
 ### Added

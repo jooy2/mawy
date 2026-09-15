@@ -330,11 +330,29 @@
 }
 
 /* A tip that would hang off the end of the bar is hung from its own end
-   instead. The last two controls are the ones near enough the edge to. */
+ * instead. The last two controls are the ones near enough the edge to.
+ *
+ * The same is true of the start, and was not said: the editor's bar opens with
+ * the surface switch against the editor's own edge, and the name of the first
+ * button reached past it — cut off by whatever box the editor sits in, which on
+ * a page that clips its content is most of the word. The first two of the first
+ * group hang from their own start. Logical sides rather than physical ones, so
+ * a bar in a right-to-left page hangs each from the edge it is actually near. */
 .mawy-root .mawy-toolbar-controls > *:last-child [data-mawy-tip]::after,
 .mawy-root .mawy-toolbar-group > *:nth-last-child(-n + 2) [data-mawy-tip]::after {
   left: auto;
-  right: 0;
+  right: auto;
+  inset-inline-end: 0;
+  translate: 0 0;
+}
+
+.mawy-root
+  .mawy-toolbar-editor
+  > :first-child
+  :is(:first-child, :nth-child(2))[data-mawy-tip]::after {
+  left: auto;
+  right: auto;
+  inset-inline-start: 0;
   translate: 0 0;
 }
 

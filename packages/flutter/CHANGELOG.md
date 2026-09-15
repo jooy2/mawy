@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **The name of a button against either edge of a toolbar is drawn on the screen.** A tooltip hung from the middle of its button, and the surface switch is against the editor's own edge, so the name of the first mode was drawn half past the edge of the overlay and cut to its last letters. A name that would reach past an edge is hung from the end of its button nearer that edge now, measured with the words it says.
+
 ## 1.5.0 (2026-09-13)
 
 ### Added

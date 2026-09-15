@@ -705,6 +705,21 @@ describe('the frame', () => {
 });
 
 describe('the toolbar and the keyboard', () => {
+  it('hangs the name of a button against either end of the bar from that end', async () => {
+    // The surface switch is against the editor's own edge, and a name hung from
+    // the middle of its first button reached past it, to be cut off by whatever
+    // box the editor sits in.
+    const screen = await render(<MawyEditor style={WIDE} defaultValue="Words." />);
+    const tip = (label: string) =>
+      getComputedStyle(page.getByRole('radio', { name: label }).element(), '::after');
+
+    expect(tip('Formatted').left).toBe('0px');
+    expect(tip('Formatted').translate).not.toContain('%');
+    expect(tip('Source').left).toBe('0px');
+
+    await screen.unmount();
+  });
+
   it('inserts at the caret and takes the focus when something outside asks', async () => {
     for (const mode of ['plain', 'wysiwyg'] as const) {
       const onChange = vi.fn();
