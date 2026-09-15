@@ -2664,6 +2664,76 @@ describe('the document surface', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('A `code`! and **bol-d**.'));
   });
 
+  it('holds bold for what is typed next when nothing is selected, and lets it go again', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor style={WIDE} defaultValue="One." mode="wysiwyg" onChange={onChange} />
+    );
+    const bold = () => page.getByRole('button', { name: 'Bold' }).element();
+
+    put(bodyOf(screen), 'One.', 4);
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\n'));
+
+    // Nothing written yet — `****` on a line of its own is a divider — and the
+    // button says what the next letter will be.
+    await userEvent.click(page.getByRole('button', { name: 'Bold' }));
+    expect(onChange).toHaveBeenLastCalledWith('One.\n\n');
+    expect(bold()).toHaveAttribute('aria-pressed', 'true');
+    expect(bodyOf(screen).querySelector('hr')).toBeNull();
+
+    await userEvent.keyboard('ab');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\n**ab**'));
+    expect(bodyOf(screen).querySelector('strong')?.textContent).toBe('ab');
+    expect(bold()).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.keyboard('{ControlOrMeta>}b{/ControlOrMeta}c');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\n**ab**c'));
+    expect(bold()).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('turns bold off in the middle of a bold word, for what is typed there', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="**bold**" mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'bold', 2);
+    await userEvent.keyboard('{ControlOrMeta>}b{/ControlOrMeta}x');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('**bo**x**ld**'));
+    expect(bodyOf(screen).querySelectorAll('strong')).toHaveLength(2);
+  });
+
+  it('composes into the formatting the caret was holding', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One " mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'One', 3);
+    await userEvent.keyboard('{ControlOrMeta>}b{/ControlOrMeta}');
+
+    const text = body.querySelector('p')!.firstChild as Text;
+    const selection = document.getSelection() as Selection;
+    const range = document.createRange();
+
+    range.setStart(text, 3);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    text.data = 'One한';
+    range.setStart(text, 4);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '한' }));
+
+    expect(onChange).toHaveBeenLastCalledWith('One**한** ');
+  });
+
   it('carries a quotation down, and a code block takes one newline', async () => {
     const quoted = vi.fn();
     const quote = await render(

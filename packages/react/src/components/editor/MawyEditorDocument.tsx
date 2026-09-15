@@ -12,6 +12,7 @@ import type {
   MawyParseOptions,
   MawyUrlResolver
 } from '../../types.js';
+import type { MawyCommand } from '../../internal/commands.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
 import { LIVE } from '../../internal/markdown/live.js';
@@ -28,6 +29,7 @@ import {
   documentAt,
   editFor,
   editForText,
+  heldText,
   leadFor,
   markdownFor,
   openedAt,
@@ -125,6 +127,11 @@ export interface MawyEditorDocumentProps {
    * a heading's marker, or nothing. See `MawyEditor.startWithHeading`.
    */
   lead: string;
+  /**
+   * Formatting the caret has been told to hold until something is typed. See
+   * `heldText`.
+   */
+  held: readonly MawyCommand[];
   /**
    * Files on the clipboard, put in as images. Absent when the application has
    * not said where an image goes, which is when there is nothing to be done
@@ -273,6 +280,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       room,
       aim,
       lead,
+      held,
       onImages
     },
     ref
@@ -281,7 +289,13 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     const composing = React.useRef(false);
     /** The run a drag has taken out and not yet put back. See `MawyDrag`. */
     const drag = React.useRef<MawyDrag>({ taken: null });
-    const composed = React.useRef<{ host: Node; before: string; start: number } | null>(null);
+    const composed = React.useRef<{
+      host: Node;
+      before: string;
+      start: number;
+      /** Where in the run the caret was when the composition began. */
+      offset: number;
+    } | null>(null);
     /** Bumped to throw the drawing away and make it again from the document. */
     const [generation, setGeneration] = React.useState(0);
     const gfm = parse?.gfm ?? true;
@@ -306,10 +320,19 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       () => ({ gfm, breaks, definitionLists }),
       [gfm, breaks, definitionLists]
     );
-    const latest = React.useRef({ value, readOnly, onEdit, onSelect, onImages, options, lead });
+    const latest = React.useRef({
+      value,
+      readOnly,
+      onEdit,
+      onSelect,
+      onImages,
+      options,
+      lead,
+      held
+    });
 
     React.useLayoutEffect(() => {
-      latest.current = { value, readOnly, onEdit, onSelect, onImages, options, lead };
+      latest.current = { value, readOnly, onEdit, onSelect, onImages, options, lead, held };
     });
 
     React.useImperativeHandle(ref, () => root.current as HTMLElement);
@@ -481,7 +504,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           aim.current,
           now.options,
           drag.current,
-          now.lead
+          now.lead,
+          now.held
         );
 
         if (edit) {
@@ -696,7 +720,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         const start = sourceAt(element, host, 0, value);
 
         if (start !== null) {
-          composed.current = { host, before: contentOf(host), start };
+          composed.current = {
+            host,
+            before: contentOf(host),
+            start,
+            offset: host === node ? (owner.getSelection()?.anchorOffset ?? 0) : 0
+          };
         }
       };
 
@@ -761,6 +790,29 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        // Formatting the caret was holding, around what was composed, the way it
+        // is around a keystroke. See `heldText`.
+        const grown = after.length - was.before.length;
+        const formatted =
+          held.length &&
+          grown > 0 &&
+          blockAt(element, was.host)?.tagName !== 'PRE' &&
+          after.slice(0, was.offset) === was.before.slice(0, was.offset) &&
+          after.slice(was.offset + grown) === was.before.slice(was.offset)
+            ? heldText(
+                value,
+                was.start + was.offset,
+                after.slice(was.offset, was.offset + grown),
+                held
+              )
+            : null;
+
+        if (formatted) {
+          onEdit(formatted);
+
+          return;
+        }
+
         // Into an empty paragraph with the blank lines that keep it one, the way
         // a keystroke is. See `openedAt`.
         const opened = was.before
@@ -788,7 +840,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         element.removeEventListener('compositionstart', opened);
         element.removeEventListener('compositionend', closed);
       };
-    }, [value, readOnly, onEdit, aim, lead]);
+    }, [value, readOnly, onEdit, aim, lead, held]);
 
     /**
      * The caret, put down by a press rather than by the browser, and whether

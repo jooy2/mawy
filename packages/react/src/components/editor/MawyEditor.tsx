@@ -43,7 +43,7 @@ import {
   type MawyCommand,
   type MawyTableCommand
 } from '../../internal/commands.js';
-import type { MawyAim, MawyEdit } from '../../internal/editing.js';
+import { marksAt, wraps, type MawyAim, type MawyEdit } from '../../internal/editing.js';
 import {
   fileFromDataUrl,
   imageFilesIn,
@@ -186,6 +186,9 @@ const SHIFTED: Record<string, MawyCommand> = {
   Digit8: 'bulletList',
   Digit9: 'taskList'
 };
+
+/** One empty list for every render that holds no formatting, rather than one each. */
+const NOTHING_HELD: readonly MawyCommand[] = [];
 
 /** What the `heading` menu offers until an application says otherwise. */
 const DEFAULT_HEADING_LEVELS: readonly MawyHeadingLevel[] = [1, 2, 3];
@@ -996,15 +999,96 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [counted, readOnly, stateNow, write]
   );
 
+  /**
+   * The focus put back on the drawn document, with the caret or the selection
+   * where the document's own offsets say. A caret that was meant to be where
+   * the page draws nothing is left where the page put it, and `aim` still
+   * answers for it.
+   */
+  const focusDrawn = React.useCallback(
+    (start: number, end: number) => {
+      const element = drawn.current;
+      const head = element && domAt(element, start, text);
+      const tail = element && end !== start ? domAt(element, end, text) : head;
+      const kept = aim.current;
+
+      element?.focus();
+
+      if (!element || !head || !tail) {
+        return;
+      }
+
+      const range = element.ownerDocument.createRange();
+
+      if (kept && kept.value === text && kept.at === start && start === end) {
+        range.setStart(kept.node, kept.offset);
+        range.collapse(true);
+      } else {
+        range.setStart(head.node, head.offset);
+        range.setEnd(tail.node, tail.offset);
+      }
+
+      element.ownerDocument.getSelection()?.removeAllRanges();
+      element.ownerDocument.getSelection()?.addRange(range);
+    },
+    [text]
+  );
+
+  /**
+   * Formatting the caret on the drawn document has been told to hold, and the
+   * document and the place it was told at.
+   *
+   * Bold pressed with nothing selected writes nothing until something is
+   * typed, and then writes it around what was typed. See `heldText` for why
+   * the markers are not written straight away. Only for as long as the caret
+   * and the document are where they were: a caret put somewhere else, or a
+   * document changed some other way, has let go of it.
+   */
+  const [holding, setHolding] = React.useState<{
+    value: string;
+    at: number;
+    commands: readonly MawyCommand[];
+  } | null>(null);
+  const holds =
+    showDocument &&
+    holding &&
+    holding.value === text &&
+    holding.at === selection.start &&
+    selection.start === selection.end
+      ? holding.commands
+      : NOTHING_HELD;
+  /** The formatting in force where the caret is, read once for every button. */
+  const marks = React.useMemo(
+    () =>
+      showDocument && selection.start === selection.end ? marksAt(text, selection.start) : null,
+    [showDocument, selection.start, selection.end, text]
+  );
+
   const command = React.useCallback(
     (name: MawyCommand) => {
       const before = readOnly ? null : stateNow();
 
-      if (before) {
-        run(before, runCommand(name, before));
+      if (!before) {
+        return;
       }
+
+      if (showDocument && before.start === before.end && wraps(name)) {
+        setHolding({
+          value: before.value,
+          at: before.start,
+          commands: holds.includes(name) ? holds.filter((each) => each !== name) : [...holds, name]
+        });
+        // A press on the toolbar took the focus, and nothing written means no
+        // edit to put the caret back with it. What is typed next is what the
+        // formatting is being held for.
+        focusDrawn(before.start, before.end);
+
+        return;
+      }
+
+      run(before, runCommand(name, before));
     },
-    [readOnly, run, stateNow]
+    [focusDrawn, holds, readOnly, run, showDocument, stateNow]
   );
 
   React.useImperativeHandle(
@@ -1012,23 +1096,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     () => ({
       focus: () => {
         if (showDocument) {
-          const element = drawn.current;
-          const head = element && domAt(element, selection.start, text);
-          const tail =
-            element && selection.end !== selection.start
-              ? domAt(element, selection.end, text)
-              : head;
-
-          element?.focus();
-
-          if (element && head && tail) {
-            const range = element.ownerDocument.createRange();
-
-            range.setStart(head.node, head.offset);
-            range.setEnd(tail.node, tail.offset);
-            element.ownerDocument.getSelection()?.removeAllRanges();
-            element.ownerDocument.getSelection()?.addRange(range);
-          }
+          focusDrawn(selection.start, selection.end);
 
           return;
         }
@@ -1051,7 +1119,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         });
       }
     }),
-    [readOnly, run, selection.end, selection.start, showDocument, stateNow, text]
+    [focusDrawn, readOnly, run, selection.end, selection.start, showDocument, stateNow]
   );
 
   /**
@@ -1746,7 +1814,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       if (shifted) {
         event.preventDefault();
-        run(state, runCommand(shifted, state));
+        command(shifted);
       }
 
       return;
@@ -1765,7 +1833,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     if (name) {
       event.preventDefault();
-      run(state, runCommand(name, state));
+      command(name);
     }
   };
 
@@ -2008,7 +2076,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           colorScheme={scheme}
           onColorSchemeChange={setScheme}
           onCommand={command}
-          active={(name) => commandActive(name, { value: text, ...selection })}
+          active={(name) =>
+            marks && wraps(name)
+              ? marks.has(name) !== holds.includes(name)
+              : commandActive(name, { value: text, ...selection })
+          }
           headingLevels={headingLevels}
           headingActive={(depth) => headingActive({ value: text, ...selection }, depth)}
           onHeading={(depth) => {
@@ -2167,6 +2239,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               strings={strings}
               room={room}
               aim={aim}
+              held={holds}
               lead={
                 startWithHeading && headingLevels.length
                   ? `${'#'.repeat(Math.min(...headingLevels))} `

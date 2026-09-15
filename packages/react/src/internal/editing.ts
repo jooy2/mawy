@@ -16,8 +16,15 @@
  * backspace there removes a separator rather than a letter.
  */
 
-import { containerOf, continueList, continueTable, fencedAt, runCommand } from './commands.js';
-import type { MdRange } from './markdown/ast.js';
+import {
+  containerOf,
+  continueList,
+  continueTable,
+  fencedAt,
+  runCommand,
+  type MawyCommand
+} from './commands.js';
+import type { MdNode, MdRange } from './markdown/ast.js';
 import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
 import { markdownFromHtml } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
@@ -750,6 +757,175 @@ function breakAt(
   );
 }
 
+/** The formatting that is written around the words it covers, by command. */
+const WRAPS: Partial<Record<MawyCommand, MdNode['type']>> = {
+  bold: 'strong',
+  italic: 'emphasis',
+  strikethrough: 'delete',
+  code: 'inlineCode'
+};
+
+/** Whether a command is one of those, and so one a caret can hold until it types. */
+export function wraps(command: MawyCommand): boolean {
+  return command in WRAPS;
+}
+
+/**
+ * The runs of formatting a place is inside, each with where its words start
+ * and end — after its opening marker and before its closing one.
+ *
+ * Inside is between those two, inclusive: a caret at the end of a bold word is
+ * in it, because what is typed there is bold. After the closing marker it is
+ * not, which is where `ArrowRight` takes a caret. See `MawyEditorDocument`.
+ */
+function runsAt(
+  value: string,
+  offset: number
+): { command: MawyCommand; range: MdRange; start: number; end: number; marker: string }[] {
+  const out: {
+    command: MawyCommand;
+    range: MdRange;
+    start: number;
+    end: number;
+    marker: string;
+  }[] = [];
+  const document = parseMarkdown(value);
+
+  const walk = (nodes: readonly MdNode[]) => {
+    for (const node of nodes) {
+      if (offset < node.range.start || offset > node.range.end || node.type === 'code') {
+        continue;
+      }
+
+      const command = (Object.keys(WRAPS) as MawyCommand[]).find(
+        (each) => WRAPS[each] === node.type
+      );
+
+      if (command) {
+        const character = value[node.range.start];
+        let width = 0;
+
+        while (
+          width < node.range.end - node.range.start &&
+          value[node.range.start + width] === character &&
+          (command !== 'bold' || width < 2) &&
+          (command !== 'italic' || width < 1)
+        ) {
+          width += 1;
+        }
+
+        const start = node.range.start + width;
+        const end = node.range.end - width;
+
+        if (start <= offset && offset <= end) {
+          out.push({
+            command,
+            range: node.range,
+            start,
+            end,
+            marker: value.slice(node.range.start, start)
+          });
+        }
+      }
+
+      if ('children' in node) {
+        walk(node.children as MdNode[]);
+      }
+    }
+  };
+
+  walk([...document.root.children, ...document.footnotes]);
+
+  return out;
+}
+
+/** The formatting commands already in force at a place. See `runsAt`. */
+export function marksAt(value: string, offset: number): Set<MawyCommand> {
+  return new Set(/[*_~`]/.test(value) ? runsAt(value, offset).map((run) => run.command) : []);
+}
+
+/**
+ * Words typed where a caret was told to hold some formatting, with that
+ * formatting written around them.
+ *
+ * A formatting button pressed with nothing selected used to write its markers
+ * with the caret between them, which is a source editor's answer and the wrong
+ * one on a drawn document: `****` on a line of its own is a divider, `~~~~` is
+ * a code fence, and on any other line the four characters sat there drawn as
+ * themselves until something was typed. So on the drawn document the caret
+ * holds the command instead, and the markers are written with the first thing
+ * typed — `**x**`, with the caret after the `x`, so what is typed next is bold
+ * as well because it is inside the bold run.
+ *
+ * A command already in force where the caret is turns off the same way. At
+ * the end of the run the words go after its closing marker; at the start,
+ * before its opening one; in the middle the run is closed in front of them and
+ * opened again after, which is the same `**x**` read the other way round.
+ *
+ * Italic is written with `*` where a letter is either side, since `_` inside a
+ * word is not emphasis to CommonMark. `null` where nothing is held.
+ */
+export function heldText(
+  value: string,
+  at: number,
+  text: string,
+  held: readonly MawyCommand[]
+): MawyEdit | null {
+  const commands = held.filter(wraps);
+
+  if (!commands.length || !text) {
+    return null;
+  }
+
+  const runs = runsAt(value, at);
+  let point = at;
+  let before = '';
+  let after = '';
+
+  // What is being turned off first, innermost first, so a run the caret is
+  // leaving by its edge moves the point before anything is wrapped around it.
+  for (const run of [...runs].reverse()) {
+    if (!commands.includes(run.command)) {
+      continue;
+    }
+
+    if (!before && point === run.end) {
+      point = run.range.end;
+    } else if (!before && point === run.start) {
+      point = run.range.start;
+    } else {
+      before += run.marker;
+      after = run.marker + after;
+    }
+  }
+
+  for (const command of commands) {
+    if (runs.some((run) => run.command === command)) {
+      continue;
+    }
+
+    const word = /\w/.test(value[point - 1] ?? '') || /\w/.test(value[point] ?? '');
+    const marker =
+      command === 'bold'
+        ? '**'
+        : command === 'strikethrough'
+          ? '~~'
+          : command === 'code'
+            ? '`'
+            : word
+              ? '*'
+              : '_';
+
+    before += marker;
+    after = marker + after;
+  }
+
+  return {
+    value: value.slice(0, point) + before + text + after + value.slice(point),
+    caret: point + before.length + text.length
+  };
+}
+
 /**
  * The characters that open a line of Markdown as something other than a
  * paragraph, which a document is allowed to begin with. See `leadFor`.
@@ -919,7 +1095,8 @@ export function editFor(
   aim: MawyAim | null,
   options: MarkdownOptions = {},
   drag: MawyDrag = { taken: null },
-  lead = ''
+  lead = '',
+  held: readonly MawyCommand[] = []
 ): MawyEdit | null {
   const place = placeOf(root, value, aim);
   // Whatever a drag left waiting is for the drop that follows it immediately,
@@ -967,6 +1144,19 @@ export function editFor(
 
       // The first words of an empty document, after its heading's marker.
       const heading = lead && !value.trim() ? leadFor(lead, event.data) : '';
+      // Formatting the caret was told to hold, around what is typed. See
+      // `heldText`.
+      const formatted =
+        start === end && tag !== 'PRE' ? heldText(value, start, event.data, held) : null;
+
+      if (formatted) {
+        return heading
+          ? {
+              value: formatted.value.slice(0, start) + heading + formatted.value.slice(start),
+              caret: formatted.caret + heading.length
+            }
+          : formatted;
+      }
 
       if (heading) {
         return splice(value, start, end, heading + event.data);

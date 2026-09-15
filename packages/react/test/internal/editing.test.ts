@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { blankParagraphs } from '../../src/internal/editing.js';
+import { blankParagraphs, heldText, marksAt } from '../../src/internal/editing.js';
+import type { MawyCommand } from '../../src/internal/commands.js';
 import { parseMarkdown } from '../../src/internal/markdown/parse.js';
 
 /**
@@ -52,5 +53,45 @@ describe('the blank lines of a document', () => {
   it('counts a line only blank lines are either side of, whatever else is between', () => {
     // A link definition draws nothing and is not a blank line either.
     expect(drawn('One\n\n\n\n[a]: /b\n\n\n\nTwo')).toBe('One\n\n|\n\n[a]: /b\n\n|\n\nTwo');
+  });
+});
+
+describe('formatting a caret holds', () => {
+  /** What typing `text` at `|` writes, with these commands held, in the same notation. */
+  const typed = (marked: string, text: string, held: MawyCommand[]) => {
+    const at = marked.indexOf('|');
+    const edit = heldText(marked.replace('|', ''), at, text, held);
+
+    return edit && `${edit.value.slice(0, edit.caret)}|${edit.value.slice(edit.caret)}`;
+  };
+
+  it('writes the markers around what is typed, with the caret inside them', () => {
+    // `****` on a line of its own is a divider, which is why nothing is written
+    // until there is something to write them around.
+    expect(typed('|', 'a', ['bold'])).toBe('**a|**');
+    expect(typed('One |', 'a', ['strikethrough'])).toBe('One ~~a|~~');
+    expect(typed('One |', 'a', ['bold', 'code'])).toBe('One **`a|`**');
+  });
+
+  it('writes italic with an asterisk inside a word, where an underscore is not emphasis', () => {
+    expect(typed('One |', 'a', ['italic'])).toBe('One _a|_');
+    expect(typed('wo|rd', 'a', ['italic'])).toBe('wo*a|*rd');
+  });
+
+  it('turns formatting off at either edge of a run, and in the middle of one', () => {
+    expect(typed('**bold|**', 'a', ['bold'])).toBe('**bold**a|');
+    expect(typed('**|bold**', 'a', ['bold'])).toBe('a|**bold**');
+    expect(typed('**bo|ld**', 'a', ['bold'])).toBe('**bo**a|**ld**');
+  });
+
+  it('holds nothing for a command that is not written around words', () => {
+    expect(typed('|', 'a', ['bulletList'])).toBeNull();
+    expect(typed('|', 'a', [])).toBeNull();
+  });
+
+  it('reads which formatting a place is inside, to its closing marker and not past it', () => {
+    expect([...marksAt('A **bold _both_** word', 11)].sort()).toEqual(['bold', 'italic']);
+    expect([...marksAt('A `code` word', 7)]).toEqual(['code']);
+    expect([...marksAt('A `code` word', 8)]).toEqual([]);
   });
 });
