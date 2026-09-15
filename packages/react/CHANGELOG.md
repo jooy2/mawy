@@ -6,6 +6,8 @@
 
 ### Added
 
+- **A task's checkbox on `wysiwyg` ticks and unticks it.** The box was drawn disabled on the surface a document is written on as well as in the viewer. A press on it writes `[x]` or `[ ]` into the document now, in a task list and on a line of a table cell written as a task, and leaves the caret where it was. The preview, the viewer and a `readOnly` editor still draw a box that cannot be pressed.
+
 - **The whole table is deleted from the end of its bar.** A last control, in red and set off from the rest, takes out the lines the table is written on and one of the blank lines that set it off, leaving the caret where the table was. The command is `removeTable` among the table commands, `removeBlock` is the arithmetic behind it, and `MawyStrings` gained `tableRemove`. A control that takes something away whole is drawn in `--mawy-caution`.
 
 - **A line of a table cell written as a list item is drawn as one.** `- dig<br>  - deeper<br>- [x] water` in a cell was drawn as its dashes and brackets, in the viewer, the preview and on `wysiwyg`. Each such line is drawn with a bullet, a checkbox or its number in place of the marker now, a step further in for every two spaces in front of the marker; a line that is only a marker, such as the `-` of an empty cell, is left a dash. The parser still reads words, as GitHub does. On `wysiwyg` the marker is one thing the caret goes past, and `Backspace` straight after it takes the marker and its spaces off.

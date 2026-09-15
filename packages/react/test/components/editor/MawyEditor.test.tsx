@@ -3895,6 +3895,49 @@ describe('tables', () => {
     );
   });
 
+  it('ticks and unticks a task from its box, in a list and in a cell', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n- [ ] water\n- [x] weed\n\n| a |\n| - |\n| - [ ] dig |';
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={{ ...WIDE, height: 500 }}
+      />
+    );
+    const boxes = () => [...bodyOf(screen).querySelectorAll('input[type="checkbox"]')];
+
+    expect(boxes()).toHaveLength(3);
+    expect(boxes().every((box) => !(box as HTMLInputElement).disabled)).toBe(true);
+
+    await userEvent.click(boxes()[0]);
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(source.replace('- [ ] water', '- [x] water'))
+    );
+
+    await userEvent.click(boxes()[1]);
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        source.replace('- [ ] water', '- [x] water').replace('- [x] weed', '- [ ] weed')
+      )
+    );
+
+    await userEvent.click(boxes()[2]);
+    await vi.waitFor(() => expect(onChange.mock.lastCall?.[0]).toContain('| - [x] dig |'));
+
+    // A document being read is not filled in.
+    await screen.unmount();
+
+    const still = await render(<MawyEditor defaultValue={source} mode="wysiwyg" readOnly />);
+
+    expect(
+      [...bodyOf(still).querySelectorAll('input[type="checkbox"]')].every(
+        (box) => (box as HTMLInputElement).disabled
+      )
+    ).toBe(true);
+  });
+
   it('draws a space typed after the last words of a line, where Markdown keeps none', async () => {
     const onChange = vi.fn();
     const screen = await render(

@@ -234,6 +234,12 @@ export interface RenderContext {
    * not draw either. Unset everywhere else.
    */
   spaces?: MdRange | null;
+  /**
+   * What ticks or unticks a task, given the place its item or its line of a
+   * cell starts. The editor's drawn document sets it, and its checkboxes can be
+   * pressed; everywhere else they are a document being read.
+   */
+  onTask?: (at: number) => void;
 }
 
 /**
@@ -1298,6 +1304,27 @@ function taskName(item: MdListItem): string {
     : '';
 }
 
+/**
+ * What makes a task's checkbox a control: pressable where the context has an
+ * `onTask`, and read-only and disabled everywhere else.
+ *
+ * The press is kept off the editable surface around it, whose own handling of a
+ * press would move the caret into the item first.
+ */
+function taskControl(
+  at: number,
+  context: RenderContext
+): React.InputHTMLAttributes<HTMLInputElement> {
+  const toggle = context.onTask;
+
+  return toggle
+    ? {
+        onMouseDown: (event) => event.stopPropagation(),
+        onChange: () => toggle(at)
+      }
+    : { readOnly: true, disabled: true };
+}
+
 function renderListItem(
   item: MdListItem,
   index: number,
@@ -1313,11 +1340,11 @@ function renderListItem(
           type="checkbox"
           className="mawy-md-checkbox"
           checked={item.checked ?? false}
-          readOnly
-          disabled
+          {...taskControl(item.range.start, context)}
           // The document is being read, not filled in. `aria-hidden` would take
           // the state away from a screen reader entirely, so it stays in the
-          // tree and is simply not operable.
+          // tree and is simply not operable — except on the surface a document
+          // is being written on, where pressing it is writing the box.
           tabIndex={-1}
           // And a box with no name is read out as "checked, checkbox" and
           // nothing else — the one thing worth knowing, which is what is done,
@@ -1473,8 +1500,7 @@ function renderCellItem(item: CellItem, index: number, context: RenderContext): 
           type="checkbox"
           className="mawy-md-checkbox"
           checked={item.checked}
-          readOnly
-          disabled
+          {...taskControl(item.range.start, context)}
           tabIndex={-1}
           aria-label={context.strings.task}
         />

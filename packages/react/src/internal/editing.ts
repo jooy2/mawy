@@ -695,6 +695,27 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
   return { value: value.slice(0, caret) + text + value.slice(caret), caret: caret + text.length };
 }
 
+/**
+ * The document with a task's box ticked or unticked, from the place the task's
+ * item starts, or its line of a table cell. `null` where there is no box.
+ *
+ * The first `[ ]` or `[x]` on the line after that place, which is the box: the
+ * marker comes before it, and the words that could hold brackets of their own
+ * come after it.
+ */
+export function toggledTask(value: string, at: number): string | null {
+  const stop = value.indexOf('\n', at);
+  const found = /\[([ xX])\]/.exec(value.slice(at, stop === -1 ? value.length : stop));
+
+  if (!found) {
+    return null;
+  }
+
+  const box = at + found.index + 1;
+
+  return value.slice(0, box) + (found[1] === ' ' ? 'x' : ' ') + value.slice(box + 1);
+}
+
 /** A list item's marker at the start of a line of a cell. See `toggleCellList` in `commands.ts`. */
 const CELL_ITEM = /^(?:([-*+])( \[[ xX]\])?|(\d{1,9})([.)])) /;
 

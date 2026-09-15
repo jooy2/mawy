@@ -34,6 +34,7 @@ import {
   leadFor,
   markdownFor,
   openedAt,
+  toggledTask,
   typedOver,
   type MawyAim,
   type MawyDrag,
@@ -344,7 +345,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
     React.useLayoutEffect(() => {
       latest.current = { value, readOnly, onEdit, onSelect, onImages, options, lead, held };
+      selectionRef.current = selection;
     });
+
+    /** Where the caret is, where a callback made once can read it. */
+    const selectionRef = React.useRef(selection);
 
     React.useImperativeHandle(ref, () => root.current as HTMLElement);
 
@@ -401,6 +406,18 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       () => (spacesFrom === -1 ? null : { start: spacesFrom, end: spacesTo }),
       [spacesFrom, spacesTo]
     );
+    /**
+     * A task's box pressed on the page, written into the document. The caret
+     * stays where it was: the box is one character either way.
+     */
+    const onTask = React.useCallback((at: number) => {
+      const now = latest.current;
+      const next = now.readOnly ? null : toggledTask(now.value, at);
+
+      if (next !== null) {
+        now.onEdit({ value: next, caret: selectionRef.current.start });
+      }
+    }, []);
     /** Which picture is fetched with the page rather than when it is reached. */
     const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
     const context: RenderContext = React.useMemo(
@@ -421,6 +438,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         source: value,
         reveal,
         spaces,
+        onTask: readOnly ? undefined : onTask,
         live: LIVE,
         editing: true
       }),
@@ -440,7 +458,9 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         picture,
         value,
         reveal,
-        spaces
+        spaces,
+        readOnly,
+        onTask
       ]
     );
 
@@ -1035,6 +1055,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         !cell ||
         readOnly ||
         modified ||
+        (event.target as Element).closest?.('input') ||
         event.button !== 0 ||
         event.detail > 1 ||
         !element.contains(cell)
