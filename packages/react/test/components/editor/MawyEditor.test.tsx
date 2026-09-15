@@ -3466,6 +3466,107 @@ describe('tables', () => {
     }
   });
 
+  it('selects cells rather than text when a drag leaves the cell it started in', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n| a | b | c |\n| - | - | - |\n| d | e | f |\n| g | h | i |';
+    // A height, so the document is inside the pane it scrolls in and a point
+    // over a cell is over the cell.
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={{ ...WIDE, height: 500 }}
+      />
+    );
+    const cells = () => [...bodyOf(screen).querySelectorAll('th, td')] as HTMLElement[];
+    const middle = (cell: HTMLElement) => {
+      const box = cell.getBoundingClientRect();
+
+      return { clientX: box.left + 4, clientY: box.top + box.height / 2 };
+    };
+
+    // From the padding at the start of `b`, which a browser reads as the end
+    // of `a`, to `h`: the cells between, whole.
+    cells()[1].dispatchEvent(
+      new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        detail: 1,
+        ...middle(cells()[1])
+      })
+    );
+    document.dispatchEvent(
+      new MouseEvent('mousemove', { bubbles: true, buttons: 1, ...middle(cells()[7]) })
+    );
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-table-cells')).not.toBe(null)
+    );
+
+    // The controls count what they act on, and one more empties the cells.
+    expect(page.getByRole('button', { name: 'Delete these 3 rows' }).element()).toBeDisabled();
+    expect(page.getByRole('button', { name: 'Delete this column' }).element()).not.toBeDisabled();
+
+    await userEvent.keyboard('{Delete}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        'Intro.\n\n| a |  | c |\n| - | - | - |\n| d |  | f |\n| g |  | i |'
+      )
+    );
+    expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(3);
+  });
+
+  it('acts on as many rows and columns as the selected cells cover', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n| a | b | c |\n| - | - | - |\n| d | e | f |\n| g | h | i |';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} style={WIDE} />
+    );
+    const cells = [...bodyOf(screen).querySelectorAll('td')];
+    const range = document.createRange();
+
+    bodyOf(screen).focus();
+    range.setStart(cells[0].firstChild as Text, 0);
+    range.setEnd(cells[4].firstChild as Text, 1);
+    document.getSelection()?.removeAllRanges();
+    document.getSelection()?.addRange(range);
+
+    await vi.waitFor(() =>
+      expect(page.getByRole('button', { name: 'Add 2 rows below' }).element()).toBeInTheDocument()
+    );
+    await userEvent.click(page.getByRole('button', { name: 'Delete these 2 rows' }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Intro.\n\n| a | b | c |\n| - | - | - |')
+    );
+
+    // Typed over cells, the cells are emptied and the words go in the first.
+    await screen.unmount();
+
+    const typed = vi.fn();
+    const again = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={typed} style={WIDE} />
+    );
+    const those = [...bodyOf(again).querySelectorAll('td')];
+    const over = document.createRange();
+
+    bodyOf(again).focus();
+    over.setStart(those[0].firstChild as Text, 0);
+    over.setEnd(those[1].firstChild as Text, 1);
+    document.getSelection()?.removeAllRanges();
+    document.getSelection()?.addRange(over);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('x');
+
+    await vi.waitFor(() =>
+      expect(typed).toHaveBeenLastCalledWith(
+        'Intro.\n\n| a | b | c |\n| - | - | - |\n| x |  | f |\n| g | h | i |'
+      )
+    );
+  });
+
   it('offers no block to make in a cell, and pastes into one on the line a cell is', async () => {
     const onChange = vi.fn();
     const source = 'Intro.\n\n| a | b |\n| - | - |';

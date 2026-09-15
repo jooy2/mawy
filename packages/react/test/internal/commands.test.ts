@@ -188,6 +188,48 @@ describe('line markers', () => {
   });
 });
 
+describe('cells selected in a table', () => {
+  const v = '| a | b | c |\n| - | - | - |\n| d | e | f |\n| g | h | i |';
+  const over = (from: string, to: string) => ({
+    value: v,
+    start: v.indexOf(from),
+    end: v.indexOf(to) + 1
+  });
+
+  it('acts on as many rows and columns as the selection covers', () => {
+    expect(runTableCommand('removeRow', over('d', 'h'))?.value).toBe(
+      '| a | b | c |\n| - | - | - |'
+    );
+    expect(runTableCommand('addRowBelow', over('d', 'h'))?.value).toBe(
+      `${v}\n|  |  |  |\n|  |  |  |`
+    );
+    expect(runTableCommand('removeColumn', over('b', 'f'))?.value).toBe(
+      '| a |\n| - |\n| d |\n| g |'
+    );
+    expect(runTableCommand('addColumnBefore', over('e', 'f'))?.value).toBe(
+      '| a |  |  | b | c |\n| - | --- | --- | - | - |\n| d |  |  | e | f |\n| g |  |  | h | i |'
+    );
+  });
+
+  it('never takes the header or every column', () => {
+    expect(runTableCommand('removeRow', over('b', 'e'))).toBeNull();
+    expect(runTableCommand('removeColumn', over('a', 'i'))).toBeNull();
+  });
+
+  it('empties the cells it covers and leaves the table its shape', () => {
+    expect(runTableCommand('clearCells', over('e', 'i'))?.value).toBe(
+      '| a | b | c |\n| - | - | - |\n| d |  |  |\n| g |  |  |'
+    );
+    // A row written without its outer pipes is given them where a cell at its
+    // edge is emptied, or the empty cell is no cell.
+    const bare = 'a | b\n--- | ---\nc | d';
+
+    expect(runTableCommand('clearCells', { value: bare, start: 0, end: bare.length })?.value).toBe(
+      '|  |  |\n--- | ---\n|  |  |'
+    );
+  });
+});
+
 describe('in a table', () => {
   it('makes no block of a row, which a cell has no room for', () => {
     const state = { value: 'Intro.\n\n| a | b |\n| - | - |', start: 12, end: 12 };

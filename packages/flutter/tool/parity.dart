@@ -418,6 +418,15 @@ List<Object?> _edits() {
     final EditState? forwards = nextCell(state, back: false);
     final EditState? backwards = nextCell(state, back: true);
 
+    final ({int top, int bottom, int left, int right, int rows, int columns})? span = tableSpanAt(
+      state.value,
+      state.start,
+      state.end,
+    );
+
+    out['tableSpanAt'] = span == null
+        ? null
+        : <Object?>[span.top, span.bottom, span.left, span.right, span.rows, span.columns];
     out['nextCell'] = forwards == null
         ? null
         : <Object?>[forwards.value, forwards.start, forwards.end];

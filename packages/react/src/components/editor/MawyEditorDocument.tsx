@@ -878,6 +878,95 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     };
 
     /**
+     * A press in a table cell, and a drag from it, answered here rather than by
+     * the browser.
+     *
+     * A browser selecting text across a table selects the text: a drag from
+     * one cell to another covers the rest of the first row and the start of the
+     * last, and a drag that starts in the padding of a cell starts at the end
+     * of the words in the cell before it. What the table's controls and
+     * `Delete` act on is the rectangle of cells between the cell a selection
+     * starts in and the cell it ends in, so a drag is made to start in the cell
+     * under the pointer and, once it reaches another cell, to cover whole cells
+     * from the first to the one under the pointer — the way a table is selected
+     * in every editor that has tables. Inside the one cell it is a text
+     * selection, as it always was.
+     *
+     * A second press, `Shift` or any other modifier is the browser's: a word
+     * double-clicked, a selection extended.
+     */
+    const pressCell = (event: React.MouseEvent<HTMLElement>) => {
+      const element = root.current;
+      const cell = (event.target as Element | null)?.closest?.('td, th');
+      const modified = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey;
+
+      if (
+        !element ||
+        !cell ||
+        readOnly ||
+        modified ||
+        event.button !== 0 ||
+        event.detail > 1 ||
+        !element.contains(cell)
+      ) {
+        return;
+      }
+
+      const owner = element.ownerDocument;
+      /** Where in a cell a point is, or its nearer edge where the browser says it is not in it. */
+      const inCell = (target: Element, x: number, y: number) => {
+        const point = caretFromPoint(x, y);
+
+        if (point && target.contains(point.node)) {
+          return point;
+        }
+
+        const box = target.getBoundingClientRect();
+
+        return {
+          node: target,
+          offset: x < box.left + box.width / 2 ? 0 : target.childNodes.length
+        };
+      };
+      const anchor = inCell(cell, event.clientX, event.clientY);
+
+      event.preventDefault();
+      element.focus({ preventScroll: true });
+      put(element, anchor);
+
+      const move = (moved: MouseEvent) => {
+        if (!(moved.buttons & 1)) {
+          up();
+
+          return;
+        }
+
+        const over = owner.elementFromPoint(moved.clientX, moved.clientY)?.closest('td, th');
+        const selection = owner.getSelection();
+
+        if (!selection) {
+          return;
+        }
+
+        if (over && over !== cell && over.closest('table') === cell.closest('table')) {
+          selection.setBaseAndExtent(cell, 0, over, over.childNodes.length);
+        } else if (over === cell) {
+          const point = inCell(cell, moved.clientX, moved.clientY);
+
+          selection.setBaseAndExtent(anchor.node, anchor.offset, point.node, point.offset);
+        }
+      };
+
+      const up = () => {
+        owner.removeEventListener('mousemove', move);
+        owner.removeEventListener('mouseup', up);
+      };
+
+      owner.addEventListener('mousemove', move);
+      owner.addEventListener('mouseup', up);
+    };
+
+    /**
      * A paragraph opened under the last block, or over the first, where that
      * block has no line of text around it for a caret to go to.
      *
@@ -1130,6 +1219,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
             navigate(event);
             onKeyDown(event);
           }}
+          onMouseDown={pressCell}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
           <React.Fragment key={generation}>{content}</React.Fragment>

@@ -11,6 +11,8 @@
 /// sounds obvious and is the half people leave out.
 library;
 
+import 'dart:math' as math;
+
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/parse.dart';
 
@@ -1042,6 +1044,9 @@ enum MawyTableCommand {
 
   /// The caret's column, which is never the last one.
   removeColumn,
+
+  /// What is written in the cells the selection covers, with the cells left.
+  clearCells,
 }
 
 /// One cell's run, between the pipes and not including them.
@@ -1449,55 +1454,128 @@ EditState? _insertTable(EditState state, {int columns = 2, int rows = 2}) {
   return EditState(value.substring(0, start) + text + value.substring(end), caret, caret);
 }
 
-EditState? _addRow(EditState state, {required bool below}) {
-  final _TableAt? table = _tableAt(state.value, state.start);
+/// The cells a selection covers in a table, as the rectangle between the cell
+/// its start is in and the cell its end is in.
+///
+/// Rows are counted as [_tableAt] counts them, the delimiter row being the
+/// header's, so [top] and [bottom] are lines of the table. A selection whose end
+/// is outside the table the start is in covers the start's cell alone.
+class _TableSpan {
+  const _TableSpan({
+    required this.table,
+    required this.top,
+    required this.bottom,
+    required this.left,
+    required this.right,
+  });
 
-  if (table == null || (!below && table.row == 0)) {
-    return null;
-  }
+  final _TableAt table;
+  final int top;
+  final int bottom;
+  final int left;
+  final int right;
 
-  final String value = state.value;
-  // Under the header is under the delimiter row, which belongs to it.
-  final _TableLine next = table.lines[table.row == 0 ? 1 : table.row];
-  final String text = '${table.prefix}${_emptyRow(table.columns)}';
-  final int at = below ? next.end : next.lineStart;
-  final String written = below ? '\n$text' : '$text\n';
-  final int opens = below ? at + 1 : at;
-  final int column = table.column < table.columns - 1 ? table.column : table.columns - 1;
-  final int caret = opens + table.prefix.length + 3 + 3 * column;
-
-  return EditState(value.substring(0, at) + written + value.substring(at), caret, caret);
+  /// How many rows it covers, the delimiter row not being one.
+  int get rows => (top == 0 ? 1 : 0) + math.max(0, bottom - math.max(top, 2) + 1).toInt();
 }
 
-EditState? _removeRow(EditState state) {
-  final _TableAt? table = _tableAt(state.value, state.start);
-
-  if (table == null || table.row == 0) {
-    return null;
-  }
-
-  final String value = state.value;
-  final _TableLine line = table.lines[table.row];
-  final String next = value.substring(0, line.lineStart - 1) + value.substring(line.end);
-  // The row that moved up into its place, or the one above where there is none.
-  final int row = table.row < table.lines.length - 1 ? table.row : table.row - 1;
-
-  return _caretAfter(next, table.lines.first.start, row == 1 ? 0 : row, table.column);
-}
-
-EditState? _addColumn(EditState state, {required bool after}) {
-  final _TableAt? table = _tableAt(state.value, state.start);
+_TableSpan? _spanAt(String value, int start, int end) {
+  final _TableAt? table = _tableAt(value, start);
 
   if (table == null) {
     return null;
   }
 
-  final int column = table.column;
-  final String next = _rewriteLines(state.value, table.lines, (
-    String text,
-    _TableLine line,
-    int index,
-  ) {
+  final _TableAt? other = start == end ? table : _tableAt(value, end);
+  final _TableAt same = other != null && other.lines.first.start == table.lines.first.start
+      ? other
+      : table;
+
+  return _TableSpan(
+    table: table,
+    top: math.min(table.row, same.row),
+    bottom: math.max(table.row, same.row),
+    left: math.min(math.min(table.column, same.column), table.columns - 1),
+    right: math.min(math.max(table.column, same.column), table.columns - 1),
+  );
+}
+
+/// How many rows and columns of a table a selection covers, or `null` where
+/// it does not start in one.
+///
+/// What the controls beside a table count in their names.
+({int top, int bottom, int left, int right, int rows, int columns})? tableSpanAt(
+  String value,
+  int start,
+  int end,
+) {
+  final _TableSpan? span = _spanAt(value, start, end);
+
+  return span == null
+      ? null
+      : (
+          top: span.top,
+          bottom: span.bottom,
+          left: span.left,
+          right: span.right,
+          rows: span.rows,
+          columns: span.right - span.left + 1,
+        );
+}
+
+/// Rows under the rows the selection covers, or over them, as many as it
+/// covers. Never over the header.
+EditState? _addRow(EditState state, {required bool below}) {
+  final _TableSpan? span = _spanAt(state.value, state.start, state.end);
+
+  if (span == null || (!below && span.top == 0)) {
+    return null;
+  }
+
+  final String value = state.value;
+  final _TableAt table = span.table;
+  // Under the header is under the delimiter row, which belongs to it.
+  final _TableLine next = table.lines[below ? math.max(span.bottom, 1) : span.top];
+  final String text = List<String>.filled(
+    span.rows,
+    '${table.prefix}${_emptyRow(table.columns)}',
+  ).join('\n');
+  final int at = below ? next.end : next.lineStart;
+  final String written = below ? '\n$text' : '$text\n';
+  final int opens = below ? at + 1 : at;
+  final int caret = opens + table.prefix.length + 3 + 3 * span.left;
+
+  return EditState(value.substring(0, at) + written + value.substring(at), caret, caret);
+}
+
+/// The rows the selection covers, taken out. Never the header.
+EditState? _removeRow(EditState state) {
+  final _TableSpan? span = _spanAt(state.value, state.start, state.end);
+
+  if (span == null || span.top == 0) {
+    return null;
+  }
+
+  final String value = state.value;
+  final _TableAt table = span.table;
+  final String next =
+      value.substring(0, table.lines[span.top].lineStart - 1) +
+      value.substring(table.lines[span.bottom].end);
+  // The row that moved up into its place, or the one above where there is none.
+  final int row = span.bottom < table.lines.length - 1 ? span.top : span.top - 1;
+
+  return _caretAfter(next, table.lines.first.start, row == 1 ? 0 : row, span.left);
+}
+
+/// One empty column put into every line of the table beside [column].
+String _columnPutIn(String value, int anchor, int column, {required bool after}) {
+  final _TableAt? table = _tableAt(value, anchor);
+
+  if (table == null) {
+    return value;
+  }
+
+  return _rewriteLines(value, table.lines, (String text, _TableLine line, int index) {
     // A row shorter than the column is already empty there.
     if (column >= line.cells.length) {
       return text;
@@ -1515,23 +1593,36 @@ EditState? _addColumn(EditState state, {required bool after}) {
 
     return text.substring(0, at) + written + text.substring(at);
   });
-
-  return _caretAfter(next, table.lines.first.start, table.row, after ? column + 1 : column);
 }
 
-EditState? _removeColumn(EditState state) {
-  final _TableAt? table = _tableAt(state.value, state.start);
+/// Columns after the columns the selection covers, or before them, as many as
+/// it covers.
+EditState? _addColumn(EditState state, {required bool after}) {
+  final _TableSpan? span = _spanAt(state.value, state.start, state.end);
 
-  if (table == null || table.columns < 2) {
+  if (span == null) {
     return null;
   }
 
-  final int column = table.column;
-  final String next = _rewriteLines(state.value, table.lines, (
-    String text,
-    _TableLine line,
-    int index,
-  ) {
+  final int anchor = span.table.lines.first.start;
+  String next = state.value;
+
+  for (int count = span.left; count <= span.right; count += 1) {
+    next = _columnPutIn(next, anchor, after ? span.right : span.left, after: after);
+  }
+
+  return _caretAfter(next, anchor, span.table.row, after ? span.right + 1 : span.left);
+}
+
+/// One column taken out of every line of the table.
+String _columnTakenFrom(String value, int anchor, int column) {
+  final _TableAt? table = _tableAt(value, anchor);
+
+  if (table == null) {
+    return value;
+  }
+
+  return _rewriteLines(value, table.lines, (String text, _TableLine line, int index) {
     if (column >= line.cells.length) {
       return text;
     }
@@ -1554,8 +1645,71 @@ EditState? _removeColumn(EditState state) {
     // A header row with no pipe left in it is not a table's header any more.
     return index == 0 && !out.contains('|') ? '${out.trimRight()} |' : out;
   });
+}
 
-  return _caretAfter(next, table.lines.first.start, table.row, column > 0 ? column - 1 : 0);
+/// The columns the selection covers, taken out. Never every column.
+EditState? _removeColumn(EditState state) {
+  final _TableSpan? span = _spanAt(state.value, state.start, state.end);
+
+  if (span == null || span.right - span.left + 1 >= span.table.columns) {
+    return null;
+  }
+
+  final int anchor = span.table.lines.first.start;
+  String next = state.value;
+
+  for (int count = span.left; count <= span.right; count += 1) {
+    next = _columnTakenFrom(next, anchor, span.left);
+  }
+
+  return _caretAfter(next, anchor, span.table.row, span.left > 0 ? span.left - 1 : 0);
+}
+
+/// What is written in the cells the selection covers, taken out, and the cells
+/// left where they are.
+///
+/// Deleting the characters between two places in a table takes the pipes
+/// between them and the line endings between its rows, which is a table cut in
+/// half rather than cells emptied. A cell at the open edge of a row written
+/// without its outer pipe is given the pipe, or an empty cell there is no cell.
+EditState? _clearCells(EditState state) {
+  final _TableSpan? span = _spanAt(state.value, state.start, state.end);
+
+  if (span == null) {
+    return null;
+  }
+
+  final _TableAt table = span.table;
+  final String next = _rewriteLines(state.value, table.lines, (
+    String text,
+    _TableLine line,
+    int index,
+  ) {
+    if (index == 1 || index < span.top || index > span.bottom || line.cells.isEmpty) {
+      return text;
+    }
+
+    String out = text;
+    final int last = math.min(span.right, line.cells.length - 1);
+
+    for (int column = last; column >= span.left; column -= 1) {
+      final _TableCell cell = line.cells[column];
+
+      out = '${out.substring(0, cell.from - line.start)}  ${out.substring(cell.to - line.start)}';
+    }
+
+    if (span.left == 0 && !line.opened) {
+      out = '|$out';
+    }
+
+    if (last == line.cells.length - 1 && span.right >= last && !line.closed) {
+      out = '$out|';
+    }
+
+    return out;
+  });
+
+  return _caretAfter(next, table.lines.first.start, span.top, span.left);
 }
 
 /// `Tab` in a table, which is the next cell, and `Shift`+`Tab` ([back]), the
@@ -1652,6 +1806,7 @@ EditState? runTableCommand(MawyTableCommand command, EditState state) {
     MawyTableCommand.addColumnBefore => _addColumn(state, after: false),
     MawyTableCommand.removeRow => _removeRow(state),
     MawyTableCommand.removeColumn => _removeColumn(state),
+    MawyTableCommand.clearCells => _clearCells(state),
   };
 }
 

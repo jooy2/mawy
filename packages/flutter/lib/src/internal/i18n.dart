@@ -105,6 +105,13 @@ final class MawyStrings {
     required this.tableColumnBefore,
     required this.tableRowRemove,
     required this.tableColumnRemove,
+    required this.tableRowsAbove,
+    required this.tableRowsBelow,
+    required this.tableColumnsBefore,
+    required this.tableColumnsAfter,
+    required this.tableRowsRemove,
+    required this.tableColumnsRemove,
+    required this.tableCellsClear,
     required this.thematicBreak,
     required this.status,
     required this.statusPosition,
@@ -340,6 +347,27 @@ final class MawyStrings {
   /// The editor: Delete this column.
   final String tableColumnRemove;
 
+  /// The editor: Add rows above, `%N` of them.
+  final String tableRowsAbove;
+
+  /// The editor: Add rows below, `%N` of them.
+  final String tableRowsBelow;
+
+  /// The editor: Add columns before, `%N` of them.
+  final String tableColumnsBefore;
+
+  /// The editor: Add columns after, `%N` of them.
+  final String tableColumnsAfter;
+
+  /// The editor: Delete the `%N` rows the selection covers.
+  final String tableRowsRemove;
+
+  /// The editor: Delete the `%N` columns the selection covers.
+  final String tableColumnsRemove;
+
+  /// The editor: Clear the selected cells.
+  final String tableCellsClear;
+
   /// The editor: Divider.
   final String thematicBreak;
 
@@ -490,6 +518,13 @@ final class MawyStrings {
     String? tableColumnBefore,
     String? tableRowRemove,
     String? tableColumnRemove,
+    String? tableRowsAbove,
+    String? tableRowsBelow,
+    String? tableColumnsBefore,
+    String? tableColumnsAfter,
+    String? tableRowsRemove,
+    String? tableColumnsRemove,
+    String? tableCellsClear,
     String? thematicBreak,
     String? status,
     String? statusPosition,
@@ -586,6 +621,13 @@ final class MawyStrings {
       tableColumnBefore: tableColumnBefore ?? this.tableColumnBefore,
       tableRowRemove: tableRowRemove ?? this.tableRowRemove,
       tableColumnRemove: tableColumnRemove ?? this.tableColumnRemove,
+      tableRowsAbove: tableRowsAbove ?? this.tableRowsAbove,
+      tableRowsBelow: tableRowsBelow ?? this.tableRowsBelow,
+      tableColumnsBefore: tableColumnsBefore ?? this.tableColumnsBefore,
+      tableColumnsAfter: tableColumnsAfter ?? this.tableColumnsAfter,
+      tableRowsRemove: tableRowsRemove ?? this.tableRowsRemove,
+      tableColumnsRemove: tableColumnsRemove ?? this.tableColumnsRemove,
+      tableCellsClear: tableCellsClear ?? this.tableCellsClear,
       thematicBreak: thematicBreak ?? this.thematicBreak,
       status: status ?? this.status,
       statusPosition: statusPosition ?? this.statusPosition,
@@ -688,6 +730,13 @@ final class MawyStrings {
       other.tableColumnBefore == tableColumnBefore &&
       other.tableRowRemove == tableRowRemove &&
       other.tableColumnRemove == tableColumnRemove &&
+      other.tableRowsAbove == tableRowsAbove &&
+      other.tableRowsBelow == tableRowsBelow &&
+      other.tableColumnsBefore == tableColumnsBefore &&
+      other.tableColumnsAfter == tableColumnsAfter &&
+      other.tableRowsRemove == tableRowsRemove &&
+      other.tableColumnsRemove == tableColumnsRemove &&
+      other.tableCellsClear == tableCellsClear &&
       other.thematicBreak == thematicBreak &&
       other.status == status &&
       other.statusPosition == statusPosition &&
@@ -785,6 +834,13 @@ final class MawyStrings {
     tableColumnBefore,
     tableRowRemove,
     tableColumnRemove,
+    tableRowsAbove,
+    tableRowsBelow,
+    tableColumnsBefore,
+    tableColumnsAfter,
+    tableRowsRemove,
+    tableColumnsRemove,
+    tableCellsClear,
     thematicBreak,
     status,
     statusPosition,
@@ -883,6 +939,13 @@ const MawyStrings _en = MawyStrings._(
   tableColumnBefore: 'Add a column before',
   tableRowRemove: 'Delete this row',
   tableColumnRemove: 'Delete this column',
+  tableRowsAbove: 'Add %N rows above',
+  tableRowsBelow: 'Add %N rows below',
+  tableColumnsBefore: 'Add %N columns before',
+  tableColumnsAfter: 'Add %N columns after',
+  tableRowsRemove: 'Delete these %N rows',
+  tableColumnsRemove: 'Delete these %N columns',
+  tableCellsClear: 'Clear the selected cells',
   thematicBreak: 'Divider',
   status: 'Document statistics',
   statusPosition: 'Ln %L, Col %C',
@@ -980,6 +1043,13 @@ const MawyStrings _ko = MawyStrings._(
   tableColumnBefore: '앞에 열 추가',
   tableRowRemove: '이 행 삭제',
   tableColumnRemove: '이 열 삭제',
+  tableRowsAbove: '위에 행 %N개 추가',
+  tableRowsBelow: '아래에 행 %N개 추가',
+  tableColumnsBefore: '앞에 열 %N개 추가',
+  tableColumnsAfter: '뒤에 열 %N개 추가',
+  tableRowsRemove: '이 행 %N개 삭제',
+  tableColumnsRemove: '이 열 %N개 삭제',
+  tableCellsClear: '선택한 셀 비우기',
   thematicBreak: '구분선',
   status: '문서 통계',
   statusPosition: '%L행 %C열',

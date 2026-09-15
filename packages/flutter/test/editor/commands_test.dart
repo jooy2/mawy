@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
-import 'package:mawy/src/editor/commands.dart' show tableOfSize;
+import 'package:mawy/src/editor/commands.dart' show MawyTableCommand, runTableCommand, tableOfSize;
 
 /// The commands, as arithmetic on a string.
 ///
@@ -126,6 +126,44 @@ void main() {
     test('reads a heading off the lines with something on them', () {
       expect(run(MawyCommand.heading2, '«## a\n\n## b»'), '«a\n\nb»');
       expect(run(MawyCommand.heading2, '«a\n\nb»'), '«## a\n\n## b»');
+    });
+  });
+
+  group('cells selected in a table', () {
+    const String v = '| a | b | c |\n| - | - | - |\n| d | e | f |\n| g | h | i |';
+    EditState over(String from, String to) => EditState(v, v.indexOf(from), v.indexOf(to) + 1);
+
+    test('acts on as many rows and columns as the selection covers', () {
+      expect(
+        runTableCommand(MawyTableCommand.removeRow, over('d', 'h'))?.value,
+        '| a | b | c |\n| - | - | - |',
+      );
+      expect(
+        runTableCommand(MawyTableCommand.addRowBelow, over('d', 'h'))?.value,
+        '$v\n|  |  |  |\n|  |  |  |',
+      );
+      expect(
+        runTableCommand(MawyTableCommand.removeColumn, over('b', 'f'))?.value,
+        '| a |\n| - |\n| d |\n| g |',
+      );
+    });
+
+    test('never takes the header or every column', () {
+      expect(runTableCommand(MawyTableCommand.removeRow, over('b', 'e')), isNull);
+      expect(runTableCommand(MawyTableCommand.removeColumn, over('a', 'i')), isNull);
+    });
+
+    test('empties the cells it covers and leaves the table its shape', () {
+      expect(
+        runTableCommand(MawyTableCommand.clearCells, over('e', 'i'))?.value,
+        '| a | b | c |\n| - | - | - |\n| d |  |  |\n| g |  |  |',
+      );
+      const String bare = 'a | b\n--- | ---\nc | d';
+
+      expect(
+        runTableCommand(MawyTableCommand.clearCells, const EditState(bare, 0, bare.length))?.value,
+        '|  |  |\n--- | ---\n|  |  |',
+      );
     });
   });
 

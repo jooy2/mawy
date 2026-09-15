@@ -69,6 +69,7 @@ export {
   Upload as UploadIcon,
   X as CloseIcon,
   CaseSensitive as CaseSensitiveIcon,
+  Eraser as ClearCellsIcon,
   ChevronUp as PreviousMatchIcon,
   Download as SaveIcon,
   Replace as ReplaceIcon,

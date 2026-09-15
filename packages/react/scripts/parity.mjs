@@ -37,6 +37,7 @@ import {
   runCommand,
   runTableCommand,
   tableOfSize,
+  tableSpanAt,
   toggleHeading
 } from '../src/internal/commands.ts';
 import { findMatches, matchFrom, replaceAll, replaceMatch } from '../src/internal/search.ts';
@@ -187,7 +188,8 @@ const TABLE_COMMANDS = [
   'addColumnAfter',
   'addColumnBefore',
   'removeRow',
-  'removeColumn'
+  'removeColumn',
+  'clearCells'
 ];
 
 /**
@@ -249,6 +251,9 @@ const edits = JSON.parse(
   const forwards = nextCell(state, false);
   const backwards = nextCell(state, true);
 
+  const span = tableSpanAt(value, start, end);
+
+  out.tableSpanAt = span && [span.top, span.bottom, span.left, span.right, span.rows, span.columns];
   out.nextCell = forwards && [forwards.value, forwards.start, forwards.end];
   out.previousCell = backwards && [backwards.value, backwards.start, backwards.end];
   out.indent = [indented.value, indented.start, indented.end];

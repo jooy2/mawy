@@ -1021,7 +1021,8 @@ export type MawyTableCommand =
   | 'addColumnAfter'
   | 'addColumnBefore'
   | 'removeRow'
-  | 'removeColumn';
+  | 'removeColumn'
+  | 'clearCells';
 
 /** One line of a table, and where each of its cells is written. */
 interface TableLine {
@@ -1355,50 +1356,133 @@ function insertTable(state: EditState, columns = 2, rows = 2): EditState | null 
   return { value: value.slice(0, start) + text + value.slice(end), start: caret, end: caret };
 }
 
-function addRow(state: EditState, below: boolean): EditState | null {
-  const table = tableAt(state.value, state.start);
-
-  if (!table || (!below && table.row === 0)) {
-    return null;
-  }
-
-  const { value } = state;
-  // Under the header is under the delimiter row, which belongs to it.
-  const next = table.lines[table.row === 0 ? 1 : table.row];
-  const text = `${table.prefix}${emptyRow(table.columns)}`;
-  const at = below ? next.end : next.lineStart;
-  const written = below ? `\n${text}` : `${text}\n`;
-  const opens = below ? at + 1 : at;
-  const caret = opens + table.prefix.length + 3 + 3 * Math.min(table.column, table.columns - 1);
-
-  return { value: value.slice(0, at) + written + value.slice(at), start: caret, end: caret };
+/**
+ * The cells a selection covers in a table, as the rectangle between the cell
+ * its start is in and the cell its end is in.
+ *
+ * Rows are counted as `tableAt` counts them, the delimiter row being the
+ * header's, so `top` and `bottom` are lines of the table. A selection whose end
+ * is outside the table the start is in covers the start's cell alone.
+ */
+interface TableSpan {
+  table: TableAt;
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
 }
 
-function removeRow(state: EditState): EditState | null {
-  const table = tableAt(state.value, state.start);
-
-  if (!table || table.row === 0) {
-    return null;
-  }
-
-  const { value } = state;
-  const line = table.lines[table.row];
-  const next = value.slice(0, line.lineStart - 1) + value.slice(line.end);
-  // The row that moved up into its place, or the one above where there is none.
-  const row = table.row < table.lines.length - 1 ? table.row : table.row - 1;
-
-  return caretAfter(next, table.lines[0].start, row === 1 ? 0 : row, table.column);
-}
-
-function addColumn(state: EditState, after: boolean): EditState | null {
-  const table = tableAt(state.value, state.start);
+function spanAt(value: string, start: number, end: number): TableSpan | null {
+  const table = tableAt(value, start);
 
   if (!table) {
     return null;
   }
 
-  const { column } = table;
-  const next = rewriteLines(state.value, table.lines, (text, line, index) => {
+  const other = start === end ? table : tableAt(value, end);
+  const same = other && other.lines[0].start === table.lines[0].start ? other : table;
+
+  return {
+    table,
+    top: Math.min(table.row, same.row),
+    bottom: Math.max(table.row, same.row),
+    left: Math.min(table.column, same.column, table.columns - 1),
+    right: Math.min(Math.max(table.column, same.column), table.columns - 1)
+  };
+}
+
+/** How many rows a span covers, the delimiter row not being one. */
+function rowsIn(span: TableSpan): number {
+  return (span.top === 0 ? 1 : 0) + Math.max(0, span.bottom - Math.max(span.top, 2) + 1);
+}
+
+/**
+ * How many rows and columns of a table a selection covers, or `null` where it
+ * does not start in one.
+ *
+ * What the controls beside a table count in their names, and what the drawn
+ * document marks as cells rather than as text when it is more than one.
+ */
+export function tableSpanAt(
+  value: string,
+  start: number,
+  end: number
+): {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+  rows: number;
+  columns: number;
+} | null {
+  const span = spanAt(value, start, end);
+
+  return span
+    ? {
+        top: span.top,
+        bottom: span.bottom,
+        left: span.left,
+        right: span.right,
+        rows: rowsIn(span),
+        columns: span.right - span.left + 1
+      }
+    : null;
+}
+
+/**
+ * Rows under the rows the selection covers, or over them, as many as it covers.
+ * Never over the header.
+ */
+function addRow(state: EditState, below: boolean): EditState | null {
+  const span = spanAt(state.value, state.start, state.end);
+
+  if (!span || (!below && span.top === 0)) {
+    return null;
+  }
+
+  const { value } = state;
+  const { table } = span;
+  // Under the header is under the delimiter row, which belongs to it.
+  const next = table.lines[below ? Math.max(span.bottom, 1) : span.top];
+  const text = Array.from(
+    { length: rowsIn(span) },
+    () => `${table.prefix}${emptyRow(table.columns)}`
+  ).join('\n');
+  const at = below ? next.end : next.lineStart;
+  const written = below ? `\n${text}` : `${text}\n`;
+  const opens = below ? at + 1 : at;
+  const caret = opens + table.prefix.length + 3 + 3 * span.left;
+
+  return { value: value.slice(0, at) + written + value.slice(at), start: caret, end: caret };
+}
+
+/** The rows the selection covers, taken out. Never the header. */
+function removeRow(state: EditState): EditState | null {
+  const span = spanAt(state.value, state.start, state.end);
+
+  if (!span || span.top === 0) {
+    return null;
+  }
+
+  const { value } = state;
+  const { table } = span;
+  const next =
+    value.slice(0, table.lines[span.top].lineStart - 1) + value.slice(table.lines[span.bottom].end);
+  // The row that moved up into its place, or the one above where there is none.
+  const row = span.bottom < table.lines.length - 1 ? span.top : span.top - 1;
+
+  return caretAfter(next, table.lines[0].start, row === 1 ? 0 : row, span.left);
+}
+
+/** One empty column put into every line of the table beside `column`. */
+function columnPutIn(value: string, anchor: number, column: number, after: boolean): string {
+  const table = tableAt(value, anchor);
+
+  if (!table) {
+    return value;
+  }
+
+  return rewriteLines(value, table.lines, (text, line, index) => {
     const cell = line.cells[column];
 
     // A row shorter than the column is already empty there.
@@ -1421,19 +1505,35 @@ function addColumn(state: EditState, after: boolean): EditState | null {
 
     return text.slice(0, at) + written + text.slice(at);
   });
-
-  return caretAfter(next, table.lines[0].start, table.row, after ? column + 1 : column);
 }
 
-function removeColumn(state: EditState): EditState | null {
-  const table = tableAt(state.value, state.start);
+/** Columns after the columns the selection covers, or before them, as many as it covers. */
+function addColumn(state: EditState, after: boolean): EditState | null {
+  const span = spanAt(state.value, state.start, state.end);
 
-  if (!table || table.columns < 2) {
+  if (!span) {
     return null;
   }
 
-  const { column } = table;
-  const next = rewriteLines(state.value, table.lines, (text, line, index) => {
+  const anchor = span.table.lines[0].start;
+  let next = state.value;
+
+  for (let count = span.left; count <= span.right; count += 1) {
+    next = columnPutIn(next, anchor, after ? span.right : span.left, after);
+  }
+
+  return caretAfter(next, anchor, span.table.row, after ? span.right + 1 : span.left);
+}
+
+/** One column taken out of every line of the table. */
+function columnTakenFrom(value: string, anchor: number, column: number): string {
+  const table = tableAt(value, anchor);
+
+  if (!table) {
+    return value;
+  }
+
+  return rewriteLines(value, table.lines, (text, line, index) => {
     const cell = line.cells[column];
 
     if (!cell) {
@@ -1457,8 +1557,70 @@ function removeColumn(state: EditState): EditState | null {
     // A header row with no pipe left in it is not a table's header any more.
     return index === 0 && !out.includes('|') ? `${out.trimEnd()} |` : out;
   });
+}
 
-  return caretAfter(next, table.lines[0].start, table.row, Math.max(0, column - 1));
+/** The columns the selection covers, taken out. Never every column. */
+function removeColumn(state: EditState): EditState | null {
+  const span = spanAt(state.value, state.start, state.end);
+
+  if (!span || span.right - span.left + 1 >= span.table.columns) {
+    return null;
+  }
+
+  const anchor = span.table.lines[0].start;
+  let next = state.value;
+
+  for (let count = span.left; count <= span.right; count += 1) {
+    next = columnTakenFrom(next, anchor, span.left);
+  }
+
+  return caretAfter(next, anchor, span.table.row, Math.max(0, span.left - 1));
+}
+
+/**
+ * What is written in the cells the selection covers, taken out, and the cells
+ * left where they are.
+ *
+ * What `Delete` does to cells selected on the drawn document. Deleting the
+ * characters between two places in a table takes the pipes between them and
+ * the line endings between its rows, which is a table cut in half rather than
+ * cells emptied. A cell at the open edge of a row written without its outer
+ * pipe is given the pipe, or an empty cell there is no cell.
+ */
+function clearCells(state: EditState): EditState | null {
+  const span = spanAt(state.value, state.start, state.end);
+
+  if (!span) {
+    return null;
+  }
+
+  const { table } = span;
+  const next = rewriteLines(state.value, table.lines, (text, line, index) => {
+    if (index === 1 || index < span.top || index > span.bottom || !line.cells.length) {
+      return text;
+    }
+
+    let out = text;
+    const last = Math.min(span.right, line.cells.length - 1);
+
+    for (let column = last; column >= span.left; column -= 1) {
+      const cell = line.cells[column];
+
+      out = out.slice(0, cell.from - line.start) + '  ' + out.slice(cell.to - line.start);
+    }
+
+    if (span.left === 0 && !line.opened) {
+      out = `|${out}`;
+    }
+
+    if (last === line.cells.length - 1 && span.right >= last && !line.closed) {
+      out = `${out}|`;
+    }
+
+    return out;
+  });
+
+  return caretAfter(next, table.lines[0].start, span.top, span.left);
 }
 
 /**
@@ -1557,6 +1719,8 @@ export function runTableCommand(command: MawyTableCommand, state: EditState): Ed
       return removeRow(state);
     case 'removeColumn':
       return removeColumn(state);
+    case 'clearCells':
+      return clearCells(state);
     default:
       return null;
   }

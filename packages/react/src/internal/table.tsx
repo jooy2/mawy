@@ -15,6 +15,7 @@ import type { MawyTableCommand } from './commands.js';
 import { IconButton, useDismiss } from './controls.js';
 import { fill, type MawyStrings } from './i18n.js';
 import {
+  ClearCellsIcon,
   ColumnAfterIcon,
   ColumnBeforeIcon,
   RemoveIcon,
@@ -122,11 +123,18 @@ export function TableSizeGrid({
   );
 }
 
-/** What the controls beside a table do, in the order they are drawn, with their keys. */
+/**
+ * What the controls beside a table do, in the order they are drawn, with their
+ * keys, and the name each has when the selected cells cover more than one row
+ * or column.
+ */
 const TABLE_TOOLS: readonly (
   | {
       command: MawyTableCommand;
       label: keyof MawyStrings;
+      many: keyof MawyStrings;
+      /** Which count the name with a number in it is given. */
+      counts: 'rows' | 'columns';
       icon: typeof RowAboveIcon;
       keys: string;
     }
@@ -135,18 +143,24 @@ const TABLE_TOOLS: readonly (
   {
     command: 'addRowAbove',
     label: 'tableRowAbove',
+    many: 'tableRowsAbove',
+    counts: 'rows',
     icon: RowAboveIcon,
     keys: 'Control+Shift+Enter Meta+Shift+Enter'
   },
   {
     command: 'addRowBelow',
     label: 'tableRowBelow',
+    many: 'tableRowsBelow',
+    counts: 'rows',
     icon: RowBelowIcon,
     keys: 'Control+Enter Meta+Enter'
   },
   {
     command: 'removeRow',
     label: 'tableRowRemove',
+    many: 'tableRowsRemove',
+    counts: 'rows',
     icon: RemoveIcon,
     keys: 'Control+Shift+Backspace Meta+Shift+Backspace'
   },
@@ -154,18 +168,24 @@ const TABLE_TOOLS: readonly (
   {
     command: 'addColumnBefore',
     label: 'tableColumnBefore',
+    many: 'tableColumnsBefore',
+    counts: 'columns',
     icon: ColumnBeforeIcon,
     keys: 'Control+Alt+Shift+Enter Meta+Alt+Shift+Enter'
   },
   {
     command: 'addColumnAfter',
     label: 'tableColumnAfter',
+    many: 'tableColumnsAfter',
+    counts: 'columns',
     icon: ColumnAfterIcon,
     keys: 'Control+Alt+Enter Meta+Alt+Enter'
   },
   {
     command: 'removeColumn',
     label: 'tableColumnRemove',
+    many: 'tableColumnsRemove',
+    counts: 'columns',
     icon: RemoveIcon,
     keys: 'Control+Alt+Shift+Backspace Meta+Alt+Shift+Backspace'
   }
@@ -176,6 +196,9 @@ export interface TableToolsProps {
   /** Where the bar is, from the top and the inline end of the pane it is in. */
   top: number;
   end: number;
+  /** How many rows and columns the selected cells cover, one each for a caret. */
+  rows: number;
+  columns: number;
   /** Whether a command has anything to act on where the caret is. */
   available: (command: MawyTableCommand) => boolean;
   onCommand: (command: MawyTableCommand) => void;
@@ -190,9 +213,12 @@ export interface TableToolsProps {
  * the caret the command acts on is still in the cell it was in and the next
  * letter goes there. Each button is named in a tooltip and to a screen reader,
  * and each command is also a key, which `aria-keyshortcuts` says.
+ *
+ * With cells selected, each acts on as many rows or columns as the selection
+ * covers and says how many, and one more empties the cells.
  */
 export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(function TableTools(
-  { strings, top, end, available, onCommand },
+  { strings, top, end, rows, columns, available, onCommand },
   ref
 ) {
   return (
@@ -205,20 +231,35 @@ export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(func
       style={{ top, insetInlineEnd: end }}
       onMouseDown={(event) => event.preventDefault()}
     >
-      {TABLE_TOOLS.map((tool, index) =>
-        tool === 'separator' ? (
-          <span key={index} className="mawy-toolbar-separator" aria-hidden="true" />
-        ) : (
+      {TABLE_TOOLS.map((tool, index) => {
+        if (tool === 'separator') {
+          return <span key={index} className="mawy-toolbar-separator" aria-hidden="true" />;
+        }
+
+        const count = tool.counts === 'rows' ? rows : columns;
+
+        return (
           <IconButton
             key={tool.command}
-            label={strings[tool.label]}
+            label={count > 1 ? fill(strings[tool.many], { N: String(count) }) : strings[tool.label]}
             icon={<tool.icon className="mawy-icon" aria-hidden="true" />}
             aria-keyshortcuts={tool.keys}
             disabled={!available(tool.command)}
             onClick={() => onCommand(tool.command)}
           />
-        )
-      )}
+        );
+      })}
+      {rows * columns > 1 ? (
+        <>
+          <span className="mawy-toolbar-separator" aria-hidden="true" />
+          <IconButton
+            label={strings.tableCellsClear}
+            icon={<ClearCellsIcon className="mawy-icon" aria-hidden="true" />}
+            aria-keyshortcuts="Delete Backspace"
+            onClick={() => onCommand('clearCells')}
+          />
+        </>
+      ) : null}
     </div>
   );
 });

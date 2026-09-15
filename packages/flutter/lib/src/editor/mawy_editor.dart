@@ -1328,6 +1328,10 @@ class _TableToolsHostState extends State<_TableToolsHost> {
 
   /// How far down the field the bar is, or `null` while there is no bar.
   double? _top;
+
+  /// How many rows and columns the selection covers.
+  int _rows = 1;
+  int _columns = 1;
   bool _queued = false;
 
   @override
@@ -1387,10 +1391,21 @@ class _TableToolsHostState extends State<_TableToolsHost> {
 
   void _place() {
     final TextSelection selection = widget.controller.selection;
-    final MdRange? table =
-        widget.active && widget.focus.hasFocus && selection.isValid && selection.isCollapsed
-        ? tableRangeAt(widget.controller.text, selection.baseOffset)
+    final String text = widget.controller.text;
+    final MdRange? here = widget.active && widget.focus.hasFocus && selection.isValid
+        ? tableRangeAt(text, selection.start)
         : null;
+    // A selection over more than one cell is in the table as a caret is, and the
+    // controls act on the rows and columns it covers; one that runs out of the
+    // table is not.
+    final MdRange? table =
+        here != null &&
+            (selection.isCollapsed || tableRangeAt(text, selection.end)?.start == here.start)
+        ? here
+        : null;
+    final ({int top, int bottom, int left, int right, int rows, int columns})? span = table == null
+        ? null
+        : tableSpanAt(text, selection.start, selection.end);
     final RenderEditable? editable = widget.editableKey.currentState?.renderEditable;
     final RenderObject? stack = _stack.currentContext?.findRenderObject();
     double? top;
@@ -1411,8 +1426,12 @@ class _TableToolsHostState extends State<_TableToolsHost> {
       top = wanted < 4 ? 4 : (most > 4 && wanted > most ? most : wanted);
     }
 
-    if (top != _top) {
-      setState(() => _top = top);
+    if (top != _top || (span?.rows ?? 1) != _rows || (span?.columns ?? 1) != _columns) {
+      setState(() {
+        _top = top;
+        _rows = span?.rows ?? 1;
+        _columns = span?.columns ?? 1;
+      });
     }
   }
 
@@ -1434,6 +1453,8 @@ class _TableToolsHostState extends State<_TableToolsHost> {
               strings: widget.strings,
               available: widget.available,
               onCommand: widget.onCommand,
+              rows: _rows,
+              columns: _columns,
             ),
           ),
       ],

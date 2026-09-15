@@ -299,6 +299,19 @@ export interface MawyStrings {
   tableColumnBefore: string;
   tableRowRemove: string;
   tableColumnRemove: string;
+  /** `%N` is how many rows the selected cells are in. */
+  tableRowsAbove: string;
+  /** `%N` is how many rows the selected cells are in. */
+  tableRowsBelow: string;
+  /** `%N` is how many columns the selected cells are in. */
+  tableColumnsBefore: string;
+  /** `%N` is how many columns the selected cells are in. */
+  tableColumnsAfter: string;
+  /** `%N` is how many rows the selected cells are in. */
+  tableRowsRemove: string;
+  /** `%N` is how many columns the selected cells are in. */
+  tableColumnsRemove: string;
+  tableCellsClear: string;
   thematicBreak: string;
   status: string;
   /** `%L` is the line and `%C` the column, both counted from one. */

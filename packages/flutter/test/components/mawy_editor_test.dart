@@ -1328,6 +1328,38 @@ void main() {
       expect(field.focusNode.hasPrimaryFocus, isTrue);
     });
 
+    testWidgets('acts on as many rows as the selection covers, and says so', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+      const String source = '| a | b |\n| - | - |\n| c | d |\n| e | f |';
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: source, mode: MawyEditorMode.plain, onChange: seen.add)),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = TextSelection(
+        baseOffset: source.indexOf('c'),
+        extentOffset: source.indexOf('f') + 1,
+      );
+      await tester.pumpAndSettle();
+
+      Finder named(String label) => find.byWidgetPredicate(
+        (Widget widget) => widget is MawyToolbarButton && widget.label == label,
+      );
+
+      expect(named('Delete these 2 rows'), findsOneWidget);
+      expect(named('Clear the selected cells'), findsOneWidget);
+
+      await tester.tap(named('Clear the selected cells'));
+      await tester.pumpAndSettle();
+
+      expect(seen.last, '| a | b |\n| - | - |\n|  |  |\n|  |  |');
+    });
+
     testWidgets('offers no block to make in a table', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

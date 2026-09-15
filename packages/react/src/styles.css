@@ -2015,6 +2015,22 @@
   margin-top: 38px;
 }
 
+/* Cells selected across a table, marked as the rectangle the commands act on,
+ * with the browser's own mark of the text under it taken away. */
+.mawy-root .mawy-table-cells {
+  position: absolute;
+  z-index: 5;
+  border: 2px solid var(--mawy-accent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--mawy-accent) 12%, transparent);
+  pointer-events: none;
+}
+
+.mawy-root .mawy-editor-pane[data-mawy-cells] .mawy-md-table ::selection,
+.mawy-root .mawy-editor-pane[data-mawy-cells] .mawy-md-table::selection {
+  background: transparent;
+}
+
 /* A table being written in keeps its shape while it is written in.
  *
  * Laid out by what is in the cells, a table on the drawn document moved every

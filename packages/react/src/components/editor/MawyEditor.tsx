@@ -35,6 +35,7 @@ import {
   commandActive,
   tableOfSize,
   tableRangeAt,
+  tableSpanAt,
   continueList,
   headingActive,
   toggleHeading,
@@ -1195,14 +1196,35 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const sourcePane = React.useRef<HTMLDivElement>(null);
   const documentPane = React.useRef<HTMLDivElement>(null);
   const tools = React.useRef<HTMLDivElement>(null);
-  const tableHere = React.useMemo(
-    () =>
-      editable && focused && parse?.gfm !== false && selection.start === selection.end
-        ? tableRangeAt(text, selection.start)
-        : null,
-    [editable, focused, parse?.gfm, selection.end, selection.start, text]
+  const tableHere = React.useMemo(() => {
+    const table =
+      editable && focused && parse?.gfm !== false ? tableRangeAt(text, selection.start) : null;
+
+    // A selection from one cell to another is in the table as a caret is, and
+    // the controls act on the cells it covers; one that runs out of the table
+    // is not.
+    return table &&
+      (selection.start === selection.end ||
+        tableRangeAt(text, selection.end)?.start === table.start)
+      ? table
+      : null;
+  }, [editable, focused, parse?.gfm, selection.end, selection.start, text]);
+  /** The rows and columns the selection covers in that table. */
+  const tableSpan = React.useMemo(
+    () => (tableHere ? tableSpanAt(text, selection.start, selection.end) : null),
+    [selection.end, selection.start, tableHere, text]
   );
+  /** Whether that is more than one cell, which the drawn document marks as cells. */
+  const cellsSelected =
+    showDocument && tableSpan !== null && tableSpan.rows * tableSpan.columns > 1;
   const [toolsAt, setToolsAt] = React.useState<{ top: number; end: number } | null>(null);
+  /** Where the mark over the selected cells is drawn, in the pane it is drawn in. */
+  const [cellsAt, setCellsAt] = React.useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
   /** Whether the caret is in a table, which is where a toolbar's blocks have nothing to make. */
   const caretInTable = React.useMemo(
     () => editable && tableRangeAt(text, selection.start) !== null,
@@ -1221,6 +1243,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     if (!tableHere || !pane) {
       setToolsAt(null);
+      setCellsAt(null);
 
       return;
     }
@@ -1235,6 +1258,37 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       );
 
       edges = table?.getBoundingClientRect() ?? null;
+
+      // The selected cells, as one box from the first of them to the last. A
+      // row of the table is a line of it, and the delimiter line has no row on
+      // the page, so a line past the header is one row further up there.
+      const rows = table?.querySelectorAll('tr');
+      const span = tableSpan;
+      const first = span && rows?.[span.top === 0 ? 0 : span.top - 1]?.children[span.left];
+      const last = span && rows?.[span.bottom === 0 ? 0 : span.bottom - 1]?.children[span.right];
+
+      if (cellsSelected && first && last) {
+        const one = first.getBoundingClientRect();
+        const other = last.getBoundingClientRect();
+        const box = {
+          top: Math.min(one.top, other.top) - room.top,
+          left: Math.min(one.left, other.left) - room.left,
+          width: Math.max(one.right, other.right) - Math.min(one.left, other.left),
+          height: Math.max(one.bottom, other.bottom) - Math.min(one.top, other.top)
+        };
+
+        setCellsAt((was) =>
+          was &&
+          was.top === box.top &&
+          was.left === box.left &&
+          was.width === box.width &&
+          was.height === box.height
+            ? was
+            : box
+        );
+      } else {
+        setCellsAt(null);
+      }
     } else {
       const lines = pane.querySelector('.mawy-source-lines');
       const height = lines ? rowHeight(lines) : 0;
@@ -1267,7 +1321,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     const end = Math.max(4, rtl ? edges.left - room.left : room.right - edges.right);
 
     setToolsAt((was) => (was && was.top === top && was.end === end ? was : { top, end }));
-  }, [showDocument, tableHere, text]);
+  }, [cellsSelected, showDocument, tableHere, tableSpan, text]);
 
   React.useLayoutEffect(() => {
     placeTools();
@@ -1307,6 +1361,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         strings={strings}
         top={toolsAt.top}
         end={toolsAt.end}
+        rows={tableSpan?.rows ?? 1}
+        columns={tableSpan?.columns ?? 1}
         available={(name) => tableAfter(name) !== null}
         onCommand={tableCommand}
       />
@@ -2501,7 +2557,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         ) : null}
 
         {showDocument ? (
-          <div className="mawy-editor-pane" ref={documentPane}>
+          <div
+            className="mawy-editor-pane"
+            ref={documentPane}
+            data-mawy-cells={(cellsSelected && cellsAt !== null) || undefined}
+          >
             <MawyEditorDocument
               ref={drawn}
               value={text}
@@ -2535,6 +2595,12 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               }
               onImages={onUploadImage ? addImages : undefined}
             />
+            {cellsSelected && cellsAt ? (
+              // The cells, marked as cells: a selection that runs across a
+              // table is drawn by the browser as the text it covers, a ragged
+              // shape nobody reads as the rectangle of cells it acts on.
+              <div className="mawy-table-cells" aria-hidden="true" style={cellsAt} />
+            ) : null}
             {tableTools}
           </div>
         ) : null}

@@ -191,6 +191,8 @@ class MawyTableTools extends StatelessWidget {
     required this.strings,
     required this.available,
     required this.onCommand,
+    this.rows = 1,
+    this.columns = 1,
     super.key,
   });
 
@@ -206,6 +208,15 @@ class MawyTableTools extends StatelessWidget {
   /// Runs one.
   final ValueChanged<MawyTableCommand> onCommand;
 
+  /// How many rows and columns the selection covers, one each for a caret.
+  ///
+  /// Each command acts on that many and says so, and a selection over more
+  /// than one cell has one more control, which empties them.
+  final int rows;
+
+  /// How many columns the selection covers. See [rows].
+  final int columns;
+
   @override
   Widget build(BuildContext context) {
     Widget button(MawyTableCommand command, IconData icon, String label) => MawyToolbarButton(
@@ -214,6 +225,14 @@ class MawyTableTools extends StatelessWidget {
       tokens: tokens,
       enabled: available(command),
       onPressed: () => onCommand(command),
+    );
+    String counted(String one, String many, int count) =>
+        count > 1 ? many.replaceAll('%N', '$count') : one;
+    Widget rule() => Container(
+      width: 1,
+      height: 18,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      color: tokens.border,
     );
 
     return Semantics(
@@ -240,31 +259,38 @@ class MawyTableTools extends StatelessWidget {
             button(
               MawyTableCommand.addRowAbove,
               LucideIcons.betweenHorizontalStart,
-              strings.tableRowAbove,
+              counted(strings.tableRowAbove, strings.tableRowsAbove, rows),
             ),
             button(
               MawyTableCommand.addRowBelow,
               LucideIcons.betweenHorizontalEnd,
-              strings.tableRowBelow,
+              counted(strings.tableRowBelow, strings.tableRowsBelow, rows),
             ),
-            button(MawyTableCommand.removeRow, LucideIcons.trash2, strings.tableRowRemove),
-            Container(
-              width: 1,
-              height: 18,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              color: tokens.border,
+            button(
+              MawyTableCommand.removeRow,
+              LucideIcons.trash2,
+              counted(strings.tableRowRemove, strings.tableRowsRemove, rows),
             ),
+            rule(),
             button(
               MawyTableCommand.addColumnBefore,
               LucideIcons.betweenVerticalStart,
-              strings.tableColumnBefore,
+              counted(strings.tableColumnBefore, strings.tableColumnsBefore, columns),
             ),
             button(
               MawyTableCommand.addColumnAfter,
               LucideIcons.betweenVerticalEnd,
-              strings.tableColumnAfter,
+              counted(strings.tableColumnAfter, strings.tableColumnsAfter, columns),
             ),
-            button(MawyTableCommand.removeColumn, LucideIcons.trash2, strings.tableColumnRemove),
+            button(
+              MawyTableCommand.removeColumn,
+              LucideIcons.trash2,
+              counted(strings.tableColumnRemove, strings.tableColumnsRemove, columns),
+            ),
+            if (rows * columns > 1) ...<Widget>[
+              rule(),
+              button(MawyTableCommand.clearCells, LucideIcons.eraser, strings.tableCellsClear),
+            ],
           ],
         ),
       ),

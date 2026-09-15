@@ -16,7 +16,15 @@
  * backspace there removes a separator rather than a letter.
  */
 
-import { containerOf, continueList, fencedAt, runCommand, type MawyCommand } from './commands.js';
+import {
+  containerOf,
+  continueList,
+  fencedAt,
+  runCommand,
+  runTableCommand,
+  tableSpanAt,
+  type MawyCommand
+} from './commands.js';
 import type { MdNode, MdRange } from './markdown/ast.js';
 import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
 import { markdownFromHtml } from './markdown/paste.js';
@@ -1045,6 +1053,59 @@ function placeOf(
   };
 }
 
+/** Whether a selection covers more than one cell of one table. */
+function cellsSelected(value: string, start: number, end: number): boolean {
+  const span = value.includes('|') ? tableSpanAt(value, start, end) : null;
+
+  return Boolean(span && span.rows * span.columns > 1 && tableSpanAt(value, end, end));
+}
+
+/**
+ * What an input does to cells selected on the drawn document.
+ *
+ * A deletion of any kind, a cut among them, empties the cells and leaves the
+ * table its shape: the characters between two cells are pipes and line endings,
+ * and taking those out was a table cut in half. Words typed over the cells
+ * empty them and are written into the first, the way a cell is typed into with
+ * nothing in it. Anything else, a drop or a line break, is refused.
+ */
+function inCells(event: InputEvent, value: string, start: number, end: number): MawyEdit | null {
+  const cleared = runTableCommand('clearCells', { value, start, end });
+
+  if (!cleared) {
+    return null;
+  }
+
+  if (event.inputType.startsWith('delete') && event.inputType !== 'deleteByDrag') {
+    return { value: cleared.value, caret: cleared.start };
+  }
+
+  const text =
+    (event.inputType === 'insertText' || event.inputType === 'insertReplacementText') && event.data
+      ? event.data
+      : null;
+
+  return text ? intoClearedCell(cleared.value, cleared.start, text) : null;
+}
+
+/**
+ * Words written into a cell with nothing in it, between its spaces rather than
+ * after them. `|  |` is where the parser says an empty cell's caret is, and a
+ * letter typed there as it stands would be `|  a|`.
+ */
+function intoClearedCell(value: string, caret: number, text: string): MawyEdit {
+  let from = caret;
+
+  while (from > 0 && (value[from - 1] === ' ' || value[from - 1] === '\t')) {
+    from -= 1;
+  }
+
+  return {
+    value: `${value.slice(0, from)} ${text} ${value.slice(caret)}`,
+    caret: from + 1 + text.length
+  };
+}
+
 /** A run taken out, with the markers of anything it took whole. See `widened`. */
 function deleted(value: string, start: number, end: number): MawyEdit {
   const run = widened(value, start, end);
@@ -1214,6 +1275,14 @@ export function editForText(
     return null;
   }
 
+  // Pasted over cells selected on the drawn document: the cells are emptied and
+  // what was on the clipboard goes into the first. See `inCells`.
+  if (place.start !== place.end && cellsSelected(value, place.start, place.end)) {
+    const cleared = runTableCommand('clearCells', { value, start: place.start, end: place.end });
+
+    return cleared && intoClearedCell(cleared.value, cleared.start, text);
+  }
+
   const opened =
     place.start === place.end
       ? openedAt(root, place.node, value, place.start)
@@ -1255,6 +1324,13 @@ export function editFor(
 
   const { start, end } = place;
   const range = { startContainer: place.node, startOffset: place.offset };
+
+  // More than one cell of a table selected: what is deleted or typed is about
+  // the cells rather than about the pipes and line endings between them. See
+  // `inCells`.
+  if (start !== end && cellsSelected(value, start, end)) {
+    return inCells(event, value, start, end);
+  }
 
   switch (event.inputType) {
     case 'insertText': {
