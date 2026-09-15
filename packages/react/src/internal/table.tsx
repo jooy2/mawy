@@ -11,10 +11,13 @@
  */
 
 import * as React from 'react';
-import type { MawyTableCommand } from './commands.js';
+import type { MawyColumnAlign, MawyTableCommand } from './commands.js';
 import { IconButton, useDismiss } from './controls.js';
 import { fill, type MawyStrings } from './i18n.js';
 import {
+  AlignCenterIcon,
+  AlignLeftIcon,
+  AlignRightIcon,
   ClearCellsIcon,
   ColumnAfterIcon,
   ColumnBeforeIcon,
@@ -191,6 +194,21 @@ const TABLE_TOOLS: readonly (
   }
 ];
 
+/**
+ * The three ways a column can be aligned, each pressed where the columns the
+ * selection covers are already aligned that way, and each taking it back off.
+ */
+const ALIGNS: readonly {
+  command: MawyTableCommand;
+  align: MawyColumnAlign;
+  label: keyof MawyStrings;
+  icon: typeof RowAboveIcon;
+}[] = [
+  { command: 'alignLeft', align: 'left', label: 'tableAlignLeft', icon: AlignLeftIcon },
+  { command: 'alignCenter', align: 'center', label: 'tableAlignCenter', icon: AlignCenterIcon },
+  { command: 'alignRight', align: 'right', label: 'tableAlignRight', icon: AlignRightIcon }
+];
+
 export interface TableToolsProps {
   strings: MawyStrings;
   /** Where the bar is, from the top and the left of the pane it is in. */
@@ -199,6 +217,8 @@ export interface TableToolsProps {
   /** How many rows and columns the selected cells cover, one each for a caret. */
   rows: number;
   columns: number;
+  /** How the columns the selection covers are aligned, or `null` where they differ. */
+  align: MawyColumnAlign | null;
   /** Whether a command has anything to act on where the caret is. */
   available: (command: MawyTableCommand) => boolean;
   onCommand: (command: MawyTableCommand) => void;
@@ -215,10 +235,11 @@ export interface TableToolsProps {
  * and each command is also a key, which `aria-keyshortcuts` says.
  *
  * With cells selected, each acts on as many rows or columns as the selection
- * covers and says how many, and one more empties the cells.
+ * covers and says how many, and one more empties the cells. The three after
+ * the columns align the columns the selection covers.
  */
 export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(function TableTools(
-  { strings, top, left, rows, columns, available, onCommand },
+  { strings, top, left, rows, columns, align, available, onCommand },
   ref
 ) {
   return (
@@ -249,6 +270,18 @@ export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(func
           />
         );
       })}
+      <span className="mawy-toolbar-separator" aria-hidden="true" />
+      {ALIGNS.map((each) => (
+        <IconButton
+          key={each.command}
+          label={strings[each.label]}
+          icon={<each.icon className="mawy-icon" aria-hidden="true" />}
+          pressed={align === each.align}
+          aria-pressed={align === each.align}
+          disabled={!available(each.command)}
+          onClick={() => onCommand(each.command)}
+        />
+      ))}
       {rows * columns > 1 ? (
         <>
           <span className="mawy-toolbar-separator" aria-hidden="true" />

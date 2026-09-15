@@ -312,6 +312,9 @@ export interface MawyStrings {
   /** `%N` is how many columns the selected cells are in. */
   tableColumnsRemove: string;
   tableCellsClear: string;
+  tableAlignLeft: string;
+  tableAlignCenter: string;
+  tableAlignRight: string;
   thematicBreak: string;
   status: string;
   /** `%L` is the line and `%C` the column, both counted from one. */

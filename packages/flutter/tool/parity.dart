@@ -425,6 +425,7 @@ List<Object?> _edits() {
     out['tableSpanAt'] = span == null
         ? null
         : <Object?>[span.top, span.bottom, span.left, span.right, span.rows, span.columns];
+    out['tableAlignAt'] = tableAlignAt(state.value, state.start, state.end);
     out['nextCell'] = forwards == null
         ? null
         : <Object?>[forwards.value, forwards.start, forwards.end];

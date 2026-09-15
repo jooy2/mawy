@@ -1340,6 +1340,9 @@ class _TableToolsHostState extends State<_TableToolsHost> {
   /// How many rows and columns the selection covers.
   int _rows = 1;
   int _columns = 1;
+
+  /// How the columns it covers are aligned. See [tableAlignAt].
+  String? _align;
   bool _queued = false;
 
   @override
@@ -1446,14 +1449,18 @@ class _TableToolsHostState extends State<_TableToolsHost> {
       );
     }
 
+    final String? align = table == null ? null : tableAlignAt(text, selection.start, selection.end);
+
     if (top != _top ||
         left != _left ||
+        align != _align ||
         (span?.rows ?? 1) != _rows ||
         (span?.columns ?? 1) != _columns) {
       setState(() {
         _top = top;
         _left = left;
         _wide = wide;
+        _align = align;
         _rows = span?.rows ?? 1;
         _columns = span?.columns ?? 1;
       });
@@ -1486,6 +1493,7 @@ class _TableToolsHostState extends State<_TableToolsHost> {
               onCommand: widget.onCommand,
               rows: _rows,
               columns: _columns,
+              align: _align,
             ),
           ),
       ],

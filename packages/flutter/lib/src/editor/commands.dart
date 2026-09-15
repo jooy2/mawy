@@ -1060,6 +1060,16 @@ enum MawyTableCommand {
 
   /// What is written in the cells the selection covers, with the cells left.
   clearCells,
+
+  /// The columns the selection covers aligned left, or not aligned where they
+  /// all already are.
+  alignLeft,
+
+  /// The same, in the middle.
+  alignCenter,
+
+  /// The same, on the right.
+  alignRight,
 }
 
 /// One cell's run, between the pipes and not including them.
@@ -1732,6 +1742,120 @@ EditState? _clearCells(EditState state) {
   return _caretAfter(next, table.lines.first.start, span.top, span.left);
 }
 
+/// How a delimiter cell aligns its column: `left`, `center`, `right` or `none`.
+String _alignOf(String cell) {
+  final String text = cell.trim();
+  final bool left = text.startsWith(':');
+  final bool right = text.length > 1 && text.endsWith(':');
+
+  return left && right
+      ? 'center'
+      : left
+      ? 'left'
+      : right
+      ? 'right'
+      : 'none';
+}
+
+/// How every column a selection covers is aligned — `left`, `center`, `right`
+/// or `none` — where they are all aligned the same way, or `null` where they
+/// are not or there is no table.
+///
+/// What the controls beside a table draw as pressed.
+String? tableAlignAt(String value, int start, int end) {
+  final _TableSpan? span = value.contains('|') ? _spanAt(value, start, end) : null;
+
+  if (span == null || span.table.lines.length < 2) {
+    return null;
+  }
+
+  final _TableLine delimiter = span.table.lines[1];
+  String? shared;
+
+  for (int column = span.left; column <= span.right; column += 1) {
+    final String align = column < delimiter.cells.length
+        ? _alignOf(value.substring(delimiter.cells[column].from, delimiter.cells[column].to))
+        : 'none';
+
+    if (shared != null && align != shared) {
+      return null;
+    }
+
+    shared = align;
+  }
+
+  return shared;
+}
+
+/// The columns a selection covers aligned one way, or back to no alignment
+/// where every one of them already is.
+///
+/// A colon on that side of the dashes in the delimiter row, or on both for the
+/// middle. GitHub aligns a column and never a cell, so a column is the narrowest
+/// thing there is to align. The dashes stay as many as they were, and what is
+/// written around them stays as it was.
+EditState? _alignColumns(EditState state, String align) {
+  final String value = state.value;
+  final _TableSpan? span = _spanAt(value, state.start, state.end);
+
+  if (span == null || span.table.lines.length < 2) {
+    return null;
+  }
+
+  final _TableLine delimiter = span.table.lines[1];
+  final String target = tableAlignAt(value, state.start, state.end) == align ? 'none' : align;
+  final List<({int from, int to, String text})> edits = <({int from, int to, String text})>[];
+
+  for (
+    int column = span.left;
+    column <= math.min(span.right, delimiter.cells.length - 1);
+    column += 1
+  ) {
+    final _TableCell cell = delimiter.cells[column];
+    final String text = value.substring(cell.from, cell.to);
+    final int from = cell.from + text.length - text.trimLeft().length;
+    final int to = math.max(from, cell.to - (text.length - text.trimRight().length));
+    final String found = value.substring(from, to).replaceAll(':', '');
+    final String dashes = found.isEmpty ? '-' : found;
+    final String written = switch (target) {
+      'center' => ':$dashes:',
+      'left' => ':$dashes',
+      'right' => '$dashes:',
+      _ => dashes,
+    };
+
+    edits.add((from: from, to: to, text: written));
+  }
+
+  String next = value;
+
+  for (int index = edits.length - 1; index >= 0; index -= 1) {
+    final ({int from, int to, String text}) edit = edits[index];
+
+    next = next.substring(0, edit.from) + edit.text + next.substring(edit.to);
+  }
+
+  int move(int at) {
+    int shift = 0;
+
+    for (final ({int from, int to, String text}) edit in edits) {
+      if (at < edit.from) {
+        break;
+      }
+
+      if (at < edit.to) {
+        return edit.from + shift + math.min(at - edit.from, edit.text.length);
+      }
+
+      shift += edit.text.length - (edit.to - edit.from);
+    }
+
+    return at + shift;
+  }
+
+  return EditState(next, move(state.start), move(state.end));
+}
+
 /// One line of a cell, between its edges and the `<br>`s in it.
 class _CellLine {
   const _CellLine({
@@ -2092,5 +2216,8 @@ EditState? runTableCommand(MawyTableCommand command, EditState state) {
     MawyTableCommand.removeRow => _removeRow(state),
     MawyTableCommand.removeColumn => _removeColumn(state),
     MawyTableCommand.clearCells => _clearCells(state),
+    MawyTableCommand.alignLeft => _alignColumns(state, 'left'),
+    MawyTableCommand.alignCenter => _alignColumns(state, 'center'),
+    MawyTableCommand.alignRight => _alignColumns(state, 'right'),
   };
 }

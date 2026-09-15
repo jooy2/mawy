@@ -3439,6 +3439,36 @@ describe('tables', () => {
     expect(document.activeElement).toBe(sourceOf(plain));
   });
 
+  it('aligns the column the caret is in from the bar, and shows how it is aligned', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'| a | b |\n| --- | --- |\n| c | d |'}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+    const center = () => page.getByRole('button', { name: 'Align center' });
+
+    put(bodyOf(screen), 'd', 1);
+    await vi.waitFor(() => expect(center().element()).toHaveAttribute('aria-pressed', 'false'));
+
+    // A colon either side of the dashes: GitHub aligns a column, never a cell.
+    await userEvent.click(center());
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a | b |\n| --- | :---: |\n| c | d |')
+    );
+    await vi.waitFor(() => expect(center().element()).toHaveAttribute('aria-pressed', 'true'));
+    expect(bodyOf(screen).querySelectorAll('td')[1].style.textAlign).toBe('center');
+
+    // And pressed again, taken back off.
+    await userEvent.click(center());
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a | b |\n| --- | --- |\n| c | d |')
+    );
+  });
+
   it('moves between the cells with Tab, grows the table from the last, and goes back with Shift', async () => {
     for (const mode of ['wysiwyg', 'plain'] as const) {
       const onChange = vi.fn();

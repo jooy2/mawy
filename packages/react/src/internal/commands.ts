@@ -1031,7 +1031,13 @@ export type MawyTableCommand =
   | 'addColumnBefore'
   | 'removeRow'
   | 'removeColumn'
-  | 'clearCells';
+  | 'clearCells'
+  | 'alignLeft'
+  | 'alignCenter'
+  | 'alignRight';
+
+/** How a column of a table is aligned, as the colons in its delimiter cell say. */
+export type MawyColumnAlign = 'left' | 'center' | 'right' | 'none';
 
 /** One line of a table, and where each of its cells is written. */
 interface TableLine {
@@ -1639,6 +1645,117 @@ function clearCells(state: EditState): EditState | null {
   return caretAfter(next, table.lines[0].start, span.top, span.left);
 }
 
+/** How a delimiter cell aligns its column. */
+function alignOf(cell: string): MawyColumnAlign {
+  const text = cell.trim();
+  const left = text.startsWith(':');
+  const right = text.length > 1 && text.endsWith(':');
+
+  return left && right ? 'center' : left ? 'left' : right ? 'right' : 'none';
+}
+
+/**
+ * How every column a selection covers is aligned, where they are all aligned
+ * the same way, or `null` where they are not or there is no table.
+ *
+ * What the controls beside a table draw as pressed.
+ */
+export function tableAlignAt(value: string, start: number, end: number): MawyColumnAlign | null {
+  const span = value.includes('|') ? spanAt(value, start, end) : null;
+  const delimiter = span?.table.lines[1];
+
+  if (!span || !delimiter) {
+    return null;
+  }
+
+  let shared: MawyColumnAlign | null = null;
+
+  for (let column = span.left; column <= span.right; column += 1) {
+    const cell = delimiter.cells[column];
+    const align = cell ? alignOf(value.slice(cell.from, cell.to)) : 'none';
+
+    if (shared !== null && align !== shared) {
+      return null;
+    }
+
+    shared = align;
+  }
+
+  return shared;
+}
+
+/**
+ * The columns a selection covers aligned one way, or back to no alignment where
+ * every one of them already is.
+ *
+ * A colon on that side of the dashes in the delimiter row, or on both for the
+ * middle. GitHub aligns a column and never a cell, so a column is the narrowest
+ * thing there is to align. The dashes stay as many as they were, and what is
+ * written around them stays as it was.
+ */
+function alignColumns(state: EditState, align: Exclude<MawyColumnAlign, 'none'>): EditState | null {
+  const { value } = state;
+  const span = spanAt(value, state.start, state.end);
+  const delimiter = span?.table.lines[1];
+
+  if (!span || !delimiter) {
+    return null;
+  }
+
+  const target = tableAlignAt(value, state.start, state.end) === align ? 'none' : align;
+  const edits: { from: number; to: number; text: string }[] = [];
+
+  for (
+    let column = span.left;
+    column <= Math.min(span.right, delimiter.cells.length - 1);
+    column += 1
+  ) {
+    const cell = delimiter.cells[column];
+    const text = value.slice(cell.from, cell.to);
+    const from = cell.from + text.length - text.trimStart().length;
+    const to = Math.max(from, cell.to - (text.length - text.trimEnd().length));
+    const dashes = value.slice(from, to).replace(/:/g, '') || '-';
+    const written =
+      target === 'center'
+        ? `:${dashes}:`
+        : target === 'left'
+          ? `:${dashes}`
+          : target === 'right'
+            ? `${dashes}:`
+            : dashes;
+
+    edits.push({ from, to, text: written });
+  }
+
+  let next = value;
+
+  for (let index = edits.length - 1; index >= 0; index -= 1) {
+    const edit = edits[index];
+
+    next = next.slice(0, edit.from) + edit.text + next.slice(edit.to);
+  }
+
+  const move = (at: number): number => {
+    let shift = 0;
+
+    for (const edit of edits) {
+      if (at < edit.from) {
+        break;
+      }
+
+      if (at < edit.to) {
+        return edit.from + shift + Math.min(at - edit.from, edit.text.length);
+      }
+
+      shift += edit.text.length - (edit.to - edit.from);
+    }
+
+    return at + shift;
+  };
+
+  return { value: next, start: move(state.start), end: move(state.end) };
+}
+
 /** One line of a cell, between its edges and the `<br>`s in it. */
 interface CellLine {
   from: number;
@@ -1969,6 +2086,12 @@ export function runTableCommand(command: MawyTableCommand, state: EditState): Ed
       return removeColumn(state);
     case 'clearCells':
       return clearCells(state);
+    case 'alignLeft':
+      return alignColumns(state, 'left');
+    case 'alignCenter':
+      return alignColumns(state, 'center');
+    case 'alignRight':
+      return alignColumns(state, 'right');
     default:
       return null;
   }

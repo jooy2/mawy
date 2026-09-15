@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
-import 'package:mawy/src/editor/commands.dart' show MawyTableCommand, runTableCommand, tableOfSize;
+import 'package:mawy/src/editor/commands.dart'
+    show MawyTableCommand, runTableCommand, tableAlignAt, tableOfSize;
 
 /// The commands, as arithmetic on a string.
 ///
@@ -208,6 +209,41 @@ void main() {
         tableOfSize(const EditState('Intro.', 6, 6), 1, 3)?.value,
         'Intro.\n\n|  |\n| --- |\n|  |\n|  |',
       );
+    });
+  });
+
+  group('aligning columns', () {
+    const String v = '| a | b | c |\n| :-- | --- | --: |\n| d | e | f |';
+    EditState over(String from, String to) =>
+        EditState(v, v.indexOf(from), v.indexOf(to) + (from == to ? 0 : 1));
+
+    test(
+      'writes the colons into the delimiter cell of the column the caret is in, and takes them back off',
+      () {
+        expect(
+          runTableCommand(MawyTableCommand.alignCenter, over('e', 'e'))?.value,
+          '| a | b | c |\n| :-- | :---: | --: |\n| d | e | f |',
+        );
+        expect(
+          runTableCommand(MawyTableCommand.alignLeft, over('d', 'd'))?.value,
+          '| a | b | c |\n| -- | --- | --: |\n| d | e | f |',
+        );
+        expect(
+          runTableCommand(MawyTableCommand.alignLeft, over('f', 'f'))?.value,
+          '| a | b | c |\n| :-- | --- | :-- |\n| d | e | f |',
+        );
+      },
+    );
+
+    test('aligns every column the selection covers, and says how they are aligned', () {
+      expect(
+        runTableCommand(MawyTableCommand.alignRight, over('d', 'e'))?.value,
+        '| a | b | c |\n| --: | ---: | --: |\n| d | e | f |',
+      );
+      expect(tableAlignAt(v, v.indexOf('f'), v.indexOf('f')), 'right');
+      expect(tableAlignAt(v, v.indexOf('e'), v.indexOf('e')), 'none');
+      expect(tableAlignAt(v, v.indexOf('d'), v.indexOf('e') + 1), isNull);
+      expect(tableAlignAt('No table.', 0, 0), isNull);
     });
   });
 

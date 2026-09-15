@@ -35,6 +35,7 @@ import {
   nextCell,
   runCommand,
   runTableCommand,
+  tableAlignAt,
   tableOfSize,
   tableSpanAt,
   toggleHeading
@@ -188,7 +189,10 @@ const TABLE_COMMANDS = [
   'addColumnBefore',
   'removeRow',
   'removeColumn',
-  'clearCells'
+  'clearCells',
+  'alignLeft',
+  'alignCenter',
+  'alignRight'
 ];
 
 /**
@@ -251,6 +255,7 @@ const edits = JSON.parse(
   const span = tableSpanAt(value, start, end);
 
   out.tableSpanAt = span && [span.top, span.bottom, span.left, span.right, span.rows, span.columns];
+  out.tableAlignAt = tableAlignAt(value, start, end);
   out.nextCell = forwards && [forwards.value, forwards.start, forwards.end];
   out.previousCell = backwards && [backwards.value, backwards.start, backwards.end];
   out.indent = [indented.value, indented.start, indented.end];

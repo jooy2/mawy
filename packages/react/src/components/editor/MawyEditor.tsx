@@ -33,6 +33,7 @@ import { fill } from '../../internal/i18n.js';
 import { useStrings } from '../../internal/strings.js';
 import {
   commandActive,
+  tableAlignAt,
   tableOfSize,
   tableRangeAt,
   tableSpanAt,
@@ -1214,6 +1215,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     () => (tableHere ? tableSpanAt(text, selection.start, selection.end) : null),
     [selection.end, selection.start, tableHere, text]
   );
+  /** How the columns it covers are aligned, which the bar draws as pressed. */
+  const tableAlign = React.useMemo(
+    () => (tableHere ? tableAlignAt(text, selection.start, selection.end) : null),
+    [selection.end, selection.start, tableHere, text]
+  );
   /** Whether that is more than one cell, which the drawn document marks as cells. */
   const cellsSelected =
     showDocument && tableSpan !== null && tableSpan.rows * tableSpan.columns > 1;
@@ -1393,6 +1399,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         left={toolsAt.left}
         rows={tableSpan?.rows ?? 1}
         columns={tableSpan?.columns ?? 1}
+        align={tableAlign}
         available={(name) => tableAfter(name) !== null}
         onCommand={tableCommand}
       />

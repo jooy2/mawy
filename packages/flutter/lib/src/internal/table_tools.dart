@@ -183,7 +183,8 @@ const double kMawyTableToolsHeight = 36;
 ///
 /// A press on one does not take the focus from the source, so the caret the
 /// command acts on is still in the cell it was in. Each is named in a tooltip
-/// and to a screen reader, and each command is also a key.
+/// and to a screen reader, and each row and column command is also a key. The
+/// three after the columns align the columns the selection covers.
 class MawyTableTools extends StatelessWidget {
   /// Creates the bar.
   const MawyTableTools({
@@ -193,6 +194,7 @@ class MawyTableTools extends StatelessWidget {
     required this.onCommand,
     this.rows = 1,
     this.columns = 1,
+    this.align,
     super.key,
   });
 
@@ -217,15 +219,22 @@ class MawyTableTools extends StatelessWidget {
   /// How many columns the selection covers. See [rows].
   final int columns;
 
+  /// How the columns the selection covers are aligned — `left`, `center`,
+  /// `right` or `none` — or `null` where they differ. The alignment control
+  /// that says so is drawn pressed. See `tableAlignAt`.
+  final String? align;
+
   @override
   Widget build(BuildContext context) {
-    Widget button(MawyTableCommand command, IconData icon, String label) => MawyToolbarButton(
-      icon: icon,
-      label: label,
-      tokens: tokens,
-      enabled: available(command),
-      onPressed: () => onCommand(command),
-    );
+    Widget button(MawyTableCommand command, IconData icon, String label, {bool pressed = false}) =>
+        MawyToolbarButton(
+          icon: icon,
+          label: label,
+          tokens: tokens,
+          pressed: pressed,
+          enabled: available(command),
+          onPressed: () => onCommand(command),
+        );
     String counted(String one, String many, int count) =>
         count > 1 ? many.replaceAll('%N', '$count') : one;
     Widget rule() => Container(
@@ -286,6 +295,25 @@ class MawyTableTools extends StatelessWidget {
               MawyTableCommand.removeColumn,
               LucideIcons.trash2,
               counted(strings.tableColumnRemove, strings.tableColumnsRemove, columns),
+            ),
+            rule(),
+            button(
+              MawyTableCommand.alignLeft,
+              LucideIcons.textAlignStart,
+              strings.tableAlignLeft,
+              pressed: align == 'left',
+            ),
+            button(
+              MawyTableCommand.alignCenter,
+              LucideIcons.textAlignCenter,
+              strings.tableAlignCenter,
+              pressed: align == 'center',
+            ),
+            button(
+              MawyTableCommand.alignRight,
+              LucideIcons.textAlignEnd,
+              strings.tableAlignRight,
+              pressed: align == 'right',
             ),
             if (rows * columns > 1) ...<Widget>[
               rule(),

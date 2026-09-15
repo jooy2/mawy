@@ -5,6 +5,7 @@ import {
   indent,
   runCommand,
   runTableCommand,
+  tableAlignAt,
   tableOfSize,
   type EditState,
   type MawyCommand,
@@ -241,6 +242,37 @@ describe('in a table', () => {
     expect(runCommand('bold', { ...state, start: 10, end: 11 }).value).toBe(
       'Intro.\n\n| **a** | b |\n| - | - |'
     );
+  });
+});
+
+describe('aligning columns', () => {
+  const v = '| a | b | c |\n| :-- | --- | --: |\n| d | e | f |';
+  const over = (from: string, to: string) => ({
+    value: v,
+    start: v.indexOf(from),
+    end: v.indexOf(to) + (from === to ? 0 : 1)
+  });
+
+  it('writes the colons into the delimiter cell of the column the caret is in, and takes them back off', () => {
+    expect(runTableCommand('alignCenter', over('e', 'e'))?.value).toBe(
+      '| a | b | c |\n| :-- | :---: | --: |\n| d | e | f |'
+    );
+    expect(runTableCommand('alignLeft', over('d', 'd'))?.value).toBe(
+      '| a | b | c |\n| -- | --- | --: |\n| d | e | f |'
+    );
+    expect(runTableCommand('alignLeft', over('f', 'f'))?.value).toBe(
+      '| a | b | c |\n| :-- | --- | :-- |\n| d | e | f |'
+    );
+  });
+
+  it('aligns every column the selection covers, and says how they are aligned', () => {
+    expect(runTableCommand('alignRight', over('d', 'e'))?.value).toBe(
+      '| a | b | c |\n| --: | ---: | --: |\n| d | e | f |'
+    );
+    expect(tableAlignAt(v, v.indexOf('f'), v.indexOf('f'))).toBe('right');
+    expect(tableAlignAt(v, v.indexOf('e'), v.indexOf('e'))).toBe('none');
+    expect(tableAlignAt(v, v.indexOf('d'), v.indexOf('e') + 1)).toBe(null);
+    expect(tableAlignAt('No table.', 0, 0)).toBe(null);
   });
 });
 

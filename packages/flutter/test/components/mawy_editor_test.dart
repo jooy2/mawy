@@ -1291,6 +1291,44 @@ void main() {
       expect(field.focusNode.hasFocus, isTrue);
     });
 
+    testWidgets('aligns the column the caret is in from the bar, and shows how it is aligned', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '| a | b |\n| --- | --- |\n| c | d |',
+            mode: MawyEditorMode.plain,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+      final Finder center = find.byWidgetPredicate(
+        (Widget widget) => widget is MawyToolbarButton && widget.label == 'Align center',
+      );
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection.collapsed(offset: 31);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<MawyToolbarButton>(center).pressed, isFalse);
+
+      await tester.tap(center);
+      await tester.pumpAndSettle();
+
+      expect(seen.last, '| a | b |\n| --- | :---: |\n| c | d |');
+      expect(tester.widget<MawyToolbarButton>(center).pressed, isTrue);
+
+      await tester.tap(center);
+      await tester.pumpAndSettle();
+
+      expect(seen.last, '| a | b |\n| --- | --- |\n| c | d |');
+    });
+
     testWidgets('moves between the cells with Tab, and grows the table from the last', (
       WidgetTester tester,
     ) async {

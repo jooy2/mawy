@@ -6,6 +6,8 @@
 
 ### Added
 
+- **A column of a table is aligned from the bar beside the caret.** Three controls after the column controls write GitHub's colons into the delimiter cell of the column the caret is in, `:---` for left, `:---:` for the middle and `---:` for right, keeping as many dashes as there were; the one the column already has is drawn pressed, and pressing it again takes the colons off. With cells selected they align every column the selection covers. `MawyTableCommand` gained `alignLeft`, `alignCenter` and `alignRight`, `MawyTableTools` an `align`, and `MawyStrings` `tableAlignLeft`, `tableAlignCenter` and `tableAlignRight`. It is the React package's arithmetic, and the parity check compares the two.
+
 - **The bar of a table's controls floats beside the caret.** It hung over the line the table starts on at the source's far edge, which in a table longer than the field was a scroll away from the row being written in. It floats a little under the line the caret is on now, starting where the caret is across, and over the line where there is no room under it.
 
 - **A list in a table cell is written as lines of the cell.** A cell of a GitHub table holds no block, but it can hold lines that read as a list. With the caret in a cell, `bulletList`, `orderedList` and `taskList` write an item's marker at the start of the line of the cell the caret is on, between the `<br>`s the cell is written with, and take it off again, and with cells selected they mark or number every line of every cell, numbering again in each. Their buttons stay enabled in a table and are pressed on a cell's lines that are already that list. It is the React package's arithmetic, and the parity check compares the two.

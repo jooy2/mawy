@@ -112,6 +112,9 @@ final class MawyStrings {
     required this.tableRowsRemove,
     required this.tableColumnsRemove,
     required this.tableCellsClear,
+    required this.tableAlignLeft,
+    required this.tableAlignCenter,
+    required this.tableAlignRight,
     required this.thematicBreak,
     required this.status,
     required this.statusPosition,
@@ -368,6 +371,15 @@ final class MawyStrings {
   /// The editor: Clear the selected cells.
   final String tableCellsClear;
 
+  /// The editor: Align the columns the selection covers left.
+  final String tableAlignLeft;
+
+  /// The editor: Align the columns the selection covers in the middle.
+  final String tableAlignCenter;
+
+  /// The editor: Align the columns the selection covers right.
+  final String tableAlignRight;
+
   /// The editor: Divider.
   final String thematicBreak;
 
@@ -525,6 +537,9 @@ final class MawyStrings {
     String? tableRowsRemove,
     String? tableColumnsRemove,
     String? tableCellsClear,
+    String? tableAlignLeft,
+    String? tableAlignCenter,
+    String? tableAlignRight,
     String? thematicBreak,
     String? status,
     String? statusPosition,
@@ -628,6 +643,9 @@ final class MawyStrings {
       tableRowsRemove: tableRowsRemove ?? this.tableRowsRemove,
       tableColumnsRemove: tableColumnsRemove ?? this.tableColumnsRemove,
       tableCellsClear: tableCellsClear ?? this.tableCellsClear,
+      tableAlignLeft: tableAlignLeft ?? this.tableAlignLeft,
+      tableAlignCenter: tableAlignCenter ?? this.tableAlignCenter,
+      tableAlignRight: tableAlignRight ?? this.tableAlignRight,
       thematicBreak: thematicBreak ?? this.thematicBreak,
       status: status ?? this.status,
       statusPosition: statusPosition ?? this.statusPosition,
@@ -737,6 +755,9 @@ final class MawyStrings {
       other.tableRowsRemove == tableRowsRemove &&
       other.tableColumnsRemove == tableColumnsRemove &&
       other.tableCellsClear == tableCellsClear &&
+      other.tableAlignLeft == tableAlignLeft &&
+      other.tableAlignCenter == tableAlignCenter &&
+      other.tableAlignRight == tableAlignRight &&
       other.thematicBreak == thematicBreak &&
       other.status == status &&
       other.statusPosition == statusPosition &&
@@ -841,6 +862,9 @@ final class MawyStrings {
     tableRowsRemove,
     tableColumnsRemove,
     tableCellsClear,
+    tableAlignLeft,
+    tableAlignCenter,
+    tableAlignRight,
     thematicBreak,
     status,
     statusPosition,
@@ -946,6 +970,9 @@ const MawyStrings _en = MawyStrings._(
   tableRowsRemove: 'Delete these %N rows',
   tableColumnsRemove: 'Delete these %N columns',
   tableCellsClear: 'Clear the selected cells',
+  tableAlignLeft: 'Align left',
+  tableAlignCenter: 'Align center',
+  tableAlignRight: 'Align right',
   thematicBreak: 'Divider',
   status: 'Document statistics',
   statusPosition: 'Ln %L, Col %C',
@@ -1050,6 +1077,9 @@ const MawyStrings _ko = MawyStrings._(
   tableRowsRemove: '이 행 %N개 삭제',
   tableColumnsRemove: '이 열 %N개 삭제',
   tableCellsClear: '선택한 셀 비우기',
+  tableAlignLeft: '왼쪽 정렬',
+  tableAlignCenter: '가운데 정렬',
+  tableAlignRight: '오른쪽 정렬',
   thematicBreak: '구분선',
   status: '문서 통계',
   statusPosition: '%L행 %C열',
