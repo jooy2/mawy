@@ -1304,6 +1304,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   /** Whether that is more than one cell, which the drawn document marks as cells. */
   const cellsSelected =
     showDocument && tableSpan !== null && tableSpan.rows * tableSpan.columns > 1;
+  /**
+   * Which cell of the drawn document the bar was last hung under, and how far
+   * across it from the cell's edge. See `placeTools`.
+   */
+  const across = React.useRef<{ key: string; offset: number } | null>(null);
   const [toolsAt, setToolsAt] = React.useState<{
     top: number;
     left: number;
@@ -1323,10 +1328,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   );
 
   /**
-   * Where the bar goes: under the cell the caret is in, or under the cells
-   * selected, starting at the caret across, and over them where there is no
-   * room under them in the pane or on the screen. On the source it goes under
-   * the line the caret is on.
+   * Where the bar goes: under the cell the caret is in, starting across from
+   * where the caret came into that cell, or under the cells selected, and over
+   * them where there is no room under them in the pane or on the screen. On
+   * the source it goes under the line the caret is on.
    *
    * Beside the caret rather than at the table's far end, which in a table
    * longer than the screen is a long way from the row being written in, and
@@ -1338,6 +1343,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     const pane = showDocument ? documentPane.current : sourcePane.current;
 
     if (!tableHere || !pane) {
+      across.current = null;
       setToolsAt(null);
       setCellsAt(null);
 
@@ -1396,9 +1402,23 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
         if (cell && table?.contains(cell)) {
           const box = cell.getBoundingClientRect();
-          const caret = selection?.rangeCount ? selection.getRangeAt(0).getClientRects()[0] : null;
+          const key = span ? `${tableHere.start}:${span.top}:${span.left}` : '';
 
-          anchor = { top: box.top, bottom: box.bottom, x: caret?.left ?? box.left };
+          // Across from where the caret was when it came into the cell, and
+          // kept there for as long as it stays in the cell. Measured from the
+          // caret every time, the bar went after the edge of a selection being
+          // drawn one letter at a time, and a bar that moves under the pointer
+          // with every letter is one nobody can reach for. Kept as a distance
+          // from the cell's edge, so a table scrolled sideways takes it along.
+          if (!across.current || across.current.key !== key) {
+            const caret = selection?.rangeCount
+              ? selection.getRangeAt(0).getClientRects()[0]
+              : null;
+
+            across.current = { key, offset: (caret?.left ?? box.left) - box.left };
+          }
+
+          anchor = { top: box.top, bottom: box.bottom, x: box.left + across.current.offset };
         }
       }
     } else {

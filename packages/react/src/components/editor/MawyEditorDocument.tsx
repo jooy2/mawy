@@ -446,6 +446,18 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       onTarget?.(target);
     }, [onTarget, target]);
 
+    /**
+     * Whether what is selected is one picture and nothing else, which is what a
+     * press on a picture leaves. The selection is what `Delete` and the next
+     * letter act on, so it stays; the browser's tint over it goes, since the
+     * bar beside the picture already says it is the one being acted on, and a
+     * picture washed over in blue reads as a picture that has stopped loading.
+     */
+    const pictureSelected =
+      target?.kind === 'image' &&
+      selection.start === target.range.start &&
+      selection.end === target.range.end;
+
     /** Which picture is fetched with the page rather than when it is reached. */
     const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
     const context: RenderContext = React.useMemo(
@@ -1479,6 +1491,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           }}
           onMouseDown={pressCell}
           onClick={pressImage}
+          data-mawy-picture-selected={pictureSelected ? '' : undefined}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
           <React.Fragment key={generation}>{content}</React.Fragment>

@@ -117,9 +117,12 @@ const ALERTS: readonly { kind: MdAlertKind; label: keyof MawyStrings; icon: type
   { kind: 'caution', label: 'alertCaution', icon: CautionIcon }
 ];
 
-/** A press on the bar, kept from taking the focus off the document, except in a field. */
+/**
+ * A press on the bar, kept from taking the focus off the document, except in a
+ * field or on the label that names one, which puts the focus in its field.
+ */
 function keepFocus(event: React.MouseEvent<HTMLElement>): void {
-  if (!(event.target as Element).closest('input')) {
+  if (!(event.target as Element).closest('input, label')) {
     event.preventDefault();
   }
 }
@@ -343,31 +346,46 @@ function Fields({
     write(false);
   };
   const href = safeUrl(url);
+  const ids = React.useId();
 
   return (
     <>
-      <input
-        ref={address}
-        className="mawy-block-field mawy-block-address"
-        type="url"
-        aria-label={image ? strings.imageAddress : strings.linkAddress}
-        placeholder="https://"
-        value={url}
-        spellCheck={false}
-        onChange={(event) => setUrl(event.target.value)}
-        onKeyDown={keys}
-        onBlur={left}
-      />
-      <input
-        className="mawy-block-field"
-        type="text"
-        aria-label={image ? strings.imageDescription : strings.linkText}
-        placeholder={image ? strings.imageDescription : strings.linkText}
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={keys}
-        onBlur={left}
-      />
+      {/*
+        One row a field, each named on the page by a label in front of it. Two
+        fields side by side with nothing but their contents in them read as two
+        runs of text, and which was the address was a thing to work out. The
+        label is the field's name as well, so what a screen reader says is what
+        is on the page.
+      */}
+      <div className="mawy-block-fields">
+        <label className="mawy-block-label" htmlFor={`${ids}address`}>
+          {image ? strings.imageAddress : strings.linkAddress}
+        </label>
+        <input
+          ref={address}
+          id={`${ids}address`}
+          className="mawy-block-field"
+          type="url"
+          placeholder="https://"
+          value={url}
+          spellCheck={false}
+          onChange={(event) => setUrl(event.target.value)}
+          onKeyDown={keys}
+          onBlur={left}
+        />
+        <label className="mawy-block-label" htmlFor={`${ids}text`}>
+          {image ? strings.imageDescription : strings.linkText}
+        </label>
+        <input
+          id={`${ids}text`}
+          className="mawy-block-field"
+          type="text"
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={keys}
+          onBlur={left}
+        />
+      </div>
       {target.kind === 'insert' ? (
         <IconButton
           label={strings.insertApply}

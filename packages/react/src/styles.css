@@ -2009,6 +2009,17 @@
   vertical-align: top;
 }
 
+/* A picture pressed is selected, so that `Delete` and the next letter act on
+ * it, and drawn without the selection's tint over it: its bar already says
+ * which picture is being acted on. The tint a browser lays over a selected
+ * picture is the colour of the selection around it, and not of the picture's
+ * own, so it is taken off every selection in the document for as long as the
+ * picture is the whole of it. */
+.mawy-root .mawy-document-body[data-mawy-picture-selected]::selection,
+.mawy-root .mawy-document-body[data-mawy-picture-selected] ::selection {
+  background: transparent;
+}
+
 .mawy-root .mawy-document-body > p:only-child:empty::before {
   content: var(--mawy-placeholder, '');
   color: var(--mawy-fg-subtle);
@@ -2039,23 +2050,49 @@
   height: 28px;
 }
 
+/* A button that says what is chosen as well as what it is for, such as a code
+ * block's language, is as wide as its words. The square size above is for an
+ * icon on its own, and held to it the words ran out past the button's edge. */
+.mawy-root .mawy-table-tools .mawy-button-labelled {
+  width: auto;
+  padding: 0 10px 0 8px;
+}
+
 .mawy-root .mawy-table-tools .mawy-toolbar-separator {
   margin: 0 3px;
 }
 
-/* The fields on a link's bar and a picture's, drawn the way the find bar's are.
- * The bar keeps inside the pane it floats in, and a field gives up width before
- * the buttons beside it do. */
+/* The fields on a link's bar and a picture's, drawn the way the find bar's are:
+ * one row a field, its name in front of it, and the buttons beside the two.
+ * The bar keeps inside the pane it floats in, and the fields give up width
+ * before the buttons beside them do. */
 .mawy-root .mawy-block-tools {
   max-width: calc(100% - 8px);
 }
 
+.mawy-root .mawy-block-fields {
+  display: grid;
+  flex: 0 1 auto;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 8px;
+  width: 24em;
+  min-width: 0;
+  padding: 3px 2px 3px 8px;
+}
+
+.mawy-root .mawy-block-label {
+  color: var(--mawy-fg-muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: default;
+}
+
 .mawy-root .mawy-block-field {
-  flex: 1 1 11em;
-  width: 11em;
-  min-width: 4em;
+  width: 100%;
+  min-width: 0;
   height: 26px;
-  margin: 0 2px;
   padding: 0 8px;
   border: 1px solid var(--mawy-border-strong);
   border-radius: var(--mawy-radius-sm);
@@ -2063,11 +2100,6 @@
   color: var(--mawy-fg);
   font: inherit;
   font-size: 0.85em;
-}
-
-.mawy-root .mawy-block-address {
-  flex-basis: 16em;
-  width: 16em;
 }
 
 .mawy-root .mawy-block-field:focus-visible,

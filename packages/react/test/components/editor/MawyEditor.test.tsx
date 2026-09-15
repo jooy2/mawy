@@ -1867,6 +1867,19 @@ describe('the document surface', () => {
     expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull();
     expect(page.getByRole('textbox', { name: 'Link text' }).element()).toHaveValue('the docs');
 
+    // One field a row, each named on the page by the label in front of it,
+    // which is the name a screen reader is given as well.
+    const address = page.getByRole('textbox', { name: 'Link address' }).element();
+    const words = page.getByRole('textbox', { name: 'Link text' }).element();
+    const labels = [...screen.container.querySelectorAll('.mawy-block-label')].map(
+      (each) => each.textContent
+    );
+
+    expect(labels).toEqual(['Link address', 'Link text']);
+    expect(words.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      address.getBoundingClientRect().bottom
+    );
+
     // The address changed and written with `Enter`, the words and their bold
     // left as they were, and the focus back on the document.
     await userEvent.fill(page.getByRole('textbox', { name: 'Link address' }), '/guide/2');
@@ -1924,6 +1937,10 @@ describe('the document surface', () => {
     );
     expect(bodyOf(screen).querySelector('img')).not.toBeNull();
     expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull();
+    // Selected, and said to be, so the stylesheet draws it without the tint a
+    // selected picture is washed over with: the bar is what says it is chosen.
+    expect(bodyOf(screen)).toHaveAttribute('data-mawy-picture-selected');
+    expect(page.getByText('Image address').element()).toBeVisible();
 
     await userEvent.fill(page.getByRole('textbox', { name: 'Image description' }), 'a big hill');
     await userEvent.keyboard('{Enter}');
@@ -3357,6 +3374,13 @@ describe('the bars over a code block and an alert', () => {
       bodyOf(screen).querySelector('.mawy-md-pre')!.getBoundingClientRect().top
     );
 
+    // And the language inside its button, which was held to an icon's width
+    // with the word running out past its edge.
+    const language = page.getByRole('button', { name: 'Language: ts' }).element();
+    const words = language.querySelector('.mawy-button-text')!.getBoundingClientRect();
+
+    expect(words.right).toBeLessThanOrEqual(language.getBoundingClientRect().right);
+
     await userEvent.click(page.getByRole('button', { name: 'Language: ts' }));
     await userEvent.click(page.getByRole('radio', { name: 'python' }));
     await vi.waitFor(() =>
@@ -3574,6 +3598,36 @@ describe('tables', () => {
       expect(onChange).toHaveBeenLastCalledWith('Intro.\n\n| a | b |\n| - | - |\n\nAfter.')
     );
     expect(document.activeElement).toBe(sourceOf(plain));
+  });
+
+  it('keeps the bar where it is while the selection changes inside one cell', async () => {
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'| words in one cell | b |\n| - | - |\n| c | d |'}
+        mode="wysiwyg"
+        style={WIDE}
+      />
+    );
+    const tools = () => screen.container.querySelector('.mawy-table-tools') as HTMLElement | null;
+
+    put(bodyOf(screen), 'words in one cell', 12);
+    await vi.waitFor(() => expect(tools()).not.toBe(null));
+    await new Promise((done) => setTimeout(done, 30));
+
+    const left = tools()!.getBoundingClientRect().left;
+    const words = bodyOf(screen).querySelector('th')!.firstChild as Text;
+
+    // A letter at a time back towards the start of the cell, the way `Shift`
+    // and an arrow draw a selection. The bar went after the edge of it.
+    for (const at of [10, 7, 4, 1]) {
+      document.getSelection()!.setBaseAndExtent(words, 12, words, at);
+      await new Promise((done) => setTimeout(done, 30));
+      expect(tools()!.getBoundingClientRect().left).toBe(left);
+    }
+
+    // Into another cell it goes with the caret.
+    put(bodyOf(screen), 'd', 1);
+    await vi.waitFor(() => expect(tools()!.getBoundingClientRect().left).toBeGreaterThan(left));
   });
 
   it('keeps the controls that delete at the end of the bar away from the caret', async () => {
