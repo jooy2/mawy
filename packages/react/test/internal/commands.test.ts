@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   commandActive,
   continueList,
-  continueTable,
   indent,
   runCommand,
   runTableCommand,
@@ -538,24 +537,6 @@ describe('tables', () => {
   it('does nothing outside a table, or to pipes in a code block', () => {
     expect(table('addRowBelow', 'Just^ words.')).toBe(null);
     expect(table('addRowBelow', '```\n| a^ |\n| --- |\n```')).toBe(null);
-  });
-
-  it('carries Enter down a row, and leaves the table from a row still empty', () => {
-    expect(shown(continueTable(put(TABLE.replace('c', 'c^'))))).toBe(`${TABLE}\n|  ^|  |`);
-    expect(shown(continueTable(put(`${TABLE}\n|  ^|  |`)))).toBe(`${TABLE}\n\n^`);
-    expect(shown(continueTable(put(`${TABLE}\n|  ^|  |\n\nAfter.`)))).toBe(
-      `${TABLE}\n\n^\n\nAfter.`
-    );
-    expect(continueTable(put('Not^ a table.'))).toBe(null);
-  });
-
-  it('leaves a table inside a quotation or a list item for a line still inside it', () => {
-    expect(shown(continueTable(put('> | a |\n> | - |\n> | x |\n> |  ^|\n>\n> After.')))).toBe(
-      '> | a |\n> | - |\n> | x |\n>\n> ^\n>\n> After.'
-    );
-    expect(shown(continueTable(put('- item\n\n  | a |\n  | - |\n  |  ^|')))).toBe(
-      '- item\n\n  | a |\n  | - |\n\n  ^'
-    );
   });
 
   it('reads a row of nothing but a space no parser trims the same way both packages do', () => {

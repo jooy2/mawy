@@ -409,10 +409,8 @@ List<Object?> _edits() {
       out[command.name] = after == null ? null : <Object?>[after.value, after.start, after.end];
     }
 
-    final EditState? row = continueTable(state);
     final EditState? sized = tableOfSize(state, 3, 4);
 
-    out['continueTable'] = row == null ? null : <Object?>[row.value, row.start, row.end];
     out['tableOfSize'] = sized == null ? null : <Object?>[sized.value, sized.start, sized.end];
 
     final EditState? forwards = nextCell(state, back: false);

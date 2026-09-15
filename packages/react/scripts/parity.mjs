@@ -30,7 +30,6 @@ import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
 import {
   commandActive,
   continueList,
-  continueTable,
   headingActive,
   indent,
   nextCell,
@@ -242,10 +241,8 @@ const edits = JSON.parse(
     out[command] = after && [after.value, after.start, after.end];
   }
 
-  const row = continueTable(state);
   const sized = tableOfSize(state, 3, 4);
 
-  out.continueTable = row && [row.value, row.start, row.end];
   out.tableOfSize = sized && [sized.value, sized.start, sized.end];
 
   const forwards = nextCell(state, false);

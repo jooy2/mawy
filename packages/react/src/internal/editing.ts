@@ -694,8 +694,7 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
  * caret is between blocks to begin with. Inside a list it is a new item with
  * the marker carried down; inside a quotation it is a new quoted line; inside a
  * code block it is a newline and nothing else, because everything in there is
- * the characters it is. In a table it is the list's rule said about rows: a new
- * row, and on a row still empty, a way out. See `continueTable`.
+ * the characters it is. In a table cell it is a line break inside the cell.
  */
 function breakAt(
   root: HTMLElement,

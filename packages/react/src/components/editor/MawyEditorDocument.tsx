@@ -1185,7 +1185,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
       // Below a code block, a divider or drawn HTML, a paragraph to type in.
       // Below a table the caret goes into its last cell, as it always has, and
-      // `Enter` on a row still empty or `ArrowDown` is the way out of it.
+      // `ArrowDown` from its last row is the way out of it.
       const edit = opened(element, true, false);
 
       if (edit) {
