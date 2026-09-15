@@ -1274,20 +1274,30 @@ export function editForText(
     return null;
   }
 
-  // Pasted over cells selected on the drawn document: the cells are emptied and
-  // what was on the clipboard goes into the first. See `inCells`.
-  if (place.start !== place.end && cellsSelected(value, place.start, place.end)) {
-    const cleared = runTableCommand('clearCells', { value, start: place.start, end: place.end });
-
-    return cleared && intoClearedCell(cleared.value, cleared.start, text);
+  if (place.start !== place.end) {
+    return typedOver(value, place.start, place.end, text);
   }
 
-  const opened =
-    place.start === place.end
-      ? openedAt(root, place.node, value, place.start)
-      : { value, at: place.start };
+  const opened = openedAt(root, place.node, value, place.start);
 
-  return splice(opened.value, opened.at, opened.at + (place.end - place.start), text);
+  return splice(opened.value, opened.at, opened.at, text);
+}
+
+/**
+ * Words put in place of a selection, whatever brought them: a paste, or a
+ * composition that began over one.
+ *
+ * Over cells selected on the drawn document the cells are emptied and the words
+ * go into the first, the way a keystroke over them goes. See `inCells`.
+ */
+export function typedOver(value: string, start: number, end: number, text: string): MawyEdit {
+  const cleared = cellsSelected(value, start, end)
+    ? runTableCommand('clearCells', { value, start, end })
+    : null;
+
+  return cleared
+    ? intoClearedCell(cleared.value, cleared.start, text)
+    : splice(value, start, end, text);
 }
 
 /**

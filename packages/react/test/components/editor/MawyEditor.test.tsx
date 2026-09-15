@@ -3768,6 +3768,73 @@ describe('tables', () => {
     expect(onChange).toHaveBeenLastCalledWith('| 이름 | b |\n| - | - |');
   });
 
+  it('composes after a line break in a cell, where there is no run of text to compose into', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'| a |\n| --- |\n| b |'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'b', 1);
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b<br> |'));
+
+    // The caret is on the cell itself, after the break. The browser composes
+    // into a run of text it makes there, in place of the line the editor drew
+    // for the caret, and that tree is one React did not draw: the next render
+    // used to fail on it and take the editor down.
+    const cell = body.querySelector('td') as HTMLElement;
+    const selection = document.getSelection() as Selection;
+
+    selection.collapse(cell, 2);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    cell.lastChild?.replaceWith('한');
+    selection.collapse(cell.lastChild, 1);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '한' }));
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b<br>한 |')
+    );
+    await vi.waitFor(() => expect(bodyOf(screen).querySelector('td')?.textContent).toBe('b한'));
+
+    await userEvent.keyboard('c');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('| a |\n| --- |\n| b<br>한c |')
+    );
+  });
+
+  it('composes over selected cells into the first of them, and takes no row away', async () => {
+    const onChange = vi.fn();
+    const source = '| a | b | c |\n| - | - | - |\n| d | e | f |\n| g | h | i |';
+    const screen = await render(
+      <MawyEditor defaultValue={source} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const cells = [...body.querySelectorAll('td')];
+    const selection = document.getSelection() as Selection;
+
+    body.focus();
+    selection.setBaseAndExtent(cells[1], 0, cells[5], cells[5].childNodes.length);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+
+    // Closed onto its start before the browser can take the rows between the
+    // two cells out to make room.
+    expect(selection.isCollapsed).toBe(true);
+
+    const run = selection.anchorNode as Text;
+
+    run.data = `가${run.data}`;
+    selection.collapse(run, 1);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '가' }));
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        '| a | b | c |\n| - | - | - |\n| d | 가 |  |\n| g |  |  |'
+      )
+    );
+    expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(3);
+  });
+
   it('gives the drawn document back its whole selection when something outside asks', async () => {
     const handle: { current: MawyEditorHandle | null } = { current: null };
     const screen = await render(

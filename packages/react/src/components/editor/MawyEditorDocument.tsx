@@ -34,6 +34,7 @@ import {
   leadFor,
   markdownFor,
   openedAt,
+  typedOver,
   type MawyAim,
   type MawyDrag,
   type MawyEdit
@@ -296,6 +297,15 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       start: number;
       /** Where in the run the caret was when the composition began. */
       offset: number;
+      /**
+       * Whether the caret was between two things in an element with words in
+       * it rather than inside a run of text — after a line break in a cell, at
+       * the start of a cell a drag selected. What the browser writes there is a
+       * run of text of its own, which nothing can take back out by hand.
+       */
+      between: boolean;
+      /** The selection the composition began over, where it ran past one run of text. */
+      over: { start: number; end: number } | null;
     } | null>(null);
     /** Bumped to throw the drawing away and make it again from the document. */
     const [generation, setGeneration] = React.useState(0);
@@ -709,55 +719,147 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         composing.current = true;
         composed.current = null;
 
-        const node = owner.getSelection()?.anchorNode;
+        const selection = owner.getSelection();
 
-        // Either the run of text the caret is in, or — with nothing to type
-        // into yet — the empty block it is in, which is where a composition
-        // straight after `Enter` lands.
-        const host =
-          node?.nodeType === 3 ? node : node?.nodeType === 1 && !node.textContent ? node : null;
-
-        if (!host || !element.contains(host) || !blockAt(element, host)) {
+        if (!selection?.rangeCount || !element.contains(selection.anchorNode)) {
           return;
         }
 
-        // Where the run of text starts rather than where the caret is, so the
-        // caret's own answer is not the one being asked for here.
-        const start = sourceAt(element, host, 0, value);
+        // A selection across more than one run of text is taken out by the
+        // browser to make room for what is composed, and what it takes is the
+        // tree between the two ends: the pipes and rows between two cells, the
+        // blocks between two paragraphs. That cannot be refused, so the
+        // selection is closed onto its start before anything is composed, and
+        // what was composed replaces it when the composition ends.
+        let over: { start: number; end: number } | null = null;
+        const range = selection.getRangeAt(0);
 
-        if (start !== null) {
-          composed.current = {
-            host,
-            before: contentOf(host),
-            start,
-            offset: host === node ? (owner.getSelection()?.anchorOffset ?? 0) : 0
-          };
+        if (
+          !selection.isCollapsed &&
+          (range.startContainer !== range.endContainer || range.startContainer.nodeType !== 3)
+        ) {
+          // A selection of everything starts and ends on the surface itself,
+          // which is the start and the end of the document.
+          const edge = (node: Node, offset: number) =>
+            node !== element
+              ? documentAt(element, node, offset, value, aim.current)
+              : offset === 0
+                ? 0
+                : offset >= element.childNodes.length
+                  ? value.length
+                  : null;
+          const from = edge(range.startContainer, range.startOffset);
+          const to = edge(range.endContainer, range.endOffset);
+          const place = from === null ? null : domAt(element, from, value);
+
+          if (from === null || to === null || !place) {
+            return;
+          }
+
+          over = { start: Math.min(from, to), end: Math.max(from, to) };
+          selection.collapse(place.node, place.offset);
         }
+
+        const node = selection.anchorNode;
+        const at = selection.anchorOffset;
+
+        // The run of text the caret is in; the empty block it is in, with
+        // nothing to type into yet, which is where a composition straight
+        // after `Enter` lands; or the element it is between two things in.
+        if (!node || !element.contains(node) || !blockAt(element, node)) {
+          return;
+        }
+
+        const between = node.nodeType === 1 && Boolean(node.textContent);
+        // Where the run of text starts rather than where the caret is, so the
+        // caret's own answer is not the one being asked for here. Between two
+        // things there is no run, and the caret's place is the answer.
+        const start = sourceAt(element, node, between ? at : 0, value);
+
+        if (start === null) {
+          return;
+        }
+
+        const before = owner.createRange();
+
+        before.selectNodeContents(node);
+        before.setEnd(node, at);
+
+        composed.current = {
+          host: node,
+          before: contentOf(node),
+          start,
+          offset: node.nodeType === 3 ? at : between ? before.toString().length : 0,
+          between,
+          over
+        };
       };
 
-      const closed = () => {
+      const closed = (event: CompositionEvent) => {
         composing.current = false;
 
         const was = composed.current;
 
         composed.current = null;
 
-        if (!was || readOnly) {
+        if (readOnly) {
           return;
         }
 
-        if (!element.contains(was.host)) {
-          // The browser rearranged the tree rather than changing one run of text
-          // inside it, and there is nothing to read back from that. The drawing
-          // is thrown away and made again from the document, which is still
-          // exactly what it was: a composition that cannot be read is a
-          // composition that did not happen.
-          setGeneration((each) => each + 1);
+        if (!was || !element.contains(was.host)) {
+          // Nothing was written down to read back, or the browser rearranged
+          // the tree rather than changing one run of text inside it. The
+          // drawing is thrown away and made again from the document, which is
+          // still exactly what it was: a composition that cannot be read is a
+          // composition that did not happen, and a tree React did not draw is
+          // one the next render fails on.
+          if (was || event.data) {
+            setGeneration((each) => each + 1);
+          }
 
           return;
         }
 
         const after = contentOf(was.host);
+        const grown = after.length - was.before.length;
+        const typed =
+          grown > 0 &&
+          after.slice(0, was.offset) === was.before.slice(0, was.offset) &&
+          after.slice(was.offset + grown) === was.before.slice(was.offset)
+            ? after.slice(was.offset, was.offset + grown)
+            : '';
+
+        if (was.between || was.over) {
+          // Between two things the browser wrote a run of text of its own, and
+          // the drawing is made again rather than taken apart by hand. A run
+          // that was only changed goes back to what React last drew.
+          if (was.between) {
+            setGeneration((each) => each + 1);
+          } else {
+            restore(was.host, was.before);
+          }
+
+          if (!typed) {
+            return;
+          }
+
+          if (was.over) {
+            onEdit(typedOver(value, was.over.start, was.over.end, typed));
+
+            return;
+          }
+
+          onEdit(
+            (held.length && blockAt(element, was.host)?.tagName !== 'PRE'
+              ? heldText(value, was.start, typed, held)
+              : null) ?? {
+              value: value.slice(0, was.start) + typed + value.slice(was.start),
+              caret: was.start + typed.length
+            }
+          );
+
+          return;
+        }
 
         if (after === was.before) {
           return;
@@ -798,7 +900,6 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
         // Formatting the caret was holding, around what was composed, the way it
         // is around a keystroke. See `heldText`.
-        const grown = after.length - was.before.length;
         const formatted =
           held.length &&
           grown > 0 &&
