@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.6.0 (2026-09-15)
+
 ### Added
 
 - **The whole table is deleted from the end of its bar.** A last control, in red and set off from the rest, takes out the lines the table is written on and one of the blank lines that set it off, leaving the caret where the table was. `MawyTableCommand` gained `removeTable`, `MawyToolbarButton` a `danger` that draws it in `MawyTokens.caution`, and `MawyStrings` `tableRemove`. It is the React package's arithmetic, and the parity check compares the two.
