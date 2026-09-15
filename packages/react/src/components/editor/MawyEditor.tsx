@@ -39,6 +39,7 @@ import {
   headingActive,
   toggleHeading,
   indent,
+  nextCell,
   runCommand,
   runTableCommand,
   type EditState,
@@ -1871,7 +1872,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         const anchor = element?.ownerDocument.getSelection()?.anchorNode ?? null;
         const host = anchor?.nodeType === 1 ? (anchor as Element) : (anchor?.parentElement ?? null);
 
-        if (!element || !host || !element.contains(host) || !host.closest('li')) {
+        if (!element || !host || !element.contains(host)) {
+          return;
+        }
+
+        // In a table cell it is the next cell, or the one before, and `Tab` in
+        // the last cell adds a row. See `nextCell`.
+        if (host.closest('td, th')) {
+          const cell = nextCell(state, event.shiftKey);
+
+          event.preventDefault();
+
+          if (cell) {
+            run(state, cell);
+          }
+
+          return;
+        }
+
+        if (!host.closest('li')) {
           return;
         }
 
@@ -1887,7 +1906,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
 
       event.preventDefault();
-      apply(state, indent(state, event.shiftKey));
+      apply(state, nextCell(state, event.shiftKey) ?? indent(state, event.shiftKey));
 
       return;
     }

@@ -1290,6 +1290,44 @@ void main() {
       expect(field.focusNode.hasFocus, isTrue);
     });
 
+    testWidgets('moves between the cells with Tab, and grows the table from the last', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '| a | b |\n| - | - |',
+            mode: MawyEditorMode.plain,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(field.controller.selection.baseOffset, 7);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(seen.last, '| a | b |\n| - | - |\n|  |  |');
+      expect(field.controller.selection.baseOffset, 23);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(field.controller.selection.baseOffset, 7);
+      expect(field.focusNode.hasPrimaryFocus, isTrue);
+    });
+
     testWidgets('offers no block to make in a table', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

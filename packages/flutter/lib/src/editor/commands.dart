@@ -1558,6 +1558,63 @@ EditState? _removeColumn(EditState state) {
   return _caretAfter(next, table.lines.first.start, table.row, column > 0 ? column - 1 : 0);
 }
 
+/// `Tab` in a table, which is the next cell, and `Shift`+`Tab` ([back]), the
+/// one before — or `null` outside a table, where `Tab` is what it is everywhere
+/// else.
+///
+/// Across the row and then down to the first cell of the next, the way a table
+/// is read. `Tab` in the last cell adds a row under it and goes to the row's
+/// first cell, which is how a table is grown without taking a hand off the keys;
+/// `Shift`+`Tab` in the first cell stays there. The caret lands after what is in
+/// the cell it arrives at. A selection over more than one line is not in a cell
+/// and is left to [indent].
+EditState? nextCell(EditState state, {required bool back}) {
+  final String value = state.value;
+  final int start = state.start;
+  final int end = state.end;
+
+  if (value.substring(start, end).contains('\n')) {
+    return null;
+  }
+
+  final _TableAt? table = _tableAt(value, start);
+
+  if (table == null) {
+    return null;
+  }
+
+  final int anchor = table.lines[0].start;
+  // The rows a caret can be in, which is every line but the delimiter row's.
+  final List<int> rows = <int>[
+    for (int index = 0; index < table.lines.length; index += 1)
+      if (index != 1) index,
+  ];
+  final int at = rows.indexOf(table.row);
+  final int last = table.columns - 1;
+
+  if (back) {
+    if (table.column > 0) {
+      return _caretAfter(value, anchor, table.row, (table.column < last ? table.column : last) - 1);
+    }
+
+    return at > 0 ? _caretAfter(value, anchor, rows[at - 1], last) : EditState(value, start, start);
+  }
+
+  if (table.column < last) {
+    return _caretAfter(value, anchor, table.row, table.column + 1);
+  }
+
+  if (at < rows.length - 1) {
+    return _caretAfter(value, anchor, rows[at + 1], 0);
+  }
+
+  final EditState? grown = _addRow(EditState(value, start, start), below: true);
+
+  return grown == null
+      ? null
+      : _caretAfter(grown.value, anchor, table.row == 0 ? 2 : table.row + 1, 0);
+}
+
 /// A table of [columns] columns and [rows] rows, the header counted among the
 /// rows, where the caret is — or `null` where [MawyTableCommand.insertTable] has
 /// nowhere to put one.

@@ -3426,6 +3426,46 @@ describe('tables', () => {
     expect(document.activeElement).toBe(sourceOf(plain));
   });
 
+  it('moves between the cells with Tab, grows the table from the last, and goes back with Shift', async () => {
+    for (const mode of ['wysiwyg', 'plain'] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={'| a | b |\n| - | - |'} mode={mode} onChange={onChange} />
+      );
+      const typed = async (text: string) => {
+        await userEvent.keyboard(text);
+      };
+
+      if (mode === 'wysiwyg') {
+        put(bodyOf(screen), 'a', 1);
+      } else {
+        sourceOf(screen).focus();
+        sourceOf(screen).setSelectionRange(3, 3);
+      }
+
+      await new Promise((done) => setTimeout(done, 30));
+      await typed('{Tab}!');
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('| a | b! |\n| - | - |'));
+
+      // The last cell: a row under it, and the caret in its first cell. The
+      // drawn document writes a letter into an empty cell between its spaces;
+      // the source writes it where the caret is, which is after them.
+      const row = mode === 'wysiwyg' ? '| c |  |' : '|  c|  |';
+
+      await typed('{Tab}c');
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith(`| a | b! |\n| - | - |\n${row}`)
+      );
+
+      await typed('{Shift>}{Tab}{/Shift}?');
+      await vi.waitFor(() =>
+        expect(onChange).toHaveBeenLastCalledWith(`| a | b!? |\n| - | - |\n${row}`)
+      );
+
+      await screen.unmount();
+    }
+  });
+
   it('offers no block to make in a cell, and pastes into one on the line a cell is', async () => {
     const onChange = vi.fn();
     const source = 'Intro.\n\n| a | b |\n| - | - |';

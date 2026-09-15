@@ -289,17 +289,20 @@ The React package solves the same problem with a menu at the end of the bar, and
 
 **The rows and columns of a table are changed from a bar beside it.** While the caret is in a table and the editor has the focus, a small bar hangs over the table's top edge at its far end, or under its bottom edge where there is no room above: a row above or below, a column before or after, and deleting the row or the column the caret is in. It is on the drawn document over the table, and on the source over the line the table starts on. A press on it does not take the focus, so the next letter still goes into the cell the caret was in. On the drawn document every table has room above it for the bar, so the bar never covers the end of the paragraph before it. What they write is a GitHub table: the alignment in the delimiter row and whatever is written in the other cells stay exactly as they were, because each command puts in or takes out one cell per line rather than writing the table out again. Each has a shortcut:
 
-|                                       |                     |
-| ------------------------------------- | ------------------- |
-| `Mod` + `Alt` + `T`                   | Insert a table      |
-| `Mod` + `Enter`                       | Add a row below     |
-| `Mod` + `Shift` + `Enter`             | Add a row above     |
-| `Mod` + `Alt` + `Enter`               | Add a column after  |
-| `Mod` + `Alt` + `Shift` + `Enter`     | Add a column before |
-| `Mod` + `Shift` + `Backspace`         | Delete this row     |
-| `Mod` + `Alt` + `Shift` + `Backspace` | Delete this column  |
+|                                       |                               |
+| ------------------------------------- | ----------------------------- |
+| `Mod` + `Alt` + `T`                   | Insert a table                |
+| `Mod` + `Enter`                       | Add a row below               |
+| `Mod` + `Shift` + `Enter`             | Add a row above               |
+| `Mod` + `Alt` + `Enter`               | Add a column after            |
+| `Mod` + `Alt` + `Shift` + `Enter`     | Add a column before           |
+| `Mod` + `Shift` + `Backspace`         | Delete this row               |
+| `Mod` + `Alt` + `Shift` + `Backspace` | Delete this column            |
+| `Tab` / `Shift` + `Tab`               | The next cell, the one before |
 
 `Enter` adds a row and `Backspace` takes one away, with `Alt` meaning the column rather than the row and `Shift` the one above or the one the caret is in. A letter would be easier to remember, and nearly every letter is already taken: `Mod`+`Alt`+`I` opens a browser's developer tools, `Mod`+`Shift`+`T` reopens a tab, and on Windows `Ctrl`+`Alt` is `AltGr`, which types `€` and `@` on many European keyboards. `T` for a new table is one of the few letters `AltGr` leaves alone.
+
+**`Tab` goes to the next cell** and `Shift`+`Tab` to the one before, across the row and then down to the first cell of the next, on the source and the drawn document alike. `Tab` in the last cell adds a row under it and goes to its first cell, and `Shift`+`Tab` in the first cell stays there. The caret lands after what is in the cell. `Escape` and then `Tab` still moves the focus on.
 
 The shortcuts only act inside a table, and outside one the keys are handed on to whatever else answers them. A table made with `Mod`+`Alt`+`T` has two empty columns, a header and one row, and every new table has a blank line on either side. It has no column names, because those would be in the interface's language and stay in the document. Inside a quotation or a list item the table goes inside it, with that container's prefix on every line, and inside a code block or another table there is nowhere for one to go, so the grid is disabled there. A row cannot go above the header and the last column cannot be removed, so those buttons on the bar are disabled where they would do nothing. With `gfm` turned off in `parse` the parser reads no tables, so none of these do anything.
 
@@ -502,7 +505,7 @@ Capturing `Tab` in a textarea creates a keyboard trap: somebody who cannot use a
 
 **Press `Escape`, then `Tab`, and the focus moves on.** One `Escape` arms it and anything else typed disarms it again. It is the rule CodeMirror, Monaco and GitHub's own editor all use, so anybody who has met one of those already knows it. The surface also announces it to a screen reader.
 
-The drawn document captures `Tab` only in a list item, where it nests the item the way it does on the source. Everywhere else it is one focusable element, and `Tab` moves straight out of it.
+The drawn document captures `Tab` only in a list item, where it nests the item the way it does on the source, and in a table cell, where it goes to the next cell. On both surfaces `Tab` in a table is the next cell rather than indentation. Everywhere else it is one focusable element, and `Tab` moves straight out of it.
 
 ## Undo
 

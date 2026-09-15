@@ -1462,6 +1462,57 @@ function removeColumn(state: EditState): EditState | null {
 }
 
 /**
+ * `Tab` in a table, which is the next cell, and `Shift`+`Tab`, the one before —
+ * or `null` outside a table, where `Tab` is what it is everywhere else.
+ *
+ * Across the row and then down to the first cell of the next, the way a table
+ * is read. `Tab` in the last cell adds a row under it and goes to the row's
+ * first cell, which is how a table is grown without taking a hand off the keys;
+ * `Shift`+`Tab` in the first cell stays there. The caret lands after what is in
+ * the cell it arrives at, where the next letter carries on the words. A
+ * selection over more than one line is not in a cell and is left to `indent`.
+ */
+export function nextCell(state: EditState, back: boolean): EditState | null {
+  const { value, start, end } = state;
+
+  if (value.slice(start, end).includes('\n')) {
+    return null;
+  }
+
+  const table = tableAt(value, start);
+
+  if (!table) {
+    return null;
+  }
+
+  const anchor = table.lines[0].start;
+  // The rows a caret can be in, which is every line but the delimiter row's.
+  const rows = table.lines.map((_, index) => index).filter((index) => index !== 1);
+  const at = rows.indexOf(table.row);
+  const last = table.columns - 1;
+
+  if (back) {
+    if (table.column > 0) {
+      return caretAfter(value, anchor, table.row, Math.min(table.column, last) - 1);
+    }
+
+    return at > 0 ? caretAfter(value, anchor, rows[at - 1], last) : { value, start, end: start };
+  }
+
+  if (table.column < last) {
+    return caretAfter(value, anchor, table.row, table.column + 1);
+  }
+
+  if (at < rows.length - 1) {
+    return caretAfter(value, anchor, rows[at + 1], 0);
+  }
+
+  const grown = addRow({ value, start, end: start }, true);
+
+  return grown && caretAfter(grown.value, anchor, table.row === 0 ? 2 : table.row + 1, 0);
+}
+
+/**
  * A table of this many columns and rows, the header counted among the rows,
  * where the caret is — or `null` where `insertTable` has nowhere to put one.
  *

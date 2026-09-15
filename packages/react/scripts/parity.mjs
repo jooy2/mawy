@@ -33,6 +33,7 @@ import {
   continueTable,
   headingActive,
   indent,
+  nextCell,
   runCommand,
   runTableCommand,
   tableOfSize,
@@ -244,6 +245,12 @@ const edits = JSON.parse(
 
   out.continueTable = row && [row.value, row.start, row.end];
   out.tableOfSize = sized && [sized.value, sized.start, sized.end];
+
+  const forwards = nextCell(state, false);
+  const backwards = nextCell(state, true);
+
+  out.nextCell = forwards && [forwards.value, forwards.start, forwards.end];
+  out.previousCell = backwards && [backwards.value, backwards.start, backwards.end];
   out.indent = [indented.value, indented.start, indented.end];
   out.outdent = [outdented.value, outdented.start, outdented.end];
 
