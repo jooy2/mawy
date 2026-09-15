@@ -1416,8 +1416,11 @@ class _TableToolsHostState extends State<_TableToolsHost> {
   Widget build(BuildContext context) {
     return Stack(
       key: _stack,
+      // As large as the source, whatever the source is given, rather than as
+      // large as a stack of nothing but positioned children would be.
+      fit: StackFit.passthrough,
       children: <Widget>[
-        Positioned.fill(child: widget.child),
+        widget.child,
         if (_top != null)
           PositionedDirectional(
             top: _top,
