@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.6.0 (2026-09-15)
+
 ### Added
 
 - **A link and a picture on `wysiwyg` are edited from a bar beside them, and stay drawn while the caret is in them.** Either was written out as its own characters while the caret was inside it, which was the only place its address could be typed, and a press at the edge of a picture turned the picture into `![...](...)`. With the caret in a link, a bar under the line holds its address and its words, one field a row with its name in front of it, a button that opens it, one that takes the link off its words and, in red, one that deletes it; a press on a picture selects it, without the browser's tint over it, and its bar holds its address, its description and, in red, deleting it. What is typed is written on `Enter` or when the field is left, and words left alone keep their formatting. The toolbar's `link` and `image`, and their keys, open the same bar at the caret with an address starting `https://` and write nothing until there is one, where they wrote `[](url)`; on the source they still do. Raw HTML is still written out. `MawyStrings` gained `imageAddress`, `imageDescription`, `imageRemove`, `linkAddress`, `linkText`, `linkOpen`, `linkUnlink`, `linkRemove` and `insertApply`.
