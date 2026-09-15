@@ -241,13 +241,19 @@ describe('a source surface longer than the screen', () => {
 
     input.scrollTop = input.scrollHeight;
 
-    await vi.waitFor(() => {
-      const drawn = [...screen.container.querySelectorAll('.mawy-source-line')].map(
-        (line) => line.textContent
-      );
+    // Longer than a wait is usually given: the chunk is coloured when an
+    // `IntersectionObserver` says it came into view, and WebKit on a shared CI
+    // machine has taken more than the second a wait gets by default to say so.
+    await vi.waitFor(
+      () => {
+        const drawn = [...screen.container.querySelectorAll('.mawy-source-line')].map(
+          (line) => line.textContent
+        );
 
-      expect(drawn).toContain('The last line, which nothing above it repeats.');
-    });
+        expect(drawn).toContain('The last line, which nothing above it repeats.');
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('says where a line nothing has coloured is drawn', async () => {
@@ -1902,7 +1908,12 @@ describe('the document surface', () => {
       />
     );
 
-    await userEvent.click(bodyOf(screen).querySelector('img')!);
+    // A press on the picture itself, which is a pixel square: a pointer aimed
+    // at its middle lands on the paragraph around it in Firefox and WebKit.
+    bodyOf(screen).focus();
+    bodyOf(screen)
+      .querySelector('img')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
     // The picture stays a picture: its address is in the bar, not written out
     // in its place.
@@ -2433,6 +2444,10 @@ describe('the document surface', () => {
     const body = bodyOf(screen);
 
     put(body, 'two', 3);
+    // `selectionchange` is how the editor hears where the caret went, and it
+    // arrives on a task of its own; a key pressed before it acts on the caret
+    // the editor had.
+    await new Promise((done) => setTimeout(done, 30));
     await userEvent.keyboard('{Tab}');
 
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('1. one\n   1. two'));
