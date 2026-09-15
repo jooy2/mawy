@@ -310,7 +310,9 @@ The shortcuts only act inside a table, and outside one the keys are handed on to
 
 ::: fw react
 
-**A cell holds one line of words, and no block.** A row of a GitHub table is one line of the file, so a cell can hold bold, italic, code, links and pictures, and line breaks written `<br>`, but not a list, a heading, a quotation or a code block: the first line that opens with `- ` is where the table ends. So with the caret in a table, the toolbar's blocks and the heading menu are disabled and their keys do nothing, where they used to write their marker at the front of the row and break the table. Text pasted into a cell stays on the cell's one line: each line ending becomes `<br>` and each `|` is escaped.
+**A cell holds one line of words, and no block.** A row of a GitHub table is one line of the file, so a cell can hold bold, italic, code, links and pictures, and line breaks written `<br>`, but not a heading, a quotation, a code block or a list: the first line that opens with `- ` is where the table ends. So with the caret in a table, the heading menu and the buttons for those blocks are disabled and their keys do nothing, where they used to write their marker at the front of the row and break the table. Text pasted into a cell stays on the cell's one line: each line ending becomes `<br>` and each `|` is escaped.
+
+**A list in a cell is written as lines of the cell.** A list cannot be put in a cell, but the way one reads can. The list buttons and their keys write an item's marker at the start of the line of the cell the caret is on, between the `<br>`s the cell is written with, and take it off again; with cells selected they number or mark every line of every cell. `Enter` on a line that opens with a marker carries it onto the line it starts, one higher for a number, and on a line with nothing after its marker it gives the marker up, as it does in a list. Every renderer draws the markers as the characters they are, so `1. one<br>2. two` reads as a numbered list on GitHub too, without the indentation a list would have. A space typed after the last word of a line, a marker's among them, is drawn while the caret is after it, where Markdown keeps none.
 
 **A table on the drawn document keeps its shape while it is written in.** Every column is the same width, and the table is as wide as the document or as wide as its columns need to be read, scrolling sideways past that. An empty cell is a line of text tall, so the caret put in it has room and typing the first letter does not move anything. A Markdown table has no column widths to say anything else with, and the preview and the viewer still lay a table out by what is in it.
 
@@ -320,7 +322,7 @@ On the drawn document, **`Enter` in a cell starts a new line in that cell**, and
 
 ::: fw flutter
 
-There is no drawn document here, so `Enter` in a row of the source is a line ending, as it is in the React package's source. The commands behind the grid and the bar are the React package's under the same names, and the parity check diffs the two.
+There is no drawn document here, so `Enter` in a row of the source is a line ending, as it is in the React package's source. With the caret in a table the heading menu and the buttons for a heading, a quotation, a code block and a divider are disabled, because a cell holds no block. The list buttons write an item's marker at the start of the line of the cell the caret is on instead, or on every line of the cells a selection covers, as the React package's do. The commands behind the grid and the bar are the React package's under the same names, and the parity check diffs the two.
 
 :::
 

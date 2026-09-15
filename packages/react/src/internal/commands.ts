@@ -430,6 +430,10 @@ function insertRule(state: EditState): EditState {
  * cell, each wrote its marker at the front of the row, and a row that opens
  * with `- ` is not a row: the table ended on that line. So from a table they do
  * nothing, and `blockCommand` is what a toolbar asks to draw them disabled.
+ *
+ * The three lists are not among them. A list cannot be put in a cell either,
+ * but the way one reads can, and that is what they write there instead. See
+ * `toggleCellList`.
  */
 const BLOCK_COMMANDS: ReadonlySet<MawyCommand> = new Set<MawyCommand>([
   'heading1',
@@ -437,12 +441,12 @@ const BLOCK_COMMANDS: ReadonlySet<MawyCommand> = new Set<MawyCommand>([
   'heading3',
   'paragraph',
   'quote',
-  'bulletList',
-  'orderedList',
-  'taskList',
   'codeBlock',
   'rule'
 ]);
+
+/** The commands that write a list, which a cell is given as lines. See `toggleCellList`. */
+type ListCommand = 'bulletList' | 'orderedList' | 'taskList';
 
 /** Whether a command makes a block of its lines. See `BLOCK_COMMANDS`. */
 export function blockCommand(command: MawyCommand): boolean {
@@ -460,6 +464,13 @@ function inTable(state: EditState): boolean {
 export function runCommand(command: MawyCommand, state: EditState): EditState {
   if (BLOCK_COMMANDS.has(command) && inTable(state)) {
     return state;
+  }
+
+  if (
+    (command === 'bulletList' || command === 'orderedList' || command === 'taskList') &&
+    inTable(state)
+  ) {
+    return toggleCellList(state, command);
   }
 
   switch (command) {
@@ -585,11 +596,9 @@ export function commandActive(command: MawyCommand, state: EditState): boolean {
     case 'quote':
       return everyLine(MARKERS.quote);
     case 'bulletList':
-      return everyLine(MARKERS.bulletList);
     case 'orderedList':
-      return everyLine(MARKERS.orderedList);
     case 'taskList':
-      return everyLine(MARKERS.taskList);
+      return everyLine(MARKERS[command]) || cellListActive(state, command);
     case 'codeBlock':
       return state.start === state.end && fencedAt(state.value, state.start) !== null;
     default:
@@ -1628,6 +1637,238 @@ function clearCells(state: EditState): EditState | null {
   });
 
   return caretAfter(next, table.lines[0].start, span.top, span.left);
+}
+
+/** One line of a cell, between its edges and the `<br>`s in it. */
+interface CellLine {
+  from: number;
+  to: number;
+  /** The cell it is a line of. */
+  cell: { from: number; to: number };
+  /** Whether it starts the cell, and whether it ends it. */
+  first: boolean;
+  last: boolean;
+  /** Whether the cell starts its row with no pipe in front of it. */
+  bare: boolean;
+}
+
+/** What a cell writes a second line with. See `cellContents` in `render.tsx`. */
+const CELL_BREAK = /<br\s*\/?>/gi;
+
+/** A list item's marker at the start of a line of a cell, by the command that writes it. */
+const CELL_MARKERS: Record<ListCommand, RegExp> = {
+  bulletList: /^[-*+] (?!\[[ xX]\] )/,
+  taskList: /^[-*+] \[[ xX]\] /,
+  orderedList: /^\d{1,9}[.)] /
+};
+
+/** Any of those. */
+const CELL_MARKER = /^(?:[-*+] (?:\[[ xX]\] )?|\d{1,9}[.)] )/;
+
+/** Every line of a cell. */
+function linesOfCell(value: string, cell: { from: number; to: number }, bare: boolean): CellLine[] {
+  const text = value.slice(cell.from, cell.to);
+  const lines: CellLine[] = [];
+  let at = 0;
+
+  for (const found of text.matchAll(CELL_BREAK)) {
+    lines.push({
+      from: cell.from + at,
+      to: cell.from + found.index,
+      cell,
+      first: at === 0,
+      last: false,
+      bare
+    });
+    at = found.index + found[0].length;
+  }
+
+  lines.push({ from: cell.from + at, to: cell.to, cell, first: at === 0, last: true, bare });
+
+  return lines;
+}
+
+/**
+ * The lines of cells a selection covers: the line of the cell the caret is on,
+ * the lines a selection inside one cell touches, and every line of cells
+ * selected across a table. `null` outside a table.
+ */
+function cellLinesAt(state: EditState): CellLine[] | null {
+  const { value, start, end } = state;
+  const lineStart = lineStartOf(value, start);
+  const lineEnd = value.indexOf('\n', start);
+
+  // The toolbar asks at every step of the caret, and a line with no pipe on it
+  // is not worth a parse to find out it is no row.
+  if (
+    start === end &&
+    !value.slice(lineStart, lineEnd === -1 ? undefined : lineEnd).includes('|')
+  ) {
+    return null;
+  }
+
+  const span = spanAt(value, start, end);
+
+  if (!span) {
+    return null;
+  }
+
+  const one = span.top === span.bottom && span.left === span.right;
+  const lines: CellLine[] = [];
+
+  for (let row = span.top; row <= span.bottom; row += 1) {
+    const line = span.table.lines[row];
+
+    if (row === 1 || !line) {
+      continue;
+    }
+
+    for (
+      let column = span.left;
+      column <= Math.min(span.right, line.cells.length - 1);
+      column += 1
+    ) {
+      for (const each of linesOfCell(value, line.cells[column], column === 0 && !line.opened)) {
+        if (!one || (each.from <= end && start <= each.to)) {
+          lines.push(each);
+        }
+      }
+    }
+  }
+
+  return lines;
+}
+
+/** The marker a command writes, numbered where it is a number. */
+function cellMarker(command: ListCommand, number: number): string {
+  return command === 'orderedList' ? `${number}. ` : command === 'taskList' ? '- [ ] ' : '- ';
+}
+
+/**
+ * A list's markers written at the start of the lines of the cells a selection
+ * covers, or taken off them.
+ *
+ * A cell of a GitHub table holds one line of the file and no block, so a list
+ * cannot be put in one. What can be is the way a list reads: each line of the
+ * cell, between the `<br>`s it is written with, opening with the marker an item
+ * would, which every renderer draws as those characters at the start of lines
+ * of their own. So that is what a list command writes in a cell rather than
+ * nothing, and `Enter` on the drawn document carries the marker down a cell the
+ * way it carries one down a list.
+ *
+ * A line with nothing on it takes a marker only where it is the only line, the
+ * way `togglePrefix` has it, and a number carries on from the line above it in
+ * the same cell. A marker is set off from a pipe by a space on either side, or
+ * the space after it is trimmed away with the cell's padding.
+ */
+function toggleCellList(state: EditState, command: ListCommand): EditState {
+  const lines = cellLinesAt(state);
+
+  if (!lines?.length) {
+    return state;
+  }
+
+  const { value } = state;
+  const texts = lines.map((line) => value.slice(line.from, line.to).trimStart());
+  const content = texts.filter((text) => text.trim());
+  const on = content.length > 0 && content.every((text) => CELL_MARKERS[command].test(text));
+  const edits: { from: number; to: number; text: string; blank: boolean }[] = [];
+  let number = 0;
+
+  if (command === 'orderedList' && lines.length === 1 && !lines[0].first) {
+    const above = value.slice(lines[0].cell.from, lines[0].from).split(CELL_BREAK);
+    const ordinal = /^(\d{1,9})[.)] /.exec(above[above.length - 2]?.trimStart() ?? '');
+
+    number = ordinal ? Number.parseInt(ordinal[1], 10) : 0;
+  }
+
+  lines.forEach((line, index) => {
+    const text = texts[index];
+    const from = line.to - text.length;
+    const old = CELL_MARKER.exec(text)?.[0] ?? '';
+    // A row that opens with a marker rather than a pipe is a list item, and the
+    // end of the table, so a row written without its outer pipes is given one.
+    const pipe = line.first && line.bare ? '| ' : '';
+
+    // Numbered again in every cell.
+    if (index > 0 && lines[index - 1].cell !== line.cell) {
+      number = 0;
+    }
+
+    if (on) {
+      if (old) {
+        edits.push({ from, to: from + old.length, text: '', blank: false });
+      }
+
+      return;
+    }
+
+    if (!text.trim()) {
+      if (lines.length === 1) {
+        number += 1;
+        edits.push({
+          from: line.from,
+          to: line.to,
+          text: `${pipe || (line.first ? ' ' : '')}${cellMarker(command, number)}${line.last ? ' ' : ''}`,
+          blank: true
+        });
+      }
+
+      return;
+    }
+
+    number += 1;
+    edits.push({
+      from,
+      to: from + old.length,
+      text: `${pipe}${cellMarker(command, number)}`,
+      blank: false
+    });
+  });
+
+  let next = value;
+
+  for (let index = edits.length - 1; index >= 0; index -= 1) {
+    const edit = edits[index];
+
+    next = next.slice(0, edit.from) + edit.text + next.slice(edit.to);
+  }
+
+  // A place after a marker is after the one written in its place, and a place
+  // on a line with nothing on it is after the marker it was given.
+  const move = (at: number): number => {
+    let shift = 0;
+
+    for (const edit of edits) {
+      if (edit.blank && edit.from <= at && at <= edit.to) {
+        return edit.from + shift + edit.text.trimEnd().length + 1;
+      }
+
+      if (at < edit.from) {
+        break;
+      }
+
+      if (at < edit.to) {
+        return edit.from + shift + edit.text.length;
+      }
+
+      shift += edit.text.length - (edit.to - edit.from);
+    }
+
+    return at + shift;
+  };
+
+  return { value: next, start: move(state.start), end: move(state.end) };
+}
+
+/** Whether every line with words on it, of the cells a selection covers, is an item of this list. */
+function cellListActive(state: EditState, command: ListCommand): boolean {
+  const lines = cellLinesAt(state);
+  const content = (lines ?? [])
+    .map((line) => state.value.slice(line.from, line.to).trimStart())
+    .filter((text) => text.trim());
+
+  return content.length > 0 && content.every((text) => CELL_MARKERS[command].test(text));
 }
 
 /**

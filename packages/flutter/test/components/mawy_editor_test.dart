@@ -1360,7 +1360,9 @@ void main() {
       expect(seen.last, '| a | b |\n| - | - |\n|  |  |\n|  |  |');
     });
 
-    testWidgets('offers no block to make in a table', (WidgetTester tester) async {
+    testWidgets('offers no block to make in a table, and writes a list as lines of a cell', (
+      WidgetTester tester,
+    ) async {
       final List<String> seen = <String>[];
 
       await tester.pumpWidget(
@@ -1388,9 +1390,21 @@ void main() {
       field.controller.selection = const TextSelection.collapsed(offset: 12);
       await tester.pumpAndSettle();
 
-      expect(button('Bulleted list').enabled, isFalse);
+      expect(button('Quotation').enabled, isFalse);
       expect(button('Heading').enabled, isFalse);
       expect(button('Bold').enabled, isTrue);
+
+      // A list is written as lines of the cell, each opening with a marker.
+      expect(button('Bulleted list').enabled, isTrue);
+
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == 'Bulleted list',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(seen.last, 'Intro.\n\n| - a | b |\n| - | - |');
     });
 
     testWidgets('is not offered where nothing can be edited', (WidgetTester tester) async {

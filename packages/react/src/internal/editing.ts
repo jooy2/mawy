@@ -692,6 +692,64 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
   return { value: value.slice(0, caret) + text + value.slice(caret), caret: caret + text.length };
 }
 
+/** A list item's marker at the start of a line of a cell. See `toggleCellList` in `commands.ts`. */
+const CELL_ITEM = /^(?:([-*+])( \[[ xX]\])?|(\d{1,9})([.)])) /;
+
+/**
+ * `Enter` in a table cell: a line break, and on a line of the cell that opens
+ * with a list item's marker, the marker carried down onto the line the break
+ * starts, the way it is carried down a list.
+ *
+ * On a line with nothing after its marker the marker goes instead, which is the
+ * way out of a list in a cell as it is the way out of a list. A caret in front
+ * of the marker, or a selection, is only a break.
+ */
+function cellBreak(value: string, start: number, end: number): MawyEdit {
+  let from = start;
+
+  while (
+    from > 0 &&
+    value[from - 1] !== '\n' &&
+    !(value[from - 1] === '|' && value[from - 2] !== '\\') &&
+    !/<br\s*\/?>$/i.test(value.slice(Math.max(0, from - 6), from))
+  ) {
+    from -= 1;
+  }
+
+  let to = start;
+
+  while (
+    to < value.length &&
+    value[to] !== '\n' &&
+    !(value[to] === '|' && value[to - 1] !== '\\') &&
+    !/^<br\s*\/?>/i.test(value.slice(to, to + 6))
+  ) {
+    to += 1;
+  }
+
+  const line = value.slice(from, to);
+  const marker = from + line.length - line.trimStart().length;
+  const item = start === end ? CELL_ITEM.exec(value.slice(marker, to)) : null;
+
+  if (!item || start < marker + item[0].length) {
+    return splice(value, start, end, '<br>');
+  }
+
+  const rest = value.slice(marker + item[0].length, to);
+
+  if (!rest.trim()) {
+    // The space after the marker stays where nothing else is left to set the
+    // cell off from its pipe.
+    return splice(value, marker, marker + item[0].length - (rest ? 0 : 1), '');
+  }
+
+  const next = item[3]
+    ? `${Number.parseInt(item[3], 10) + 1}${item[4]} `
+    : `${item[1]}${item[2] ? ' [ ]' : ''} `;
+
+  return splice(value, start, end, `<br>${next}`);
+}
+
 /**
  * `Enter`, which is a different thing in every container it is pressed in.
  *
@@ -718,7 +776,7 @@ function breakAt(
   // the renderer reads one in a cell as the break it is. `Mod`+`Enter` is the
   // row under this one, and `Tab` the next cell.
   if (tag === 'TD' || tag === 'TH') {
-    return splice(value, start, end, '<br>');
+    return cellBreak(value, start, end);
   }
 
   if (tag === 'PRE') {

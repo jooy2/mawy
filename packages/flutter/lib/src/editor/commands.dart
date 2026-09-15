@@ -481,17 +481,25 @@ EditState _insertRule(EditState state) {
 /// cell, each wrote its marker at the front of the row, and a row that opens
 /// with `- ` is not a row: the table ended on that line. So from a table they
 /// do nothing, and [blockCommand] is what a toolbar asks to draw them disabled.
+///
+/// The three lists are not among them. A list cannot be put in a cell either,
+/// but the way one reads can, and that is what they write there instead. See
+/// [_toggleCellList].
 const Set<MawyCommand> _blockCommands = <MawyCommand>{
   MawyCommand.heading1,
   MawyCommand.heading2,
   MawyCommand.heading3,
   MawyCommand.paragraph,
   MawyCommand.quote,
+  MawyCommand.codeBlock,
+  MawyCommand.rule,
+};
+
+/// The commands that write a list, which a cell is given as lines. See [_toggleCellList].
+const Set<MawyCommand> _listCommands = <MawyCommand>{
   MawyCommand.bulletList,
   MawyCommand.orderedList,
   MawyCommand.taskList,
-  MawyCommand.codeBlock,
-  MawyCommand.rule,
 };
 
 /// Whether [command] makes a block of its lines. See [_blockCommands].
@@ -506,6 +514,10 @@ bool _inTable(EditState state) =>
 EditState runCommand(MawyCommand command, EditState state) {
   if (_blockCommands.contains(command) && _inTable(state)) {
     return state;
+  }
+
+  if (_listCommands.contains(command) && _inTable(state)) {
+    return _toggleCellList(state, command);
   }
 
   return switch (command) {
@@ -596,9 +608,10 @@ bool commandActive(MawyCommand command, EditState state) {
     MawyCommand.heading2 => everyLine(RegExp(r'^[ \t]*## ')),
     MawyCommand.heading3 => everyLine(RegExp(r'^[ \t]*### ')),
     MawyCommand.quote => everyLine(_markers[_quote]!),
-    MawyCommand.bulletList => everyLine(_markers[_bulletList]!),
-    MawyCommand.orderedList => everyLine(_markers[_orderedList]!),
-    MawyCommand.taskList => everyLine(_markers[_taskList]!),
+    MawyCommand.bulletList => everyLine(_markers[_bulletList]!) || _cellListActive(state, command),
+    MawyCommand.orderedList =>
+      everyLine(_markers[_orderedList]!) || _cellListActive(state, command),
+    MawyCommand.taskList => everyLine(_markers[_taskList]!) || _cellListActive(state, command),
     MawyCommand.codeBlock =>
       state.start == state.end && _fencedAt(state.value, state.start) != null,
     _ => false,
@@ -1717,6 +1730,271 @@ EditState? _clearCells(EditState state) {
   });
 
   return _caretAfter(next, table.lines.first.start, span.top, span.left);
+}
+
+/// One line of a cell, between its edges and the `<br>`s in it.
+class _CellLine {
+  const _CellLine({
+    required this.from,
+    required this.to,
+    required this.cell,
+    required this.first,
+    required this.last,
+    required this.bare,
+  });
+
+  final int from;
+  final int to;
+
+  /// The cell it is a line of.
+  final _TableCell cell;
+
+  /// Whether it starts the cell, and whether it ends it.
+  final bool first;
+  final bool last;
+
+  /// Whether the cell starts its row with no pipe in front of it.
+  final bool bare;
+}
+
+/// What a cell writes a second line with. See `_cellContents` in `render.dart`.
+final RegExp _cellBreak = RegExp(r'<br\s*\/?>', caseSensitive: false);
+
+/// A list item's marker at the start of a line of a cell, by the command that writes it.
+final Map<MawyCommand, RegExp> _cellMarkers = <MawyCommand, RegExp>{
+  MawyCommand.bulletList: RegExp(r'^[-*+] (?!\[[ xX]\] )'),
+  MawyCommand.taskList: RegExp(r'^[-*+] \[[ xX]\] '),
+  MawyCommand.orderedList: RegExp(r'^\d{1,9}[.)] '),
+};
+
+/// Any of those.
+final RegExp _cellMarker = RegExp(r'^(?:[-*+] (?:\[[ xX]\] )?|\d{1,9}[.)] )');
+
+/// Every line of a cell.
+List<_CellLine> _linesOfCell(String value, _TableCell cell, {required bool bare}) {
+  final String text = value.substring(cell.from, cell.to);
+  final List<_CellLine> lines = <_CellLine>[];
+  int at = 0;
+
+  for (final RegExpMatch found in _cellBreak.allMatches(text)) {
+    lines.add(
+      _CellLine(
+        from: cell.from + at,
+        to: cell.from + found.start,
+        cell: cell,
+        first: at == 0,
+        last: false,
+        bare: bare,
+      ),
+    );
+    at = found.end;
+  }
+
+  lines.add(
+    _CellLine(
+      from: cell.from + at,
+      to: cell.to,
+      cell: cell,
+      first: at == 0,
+      last: true,
+      bare: bare,
+    ),
+  );
+
+  return lines;
+}
+
+/// The lines of cells a selection covers: the line of the cell the caret is on,
+/// the lines a selection inside one cell touches, and every line of cells
+/// selected across a table. `null` outside a table.
+List<_CellLine>? _cellLinesAt(EditState state) {
+  final String value = state.value;
+  final int start = state.start;
+  final int end = state.end;
+  final int lineStart = _lineStartOf(value, start);
+  final int lineEnd = value.indexOf('\n', start);
+
+  // The toolbar asks at every step of the caret, and a line with no pipe on it
+  // is not worth a parse to find out it is no row.
+  if (start == end &&
+      !value.substring(lineStart, lineEnd == -1 ? value.length : lineEnd).contains('|')) {
+    return null;
+  }
+
+  final _TableSpan? span = _spanAt(value, start, end);
+
+  if (span == null) {
+    return null;
+  }
+
+  final bool one = span.top == span.bottom && span.left == span.right;
+  final List<_CellLine> lines = <_CellLine>[];
+
+  for (int row = span.top; row <= span.bottom; row += 1) {
+    if (row == 1 || row >= span.table.lines.length) {
+      continue;
+    }
+
+    final _TableLine line = span.table.lines[row];
+
+    for (
+      int column = span.left;
+      column <= math.min(span.right, line.cells.length - 1);
+      column += 1
+    ) {
+      for (final _CellLine each in _linesOfCell(
+        value,
+        line.cells[column],
+        bare: column == 0 && !line.opened,
+      )) {
+        if (!one || (each.from <= end && start <= each.to)) {
+          lines.add(each);
+        }
+      }
+    }
+  }
+
+  return lines;
+}
+
+/// The marker a command writes, numbered where it is a number.
+String _cellMarkerFor(MawyCommand command, int number) => command == MawyCommand.orderedList
+    ? '$number. '
+    : command == MawyCommand.taskList
+    ? '- [ ] '
+    : '- ';
+
+/// A list's markers written at the start of the lines of the cells a selection
+/// covers, or taken off them.
+///
+/// A cell of a GitHub table holds one line of the file and no block, so a list
+/// cannot be put in one. What can be is the way a list reads: each line of the
+/// cell, between the `<br>`s it is written with, opening with the marker an item
+/// would, which every renderer draws as those characters at the start of lines
+/// of their own. So that is what a list command writes in a cell rather than
+/// nothing.
+///
+/// A line with nothing on it takes a marker only where it is the only line, the
+/// way [_togglePrefix] has it, and a number carries on from the line above it in
+/// the same cell. A marker is set off from a pipe by a space on either side, or
+/// the space after it is trimmed away with the cell's padding.
+EditState _toggleCellList(EditState state, MawyCommand command) {
+  final List<_CellLine>? lines = _cellLinesAt(state);
+
+  if (lines == null || lines.isEmpty) {
+    return state;
+  }
+
+  final String value = state.value;
+  final RegExp pattern = _cellMarkers[command]!;
+  final List<String> texts = lines
+      .map((_CellLine line) => value.substring(line.from, line.to).trimLeft())
+      .toList();
+  final Iterable<String> content = texts.where((String text) => text.trim().isNotEmpty);
+  final bool on = content.isNotEmpty && content.every(pattern.hasMatch);
+  final List<({int from, int to, String text, bool blank})> edits =
+      <({int from, int to, String text, bool blank})>[];
+  int number = 0;
+
+  if (command == MawyCommand.orderedList && lines.length == 1 && !lines.first.first) {
+    final List<String> above = value
+        .substring(lines.first.cell.from, lines.first.from)
+        .split(_cellBreak);
+    final RegExpMatch? ordinal = above.length < 2
+        ? null
+        : RegExp(r'^(\d{1,9})[.)] ').firstMatch(above[above.length - 2].trimLeft());
+
+    number = ordinal == null ? 0 : int.parse(ordinal.group(1)!);
+  }
+
+  for (int index = 0; index < lines.length; index += 1) {
+    final _CellLine line = lines[index];
+    final String text = texts[index];
+    final int from = line.to - text.length;
+    final String old = _cellMarker.firstMatch(text)?.group(0) ?? '';
+    // A row that opens with a marker rather than a pipe is a list item, and the
+    // end of the table, so a row written without its outer pipes is given one.
+    final String pipe = line.first && line.bare ? '| ' : '';
+
+    // Numbered again in every cell.
+    if (index > 0 && !identical(lines[index - 1].cell, line.cell)) {
+      number = 0;
+    }
+
+    if (on) {
+      if (old.isNotEmpty) {
+        edits.add((from: from, to: from + old.length, text: '', blank: false));
+      }
+
+      continue;
+    }
+
+    if (text.trim().isEmpty) {
+      if (lines.length == 1) {
+        number += 1;
+        edits.add((
+          from: line.from,
+          to: line.to,
+          text:
+              '${pipe.isNotEmpty ? pipe : (line.first ? ' ' : '')}${_cellMarkerFor(command, number)}${line.last ? ' ' : ''}',
+          blank: true,
+        ));
+      }
+
+      continue;
+    }
+
+    number += 1;
+    edits.add((
+      from: from,
+      to: from + old.length,
+      text: '$pipe${_cellMarkerFor(command, number)}',
+      blank: false,
+    ));
+  }
+
+  String next = value;
+
+  for (int index = edits.length - 1; index >= 0; index -= 1) {
+    final ({int from, int to, String text, bool blank}) edit = edits[index];
+
+    next = next.substring(0, edit.from) + edit.text + next.substring(edit.to);
+  }
+
+  // A place after a marker is after the one written in its place, and a place
+  // on a line with nothing on it is after the marker it was given.
+  int move(int at) {
+    int shift = 0;
+
+    for (final ({int from, int to, String text, bool blank}) edit in edits) {
+      if (edit.blank && edit.from <= at && at <= edit.to) {
+        return edit.from + shift + edit.text.trimRight().length + 1;
+      }
+
+      if (at < edit.from) {
+        break;
+      }
+
+      if (at < edit.to) {
+        return edit.from + shift + edit.text.length;
+      }
+
+      shift += edit.text.length - (edit.to - edit.from);
+    }
+
+    return at + shift;
+  }
+
+  return EditState(next, move(state.start), move(state.end));
+}
+
+/// Whether every line with words on it, of the cells a selection covers, is an item of this list.
+bool _cellListActive(EditState state, MawyCommand command) {
+  final Iterable<String> content = (_cellLinesAt(state) ?? const <_CellLine>[])
+      .map((_CellLine line) => state.value.substring(line.from, line.to).trimLeft())
+      .where((String text) => text.trim().isNotEmpty);
+
+  return content.isNotEmpty && content.every(_cellMarkers[command]!.hasMatch);
 }
 
 /// `Tab` in a table, which is the next cell, and `Shift`+`Tab` ([back]), the

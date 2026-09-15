@@ -3567,7 +3567,7 @@ describe('tables', () => {
     );
   });
 
-  it('offers no block to make in a cell, and pastes into one on the line a cell is', async () => {
+  it('offers no block but a list to make in a cell, and pastes into one on the line a cell is', async () => {
     const onChange = vi.fn();
     const source = 'Intro.\n\n| a | b |\n| - | - |';
     const screen = await render(
@@ -3577,13 +3577,14 @@ describe('tables', () => {
     put(bodyOf(screen), 'b', 1);
 
     await vi.waitFor(() =>
-      expect(page.getByRole('button', { name: 'Bulleted list' }).element()).toBeDisabled()
+      expect(page.getByRole('button', { name: 'Quotation' }).element()).toBeDisabled()
     );
     expect(page.getByRole('button', { name: 'Heading' }).element()).toBeDisabled();
     expect(page.getByRole('button', { name: 'Bold' }).element()).not.toBeDisabled();
+    expect(page.getByRole('button', { name: 'Bulleted list' }).element()).not.toBeDisabled();
 
-    // The key does nothing either, where it used to put `- ` in front of the row.
-    await userEvent.keyboard('{ControlOrMeta>}{Shift>}8{/Shift}{/ControlOrMeta}');
+    // The key does nothing either, where it used to put a fence around the row.
+    await userEvent.keyboard('{ControlOrMeta>}{Shift>}e{/Shift}{/ControlOrMeta}');
     await new Promise((done) => setTimeout(done, 30));
     expect(onChange).not.toHaveBeenCalled();
 
@@ -3719,6 +3720,42 @@ describe('tables', () => {
     await pressed('{ArrowUp}');
     expect(block()?.textContent).toBe('a');
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('writes a list in a cell as its lines, and carries it down them with Enter', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'| a | b |\n| - | - |\n| c | d |'}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+    const row = (cell: string) => `| a | b |\n| - | - |\n| ${cell} | d |`;
+
+    put(bodyOf(screen), 'c', 1);
+    await userEvent.click(page.getByRole('button', { name: 'Numbered list' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(row('1. c')));
+
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(row('1. c<br>2. ')));
+    await vi.waitFor(() =>
+      expect(page.getByRole('button', { name: 'Numbered list' }).element()).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+
+    await userEvent.keyboard('e{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(row('1. c<br>2. e<br>3. ')));
+
+    // A line with nothing after its marker gives the marker up.
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(row('1. c<br>2. e<br>')));
+    await userEvent.keyboard('f');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(row('1. c<br>2. e<br>f')));
+    expect(bodyOf(screen).querySelectorAll('tr')).toHaveLength(2);
   });
 
   it('draws a space typed after the last words of a line, where Markdown keeps none', async () => {

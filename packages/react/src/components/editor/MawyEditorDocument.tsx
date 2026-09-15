@@ -849,7 +849,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
-        const after = contentOf(was.host);
+        const after = spacedBack(contentOf(was.host), was.before, value.slice(was.start));
         const grown = after.length - was.before.length;
         const typed =
           grown > 0 &&
@@ -1656,6 +1656,47 @@ function edgeOf(
   const rest = range.toString();
 
   return across ? !rest.replace(/\n$/, '') : !rest.replace(/\n$/, '').includes('\n');
+}
+
+/**
+ * A run of text as a composition left it, with the no-break spaces the page
+ * drew for spaces in the document read back as the spaces they are. See
+ * `spaces` in `render.tsx`.
+ *
+ * Only in what the composition did not change, found as the part at either end
+ * that is still what the run said before it: a no-break space typed on purpose
+ * is a no-break space.
+ */
+function spacedBack(after: string, before: string, source: string): string {
+  if (
+    !before.includes('\u00a0') ||
+    source.slice(0, before.length).replace(/[ \t]/g, '\u00a0') !==
+      before.replace(/[ \t]/g, '\u00a0')
+  ) {
+    return after;
+  }
+
+  let head = 0;
+
+  while (head < before.length && head < after.length && after[head] === before[head]) {
+    head += 1;
+  }
+
+  let tail = 0;
+
+  while (
+    tail < before.length - head &&
+    tail < after.length - head &&
+    after[after.length - 1 - tail] === before[before.length - 1 - tail]
+  ) {
+    tail += 1;
+  }
+
+  return (
+    source.slice(0, head) +
+    after.slice(head, after.length - tail) +
+    source.slice(before.length - tail, before.length)
+  );
 }
 
 /** What a composition changed: a run of text, or an empty block's contents. */

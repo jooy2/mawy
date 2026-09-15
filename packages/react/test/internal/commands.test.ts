@@ -233,16 +233,7 @@ describe('in a table', () => {
   it('makes no block of a row, which a cell has no room for', () => {
     const state = { value: 'Intro.\n\n| a | b |\n| - | - |', start: 12, end: 12 };
 
-    for (const command of [
-      'heading1',
-      'paragraph',
-      'quote',
-      'bulletList',
-      'orderedList',
-      'taskList',
-      'codeBlock',
-      'rule'
-    ] as const) {
+    for (const command of ['heading1', 'paragraph', 'quote', 'codeBlock', 'rule'] as const) {
       expect(runCommand(command, state)).toBe(state);
     }
 
@@ -250,6 +241,56 @@ describe('in a table', () => {
     expect(runCommand('bold', { ...state, start: 10, end: 11 }).value).toBe(
       'Intro.\n\n| **a** | b |\n| - | - |'
     );
+  });
+});
+
+describe('lists in a cell', () => {
+  const HEAD = '| h | i |\n| - | - |\n';
+  /** A row under a header, with `^` for the caret and `«»` around a selection. */
+  const row = (marked: string): EditState => {
+    const value = HEAD + marked.replace(/[\^«»]/g, '');
+    const caret = marked.indexOf('^');
+    const start = caret === -1 ? marked.indexOf('«') : caret;
+    const end = caret === -1 ? marked.indexOf('»') - 1 : caret;
+
+    return { value, start: HEAD.length + start, end: HEAD.length + end };
+  };
+  const list = (command: MawyCommand, marked: string): string => {
+    const { value, start, end } = runCommand(command, row(marked));
+    const shown =
+      start === end
+        ? `${value.slice(0, start)}^${value.slice(start)}`
+        : `${value.slice(0, start)}«${value.slice(start, end)}»${value.slice(end)}`;
+
+    return shown.slice(HEAD.length);
+  };
+
+  it('writes a marker at the start of the line of the cell the caret is on, or takes it off', () => {
+    // A list cannot be put in a cell, and the way one reads can: lines of the
+    // cell, each opening with an item's marker.
+    expect(list('bulletList', '| a^ | x |')).toBe('| - a^ | x |');
+    expect(list('taskList', '| a<br>^b | x |')).toBe('| a<br>- [ ] ^b | x |');
+    expect(list('bulletList', '| - a^ | x |')).toBe('| a^ | x |');
+    expect(list('orderedList', '| - a^ | x |')).toBe('| 1. a^ | x |');
+  });
+
+  it('gives a line with nothing on it a marker, set off from the pipe after it', () => {
+    expect(list('bulletList', '|  ^| x |')).toBe('| - ^ | x |');
+    expect(list('orderedList', '| 1. a<br>^ | x |')).toBe('| 1. a<br>2. ^ | x |');
+  });
+
+  it('numbers the lines a selection covers, again in every cell', () => {
+    expect(list('orderedList', '| «a<br><br>b | x» |')).toBe('| 1. «a<br><br>2. b | 1. x» |');
+  });
+
+  it('gives a row written without its outer pipes the one a marker would take', () => {
+    expect(list('bulletList', 'a^ | x')).toBe('| - a^ | x');
+  });
+
+  it('sees the list the lines of a cell are in', () => {
+    expect(commandActive('orderedList', row('| 1. a<br>2. b^ | x |'))).toBe(true);
+    expect(commandActive('bulletList', row('| 1. a<br>2. b^ | x |'))).toBe(false);
+    expect(commandActive('bulletList', row('| a^ | - x |'))).toBe(false);
   });
 });
 

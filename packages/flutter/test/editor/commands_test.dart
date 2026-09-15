@@ -175,9 +175,6 @@ void main() {
         MawyCommand.heading1,
         MawyCommand.paragraph,
         MawyCommand.quote,
-        MawyCommand.bulletList,
-        MawyCommand.orderedList,
-        MawyCommand.taskList,
         MawyCommand.codeBlock,
         MawyCommand.rule,
       ]) {
@@ -211,6 +208,63 @@ void main() {
         tableOfSize(const EditState('Intro.', 6, 6), 1, 3)?.value,
         'Intro.\n\n|  |\n| --- |\n|  |\n|  |',
       );
+    });
+  });
+
+  group('lists in a cell', () {
+    const String head = '| h | i |\n| - | - |\n';
+
+    /// A row under a header, with `^` for the caret and `«»` around a selection.
+    EditState row(String marked) {
+      final String value = head + marked.replaceAll(RegExp('[\\^«»]'), '');
+      final int caret = marked.indexOf('^');
+      final int start = caret == -1 ? marked.indexOf('«') : caret;
+      final int end = caret == -1 ? marked.indexOf('»') - 1 : caret;
+
+      return EditState(value, head.length + start, head.length + end);
+    }
+
+    String list(MawyCommand command, String marked) {
+      final EditState after = runCommand(command, row(marked));
+      final String value = after.value;
+      final String shown = after.start == after.end
+          ? '${value.substring(0, after.start)}^${value.substring(after.start)}'
+          : '${value.substring(0, after.start)}«${value.substring(after.start, after.end)}»'
+                '${value.substring(after.end)}';
+
+      return shown.substring(head.length);
+    }
+
+    test(
+      'writes a marker at the start of the line of the cell the caret is on, or takes it off',
+      () {
+        expect(list(MawyCommand.bulletList, '| a^ | x |'), '| - a^ | x |');
+        expect(list(MawyCommand.taskList, '| a<br>^b | x |'), '| a<br>- [ ] ^b | x |');
+        expect(list(MawyCommand.bulletList, '| - a^ | x |'), '| a^ | x |');
+        expect(list(MawyCommand.orderedList, '| - a^ | x |'), '| 1. a^ | x |');
+      },
+    );
+
+    test('gives a line with nothing on it a marker, set off from the pipe after it', () {
+      expect(list(MawyCommand.bulletList, '|  ^| x |'), '| - ^ | x |');
+      expect(list(MawyCommand.orderedList, '| 1. a<br>^ | x |'), '| 1. a<br>2. ^ | x |');
+    });
+
+    test('numbers the lines a selection covers, again in every cell', () {
+      expect(
+        list(MawyCommand.orderedList, '| «a<br><br>b | x» |'),
+        '| 1. «a<br><br>2. b | 1. x» |',
+      );
+    });
+
+    test('gives a row written without its outer pipes the one a marker would take', () {
+      expect(list(MawyCommand.bulletList, 'a^ | x'), '| - a^ | x');
+    });
+
+    test('sees the list the lines of a cell are in', () {
+      expect(commandActive(MawyCommand.orderedList, row('| 1. a<br>2. b^ | x |')), isTrue);
+      expect(commandActive(MawyCommand.bulletList, row('| 1. a<br>2. b^ | x |')), isFalse);
+      expect(commandActive(MawyCommand.bulletList, row('| a^ | - x |')), isFalse);
     });
   });
 
