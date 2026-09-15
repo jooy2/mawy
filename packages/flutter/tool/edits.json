@@ -268,5 +268,25 @@
   "one two",
   5,
   5
+ ],
+ [
+  "- one\n- two  \n  more\n\nAfter.",
+  20,
+  20
+ ],
+ [
+  "1. one\n   more",
+  14,
+  14
+ ],
+ [
+  "- one\n  - two\n    more",
+  22,
+  22
+ ],
+ [
+  "- one\n\n  ```\n  code\n  ```",
+  19,
+  19
  ]
 ]

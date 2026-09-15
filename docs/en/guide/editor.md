@@ -238,7 +238,7 @@ A number outside one to six is left out.
 
 Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and the toolbar button shows which are in force. Markers replace each other rather than stacking, so turning a numbered list into a bulleted one gives a bulleted list and not `- 1. item`. On a line with nothing on it yet, the lists, the quotation and the headings write their marker for the words still to come, and a caret stays among the words it was among rather than coming out selected around the line.
 
-`Enter` at the end of a list item carries the marker down and counts an ordered list on. Pressing it again on the item that is still empty takes the marker away instead of making another. Without that, leaving a list would mean deleting the bullet the editor had just added.
+`Enter` at the end of a list item carries the marker down and counts an ordered list on, from the line an item runs on over as well as from its first. Pressing it again on the item that is still empty takes the marker away instead of making another. Without that, leaving a list would mean deleting the bullet the editor had just added.
 
 The edits go in through the browser's own text-insertion command, which leaves the caret, the scroll position and any composition in progress exactly where they were. Writing the value directly guarantees none of that. Undo used to be the reason for this choice and is not any more; it has a section of its own below.
 

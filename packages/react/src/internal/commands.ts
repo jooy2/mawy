@@ -10,7 +10,7 @@
  * sounds obvious and is the half people leave out.
  */
 
-import type { MdNode, MdTable } from './markdown/ast.js';
+import type { MdListItem, MdNode, MdTable } from './markdown/ast.js';
 import { parseMarkdown } from './markdown/parse.js';
 
 export interface EditState {
@@ -512,7 +512,8 @@ export function continueList(state: EditState, definitionLists = true): EditStat
 
   const from = lineStartOf(state.value, state.start);
   const line = state.value.slice(from, state.start);
-  const item = ITEM.exec(line);
+  const own = ITEM.exec(line);
+  const item = own ?? ownerOf(state.value, from, state.start)?.item;
 
   if (!item) {
     return null;
@@ -524,7 +525,7 @@ export function continueList(state: EditState, definitionLists = true): EditStat
     return null;
   }
 
-  if (!content.trim()) {
+  if (own && !content.trim()) {
     // An empty item: the marker goes, and so does the list.
     return {
       value: state.value.slice(0, from) + state.value.slice(state.start),
@@ -544,6 +545,70 @@ export function continueList(state: EditState, definitionLists = true): EditStat
     start: state.start + text.length,
     end: state.start + text.length
   };
+}
+
+/** A line that might open a list item, somewhere in a document. */
+const ANY_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]/m;
+
+/**
+ * The first line of the list item a line of words carries on, read the way
+ * `ITEM` reads a line that opens one, or `null`.
+ *
+ * An item's words can run over more than one line — a hard break, a line
+ * wrapped by hand — and the second of those opens with no marker at all. `Enter`
+ * at its end made a paragraph under the list rather than the next item, which
+ * is the one place in a list where a list was not carried on. The parser says
+ * which item the line is in, so the marker is read off that item's first line.
+ *
+ * A blank line carries nothing on, and neither does code inside the item: a
+ * line of code is the characters it is. Only asked where a document has a line
+ * that could open a list somewhere in it, which is what spares the parse
+ * everywhere else.
+ */
+function ownerOf(
+  value: string,
+  from: number,
+  at: number
+): { first: number; item: RegExpExecArray } | null {
+  if (!value.slice(from, at).trim() || !ANY_ITEM.test(value)) {
+    return null;
+  }
+
+  const document = parseMarkdown(value);
+  const blocks = [...document.root.children, ...document.footnotes];
+  const owner = verbatimAt(blocks, at) ? null : itemNodeAt(blocks, at);
+
+  if (!owner) {
+    return null;
+  }
+
+  const first = lineStartOf(value, owner.range.start);
+  const end = value.indexOf('\n', first);
+  const item =
+    first === from ? null : ITEM.exec(value.slice(first, end === -1 ? value.length : end));
+
+  return item ? { first, item } : null;
+}
+
+/** The innermost list item a place is inside. */
+function itemNodeAt(nodes: readonly MdNode[], offset: number): MdListItem | null {
+  for (const node of nodes) {
+    if (offset < node.range.start || offset > node.range.end) {
+      continue;
+    }
+
+    const inside = 'children' in node ? itemNodeAt(node.children as MdNode[], offset) : null;
+
+    if (inside) {
+      return inside;
+    }
+
+    if (node.type === 'listItem') {
+      return node;
+    }
+  }
+
+  return null;
 }
 
 /* -------------------------------------------------------------------------

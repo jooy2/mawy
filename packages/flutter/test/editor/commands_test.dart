@@ -184,6 +184,13 @@ void main() {
       expect(show(continueList(at('- one|'), definitionLists: false)!), '- one\n- |');
     });
 
+    test('carries the marker down from the line an item runs on over', () {
+      expect(enter('- one\n- two  \n  more|\n\nAfter.'), '- one\n- two  \n  more\n- |\n\nAfter.');
+      expect(enter('1. one\n   more|'), '1. one\n   more\n2. |');
+      expect(enter('- one\n  - two\n    more|'), '- one\n  - two\n    more\n  - |');
+      expect(enter('- one\n\n  ```\n  code|\n  ```'), isNull);
+    });
+
     test('says nothing about a line that is not a list item', () {
       expect(enter('just text|'), isNull);
       expect(enter('- one «two»'), isNull);

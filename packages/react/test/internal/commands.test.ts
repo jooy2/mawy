@@ -246,6 +246,18 @@ describe('Enter, inside a list', () => {
     expect(enter('- one\n- |')).toBe('- one\n|');
   });
 
+  it('carries the marker down from the line an item runs on over', () => {
+    // A hard break, or a line wrapped by hand: the second line has no marker
+    // of its own and is still the item's.
+    expect(enter('- one\n- two  \n  more|\n\nAfter.')).toBe(
+      '- one\n- two  \n  more\n- |\n\nAfter.'
+    );
+    expect(enter('1. one\n   more|')).toBe('1. one\n   more\n2. |');
+    expect(enter('- one\n  - two\n    more|')).toBe('- one\n  - two\n    more\n  - |');
+    // Code inside an item is the characters it is.
+    expect(enter('- one\n\n  ```\n  code|\n  ```')).toBeNull();
+  });
+
   it('says nothing about a line that is not a list item', () => {
     expect(enter('just text|')).toBeNull();
     expect(enter('- one «two»')).toBeNull();

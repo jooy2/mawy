@@ -2311,6 +2311,25 @@ describe('the document surface', () => {
     }
   });
 
+  it('carries a list on from the line an item runs on over', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'- one\n- two  \n  more\n\nAfter.'}
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+
+    put(bodyOf(screen), 'more', 4);
+    await userEvent.keyboard('{Enter}x');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('- one\n- two  \n  more\n- x\n\nAfter.')
+    );
+    expect(bodyOf(screen).querySelectorAll('li')).toHaveLength(3);
+  });
+
   it('gives a list item up onto a paragraph the document has', async () => {
     const onChange = vi.fn();
     const screen = await render(

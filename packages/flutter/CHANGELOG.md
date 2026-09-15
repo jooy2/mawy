@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **`Enter` on the line a list item runs on over carries the list on.** An item's words can run over more than one line, after a hard break or wrapped by hand, and that second line has no marker of its own, so `Enter` at its end was a plain line ending instead of the next item. The marker is read off the first line of the item the parser says the line is in. Code inside an item is still the characters it is.
+
 - **A list, a quotation or a heading can be started on a line with nothing on it.** The toolbar's lists, the quotation and the headings left a blank line alone, so pressing one on an empty line did nothing, and a list could only be made out of words already written. On a line of its own each writes its marker now, with the caret after it for the words still to come. A caret, or a selection inside one line, also stays among the words it was among when a marker goes on or comes off, where it came out selected around the whole line and the next letter typed over the marker with the words. The React package's commands do the same, and the parity check compares the two.
 
 - **The name of a button against either edge of a toolbar is drawn on the screen.** A tooltip hung from the middle of its button, and the surface switch is against the editor's own edge, so the name of the first mode was drawn half past the edge of the overlay and cut to its last letters. A name that would reach past an edge is hung from the end of its button nearer that edge now, measured with the words it says.

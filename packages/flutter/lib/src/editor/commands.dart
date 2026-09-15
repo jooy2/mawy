@@ -525,7 +525,8 @@ EditState? continueList(EditState state, {bool definitionLists = true}) {
 
   final int from = state.start <= 0 ? 0 : state.value.lastIndexOf('\n', state.start - 1) + 1;
   final String line = state.value.substring(from, state.start);
-  final RegExpMatch? item = _item.firstMatch(line);
+  final RegExpMatch? own = _item.firstMatch(line);
+  final RegExpMatch? item = own ?? _ownerOf(state.value, from, state.start)?.item;
 
   if (item == null) {
     return null;
@@ -542,7 +543,7 @@ EditState? continueList(EditState state, {bool definitionLists = true}) {
     return null;
   }
 
-  if (content.trim().isEmpty) {
+  if (own != null && content.trim().isEmpty) {
     // An empty item: the marker goes, and so does the list.
     return EditState(
       state.value.substring(0, from) + state.value.substring(state.start),
@@ -562,6 +563,64 @@ EditState? continueList(EditState state, {bool definitionLists = true}) {
     state.start + text.length,
     state.start + text.length,
   );
+}
+
+/// A line that might open a list item, somewhere in a document.
+final RegExp _anyItem = RegExp(r'^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]', multiLine: true);
+
+/// The first line of the list item a line of words carries on, read the way
+/// [_item] reads a line that opens one, or `null`.
+///
+/// An item's words can run over more than one line — a hard break, a line
+/// wrapped by hand — and the second of those opens with no marker at all.
+/// `Enter` at its end made a paragraph under the list rather than the next
+/// item. The parser says which item the line is in, so the marker is read off
+/// that item's first line.
+///
+/// A blank line carries nothing on, and neither does code inside the item.
+/// Only asked where a document has a line that could open a list somewhere in
+/// it, which is what spares the parse everywhere else.
+({int first, RegExpMatch item})? _ownerOf(String value, int from, int at) {
+  if (value.substring(from, at).trim().isEmpty || !_anyItem.hasMatch(value)) {
+    return null;
+  }
+
+  final MdDocument document = parseMarkdown(value);
+  final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
+  final MdListItem? owner = _verbatimAt(blocks, at) ? null : _itemNodeAt(blocks, at);
+
+  if (owner == null) {
+    return null;
+  }
+
+  final int first = owner.range.start <= 0 ? 0 : value.lastIndexOf('\n', owner.range.start - 1) + 1;
+  final int end = value.indexOf('\n', first);
+  final RegExpMatch? item = first == from
+      ? null
+      : _item.firstMatch(value.substring(first, end == -1 ? value.length : end));
+
+  return item == null ? null : (first: first, item: item);
+}
+
+/// The innermost list item a place is inside.
+MdListItem? _itemNodeAt(List<MdNode> nodes, int offset) {
+  for (final MdNode node in nodes) {
+    if (offset < node.range.start || offset > node.range.end) {
+      continue;
+    }
+
+    final MdListItem? inside = _itemNodeAt(_blocksIn(node), offset);
+
+    if (inside != null) {
+      return inside;
+    }
+
+    if (node is MdListItem) {
+      return node;
+    }
+  }
+
+  return null;
 }
 
 /* -------------------------------------------------------------------------
