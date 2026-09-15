@@ -249,7 +249,7 @@ It is there because a platform's own find reaches a page of text and not the ins
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `linkRel`, `links`, `images`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives`, `anchorPrefix`, `headingBase`, `links` and `images` reach the drawn document as well.
+`parse`, `html`, `linkTarget`, `linkRel`, `links`, `images`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme` and `onColorSchemeChange` mean exactly what they mean on [`MawyViewer`](./mawy-viewer), and everything that describes a document is passed straight through to the preview. `directives`, `anchorPrefix`, `headingBase`, `links`, `images` and `highlight` reach the drawn document as well.
 
 On the drawn document, the link or picture the caret is in is written out as its source whatever `links` and `images` say, the way it always is, because that is where a caret can edit it. Under `hide` a link or a picture is not on the surface until the caret reaches it, which is what an editor showing a writer what readers will be shown asks for.
 

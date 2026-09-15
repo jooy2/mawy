@@ -6,6 +6,8 @@
 
 ### Added
 
+- **A code block on `wysiwyg` is coloured by `highlight`.** The highlighter reached the preview and never the drawn document, so a block with a language on its fence was plain code on the surface it was written on. The drawn document asks for the same highlighter the same lazy way now, and colours the blocks it draws; every token says where it came from, so a caret inside one maps back into the source as it does in plain code.
+
 - **A task's checkbox on `wysiwyg` ticks and unticks it.** The box was drawn disabled on the surface a document is written on as well as in the viewer. A press on it writes `[x]` or `[ ]` into the document now, in a task list and on a line of a table cell written as a task, and leaves the caret where it was. The preview, the viewer and a `readOnly` editor still draw a box that cannot be pressed.
 
 - **The whole table is deleted from the end of its bar.** A last control, in red and set off from the rest, takes out the lines the table is written on and one of the blank lines that set it off, leaving the caret where the table was. The command is `removeTable` among the table commands, `removeBlock` is the arithmetic behind it, and `MawyStrings` gained `tableRemove`. A control that takes something away whole is drawn in `--mawy-caution`.

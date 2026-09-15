@@ -420,7 +420,7 @@ The picture goes where the caret is when `insert` is called, which after a slow 
 
 ## Colour in the preview
 
-`highlight` is passed straight through to the viewer inside the preview, so a `split` or `preview` surface colours its code the way [the viewer does](./viewer#colouring-a-code-block). The lazy form works here too, and is the one to use:
+`highlight` is passed straight through to the viewer inside the preview, so a `split` or `preview` surface colours its code the way [the viewer does](./viewer#colouring-a-code-block), and the drawn document colours the code blocks it draws with the same highlighter. The lazy form works here too, and is the one to use:
 
 ```tsx
 <MawyEditor
@@ -429,7 +429,7 @@ The picture goes where the caret is when `insert` is called, which after a slow 
 />
 ```
 
-The **drawn document is not coloured**, and will not be. The source surface has a highlighter of its own for the Markdown. On the drawn surface every caret has to map back into the source, and a second reading of the characters inside a code block would break that mapping.
+**On the drawn document a code block is coloured as it is written in.** Every coloured token says where in the source it came from, the way every other element on that surface does, so a caret inside one maps back to the same character it would in plain code, and what is typed is coloured again with the next render. The source surface has a highlighter of its own for the Markdown, and a code block there is coloured as Markdown rather than as its language.
 
 ## Opening and saving
 

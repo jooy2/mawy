@@ -363,10 +363,9 @@ export interface MawyEditorProps extends Omit<
    */
   images?: MawyImagePolicy;
   /**
-   * What colours a fenced code block in the preview. The drawn document is not
-   * coloured and will not be: an editing surface where the caret has to find
-   * its way back into the source is not the place for a second opinion about
-   * what the characters are.
+   * What colours a fenced code block, in the preview and on the drawn document.
+   * Every coloured token on the drawn document says where it came from, so a
+   * caret inside one maps back into the source the way it does in plain code.
    */
   highlight?: MawyHighlight;
   /**
@@ -2626,6 +2625,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             <MawyEditorDocument
               ref={drawn}
               value={text}
+              highlight={highlight}
               onEdit={applyEdit}
               onSelect={readDrawnSelection}
               selection={selection}

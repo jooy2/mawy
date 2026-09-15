@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-react';
 import { MawyEditor, type MawyEditorHandle } from 'mawy-react';
 import { rowHeight, rowRect } from '../../../src/internal/source.js';
 import { PIXEL_HEX, wordHtml, wordRtf } from '../../support/word.js';
+import { mawyHighlighter } from '../../../src/highlight.js';
 // The one test file that needs the real stylesheet. The source surface is two
 // layers that have to lay out identically, and without the CSS there is only
 // one layout to check against itself.
@@ -3936,6 +3937,27 @@ describe('tables', () => {
         (box) => (box as HTMLInputElement).disabled
       )
     ).toBe(true);
+  });
+
+  it('colours a code block on the drawn document, and types into the colours', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'```ts\nconst a = 1;\n```'}
+        highlight={mawyHighlighter}
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+
+    await vi.waitFor(() =>
+      expect(bodyOf(screen).querySelector('code .mawy-hl-keyword')?.textContent).toBe('const')
+    );
+
+    put(bodyOf(screen), ' a ', 2);
+    await userEvent.keyboard('bc');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('```ts\nconst abc = 1;\n```'));
+    expect(bodyOf(screen).querySelector('code .mawy-hl-keyword')?.textContent).toBe('const');
   });
 
   it('draws a space typed after the last words of a line, where Markdown keeps none', async () => {

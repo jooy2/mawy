@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type {
   MawyDirectives,
+  MawyHighlight,
   MawyHtmlPolicy,
   MawyImageProps,
   MawyImagePolicy,
@@ -15,6 +16,7 @@ import type {
 import type { MawyCommand } from '../../internal/commands.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock, MdNode, MdRange } from '../../internal/markdown/ast.js';
+import { useHighlighter } from '../../internal/highlighter.js';
 import { LIVE } from '../../internal/markdown/live.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
 import {
@@ -46,6 +48,8 @@ import { caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/positio
 
 export interface MawyEditorDocumentProps {
   value: string;
+  /** What colours a code block that names its language. See `MawyEditor.highlight`. */
+  highlight?: MawyHighlight;
   onEdit: (edit: MawyEdit) => void;
   /** Where the caret is, in the document's own offsets. */
   onSelect: (selection: { start: number; end: number }) => void;
@@ -260,6 +264,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
   function MawyEditorDocument(
     {
       value,
+      highlight,
       onEdit,
       onSelect,
       selection,
@@ -354,6 +359,9 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     React.useImperativeHandle(ref, () => root.current as HTMLElement);
 
     const document_ = React.useMemo(() => parseMarkdown(value, options), [value, options]);
+    // The same highlighter the preview is given, asked for the same way: not
+    // until the document has a fenced code block with a language on it.
+    const highlighter = useHighlighter(highlight, document_);
     const blocks = React.useMemo(
       () => withRoom(document_.root.children, room, value),
       [document_, room, value]
@@ -423,6 +431,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     const context: RenderContext = React.useMemo(
       () => ({
         html,
+        highlighter,
         strings,
         footnotes,
         directives,
@@ -444,6 +453,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       }),
       [
         html,
+        highlighter,
         strings,
         footnotes,
         directives,
