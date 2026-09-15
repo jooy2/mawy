@@ -193,6 +193,15 @@ void main() {
       );
     });
 
+    test('leaves a pipe on every line of a table written without its outer ones', () {
+      String removed(String value, int at) =>
+          runTableCommand(MawyTableCommand.removeColumn, EditState(value, at, at))!.value;
+
+      expect(removed('a | b\n--- | ---\nc | d', 0), 'b |\n--- |\nd |');
+      expect(removed('a | b\n- | -\n1 | 2\n3 | 4', 21), 'a |\n- |\n1 |\n3 |');
+      expect(removed('> a | b | e\n> --- | --- | ---', 2), '> b | e\n> --- | ---');
+    });
+
     test('inserts a table of the size asked for, the header counted among the rows', () {
       expect(
         tableOfSize(const EditState('', 0, 0), 3, 1)?.value,

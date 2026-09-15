@@ -1637,13 +1637,20 @@ String _columnTakenFrom(String value, int anchor, int column) {
       // blank line and the end of the table.
       out = text.substring(0, from) + (line.opened || line.closed ? ' ' : '|') + text.substring(to);
     } else if (column < line.cells.length - 1 || line.closed) {
-      out = text.substring(0, from) + text.substring(to + 1);
+      // The cell and the pipe after it, and at the open front of a row the
+      // space the next cell's words were set off from that pipe with.
+      final String rest = text.substring(to + 1);
+
+      out = text.substring(0, from) + (column == 0 && !line.opened ? rest.trimLeft() : rest);
     } else {
       out = text.substring(0, from - 1).trimRight() + text.substring(to);
     }
 
-    // A header row with no pipe left in it is not a table's header any more.
-    return index == 0 && !out.contains('|') ? '${out.trimRight()} |' : out;
+    // A line with no pipe left in it is not a line of the table any more: a
+    // header without one is a paragraph, the delimiter row under it the
+    // underline of a heading, and a row of `-` a list item. A row written with
+    // no outer pipes is down to one when its second-last cell goes.
+    return RegExp(r'(?:^|[^\\])\|').hasMatch(out) ? out : '${out.trimRight()} |';
   });
 }
 

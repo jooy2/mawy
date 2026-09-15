@@ -526,8 +526,17 @@ describe('tables', () => {
     expect(table('removeColumn', TABLE.replace('b', 'b^'))).toBe(
       ['| a^ |', '| :-- |', '| c |'].join('\n')
     );
-    expect(table('removeColumn', 'a | b^\n--- | ---')).toBe('a^ |\n---');
+    expect(table('removeColumn', 'a | b^\n--- | ---')).toBe('a^ |\n--- |');
     expect(table('removeColumn', '| a^ |\n| --- |')).toBe(null);
+  });
+
+  it('leaves a pipe on every line of a table written without its outer ones', () => {
+    // The last pipe of a line is what makes it a line of the table: without
+    // one, the header is a paragraph and the delimiter row under it a heading's
+    // underline.
+    expect(table('removeColumn', 'a^ | b\n--- | ---\nc | d')).toBe('b^ |\n--- |\nd |');
+    expect(table('removeColumn', 'a | b\n- | -\n1 | 2\n3 | 4^')).toBe('a |\n- |\n1 |\n3^ |');
+    expect(table('removeColumn', '> a^ | b | e\n> --- | --- | ---')).toBe('> b^ | e\n> --- | ---');
   });
 
   it('carries the prefix of a quotation onto a row it adds', () => {

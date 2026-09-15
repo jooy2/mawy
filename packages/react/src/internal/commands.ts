@@ -1533,7 +1533,7 @@ function columnTakenFrom(value: string, anchor: number, column: number): string 
     return value;
   }
 
-  return rewriteLines(value, table.lines, (text, line, index) => {
+  return rewriteLines(value, table.lines, (text, line) => {
     const cell = line.cells[column];
 
     if (!cell) {
@@ -1549,13 +1549,20 @@ function columnTakenFrom(value: string, anchor: number, column: number): string 
       // blank line and the end of the table.
       out = text.slice(0, from) + (line.opened || line.closed ? ' ' : '|') + text.slice(to);
     } else if (column < line.cells.length - 1 || line.closed) {
-      out = text.slice(0, from) + text.slice(to + 1);
+      // The cell and the pipe after it, and at the open front of a row the
+      // space the next cell's words were set off from that pipe with.
+      const rest = text.slice(to + 1);
+
+      out = text.slice(0, from) + (column === 0 && !line.opened ? rest.trimStart() : rest);
     } else {
       out = text.slice(0, from - 1).trimEnd() + text.slice(to);
     }
 
-    // A header row with no pipe left in it is not a table's header any more.
-    return index === 0 && !out.includes('|') ? `${out.trimEnd()} |` : out;
+    // A line with no pipe left in it is not a line of the table any more: a
+    // header without one is a paragraph, the delimiter row under it the
+    // underline of a heading, and a row of `-` a list item. A row written with
+    // no outer pipes is down to one when its second-last cell goes.
+    return /(?:^|[^\\])\|/.test(out) ? out : `${out.trimEnd()} |`;
   });
 }
 
