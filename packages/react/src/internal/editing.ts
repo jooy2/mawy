@@ -671,6 +671,24 @@ function breakAt(
 }
 
 /**
+ * The characters that open a line of Markdown as something other than a
+ * paragraph, which a document is allowed to begin with. See `leadFor`.
+ */
+const OPENS_BLOCK = /^[#>*+\-`~|:<]/;
+
+/**
+ * The heading's marker the first words of an empty document are written
+ * after, or nothing when those words begin a block of their own.
+ *
+ * `-` typed into an empty document is a list about to be written, `#` a
+ * heading of a level somebody chose, and a heading's marker in front of either
+ * would take that choice away. See `MawyEditor.startWithHeading`.
+ */
+export function leadFor(lead: string, text: string): string {
+  return text.trim() && !OPENS_BLOCK.test(text) ? lead : '';
+}
+
+/**
  * Where a place on the page is in the document, preferring the caret's own
  * answer over the page's wherever it has one. See `MawyAim`.
  */
@@ -820,7 +838,8 @@ export function editFor(
   value: string,
   aim: MawyAim | null,
   options: MarkdownOptions = {},
-  drag: MawyDrag = { taken: null }
+  drag: MawyDrag = { taken: null },
+  lead = ''
 ): MawyEdit | null {
   const place = placeOf(root, value, aim);
   // Whatever a drag left waiting is for the drop that follows it immediately,
@@ -864,6 +883,13 @@ export function editFor(
           value: `${value.slice(0, from)} ${event.data} ${value.slice(start)}`,
           caret: from + 1 + event.data.length
         };
+      }
+
+      // The first words of an empty document, after its heading's marker.
+      const heading = lead && !value.trim() ? leadFor(lead, event.data) : '';
+
+      if (heading) {
+        return splice(value, start, end, heading + event.data);
       }
 
       // Into an empty paragraph with the blank lines that keep it one, where it

@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **The first words written into an empty document on `wysiwyg` are its heading.** A document is nearly always begun with its title, and an empty page took the title as a paragraph that had to be turned into a heading afterwards. The first character typed or composed into a document with nothing in it is written after `# ` now, or after the marker of the first level `headingLevels` offers. A marker typed first is left alone, so a document can still open with a list, a quotation or a heading of a level somebody chose, and `Mod`+`0` turns the heading back into body text. The source surface writes what is typed and nothing else. `startWithHeading={false}` turns it off, for an editor that is a comment box rather than a page.
+
 ### Fixed
 
 - **Every paragraph `Enter` makes on `wysiwyg` is drawn, and stays.** One empty paragraph was drawn where the caret had been left and nowhere else, so `Enter` pressed three times wrote six line endings and drew one paragraph, and the one it drew was gone as soon as the caret moved. The blank lines between blocks are drawn now: the one two blocks need is nothing on the page, and every second one past it is an empty paragraph, which is the shape `Enter` writes. At either end of the document the first blank line counts, and a second blank line left between two sections by hand is not a paragraph, so a document written elsewhere draws as it did. `Backspace` in an empty paragraph takes that paragraph out rather than joining the words on either side of every empty paragraph between them, and at the start of a block it takes the one above; `Delete` is the same from the other side. Giving a list item up writes the blank line that makes the paragraph the caret is left in, so the next letter is a paragraph rather than the item's lazy continuation, and a letter typed where the caret has only a room drawn for it brings the blank lines it needs with it.

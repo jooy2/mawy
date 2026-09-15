@@ -2328,7 +2328,71 @@ describe('the document surface', () => {
     put(body, '', 0);
     type(body, 'insertText', 'Hello');
 
-    expect(onChange).toHaveBeenLastCalledWith('Hello');
+    // Its heading, which is what a document is begun with. See the test below.
+    expect(onChange).toHaveBeenLastCalledWith('# Hello');
+  });
+
+  it('writes the first words of an empty document as its heading', async () => {
+    const cases: [React.ComponentProps<typeof MawyEditor>, string, string][] = [
+      [{}, 'Title', '# Title'],
+      // The first level the menu offers, where that is not the first there is.
+      [{ headingLevels: [2, 3, 4] }, 'Title', '## Title'],
+      // A marker typed first is a block somebody chose.
+      [{}, '-', '-'],
+      [{}, '>', '>'],
+      [{ startWithHeading: false }, 'Words', 'Words']
+    ];
+
+    for (const [props, typed, written] of cases) {
+      const onChange = vi.fn();
+      const screen = await render(<MawyEditor {...props} mode="wysiwyg" onChange={onChange} />);
+
+      put(bodyOf(screen), '', 0);
+      await userEvent.keyboard(typed);
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(written));
+      await screen.unmount();
+    }
+
+    // And the characters after the first go where they are typed, in the
+    // heading, rather than each after a marker of its own.
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Words." mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'Words.', 6);
+    await userEvent.keyboard('!');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Words.!'));
+  });
+
+  it('composes the first words of an empty document into its heading', async () => {
+    const onChange = vi.fn();
+    const screen = await render(<MawyEditor mode="wysiwyg" onChange={onChange} />);
+    const body = bodyOf(screen);
+    const room = body.children[0] as HTMLElement;
+    const selection = document.getSelection() as Selection;
+    const at = document.createRange();
+
+    body.focus();
+    at.setStart(room, 0);
+    at.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(at);
+
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    room.textContent = '제목';
+
+    const after = document.createRange();
+
+    after.setStart(room.firstChild as Text, 2);
+    after.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(after);
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '제목' }));
+
+    expect(onChange).toHaveBeenLastCalledWith('# 제목');
+    await vi.waitFor(() => expect(body.querySelector('h1')?.textContent).toBe('제목'));
   });
 
   it('types inside a list item, a quotation, a table cell and a code block', async () => {

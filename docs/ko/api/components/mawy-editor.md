@@ -95,6 +95,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | 툴바에 둘 컨트롤과 그 순서. |
 | `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3]` | `heading` 메뉴가 보여 주고 `Mod`+`1`~`Mod`+`6`이 닿는 제목 수준. |
+| `startWithHeading` | `boolean` | `true` | `wysiwyg`에서 빈 문서에 처음 쓰는 글을 `headingLevels`의 첫 수준 제목으로 쓸지. 기호를 먼저 입력하면 건드리지 않습니다. |
 | `frame` | [`MawyFrame`](../types/frame) | `'box'` | 에디터가 테두리를 두를지, 페이지 위에 뜰지. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | 툴바와 찾기 바가 어느 끝에 있을지. 상태 표시줄은 움직이지 않습니다. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | 상태 표시줄이 셀 것. |

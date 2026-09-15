@@ -95,6 +95,7 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | Which controls the toolbar has, and in what order. |
 | `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3]` | Which heading levels the `heading` menu offers and `Mod`+`1` to `Mod`+`6` reach. |
+| `startWithHeading` | `boolean` | `true` | Whether the first words written into an empty document on `wysiwyg` are its heading, at the first level `headingLevels` offers. A marker typed first is left alone. |
 | `frame` | [`MawyFrame`](../types/frame) | `'box'` | Whether the editor has a frame around it, or floats in the page. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | Which end the toolbar and the find bar are at. The status bar does not move. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | What the status bar counts. |
