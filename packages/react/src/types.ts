@@ -316,6 +316,11 @@ export interface MawyStrings {
   tableAlignCenter: string;
   tableAlignRight: string;
   tableRemove: string;
+  codeLanguage: string;
+  codeLanguageNone: string;
+  codeBlockRemove: string;
+  alert: string;
+  alertRemove: string;
   thematicBreak: string;
   status: string;
   /** `%L` is the line and `%C` the column, both counted from one. */

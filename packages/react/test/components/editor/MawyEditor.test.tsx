@@ -3292,6 +3292,96 @@ describe('the document surface', () => {
  * Tables, which somebody who does not know the pipe syntax still has to be
  * able to make and grow.
  */
+describe('the bars over a code block and an alert', () => {
+  it('names the language of a code block from a menu, and deletes the block', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n```ts\nconst a = 1;\n```\n\nAfter.';
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={{ height: 500 }}
+      />
+    );
+    const code = bodyOf(screen).querySelector('code') as HTMLElement;
+
+    bodyOf(screen).focus();
+    document.getSelection()?.collapse(code.firstChild, 2);
+
+    // Over the block, with the language the fence names.
+    await vi.waitFor(() =>
+      expect(page.getByRole('button', { name: 'Language: ts' }).element()).toBeInTheDocument()
+    );
+
+    const bar = screen.container.querySelector('.mawy-block-tools')!.getBoundingClientRect();
+
+    expect(bar.bottom).toBeLessThanOrEqual(
+      bodyOf(screen).querySelector('.mawy-md-pre')!.getBoundingClientRect().top
+    );
+
+    await userEvent.click(page.getByRole('button', { name: 'Language: ts' }));
+    await userEvent.click(page.getByRole('radio', { name: 'python' }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(source.replace('```ts', '```python'))
+    );
+    // And the focus back on the document, at the caret it had.
+    await vi.waitFor(() => expect(document.activeElement).toBe(bodyOf(screen)));
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete the code block' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Intro.\n\nAfter.'));
+    expect(screen.container.querySelector('.mawy-block-tools')).toBe(null);
+  });
+
+  it('makes an alert another kind, and deletes it', async () => {
+    const onChange = vi.fn();
+    const source = 'Intro.\n\n> [!NOTE]\n> Worth knowing.\n\nAfter.';
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={{ height: 500 }}
+      />
+    );
+
+    put(bodyOf(screen), 'Worth knowing.', 3);
+    await vi.waitFor(() =>
+      expect(page.getByRole('button', { name: 'Note' }).element()).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+
+    await userEvent.click(page.getByRole('button', { name: 'Warning' }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(source.replace('[!NOTE]', '[!WARNING]'))
+    );
+    expect(document.activeElement).toBe(bodyOf(screen));
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete the alert' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Intro.\n\nAfter.'));
+  });
+
+  it('hangs no bar over a plain quotation, on the source, or in an editor that is read', async () => {
+    const plain = await render(
+      <MawyEditor defaultValue={'> Quoted.\n\n```ts\ncode\n```'} mode="wysiwyg" />
+    );
+
+    put(bodyOf(plain), 'Quoted.', 2);
+    await new Promise((done) => setTimeout(done, 50));
+    expect(plain.container.querySelector('.mawy-block-tools')).toBe(null);
+    await plain.unmount();
+
+    const source = await render(<MawyEditor defaultValue={'```ts\ncode\n```'} mode="plain" />);
+
+    sourceOf(source).focus();
+    sourceOf(source).setSelectionRange(8, 8);
+    await new Promise((done) => setTimeout(done, 50));
+    expect(source.container.querySelector('.mawy-block-tools')).toBe(null);
+  });
+});
+
 describe('tables', () => {
   /** A shortcut with every modifier it asks for, `Mod` included. */
   const press = (

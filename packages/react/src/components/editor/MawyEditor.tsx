@@ -64,6 +64,8 @@ import {
   type MawyStep
 } from '../../internal/history.js';
 import { FilePicker } from '../../internal/controls.js';
+import { BlockTools } from '../../internal/blockTools.js';
+import type { MawyBlockTarget } from '../../internal/overlays.js';
 import { movePlace, type MawyChange, type MawyPlace } from '../../internal/places.js';
 
 /** A file on its way into the document, and where it is going. */
@@ -203,6 +205,50 @@ function lineAt(value: string, offset: number): number {
   }
 
   return line;
+}
+
+/**
+ * Where a bar floats beside something in a pane: under it, or over it where
+ * there is no room under it in the pane or on the screen — or over it first,
+ * for a bar that belongs over a block — starting at a place across and running
+ * the way the line reads, or back from it where the pane has no room that way.
+ *
+ * `reversed` says it runs back, which the table's bar answers by laying its
+ * controls out the other way round. Inside the pane where the pane has a height
+ * of its own to scroll in: an editor given no height is as tall as what is in
+ * it, and there is nothing of the pane to keep the bar inside.
+ */
+function floated(
+  pane: HTMLElement,
+  anchor: { top: number; bottom: number; x: number },
+  bar: HTMLElement | null,
+  over = false
+): { top: number; left: number; reversed: boolean } {
+  const room = pane.getBoundingClientRect();
+  const rtl = getComputedStyle(pane).direction === 'rtl';
+  const tall = bar?.offsetHeight || 34;
+  const wide = bar?.offsetWidth || 280;
+  const floor = Math.min(
+    room.height > tall + 8 ? room.height : Infinity,
+    (pane.ownerDocument.defaultView?.innerHeight ?? Infinity) - room.top
+  );
+  const ceiling = Math.max(0, -room.top);
+  const below = anchor.bottom - room.top + 8;
+  const above = anchor.top - room.top - 8 - tall;
+  const top = over
+    ? above >= ceiling + 4
+      ? above
+      : Math.max(ceiling + 4, Math.min(anchor.top - room.top + 8, floor - tall - 4))
+    : below + tall <= floor - 4 || above < ceiling + 4
+      ? Math.max(ceiling + 4, Math.min(below, floor - tall - 4))
+      : above;
+  const onwards = (rtl ? anchor.x - wide + 12 : anchor.x - 12) - room.left;
+  const backwards = (rtl ? anchor.x - 12 : anchor.x + 12 - wide) - room.left;
+  const fits = rtl ? onwards >= 4 : onwards + wide <= room.width - 4;
+  const reversed = !fits && (rtl ? backwards + wide <= room.width - 4 : backwards >= 4);
+  const left = Math.max(4, Math.min(reversed ? backwards : onwards, room.width - wide - 4));
+
+  return { top, left, reversed };
 }
 
 /** One empty list for every render that holds no formatting, rather than one each. */
@@ -1339,31 +1385,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
-    const tall = tools.current?.offsetHeight || 34;
-    const wide = tools.current?.offsetWidth || 280;
-    // Inside the pane where the pane has a height of its own to scroll in, and
-    // inside the screen. An editor given no height is as tall as what is in it,
-    // and there is nothing of the pane to keep the bar inside.
-    const floor = Math.min(
-      room.height > tall + 8 ? room.height : Infinity,
-      (pane.ownerDocument.defaultView?.innerHeight ?? Infinity) - room.top
-    );
-    const ceiling = Math.max(0, -room.top);
-    const below = anchor.bottom - room.top + 8;
-    const above = anchor.top - room.top - 8 - tall;
-    const top =
-      below + tall <= floor - 4 || above < ceiling + 4
-        ? Math.max(ceiling + 4, Math.min(below, floor - tall - 4))
-        : above;
     // Starting at the caret and running the way the line reads, or, where the
     // pane has no room for that, ending at the caret and running back, with its
     // controls the other way round so the ones that delete are still the end
     // away from the caret.
-    const onwards = (rtl ? anchor.x - wide + 12 : anchor.x - 12) - room.left;
-    const backwards = (rtl ? anchor.x - 12 : anchor.x + 12 - wide) - room.left;
-    const fits = rtl ? onwards >= 4 : onwards + wide <= room.width - 4;
-    const reversed = !fits && (rtl ? backwards + wide <= room.width - 4 : backwards >= 4);
-    const left = Math.max(4, Math.min(reversed ? backwards : onwards, room.width - wide - 4));
+    const { top, left, reversed } = floated(pane, anchor, tools.current);
 
     setToolsAt((was) =>
       was && was.top === top && was.left === left && was.reversed === reversed
@@ -1402,6 +1428,123 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       observer?.disconnect();
     };
   }, [placeTools, showDocument, tableHere]);
+
+  /*
+   * The bar over a code block or an alert on the drawn document, where the caret
+   * is in one and not in a table, whose own bar is nearer what is being written.
+   */
+  const [blockTarget, setBlockTarget] = React.useState<MawyBlockTarget | null>(null);
+  const [blockAt, setBlockAt] = React.useState<{ top: number; left: number } | null>(null);
+  const blockBar = React.useRef<HTMLDivElement>(null);
+  const readTarget = React.useCallback((next: MawyBlockTarget | null) => {
+    setBlockTarget((was) => (JSON.stringify(was) === JSON.stringify(next) ? was : next));
+  }, []);
+  const blockHere =
+    showDocument &&
+    editable &&
+    focused &&
+    !tableHere &&
+    (blockTarget?.kind === 'code' || blockTarget?.kind === 'alert')
+      ? blockTarget
+      : null;
+
+  /** Over the block's top edge at its inline end, and inside its top where there is no room over it. */
+  const placeBlock = React.useCallback(() => {
+    const pane = documentPane.current;
+    const element =
+      blockHere &&
+      [...(drawn.current?.querySelectorAll('[data-mawy-range]') ?? [])].find((each) => {
+        const range = rangeOf(each);
+
+        return range?.start === blockHere.range.start && range.end === blockHere.range.end;
+      });
+
+    if (!pane || !element) {
+      setBlockAt(null);
+
+      return;
+    }
+
+    const box = element.getBoundingClientRect();
+    const wide = blockBar.current?.offsetWidth || 200;
+    const rtl = getComputedStyle(pane).direction === 'rtl';
+    const { top, left } = floated(
+      pane,
+      { top: box.top, bottom: box.bottom, x: rtl ? box.left + wide - 12 : box.right - wide + 12 },
+      blockBar.current,
+      true
+    );
+
+    setBlockAt((was) => (was && was.top === top && was.left === left ? was : { top, left }));
+  }, [blockHere]);
+
+  React.useLayoutEffect(() => {
+    placeBlock();
+  });
+
+  React.useEffect(() => {
+    const pane = documentPane.current;
+
+    if (!blockHere || !pane) {
+      return;
+    }
+
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => placeBlock());
+
+    pane.addEventListener('scroll', placeBlock, true);
+    observer?.observe(pane);
+
+    if (drawn.current) {
+      observer?.observe(drawn.current);
+    }
+
+    return () => {
+      pane.removeEventListener('scroll', placeBlock, true);
+      observer?.disconnect();
+    };
+  }, [blockHere, placeBlock]);
+
+  /** The document the last render was given, for an edit a bar made against an older one. */
+  const latestText = React.useRef(text);
+
+  React.useLayoutEffect(() => {
+    latestText.current = text;
+  });
+
+  const blockEdit = React.useCallback(
+    (edit: MawyEdit | null, from: string, refocus: boolean) => {
+      if (readOnly || from !== latestText.current) {
+        return;
+      }
+
+      if (edit) {
+        applyEdit(edit);
+      }
+
+      if (refocus) {
+        // After whatever handed the focus to a control of its own on the way
+        // out, which a menu picking a value does.
+        requestAnimationFrame(() => drawn.current?.focus({ preventScroll: true }));
+      }
+    },
+    [applyEdit, readOnly]
+  );
+
+  const blockTools =
+    blockHere && blockAt ? (
+      <BlockTools
+        key={`${blockHere.kind}:${blockHere.range.start}`}
+        ref={blockBar}
+        target={blockHere}
+        strings={strings}
+        value={text}
+        caret={selection.start}
+        top={blockAt.top}
+        left={blockAt.left}
+        onEdit={blockEdit}
+      />
+    ) : null;
 
   const tableTools =
     tableHere && toolsAt ? (
@@ -2655,6 +2798,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
                   : ''
               }
               onImages={onUploadImage ? addImages : undefined}
+              onTarget={readTarget}
             />
             {cellsSelected && cellsAt ? (
               // The cells, marked as cells: a selection that runs across a
@@ -2663,6 +2807,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               <div className="mawy-table-cells" aria-hidden="true" style={cellsAt} />
             ) : null}
             {tableTools}
+            {blockTools}
           </div>
         ) : null}
 

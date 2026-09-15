@@ -6,6 +6,8 @@
 
 ### Added
 
+- **A code block and an alert on `wysiwyg` have a bar of their own.** The language on a fence and the kind in `[!NOTE]` were nowhere on the drawn document to change. With the caret in a fenced code block, a bar floats over the block's top edge with a menu of languages, `Plain text` for none, and a red control that deletes the block; picking a language writes it on the opening fence and gives the focus back to the document. With the caret in an alert, the bar has the five kinds, the current one pressed, and a red control that deletes the alert. A table's own bar is shown instead where the caret is in a table. `MawyStrings` gained `codeLanguage`, `codeLanguageNone`, `codeBlockRemove`, `alert` and `alertRemove`.
+
 - **A code block on `wysiwyg` is coloured by `highlight`.** The highlighter reached the preview and never the drawn document, so a block with a language on its fence was plain code on the surface it was written on. The drawn document asks for the same highlighter the same lazy way now, and colours the blocks it draws; every token says where it came from, so a caret inside one maps back into the source as it does in plain code.
 
 - **A task's checkbox on `wysiwyg` ticks and unticks it.** The box was drawn disabled on the surface a document is written on as well as in the viewer. A press on it writes `[x]` or `[ ]` into the document now, in a task list and on a line of a table cell written as a task, and leaves the caret where it was. The preview, the viewer and a `readOnly` editor still draw a box that cannot be pressed.

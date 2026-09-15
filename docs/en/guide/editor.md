@@ -119,6 +119,8 @@ There is no second model behind it. What is on screen is a drawing of the Markdo
 <MawyEditor defaultValue={document} modes={['plain', 'split', 'preview']} />
 ```
 
+**A code block and an alert have a bar of their own.** With the caret in a fenced code block, a small bar floats over the block's top edge at its far end: a menu that names the block's language, `Plain text` among them for none, and, in red, deleting the block. Picking a language writes it on the opening fence and puts the focus back on the document where the caret was. With the caret in an alert, the bar has the five kinds, the one the alert is drawn pressed, and deleting the alert; a press changes `[!NOTE]` into the kind pressed. A table the caret is in has its own bar instead, nearer the row being written in. The source shows all of this as characters, and has no such bars.
+
 **A task's checkbox ticks and unticks it.** On the drawn document a press on the box writes `[x]` or `[ ]` into the source, in a task list and on a line of a table cell written as a task, and leaves the caret where it was. The preview and the viewer are a document being read, and their boxes cannot be pressed; neither can the drawn document's with `readOnly`.
 
 **The document is as wide as its pane**, and so is the preview, where the viewer keeps to the measure, because the edges of what can be typed in are the edges of the editor and the preview is that document. `--mawy-doc-edit-measure` gives both a measure of their own, and a press in the room either side of that measure still puts the caret on the line beside it. No ring is drawn around the document while it has the focus, which is the source surface's rule as well: the caret already says where the focus is.

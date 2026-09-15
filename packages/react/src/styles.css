@@ -2043,6 +2043,13 @@
   margin: 0 3px;
 }
 
+/* A menu on a floating bar, a code block's languages, runs down over what is
+ * under the bar and scrolls where it is longer than a screen can show. */
+.mawy-root .mawy-block-tools .mawy-menu-panel {
+  max-height: min(20rem, 60vh);
+  overflow: auto;
+}
+
 /* Cells selected across a table, marked as the rectangle the commands act on,
  * with the browser's own mark of the text under it taken away. */
 .mawy-root .mawy-table-cells {

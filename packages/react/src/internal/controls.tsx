@@ -36,7 +36,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
         .join(' ')}
       // A label rather than a tip alone: a tooltip is not read out, and an
       // icon with nothing else in it is a button with no name.
-      aria-label={text ? undefined : label}
+      aria-label={text ? rest['aria-label'] : label}
       // The library's own tooltip rather than the browser's `title`, which
       // waits a second before it appears and is drawn by the operating system
       // in whatever the operating system draws. See `--mawy-tip` in the
@@ -53,6 +53,8 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
 export interface MenuProps {
   label: string;
   icon: React.ReactNode;
+  /** Words drawn beside the icon, for a menu whose button says what is chosen. */
+  text?: string;
   /** Off in the modes where what the menu holds has nothing to act on. */
   disabled?: boolean;
   /**
@@ -107,7 +109,7 @@ export function useDismiss(): (() => void) | null {
  * on and the component does not honour is worse than no role at all.
  */
 export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu(
-  { label, icon, disabled, children, tabIndex, onFocus },
+  { label, icon, text, disabled, children, tabIndex, onFocus },
   ref
 ) {
   const [open, setOpen] = React.useState(false);
@@ -168,6 +170,10 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
         ref={button}
         label={label}
         icon={icon}
+        text={text}
+        // A button that says what is chosen is named for what it chooses as
+        // well, or it is read out as a language and nothing else.
+        aria-label={text ? `${label}: ${text}` : undefined}
         pressed={open}
         disabled={disabled}
         tabIndex={tabIndex}

@@ -44,10 +44,13 @@ import {
 } from '../../internal/editing.js';
 import { fileFromDataUrl, pastedImagesIn } from '../../internal/images.js';
 import { pasteFromHtml } from '../../internal/markdown/paste.js';
+import { targetAt, type MawyBlockTarget } from '../../internal/overlays.js';
 import { caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
   value: string;
+  /** Told what the caret is inside, of the things a floating bar is for. See `targetAt`. */
+  onTarget?: (target: MawyBlockTarget | null) => void;
   /** What colours a code block that names its language. See `MawyEditor.highlight`. */
   highlight?: MawyHighlight;
   onEdit: (edit: MawyEdit) => void;
@@ -264,6 +267,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
   function MawyEditorDocument(
     {
       value,
+      onTarget,
       highlight,
       onEdit,
       onSelect,
@@ -426,6 +430,23 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         now.onEdit({ value: next, caret: selectionRef.current.start });
       }
     }, []);
+    /**
+     * What the caret is inside, of the things a floating bar is for, told to
+     * the editor, which hangs the bar. Only while there is a caret to be inside
+     * anything and a document it could change.
+     */
+    const target = React.useMemo(
+      () =>
+        focused && !readOnly
+          ? targetAt(document_.root.children, selection.start, selection.end, value)
+          : null,
+      [document_, focused, readOnly, selection.end, selection.start, value]
+    );
+
+    React.useEffect(() => {
+      onTarget?.(target);
+    }, [onTarget, target]);
+
     /** Which picture is fetched with the page rather than when it is reached. */
     const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
     const context: RenderContext = React.useMemo(
