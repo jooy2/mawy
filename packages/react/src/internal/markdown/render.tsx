@@ -715,7 +715,12 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
 
       case 'inlineCode':
         return (
-          <code key={index} className="mawy-md-code" {...origin(node, context)}>
+          <code
+            key={index}
+            className="mawy-md-code"
+            spellCheck={context.editing ? false : undefined}
+            {...origin(node, context)}
+          >
             {marked(node, node.value, context)}
           </code>
         );
@@ -1230,7 +1235,13 @@ export function drawnCode(
           whether it overflows is a question about the width it is drawn at, and
           answering it would mean measuring every code block on every resize —
           which is a great deal of work to save a keyboard one press. */}
-      <pre tabIndex={context.editing ? undefined : 0}>
+      {/* No spelling checked in code on the surface being written in: a
+          browser underlines every name and path it does not know, and in code
+          that is most of them. */}
+      <pre
+        tabIndex={context.editing ? undefined : 0}
+        spellCheck={context.editing ? false : undefined}
+      >
         {/* The range on the `code` rather than only on the box around it: the
             box holds the fences and the copy button as well, and a caret in an
             empty block would otherwise have the backticks for an address. */}

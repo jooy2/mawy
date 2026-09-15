@@ -36,6 +36,8 @@
 
 ### Fixed
 
+- **Code on `wysiwyg` is not spell-checked.** The browser underlined every name, path and keyword in a code block and in inline code on the surface being written in, since most of what is in code is not a word it knows. Neither is checked there now; the source surface is unchanged.
+
 - **The editor's preview is as wide as its pane.** It kept to the viewer's measure, 44rem, which in `preview` on a wide screen was a narrow column in the middle of an empty pane. It takes `--mawy-doc-edit-measure` now, the property the drawn document takes, which is no measure at all unless an application gives one.
 
 - **A space typed after the last word of a paragraph, a heading, a list item or a table cell on `wysiwyg` is on the page.** Markdown keeps no whitespace at the end of a block, so the space was in the document and nowhere on the page, and the caret stayed where it was until the next word arrived; in a cell, `1.` and a space looked like a keystroke that did nothing. The spaces between the last word and the caret are drawn while the caret is after them.
