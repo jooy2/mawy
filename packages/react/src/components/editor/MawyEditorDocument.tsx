@@ -1142,7 +1142,40 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       const forwards = event.key === 'ArrowDown' || event.key === 'ArrowRight';
       const across = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
       const host = node.nodeType === 1 ? (node as Element) : node.parentElement;
-      const holder = host?.closest('pre, tr');
+      const cell = across ? null : host?.closest<HTMLTableCellElement>('td, th');
+
+      // Up and down in a table, which is a line of the cell and then the cell
+      // above or below. A browser asked to move a caret down out of a cell
+      // moves it into the next cell of the same row, which is the next thing
+      // after it in the tree and nowhere near under it.
+      if (cell && element.contains(cell)) {
+        const x = caretBox(selection)?.left ?? cell.getBoundingClientRect().left;
+
+        event.preventDefault();
+
+        if (lineInCell(selection, cell, forwards)) {
+          return;
+        }
+
+        const row = cell.parentElement as HTMLTableRowElement;
+        const edit = edgeOf(row, node, offset, forwards, false) ? opened(element, forwards) : null;
+
+        if (edit) {
+          onEdit(edit);
+
+          return;
+        }
+
+        const place = cellBeside(cell, forwards, x) ?? pastTable(element, cell, forwards, x);
+
+        if (place) {
+          put(element, place);
+        }
+
+        return;
+      }
+
+      const holder = host?.closest('pre');
 
       if (holder && element.contains(holder) && edgeOf(holder, node, offset, forwards, across)) {
         const edit = opened(element, forwards);
@@ -1150,12 +1183,22 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         if (edit) {
           event.preventDefault();
           onEdit(edit);
-        }
 
-        return;
+          return;
+        }
       }
 
       if (!across) {
+        // Into a table from the line above it or below it, which a browser
+        // takes to the last cell of the row it arrives in rather than the one
+        // under the caret.
+        const into = intoTable(element, selection, forwards);
+
+        if (into) {
+          event.preventDefault();
+          put(element, into);
+        }
+
         return;
       }
 
@@ -1358,6 +1401,199 @@ function lastBlock(element: HTMLElement): Element | null {
   }
 
   return last;
+}
+
+/**
+ * Where a caret is drawn, or the box of what it is beside where it is on an
+ * element between two things and has no box of its own.
+ */
+function caretBox(selection: Selection): DOMRect | null {
+  if (!selection.rangeCount) {
+    return null;
+  }
+
+  const range = selection.getRangeAt(0);
+  const own = range.getClientRects()[0];
+
+  if (own) {
+    return own;
+  }
+
+  const node = range.startContainer;
+  const beside = node.childNodes[range.startOffset] ?? node.childNodes[range.startOffset - 1];
+  const holder = beside ?? node;
+
+  if (holder.nodeType === 1) {
+    return (holder as Element).getBoundingClientRect();
+  }
+
+  const around = node.ownerDocument?.createRange();
+
+  around?.selectNodeContents(holder);
+
+  return around?.getClientRects()[0] ?? null;
+}
+
+/**
+ * The caret moved a line up or down inside the cell it is in, and whether there
+ * was a line there to move it to.
+ *
+ * The browser's own step, because what a line is — a line break, words wrapped
+ * at the edge of the cell — is the layout's question. It is taken back where it
+ * left the cell or did not change the line.
+ */
+function lineInCell(selection: Selection, cell: Element, forwards: boolean): boolean {
+  const node = selection.anchorNode;
+  const offset = selection.anchorOffset;
+  const was = caretBox(selection);
+
+  if (!node || !was || typeof selection.modify !== 'function') {
+    return false;
+  }
+
+  selection.modify('move', forwards ? 'forward' : 'backward', 'line');
+
+  const now = caretBox(selection);
+
+  if (
+    selection.anchorNode &&
+    cell.contains(selection.anchorNode) &&
+    now &&
+    (forwards ? now.top > was.top + 1 : now.top < was.top - 1)
+  ) {
+    return true;
+  }
+
+  selection.collapse(node, offset);
+
+  return false;
+}
+
+/**
+ * The place on the first line of a block, or its last, nearest a point across.
+ *
+ * Asked of the page at that point, and the block's own edge where the page
+ * answers with somewhere else — a block out of view answers with nothing.
+ */
+function lineOf(block: Element, first: boolean, x: number): { node: Node; offset: number } {
+  const box = block.getBoundingClientRect();
+  const style = getComputedStyle(block);
+  const length = (name: string) => Number.parseFloat(style.getPropertyValue(name)) || 0;
+  const line = length('line-height') || length('font-size') * 1.5;
+  const y = first
+    ? box.top + length('border-top-width') + length('padding-top') + line / 2
+    : box.bottom - length('border-bottom-width') - length('padding-bottom') - line / 2;
+  const left = box.left + length('padding-left') + 1;
+  const right = box.right - length('padding-right') - 1;
+  const point = caretFromPoint(Math.min(Math.max(x, left), Math.max(left, right)), y);
+
+  if (point && block.contains(point.node)) {
+    return point;
+  }
+
+  block.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+
+  return { node: block, offset: first ? 0 : block.childNodes.length };
+}
+
+/** The cell under a cell, or over it, in the same column. */
+function cellBeside(
+  cell: HTMLTableCellElement,
+  forwards: boolean,
+  x: number
+): { node: Node; offset: number } | null {
+  const row = cell.parentElement as HTMLTableRowElement;
+  const rows = [...(cell.closest('table')?.rows ?? [])];
+  const next = rows[rows.indexOf(row) + (forwards ? 1 : -1)];
+  const into = next?.cells[Math.min(cell.cellIndex, next.cells.length - 1)];
+
+  return into ? lineOf(into, forwards, x) : null;
+}
+
+/**
+ * Where a line up or down from the caret is, where that line is in a table: the
+ * cell of the table's first row or its last nearest the caret across. `null`
+ * where the line is not in a table, with the caret left where it was.
+ */
+function intoTable(
+  element: HTMLElement,
+  selection: Selection,
+  forwards: boolean
+): { node: Node; offset: number } | null {
+  const node = selection.anchorNode;
+  const offset = selection.anchorOffset;
+  const x = caretBox(selection)?.left;
+
+  if (!node || x === undefined || typeof selection.modify !== 'function') {
+    return null;
+  }
+
+  selection.modify('move', forwards ? 'forward' : 'backward', 'line');
+
+  const landed = selection.anchorNode;
+  const table = (landed?.nodeType === 1 ? (landed as Element) : landed?.parentElement)?.closest(
+    'table'
+  );
+
+  selection.collapse(node, offset);
+
+  const row =
+    table && element.contains(table) ? table.rows[forwards ? 0 : table.rows.length - 1] : null;
+  const cells = row ? [...row.cells] : [];
+  const apart = (cell: Element) => {
+    const box = cell.getBoundingClientRect();
+
+    return x < box.left ? box.left - x : x > box.right ? x - box.right : 0;
+  };
+  const into = cells.reduce<HTMLTableCellElement | null>(
+    (best, cell) => (!best || apart(cell) < apart(best) ? cell : best),
+    null
+  );
+
+  return into ? lineOf(into, forwards, x) : null;
+}
+
+/**
+ * The first place after a table a caret can be, going down from its last row,
+ * or the last before it going up from its header.
+ */
+function pastTable(
+  element: HTMLElement,
+  cell: Element,
+  forwards: boolean,
+  x: number
+): { node: Node; offset: number } | null {
+  const table = cell.closest('.mawy-md-table-scroll') ?? cell.closest('table');
+
+  if (!table) {
+    return null;
+  }
+
+  const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_ALL);
+
+  walker.currentNode = table;
+
+  for (
+    let node = forwards ? walker.nextNode() : walker.previousNode();
+    node;
+    node = forwards ? walker.nextNode() : walker.previousNode()
+  ) {
+    if (table.contains(node) || node.contains(table)) {
+      continue;
+    }
+
+    const block = blockAt(element, node);
+
+    if (
+      block &&
+      ((node.nodeType === 3 && (node as Text).data.trim()) ||
+        (node === block && !block.textContent))
+    ) {
+      return lineOf(block, forwards, x);
+    }
+  }
+
+  return null;
 }
 
 /**

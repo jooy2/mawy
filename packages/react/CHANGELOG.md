@@ -20,6 +20,8 @@
 
 ### Fixed
 
+- **`ArrowUp` and `ArrowDown` move up and down a table on `wysiwyg`.** A browser moving a caret down out of a cell moves it into the next cell of the same row, which is the next thing in the tree, so the arrows went across a table rather than down it, and into one from the line above or below they went to the last cell of the row. They go a line of the cell at a time now, then to the cell above or below in the same column at the caret's place across, and from the last row or the header to the line after or before the table.
+
 - **Composing after a line break in a table cell no longer takes `wysiwyg` down, and composing over a selection keeps what the selection was in.** A Korean syllable typed on the line a `<br>` starts in a cell went into a run of text the browser made there, which the editor did not read back and React did not draw, and the next render failed with `insertBefore` and unmounted the editor. What is composed there is read back into the document now. A composition begun over cells selected across a table, or over a selection that runs from one block into another, let the browser take out the rows or blocks between the two ends; the selection is closed onto its start before anything is composed now, and what was composed replaces it when the composition ends, emptying the cells and writing into the first the way a keystroke over them does.
 
 - **Deleting a column of a table written without its outer pipes left something that was not a table.** `a | b` over `--- | ---` lost its last pipe with its second column, so the header became a paragraph and the delimiter row under it a heading's underline. Every line keeps a pipe now, and the first column goes without leaving the space the next one was written after.

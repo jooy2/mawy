@@ -3673,6 +3673,54 @@ describe('tables', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(source));
   });
 
+  it('moves up and down a column with the arrows, a line of a cell at a time', async () => {
+    const onChange = vi.fn();
+    const source = 'Before.\n\n| a | bb | c |\n| --- | --- | --- |\n| d | e<br>f | g |\n\nAfter.';
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={{ ...WIDE, height: 500 }}
+      />
+    );
+    const body = bodyOf(screen);
+    const block = () => {
+      const node = document.getSelection()?.anchorNode;
+
+      return (node?.nodeType === 1 ? (node as Element) : node?.parentElement)?.closest('p, td, th');
+    };
+    const pressed = async (keys: string) => {
+      await userEvent.keyboard(keys);
+      await new Promise((done) => setTimeout(done, 30));
+    };
+
+    // Into the header from the line above, under the caret rather than into
+    // the last cell of the row.
+    put(body, 'Before.', 0);
+    await pressed('{ArrowDown}');
+    expect(block()?.textContent).toBe('a');
+
+    // Down the column rather than into the next cell of the row, and down the
+    // lines of a cell before leaving it.
+    put(body, 'bb', 1);
+    await pressed('{ArrowDown}');
+    expect(block()?.textContent).toBe('ef');
+    expect(document.getSelection()?.anchorNode?.textContent).toBe('e');
+    await pressed('{ArrowDown}');
+    expect(document.getSelection()?.anchorNode?.textContent).toBe('f');
+    await pressed('{ArrowDown}');
+    expect(block()?.textContent).toBe('After.');
+
+    // And back up, into the cell under the caret: the end of `After.` is over
+    // the first column.
+    await pressed('{ArrowUp}');
+    expect(block()?.textContent).toBe('d');
+    await pressed('{ArrowUp}');
+    expect(block()?.textContent).toBe('a');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('writes a line break into a cell on Enter, and what comes next on the line it starts', async () => {
     const onChange = vi.fn();
     const screen = await render(
