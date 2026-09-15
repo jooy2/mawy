@@ -1392,7 +1392,7 @@ export function renderBlocks(
     // does.
     if (revealed(block, context)) {
       return (
-        <p key={index} className="mawy-md-source" {...origin(block, context)}>
+        <p key={index} className="mawy-md-source mawy-md-source-block" {...origin(block, context)}>
           {context.source?.slice(block.range.start, block.range.end)}
         </p>
       );

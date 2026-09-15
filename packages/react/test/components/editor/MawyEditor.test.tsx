@@ -1741,6 +1741,16 @@ describe('the document surface', () => {
       // The list is written out rather than the item inside it, or the bullet
       // would still be drawn beside the `-` that is a drawing of it.
       expect(bodyOf(screen).querySelector(drawn)).toBeNull();
+
+      // And in the paragraph's own type, as the characters somebody is typing
+      // past, rather than in a grey box of source.
+      const written = getComputedStyle(bodyOf(screen).querySelector('.mawy-md-source')!);
+
+      expect(written.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+      expect(written.fontFamily).toBe(getComputedStyle(bodyOf(screen)).fontFamily);
+      expect(written.fontSize).toBe(getComputedStyle(bodyOf(screen)).fontSize);
+
+      await screen.unmount();
     }
   });
 

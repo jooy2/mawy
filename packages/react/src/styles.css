@@ -1689,6 +1689,25 @@
   white-space: pre-wrap;
 }
 
+/*
+ * A block written so far as its marker and nothing else — `#`, `-`, `>`, `1.` —
+ * with the caret in it, drawn as those characters in the paragraph's own type.
+ *
+ * Not marked the way a link written out is, and the difference is what is
+ * under the caret. A link written out has stopped being a link and become the
+ * text that makes one, which is worth seeing. A `#` at the start of a line is a
+ * character somebody has just typed and is about to type past, and a grey box
+ * springing up around it at every keystroke said something was wrong where
+ * nothing was: the space after it makes the heading, as it does in every other
+ * editor that reads these as they are typed.
+ */
+.mawy-root .mawy-md-source-block {
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
 .mawy-root .mawy-md-html img {
   max-width: 100%;
   height: auto;
