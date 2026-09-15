@@ -3439,6 +3439,46 @@ describe('tables', () => {
     expect(document.activeElement).toBe(sourceOf(plain));
   });
 
+  it('keeps the controls that delete at the end of the bar away from the caret', async () => {
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'| a | b | c | d |\n| - | - | - | - |\n| e | f | g | h |'}
+        mode="wysiwyg"
+        style={WIDE}
+      />
+    );
+    const middle = (name: string) => {
+      const box = page.getByRole('button', { name }).element().getBoundingClientRect();
+
+      return box.left + box.width / 2;
+    };
+
+    // In the first column the bar runs on from the caret, and in the last,
+    // where there is no room for that, it runs back from it the other way
+    // round. Either way a pointer on its way from the caret into the row under
+    // it meets something that adds before anything that deletes.
+    for (const [cell, index] of [
+      ['e', 0],
+      ['h', 3]
+    ] as const) {
+      put(bodyOf(screen), cell, 1);
+      await vi.waitFor(() =>
+        expect(screen.container.querySelector('.mawy-table-tools')).not.toBe(null)
+      );
+      await new Promise((done) => setTimeout(done, 30));
+
+      const caret = document.getSelection()!.getRangeAt(0).getClientRects()[0].left;
+      const apart = (name: string) => Math.abs(middle(name) - caret);
+
+      expect(apart('Delete this row')).toBeGreaterThan(apart('Add a row above'));
+      expect(apart('Delete this column')).toBeGreaterThan(apart('Align right'));
+      expect(bodyOf(screen).querySelectorAll('td')[index].textContent).toBe(cell);
+      expect(
+        screen.container.querySelector('.mawy-table-tools')!.hasAttribute('data-mawy-reversed')
+      ).toBe(index === 3);
+    }
+  });
+
   it('aligns the column the caret is in from the bar, and shows how it is aligned', async () => {
     const onChange = vi.fn();
     const screen = await render(

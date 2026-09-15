@@ -126,39 +126,68 @@ export function TableSizeGrid({
   );
 }
 
+/** One of the row and column controls, with its key and the name it has with cells selected. */
+interface TableTool {
+  command: MawyTableCommand;
+  label: keyof MawyStrings;
+  many: keyof MawyStrings;
+  /** Which count the name with a number in it is given. */
+  counts: 'rows' | 'columns';
+  icon: typeof RowAboveIcon;
+  keys: string;
+}
+
 /**
- * What the controls beside a table do, in the order they are drawn, with their
- * keys, and the name each has when the selected cells cover more than one row
- * or column.
+ * What the controls beside a table do, in the order they are drawn from the
+ * caret: the rows, the columns, the alignments, and last the ones that take
+ * something away.
+ *
+ * The bar is under the row after the one being written in, so a press meant
+ * for a cell of that row can land on it. What it lands on nearest the caret
+ * adds something, which one undo takes back, and what deletes is at the far
+ * end, where a pointer on its way into the table does not pass.
  */
-const TABLE_TOOLS: readonly (
-  | {
-      command: MawyTableCommand;
-      label: keyof MawyStrings;
-      many: keyof MawyStrings;
-      /** Which count the name with a number in it is given. */
-      counts: 'rows' | 'columns';
-      icon: typeof RowAboveIcon;
-      keys: string;
+const ADD_TOOLS: readonly (readonly TableTool[])[] = [
+  [
+    {
+      command: 'addRowAbove',
+      label: 'tableRowAbove',
+      many: 'tableRowsAbove',
+      counts: 'rows',
+      icon: RowAboveIcon,
+      keys: 'Control+Shift+Enter Meta+Shift+Enter'
+    },
+    {
+      command: 'addRowBelow',
+      label: 'tableRowBelow',
+      many: 'tableRowsBelow',
+      counts: 'rows',
+      icon: RowBelowIcon,
+      keys: 'Control+Enter Meta+Enter'
     }
-  | 'separator'
-)[] = [
-  {
-    command: 'addRowAbove',
-    label: 'tableRowAbove',
-    many: 'tableRowsAbove',
-    counts: 'rows',
-    icon: RowAboveIcon,
-    keys: 'Control+Shift+Enter Meta+Shift+Enter'
-  },
-  {
-    command: 'addRowBelow',
-    label: 'tableRowBelow',
-    many: 'tableRowsBelow',
-    counts: 'rows',
-    icon: RowBelowIcon,
-    keys: 'Control+Enter Meta+Enter'
-  },
+  ],
+  [
+    {
+      command: 'addColumnBefore',
+      label: 'tableColumnBefore',
+      many: 'tableColumnsBefore',
+      counts: 'columns',
+      icon: ColumnBeforeIcon,
+      keys: 'Control+Alt+Shift+Enter Meta+Alt+Shift+Enter'
+    },
+    {
+      command: 'addColumnAfter',
+      label: 'tableColumnAfter',
+      many: 'tableColumnsAfter',
+      counts: 'columns',
+      icon: ColumnAfterIcon,
+      keys: 'Control+Alt+Enter Meta+Alt+Enter'
+    }
+  ]
+];
+
+/** The two that delete, at the far end of the bar. See `ADD_TOOLS`. */
+const REMOVE_TOOLS: readonly TableTool[] = [
   {
     command: 'removeRow',
     label: 'tableRowRemove',
@@ -166,23 +195,6 @@ const TABLE_TOOLS: readonly (
     counts: 'rows',
     icon: RemoveIcon,
     keys: 'Control+Shift+Backspace Meta+Shift+Backspace'
-  },
-  'separator',
-  {
-    command: 'addColumnBefore',
-    label: 'tableColumnBefore',
-    many: 'tableColumnsBefore',
-    counts: 'columns',
-    icon: ColumnBeforeIcon,
-    keys: 'Control+Alt+Shift+Enter Meta+Alt+Shift+Enter'
-  },
-  {
-    command: 'addColumnAfter',
-    label: 'tableColumnAfter',
-    many: 'tableColumnsAfter',
-    counts: 'columns',
-    icon: ColumnAfterIcon,
-    keys: 'Control+Alt+Enter Meta+Alt+Enter'
   },
   {
     command: 'removeColumn',
@@ -219,6 +231,13 @@ export interface TableToolsProps {
   columns: number;
   /** How the columns the selection covers are aligned, or `null` where they differ. */
   align: MawyColumnAlign | null;
+  /**
+   * Whether the bar ends at the caret rather than starting there, which it does
+   * where the pane has no room for it on the caret's far side. Its controls are
+   * drawn the other way round then, so the ones that delete stay at the end
+   * away from the caret.
+   */
+  reversed?: boolean;
   /** Whether a command has anything to act on where the caret is. */
   available: (command: MawyTableCommand) => boolean;
   onCommand: (command: MawyTableCommand) => void;
@@ -236,12 +255,61 @@ export interface TableToolsProps {
  *
  * With cells selected, each acts on as many rows or columns as the selection
  * covers and says how many, and one more empties the cells. The three after
- * the columns align the columns the selection covers.
+ * the columns align the columns the selection covers, and what deletes or
+ * empties is at the end away from the caret. See `ADD_TOOLS`.
  */
 export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(function TableTools(
-  { strings, top, left, rows, columns, align, available, onCommand },
+  { strings, top, left, rows, columns, align, reversed = false, available, onCommand },
   ref
 ) {
+  const tool = (each: TableTool) => {
+    const count = each.counts === 'rows' ? rows : columns;
+
+    return (
+      <IconButton
+        key={each.command}
+        label={count > 1 ? fill(strings[each.many], { N: String(count) }) : strings[each.label]}
+        icon={<each.icon className="mawy-icon" aria-hidden="true" />}
+        aria-keyshortcuts={each.keys}
+        disabled={!available(each.command)}
+        onClick={() => onCommand(each.command)}
+      />
+    );
+  };
+  const rule = (key: string) => (
+    <span key={key} className="mawy-toolbar-separator" aria-hidden="true" />
+  );
+  // In the order the tree has them as well as the order they are drawn in, so
+  // `Tab` goes along the bar the way the eye does.
+  const controls = [
+    ...ADD_TOOLS[0].map(tool),
+    rule('rows'),
+    ...ADD_TOOLS[1].map(tool),
+    rule('columns'),
+    ...ALIGNS.map((each) => (
+      <IconButton
+        key={each.command}
+        label={strings[each.label]}
+        icon={<each.icon className="mawy-icon" aria-hidden="true" />}
+        pressed={align === each.align}
+        aria-pressed={align === each.align}
+        disabled={!available(each.command)}
+        onClick={() => onCommand(each.command)}
+      />
+    )),
+    rule('aligns'),
+    rows * columns > 1 ? (
+      <IconButton
+        key="clearCells"
+        label={strings.tableCellsClear}
+        icon={<ClearCellsIcon className="mawy-icon" aria-hidden="true" />}
+        aria-keyshortcuts="Delete Backspace"
+        onClick={() => onCommand('clearCells')}
+      />
+    ) : null,
+    ...REMOVE_TOOLS.map(tool)
+  ];
+
   return (
     <div
       ref={ref}
@@ -249,50 +317,11 @@ export const TableTools = React.forwardRef<HTMLDivElement, TableToolsProps>(func
       role="toolbar"
       aria-label={strings.table}
       lang={strings.lang}
+      data-mawy-reversed={reversed || undefined}
       style={{ top, left }}
       onMouseDown={(event) => event.preventDefault()}
     >
-      {TABLE_TOOLS.map((tool, index) => {
-        if (tool === 'separator') {
-          return <span key={index} className="mawy-toolbar-separator" aria-hidden="true" />;
-        }
-
-        const count = tool.counts === 'rows' ? rows : columns;
-
-        return (
-          <IconButton
-            key={tool.command}
-            label={count > 1 ? fill(strings[tool.many], { N: String(count) }) : strings[tool.label]}
-            icon={<tool.icon className="mawy-icon" aria-hidden="true" />}
-            aria-keyshortcuts={tool.keys}
-            disabled={!available(tool.command)}
-            onClick={() => onCommand(tool.command)}
-          />
-        );
-      })}
-      <span className="mawy-toolbar-separator" aria-hidden="true" />
-      {ALIGNS.map((each) => (
-        <IconButton
-          key={each.command}
-          label={strings[each.label]}
-          icon={<each.icon className="mawy-icon" aria-hidden="true" />}
-          pressed={align === each.align}
-          aria-pressed={align === each.align}
-          disabled={!available(each.command)}
-          onClick={() => onCommand(each.command)}
-        />
-      ))}
-      {rows * columns > 1 ? (
-        <>
-          <span className="mawy-toolbar-separator" aria-hidden="true" />
-          <IconButton
-            label={strings.tableCellsClear}
-            icon={<ClearCellsIcon className="mawy-icon" aria-hidden="true" />}
-            aria-keyshortcuts="Delete Backspace"
-            onClick={() => onCommand('clearCells')}
-          />
-        </>
-      ) : null}
+      {reversed ? controls.reverse() : controls}
     </div>
   );
 });

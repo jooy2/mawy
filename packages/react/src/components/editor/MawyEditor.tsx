@@ -1223,7 +1223,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   /** Whether that is more than one cell, which the drawn document marks as cells. */
   const cellsSelected =
     showDocument && tableSpan !== null && tableSpan.rows * tableSpan.columns > 1;
-  const [toolsAt, setToolsAt] = React.useState<{ top: number; left: number } | null>(null);
+  const [toolsAt, setToolsAt] = React.useState<{
+    top: number;
+    left: number;
+    reversed: boolean;
+  } | null>(null);
   /** Where the mark over the selected cells is drawn, in the pane it is drawn in. */
   const [cellsAt, setCellsAt] = React.useState<{
     top: number;
@@ -1353,10 +1357,21 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       below + tall <= floor - 4 || above < ceiling + 4
         ? Math.max(ceiling + 4, Math.min(below, floor - tall - 4))
         : above;
-    const across = (rtl ? anchor.x - wide + 12 : anchor.x - 12) - room.left;
-    const left = Math.max(4, Math.min(across, room.width - wide - 4));
+    // Starting at the caret and running the way the line reads, or, where the
+    // pane has no room for that, ending at the caret and running back, with its
+    // controls the other way round so the ones that delete are still the end
+    // away from the caret.
+    const onwards = (rtl ? anchor.x - wide + 12 : anchor.x - 12) - room.left;
+    const backwards = (rtl ? anchor.x - 12 : anchor.x + 12 - wide) - room.left;
+    const fits = rtl ? onwards >= 4 : onwards + wide <= room.width - 4;
+    const reversed = !fits && (rtl ? backwards + wide <= room.width - 4 : backwards >= 4);
+    const left = Math.max(4, Math.min(reversed ? backwards : onwards, room.width - wide - 4));
 
-    setToolsAt((was) => (was && was.top === top && was.left === left ? was : { top, left }));
+    setToolsAt((was) =>
+      was && was.top === top && was.left === left && was.reversed === reversed
+        ? was
+        : { top, left, reversed }
+    );
   }, [cellsSelected, selection.end, showDocument, tableHere, tableSpan, text]);
 
   React.useLayoutEffect(() => {
@@ -1397,6 +1412,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         strings={strings}
         top={toolsAt.top}
         left={toolsAt.left}
+        reversed={toolsAt.reversed}
         rows={tableSpan?.rows ?? 1}
         columns={tableSpan?.columns ?? 1}
         align={tableAlign}

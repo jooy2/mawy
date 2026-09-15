@@ -1291,6 +1291,46 @@ void main() {
       expect(field.focusNode.hasFocus, isTrue);
     });
 
+    testWidgets('keeps the controls that delete at the end of the bar away from the caret', (
+      WidgetTester tester,
+    ) async {
+      final String source = '| a | ${'x' * 150} |\n| - | - |';
+
+      await tester.pumpWidget(host(MawyEditor(defaultValue: source, mode: MawyEditorMode.plain)));
+
+      final EditableText field = tester.widget(_sourceField);
+      final RenderEditable editable = tester.state<EditableTextState>(_sourceField).renderEditable;
+      double middle(String label) => tester
+          .getCenter(
+            find.byWidgetPredicate(
+              (Widget widget) => widget is MawyToolbarButton && widget.label == label,
+            ),
+          )
+          .dx;
+
+      field.focusNode.requestFocus();
+
+      // At the start of a row the bar runs on from the caret, and at the end of
+      // a long one, where there is no room for that, it runs back from it the
+      // other way round.
+      for (final (int offset, bool reversed) in <(int, bool)>[
+        (3, false),
+        (source.indexOf(' |\n', 6), true),
+      ]) {
+        field.controller.selection = TextSelection.collapsed(offset: offset);
+        await tester.pumpAndSettle();
+
+        final double caret = editable
+            .localToGlobal(editable.getLocalRectForCaret(TextPosition(offset: offset)).topLeft)
+            .dx;
+        double apart(String label) => (middle(label) - caret).abs();
+
+        expect(tester.widget<MawyTableTools>(find.byType(MawyTableTools)).reversed, reversed);
+        expect(apart('Delete this row'), greaterThan(apart('Add a row above')));
+        expect(apart('Delete this column'), greaterThan(apart('Align right')));
+      }
+    });
+
     testWidgets('aligns the column the caret is in from the bar, and shows how it is aligned', (
       WidgetTester tester,
     ) async {

@@ -179,12 +179,17 @@ class _MawyTableSizeGridState extends State<MawyTableSizeGrid> {
 /// How tall the bar beside a table is, which is what placing it is measured against.
 const double kMawyTableToolsHeight = 36;
 
-/// The row and column controls, hung beside the table the caret is in.
+/// The row and column controls, hung beside the caret in a table.
 ///
 /// A press on one does not take the focus from the source, so the caret the
 /// command acts on is still in the cell it was in. Each is named in a tooltip
 /// and to a screen reader, and each row and column command is also a key. The
 /// three after the columns align the columns the selection covers.
+///
+/// The bar is under the line after the caret's, so a press meant for that line
+/// can land on it. What it lands on nearest the caret adds something, which one
+/// undo takes back, and what deletes or empties is at the far end, where a
+/// pointer on its way into the table does not pass.
 class MawyTableTools extends StatelessWidget {
   /// Creates the bar.
   const MawyTableTools({
@@ -195,6 +200,7 @@ class MawyTableTools extends StatelessWidget {
     this.rows = 1,
     this.columns = 1,
     this.align,
+    this.reversed = false,
     super.key,
   });
 
@@ -224,6 +230,12 @@ class MawyTableTools extends StatelessWidget {
   /// that says so is drawn pressed. See `tableAlignAt`.
   final String? align;
 
+  /// Whether the bar ends at the caret rather than starting there, which it
+  /// does where the field has no room for it on the caret's far side. Its
+  /// controls are laid out the other way round then, so the ones that delete
+  /// stay at the end away from the caret.
+  final bool reversed;
+
   @override
   Widget build(BuildContext context) {
     Widget button(MawyTableCommand command, IconData icon, String label, {bool pressed = false}) =>
@@ -243,6 +255,62 @@ class MawyTableTools extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 3),
       color: tokens.border,
     );
+
+    final List<Widget> controls = <Widget>[
+      button(
+        MawyTableCommand.addRowAbove,
+        LucideIcons.betweenHorizontalStart,
+        counted(strings.tableRowAbove, strings.tableRowsAbove, rows),
+      ),
+      button(
+        MawyTableCommand.addRowBelow,
+        LucideIcons.betweenHorizontalEnd,
+        counted(strings.tableRowBelow, strings.tableRowsBelow, rows),
+      ),
+      rule(),
+      button(
+        MawyTableCommand.addColumnBefore,
+        LucideIcons.betweenVerticalStart,
+        counted(strings.tableColumnBefore, strings.tableColumnsBefore, columns),
+      ),
+      button(
+        MawyTableCommand.addColumnAfter,
+        LucideIcons.betweenVerticalEnd,
+        counted(strings.tableColumnAfter, strings.tableColumnsAfter, columns),
+      ),
+      rule(),
+      button(
+        MawyTableCommand.alignLeft,
+        LucideIcons.textAlignStart,
+        strings.tableAlignLeft,
+        pressed: align == 'left',
+      ),
+      button(
+        MawyTableCommand.alignCenter,
+        LucideIcons.textAlignCenter,
+        strings.tableAlignCenter,
+        pressed: align == 'center',
+      ),
+      button(
+        MawyTableCommand.alignRight,
+        LucideIcons.textAlignEnd,
+        strings.tableAlignRight,
+        pressed: align == 'right',
+      ),
+      rule(),
+      if (rows * columns > 1)
+        button(MawyTableCommand.clearCells, LucideIcons.eraser, strings.tableCellsClear),
+      button(
+        MawyTableCommand.removeRow,
+        LucideIcons.trash2,
+        counted(strings.tableRowRemove, strings.tableRowsRemove, rows),
+      ),
+      button(
+        MawyTableCommand.removeColumn,
+        LucideIcons.trash2,
+        counted(strings.tableColumnRemove, strings.tableColumnsRemove, columns),
+      ),
+    ];
 
     return Semantics(
       container: true,
@@ -264,62 +332,9 @@ class MawyTableTools extends StatelessWidget {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            button(
-              MawyTableCommand.addRowAbove,
-              LucideIcons.betweenHorizontalStart,
-              counted(strings.tableRowAbove, strings.tableRowsAbove, rows),
-            ),
-            button(
-              MawyTableCommand.addRowBelow,
-              LucideIcons.betweenHorizontalEnd,
-              counted(strings.tableRowBelow, strings.tableRowsBelow, rows),
-            ),
-            button(
-              MawyTableCommand.removeRow,
-              LucideIcons.trash2,
-              counted(strings.tableRowRemove, strings.tableRowsRemove, rows),
-            ),
-            rule(),
-            button(
-              MawyTableCommand.addColumnBefore,
-              LucideIcons.betweenVerticalStart,
-              counted(strings.tableColumnBefore, strings.tableColumnsBefore, columns),
-            ),
-            button(
-              MawyTableCommand.addColumnAfter,
-              LucideIcons.betweenVerticalEnd,
-              counted(strings.tableColumnAfter, strings.tableColumnsAfter, columns),
-            ),
-            button(
-              MawyTableCommand.removeColumn,
-              LucideIcons.trash2,
-              counted(strings.tableColumnRemove, strings.tableColumnsRemove, columns),
-            ),
-            rule(),
-            button(
-              MawyTableCommand.alignLeft,
-              LucideIcons.textAlignStart,
-              strings.tableAlignLeft,
-              pressed: align == 'left',
-            ),
-            button(
-              MawyTableCommand.alignCenter,
-              LucideIcons.textAlignCenter,
-              strings.tableAlignCenter,
-              pressed: align == 'center',
-            ),
-            button(
-              MawyTableCommand.alignRight,
-              LucideIcons.textAlignEnd,
-              strings.tableAlignRight,
-              pressed: align == 'right',
-            ),
-            if (rows * columns > 1) ...<Widget>[
-              rule(),
-              button(MawyTableCommand.clearCells, LucideIcons.eraser, strings.tableCellsClear),
-            ],
-          ],
+          // The other way round in the order the focus takes as well as on the
+          // screen, so moving along the bar goes the way the eye does.
+          children: reversed ? controls.reversed.toList() : controls,
         ),
       ),
     );

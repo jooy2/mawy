@@ -1333,6 +1333,10 @@ class _TableToolsHostState extends State<_TableToolsHost> {
   /// How far across it is, from the left.
   double _left = 0;
 
+  /// Whether it ends at the caret rather than starting there. See
+  /// [MawyTableTools.reversed].
+  bool _reversed = false;
+
   /// How wide the bar was when it was placed, which is a guess until it has
   /// been laid out once.
   double? _wide;
@@ -1423,6 +1427,7 @@ class _TableToolsHostState extends State<_TableToolsHost> {
     final double wide = measured ?? _wide ?? 280;
     double? top;
     double left = _left;
+    bool reversed = _reversed;
 
     // Under the line the caret is on, across from the caret, and over the line
     // where there is no room under it: beside the row being written in rather
@@ -1443,22 +1448,31 @@ class _TableToolsHostState extends State<_TableToolsHost> {
       final bool rtl = Directionality.of(context) == TextDirection.rtl;
 
       top = below <= most || above < 4 ? math.max(4, math.min(below, most)) : above;
-      left = math.max(
-        4,
-        math.min(rtl ? head.dx - wide + 12 : head.dx - 12, stack.size.width - wide - 4),
-      );
+      // Starting at the caret and running the way the line reads, or, where the
+      // field has no room for that, ending at the caret and running back, with
+      // its controls the other way round so the ones that delete are still the
+      // end away from the caret.
+      final double room = stack.size.width;
+      final double onwards = rtl ? head.dx - wide + 12 : head.dx - 12;
+      final double backwards = rtl ? head.dx - 12 : head.dx + 12 - wide;
+      final bool fits = rtl ? onwards >= 4 : onwards + wide <= room - 4;
+
+      reversed = !fits && (rtl ? backwards + wide <= room - 4 : backwards >= 4);
+      left = math.max(4, math.min(reversed ? backwards : onwards, room - wide - 4));
     }
 
     final String? align = table == null ? null : tableAlignAt(text, selection.start, selection.end);
 
     if (top != _top ||
         left != _left ||
+        reversed != _reversed ||
         align != _align ||
         (span?.rows ?? 1) != _rows ||
         (span?.columns ?? 1) != _columns) {
       setState(() {
         _top = top;
         _left = left;
+        _reversed = reversed;
         _wide = wide;
         _align = align;
         _rows = span?.rows ?? 1;
@@ -1494,6 +1508,7 @@ class _TableToolsHostState extends State<_TableToolsHost> {
               rows: _rows,
               columns: _columns,
               align: _align,
+              reversed: _reversed,
             ),
           ),
       ],
