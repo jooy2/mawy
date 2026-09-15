@@ -1840,111 +1840,121 @@ describe('the document surface', () => {
     }
   });
 
-  it('writes a link out as its own characters when the caret is inside it', async () => {
-    const screen = await render(
-      <MawyEditor defaultValue="See [the docs](/guide) for more." mode="wysiwyg" />
-    );
-
-    // Drawn as a link until something is in it.
-    expect(bodyOf(screen).querySelector('a')?.textContent).toBe('the docs');
-
-    put(bodyOf(screen), 'the docs', 3);
-
-    // And then as the source, one character for one — which is the only way
-    // there is anywhere on the page for `/guide` to be typed over.
-    await vi.waitFor(() => {
-      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe(
-        '[the docs](/guide)'
-      );
-    });
-    expect(bodyOf(screen).querySelector('a')).toBeNull();
-  });
-
-  it('draws it as a link again once the caret has left', async () => {
-    const screen = await render(
-      <MawyEditor defaultValue="See [the docs](/guide) for more." mode="wysiwyg" />
-    );
-
-    put(bodyOf(screen), 'the docs', 3);
-    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).not.toBeNull());
-
-    put(bodyOf(screen), 'See ', 1);
-    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull());
-
-    expect(bodyOf(screen).querySelector('a')?.textContent).toBe('the docs');
-  });
-
-  it('types into a destination, which is the whole point of writing it out', async () => {
+  it('keeps a link drawn with the caret in it, and edits its address and words from its bar', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <MawyEditor
-        defaultValue="See [the docs](/guide) for more."
+        defaultValue="See [the **docs**](/guide) for more."
         mode="wysiwyg"
         onChange={onChange}
+        style={{ height: 400 }}
       />
     );
 
-    put(bodyOf(screen), 'the docs', 3);
-    await vi.waitFor(() => expect(bodyOf(screen).querySelector('.mawy-md-source')).not.toBeNull());
+    put(bodyOf(screen), 'docs', 2);
 
-    // Inside `(/guide)`, after the `e`, where before this there was no
-    // character on the page at all.
-    put(bodyOf(screen), '[the docs](/guide)', 17);
-    type(bodyOf(screen), 'insertText', '/2');
+    // Still a link, with a bar under it holding what the link is written with.
+    await vi.waitFor(() =>
+      expect(page.getByRole('textbox', { name: 'Link address' }).element()).toHaveValue('/guide')
+    );
+    expect(bodyOf(screen).querySelector('a')?.textContent).toBe('the docs');
+    expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull();
+    expect(page.getByRole('textbox', { name: 'Link text' }).element()).toHaveValue('the docs');
 
-    expect(onChange).toHaveBeenLastCalledWith('See [the docs](/guide/2) for more.');
+    // The address changed and written with `Enter`, the words and their bold
+    // left as they were, and the focus back on the document.
+    await userEvent.fill(page.getByRole('textbox', { name: 'Link address' }), '/guide/2');
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('See [the **docs**](/guide/2) for more.')
+    );
+    await vi.waitFor(() => expect(document.activeElement).toBe(bodyOf(screen)));
 
-    // And again, which is the half that is not obvious: the link's range grew
-    // under the caret, and it has to still be the one being written out or the
-    // second keystroke lands somewhere else entirely.
-    await vi.waitFor(() => {
-      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe(
-        '[the docs](/guide/2)'
-      );
-    });
-
-    type(bodyOf(screen), 'insertText', '3');
-
-    expect(onChange).toHaveBeenLastCalledWith('See [the docs](/guide/23) for more.');
+    await userEvent.click(page.getByRole('button', { name: 'Remove the link and keep the words' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('See the **docs** for more.'));
   });
 
-  it('writes an image out too, since its destination is drawn even less', async () => {
+  it('takes the bar away once the caret has left the link', async () => {
     const screen = await render(
-      <MawyEditor defaultValue="Before ![a](/i.png) after." mode="wysiwyg" />
+      <MawyEditor defaultValue="See [the docs](/guide) for more." mode="wysiwyg" />
     );
 
-    expect(bodyOf(screen).querySelector('img')).not.toBeNull();
+    put(bodyOf(screen), 'the docs', 3);
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-block-tools')).not.toBeNull()
+    );
 
-    put(bodyOf(screen), 'Before ', 7);
-
-    await vi.waitFor(() => {
-      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('![a](/i.png)');
-    });
+    put(bodyOf(screen), 'See ', 1);
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-block-tools')).toBeNull());
   });
 
-  it('leaves the toolbar link placeholder where it can be typed over', async () => {
+  it('selects a picture pressed, and changes or deletes it from its bar', async () => {
+    const onChange = vi.fn();
+    const picture =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+    const source = `Before ![a hill](${picture}) after.`;
+    const screen = await render(
+      <MawyEditor
+        defaultValue={source}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={{ height: 400 }}
+      />
+    );
+
+    await userEvent.click(bodyOf(screen).querySelector('img')!);
+
+    // The picture stays a picture: its address is in the bar, not written out
+    // in its place.
+    await vi.waitFor(() =>
+      expect(page.getByRole('textbox', { name: 'Image description' }).element()).toHaveValue(
+        'a hill'
+      )
+    );
+    expect(bodyOf(screen).querySelector('img')).not.toBeNull();
+    expect(bodyOf(screen).querySelector('.mawy-md-source')).toBeNull();
+
+    await userEvent.fill(page.getByRole('textbox', { name: 'Image description' }), 'a big hill');
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(source.replace('a hill', 'a big hill'))
+    );
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete the image' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Before  after.'));
+  });
+
+  it('asks for a new link from a bar, and writes it once it has an address', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <div style={WIDE}>
-        <MawyEditor defaultValue="Words." mode="wysiwyg" onChange={onChange} />
+        <MawyEditor defaultValue="Words here." mode="wysiwyg" onChange={onChange} />
       </div>
     );
 
-    put(bodyOf(screen), 'Words.', 6);
+    put(bodyOf(screen), 'Words here.', 0, 5);
     await screen.getByRole('button', { name: 'Link' }).click();
 
-    expect(onChange).toHaveBeenLastCalledWith('Words.[](url)');
+    // Nothing written yet, and the address asked for, starting `https://`.
+    const address = page.getByRole('textbox', { name: 'Link address' });
 
-    // The placeholder is on the page, and it is what is selected — so the next
-    // thing typed replaces it rather than landing in the words.
-    await vi.waitFor(() => {
-      expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('[](url)');
-    });
-    expect(document.getSelection()?.getRangeAt(0).toString()).toBe('url');
+    await vi.waitFor(() => expect(document.activeElement).toBe(address.element()));
+    expect(address.element()).toHaveValue('https://');
+    expect(page.getByRole('textbox', { name: 'Link text' }).element()).toHaveValue('Words');
+    expect(onChange).not.toHaveBeenCalled();
 
-    type(bodyOf(screen), 'insertText', '/a');
+    await userEvent.keyboard('example.org{Enter}');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('[Words](https://example.org) here.')
+    );
 
-    expect(onChange).toHaveBeenLastCalledWith('Words.[](/a)');
+    // And `Escape` gives a new one up with nothing written.
+    put(bodyOf(screen), ' here.', 6);
+    await screen.getByRole('button', { name: 'Link' }).click();
+    await vi.waitFor(() => expect(document.activeElement).toBe(address.element()));
+    await userEvent.keyboard('{Escape}');
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-block-tools')).toBeNull());
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 
   it('writes raw HTML out when the caret is inside it, and edits it there', async () => {

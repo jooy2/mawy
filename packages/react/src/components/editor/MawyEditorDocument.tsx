@@ -191,11 +191,13 @@ function emptyBlock(node: MdNode): boolean {
  * The range of the innermost thing a selection falls entirely inside that is
  * drawn as something other than its own characters, or `null`.
  *
- * Four kinds of node, and one reason: a link and an image draw their words and
- * never their `(url)`, and raw HTML that is being drawn rather than shown
- * reached the page through `dangerouslySetInnerHTML`, which is markup React
- * does not know the inside of. In each of them there is nothing on the page for
- * a caret to sit in that is a character of the document.
+ * Raw HTML that is being drawn rather than shown reached the page through
+ * `dangerouslySetInnerHTML`, which is markup React does not know the inside of,
+ * and there is nothing on the page for a caret to sit in that is a character of
+ * the document. A link and a picture were written out the same way once, for
+ * their addresses; they have a bar of their own for those now (see
+ * `overlays.ts`), and a picture turning into `![...](...)` under a press at its
+ * edge was a picture disappearing.
  *
  * A block written so far as a marker and nothing else is a fifth, for that same
  * reason said about a whole line: `#` draws an empty heading, and somebody who
@@ -205,8 +207,7 @@ function emptyBlock(node: MdNode): boolean {
  * which is what [emptyBlock] recurses for.
  *
  * Entirely inside, so that a range dragged across half a document does not turn
- * every link under it into markup — and so that the toolbar's `[](url)`, which
- * arrives with the placeholder already selected, is written out with it.
+ * all the markup under it into characters.
  *
  * A walk over the tree on every caret move, which sounds worse than it is: a
  * block whose range cannot hold the selection is skipped without being
@@ -219,8 +220,6 @@ function revealedIn(nodes: readonly MdNode[], start: number, end: number): MdRan
     }
 
     if (
-      node.type === 'link' ||
-      node.type === 'image' ||
       node.type === 'html' ||
       (node.type === 'inlineHtml' && !isLineBreakHtml(node)) ||
       emptyBlock(node)
@@ -1149,6 +1148,40 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     };
 
     /**
+     * A press on a picture, which selects the picture.
+     *
+     * A picture is one thing with no inside for a caret, and a press on it left
+     * the caret on one side of it or the other depending on which half was
+     * pressed. Selected whole, it is what its bar is for, what `Delete` takes out
+     * and what the next letter replaces.
+     */
+    const pressImage = (event: React.MouseEvent<HTMLElement>) => {
+      const element = root.current;
+      const picture = event.target as Element;
+
+      if (
+        !element ||
+        readOnly ||
+        picture.tagName !== 'IMG' ||
+        !element.contains(picture) ||
+        !rangeOf(picture)
+      ) {
+        return;
+      }
+
+      const range = rangeOf(picture)!;
+      const selection = element.ownerDocument.getSelection();
+
+      selection?.setBaseAndExtent(
+        picture.parentNode!,
+        [...picture.parentNode!.childNodes].indexOf(picture as ChildNode),
+        picture.parentNode!,
+        [...picture.parentNode!.childNodes].indexOf(picture as ChildNode) + 1
+      );
+      onSelect({ start: range.start, end: range.end });
+    };
+
+    /**
      * A paragraph opened under the last block, or over the first, where that
      * block has no line of text around it for a caret to go to.
      *
@@ -1445,6 +1478,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
             onKeyDown(event);
           }}
           onMouseDown={pressCell}
+          onClick={pressImage}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
           <React.Fragment key={generation}>{content}</React.Fragment>

@@ -321,6 +321,15 @@ export interface MawyStrings {
   codeBlockRemove: string;
   alert: string;
   alertRemove: string;
+  imageAddress: string;
+  imageDescription: string;
+  imageRemove: string;
+  linkAddress: string;
+  linkText: string;
+  linkOpen: string;
+  linkUnlink: string;
+  linkRemove: string;
+  insertApply: string;
   thematicBreak: string;
   status: string;
   /** `%L` is the line and `%C` the column, both counted from one. */

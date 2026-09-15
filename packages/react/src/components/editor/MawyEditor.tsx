@@ -64,7 +64,7 @@ import {
   type MawyStep
 } from '../../internal/history.js';
 import { FilePicker } from '../../internal/controls.js';
-import { BlockTools } from '../../internal/blockTools.js';
+import { BlockTools, type MawyInsertTarget } from '../../internal/blockTools.js';
 import type { MawyBlockTarget } from '../../internal/overlays.js';
 import { movePlace, type MawyChange, type MawyPlace } from '../../internal/places.js';
 
@@ -1132,11 +1132,48 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [showDocument, selection.start, selection.end, text]
   );
 
+  /**
+   * What the caret is inside on the drawn document, of the things a floating
+   * bar is for, as the document says. See `targetAt`.
+   */
+  const [blockTarget, setBlockTarget] = React.useState<MawyBlockTarget | null>(null);
+  const readTarget = React.useCallback((next: MawyBlockTarget | null) => {
+    setBlockTarget((was) => (JSON.stringify(was) === JSON.stringify(next) ? was : next));
+  }, []);
+  /** A new link or picture asked for on the drawn document, and the document it was asked of. */
+  const [inserting, setInserting] = React.useState<(MawyInsertTarget & { value: string }) | null>(
+    null
+  );
+  /** Bumped to put the focus in the address of the link or picture the caret is in. */
+  const [focusRequest, setFocusRequest] = React.useState(0);
+
   const command = React.useCallback(
     (name: MawyCommand) => {
       const before = readOnly ? null : stateNow();
 
       if (!before) {
+        return;
+      }
+
+      // A link or a picture on the drawn document is asked for from a bar with
+      // its address and its words in it, and written once it has an address:
+      // the `[](url)` a source takes is nowhere on a drawn page to be typed
+      // into. In one already, the bar it has is where its address is.
+      if (showDocument && (name === 'link' || name === 'image')) {
+        if (blockTarget?.kind === name) {
+          setFocusRequest((each) => each + 1);
+
+          return;
+        }
+
+        setInserting({
+          kind: 'insert',
+          image: name === 'image',
+          range: { start: before.start, end: before.end },
+          text: before.value.slice(before.start, before.end),
+          value: before.value
+        });
+
         return;
       }
 
@@ -1156,7 +1193,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       run(before, runCommand(name, before));
     },
-    [focusDrawn, holds, readOnly, run, showDocument, stateNow]
+    [blockTarget, focusDrawn, holds, readOnly, run, showDocument, stateNow]
   );
 
   React.useImperativeHandle(
@@ -1433,50 +1470,116 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * The bar over a code block or an alert on the drawn document, where the caret
    * is in one and not in a table, whose own bar is nearer what is being written.
    */
-  const [blockTarget, setBlockTarget] = React.useState<MawyBlockTarget | null>(null);
   const [blockAt, setBlockAt] = React.useState<{ top: number; left: number } | null>(null);
   const blockBar = React.useRef<HTMLDivElement>(null);
-  const readTarget = React.useCallback((next: MawyBlockTarget | null) => {
-    setBlockTarget((was) => (JSON.stringify(was) === JSON.stringify(next) ? was : next));
-  }, []);
-  const blockHere =
-    showDocument &&
-    editable &&
-    focused &&
-    !tableHere &&
-    (blockTarget?.kind === 'code' || blockTarget?.kind === 'alert')
-      ? blockTarget
-      : null;
+  /** A new link or picture being asked for, which is the bar there is while there is one. */
+  const insertHere = showDocument && inserting && inserting.value === text ? inserting : null;
+  const blockHere: MawyBlockTarget | MawyInsertTarget | null =
+    !showDocument || !editable || !focused
+      ? null
+      : (insertHere ??
+        (blockTarget && (blockTarget.kind === 'image' || blockTarget.kind === 'link' || !tableHere)
+          ? blockTarget
+          : null));
+  /** Whether that bar is for something inline, which the table's bar gives way to. */
+  const inlineBar = blockHere !== null && blockHere.kind !== 'code' && blockHere.kind !== 'alert';
 
-  /** Over the block's top edge at its inline end, and inside its top where there is no room over it. */
+  /**
+   * Where that bar goes. Over a block's top edge at its inline end, and inside
+   * its top where there is no room over it; under a picture; under the line the
+   * caret is on in a link or where a new one is being written.
+   */
   const placeBlock = React.useCallback(() => {
     const pane = documentPane.current;
-    const element =
-      blockHere &&
-      [...(drawn.current?.querySelectorAll('[data-mawy-range]') ?? [])].find((each) => {
-        const range = rangeOf(each);
+    const element = drawn.current;
 
-        return range?.start === blockHere.range.start && range.end === blockHere.range.end;
-      });
-
-    if (!pane || !element) {
+    if (!pane || !element || !blockHere) {
       setBlockAt(null);
 
       return;
     }
 
-    const box = element.getBoundingClientRect();
-    const wide = blockBar.current?.offsetWidth || 200;
     const rtl = getComputedStyle(pane).direction === 'rtl';
-    const { top, left } = floated(
-      pane,
-      { top: box.top, bottom: box.bottom, x: rtl ? box.left + wide - 12 : box.right - wide + 12 },
-      blockBar.current,
-      true
-    );
+    const caretAt = (offset: number) => {
+      const place = domAt(element, offset, text);
+
+      if (!place) {
+        return null;
+      }
+
+      const range = element.ownerDocument.createRange();
+
+      range.setStart(place.node, place.offset);
+      range.collapse(true);
+
+      return (
+        range.getClientRects()[0] ??
+        (place.node.nodeType === 1
+          ? (place.node as Element)
+          : place.node.parentElement
+        )?.getBoundingClientRect() ??
+        null
+      );
+    };
+
+    if (blockHere.kind === 'insert' || blockHere.kind === 'link') {
+      const caret = caretAt(
+        blockHere.kind === 'insert'
+          ? blockHere.range.end
+          : Math.min(Math.max(selection.start, blockHere.range.start), blockHere.range.end)
+      );
+
+      if (!caret) {
+        setBlockAt(null);
+
+        return;
+      }
+
+      const { top, left } = floated(
+        pane,
+        { top: caret.top, bottom: caret.bottom, x: caret.left },
+        blockBar.current
+      );
+
+      setBlockAt((was) => (was && was.top === top && was.left === left ? was : { top, left }));
+
+      return;
+    }
+
+    const drawnAs = [...element.querySelectorAll('[data-mawy-range]')].find((each) => {
+      const range = rangeOf(each);
+
+      return range?.start === blockHere.range.start && range.end === blockHere.range.end;
+    });
+
+    if (!drawnAs) {
+      setBlockAt(null);
+
+      return;
+    }
+
+    const box = drawnAs.getBoundingClientRect();
+    const wide = blockBar.current?.offsetWidth || 200;
+    const { top, left } =
+      blockHere.kind === 'image'
+        ? floated(
+            pane,
+            { top: box.top, bottom: box.bottom, x: rtl ? box.right : box.left },
+            blockBar.current
+          )
+        : floated(
+            pane,
+            {
+              top: box.top,
+              bottom: box.bottom,
+              x: rtl ? box.left + wide - 12 : box.right - wide + 12
+            },
+            blockBar.current,
+            true
+          );
 
     setBlockAt((was) => (was && was.top === top && was.left === left ? was : { top, left }));
-  }, [blockHere]);
+  }, [blockHere, selection.start, text]);
 
   React.useLayoutEffect(() => {
     placeBlock();
@@ -1518,6 +1621,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
+      setInserting(null);
+
       if (edit) {
         applyEdit(edit);
       }
@@ -1531,6 +1636,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [applyEdit, readOnly]
   );
 
+  const cancelInsert = React.useCallback(() => setInserting(null), []);
+
   const blockTools =
     blockHere && blockAt ? (
       <BlockTools
@@ -1543,11 +1650,13 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         top={blockAt.top}
         left={blockAt.left}
         onEdit={blockEdit}
+        onCancel={cancelInsert}
+        focusRequest={focusRequest}
       />
     ) : null;
 
   const tableTools =
-    tableHere && toolsAt ? (
+    tableHere && toolsAt && !inlineBar ? (
       <TableTools
         ref={tools}
         strings={strings}

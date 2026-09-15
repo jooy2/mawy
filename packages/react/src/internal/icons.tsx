@@ -70,6 +70,8 @@ export {
   X as CloseIcon,
   CaseSensitive as CaseSensitiveIcon,
   Eraser as ClearCellsIcon,
+  ExternalLink as OpenLinkIcon,
+  Unlink as UnlinkIcon,
   TextAlignCenter as AlignCenterIcon,
   TextAlignEnd as AlignRightIcon,
   TextAlignStart as AlignLeftIcon,

@@ -1,17 +1,20 @@
 'use client';
 
 /**
- * The bars that float over a code block and an alert on the drawn document.
+ * The bars that float beside a picture, a link, a code block and an alert on
+ * the drawn document, and the one a new link or picture is written from.
  *
  * `table.tsx` has the table's. These are the same kind of thing for what the
  * drawn document draws as what it means and not as what it is written with; the
  * reason each exists, and the arithmetic each runs, are in `overlays.ts`. They
  * are placed by `MawyEditor`, which knows the pane they float in.
  *
- * A press on one keeps the focus where it was, the way the table's does, so it
- * changes the block and the next letter still goes where the caret was. The
- * language menu is the exception, being a menu, and gives the focus back to the
- * document once a language is picked.
+ * A press on a button keeps the focus where it was, the way the table's does,
+ * so it changes the block and the next letter still goes where the caret was.
+ * The language menu gives the focus back to the document once a language is
+ * picked. A field cannot keep it off, being typed into: what is typed there is
+ * written when `Enter` is pressed or the field is left, and `Escape` puts the
+ * field back and the focus on the document.
  */
 
 import * as React from 'react';
@@ -20,23 +23,41 @@ import { Choice, IconButton, Menu } from './controls.js';
 import type { MawyStrings } from './i18n.js';
 import {
   CautionIcon,
+  CheckIcon,
   CodeBlockIcon,
   ImportantIcon,
   NoteIcon,
+  OpenLinkIcon,
   RemoveIcon,
   TipIcon,
+  UnlinkIcon,
   WarningIcon
 } from './icons.js';
-import type { MdAlertKind } from './markdown/ast.js';
+import type { MdAlertKind, MdRange } from './markdown/ast.js';
+import { safeUrl } from './markdown/url.js';
 import {
   alertWritten,
   blockRemoved,
   codeLanguageWritten,
+  imageWritten,
+  inlineRemoved,
+  inserted,
+  linkRemoved,
+  linkWritten,
   type MawyBlockTarget
 } from './overlays.js';
 
+/** A link or a picture about to be written where the selection is. */
+export interface MawyInsertTarget {
+  kind: 'insert';
+  image: boolean;
+  range: MdRange;
+  /** What was selected, as it was written. */
+  text: string;
+}
+
 export interface BlockToolsProps {
-  target: Extract<MawyBlockTarget, { kind: 'code' | 'alert' }>;
+  target: MawyBlockTarget | MawyInsertTarget;
   strings: MawyStrings;
   /** The document the bar reads its target out of. */
   value: string;
@@ -50,6 +71,10 @@ export interface BlockToolsProps {
    * the focus goes back to the document. `null` for no edit, only the focus.
    */
   onEdit: (edit: MawyEdit | null, from: string, refocus: boolean) => void;
+  /** The new link or picture given up. */
+  onCancel: () => void;
+  /** Bumped to put the focus in the bar's first field. */
+  focusRequest: number;
 }
 
 /**
@@ -92,9 +117,11 @@ const ALERTS: readonly { kind: MdAlertKind; label: keyof MawyStrings; icon: type
   { kind: 'caution', label: 'alertCaution', icon: CautionIcon }
 ];
 
-/** A press on the bar, kept from taking the focus off the document. */
+/** A press on the bar, kept from taking the focus off the document, except in a field. */
 function keepFocus(event: React.MouseEvent<HTMLElement>): void {
-  event.preventDefault();
+  if (!(event.target as Element).closest('input')) {
+    event.preventDefault();
+  }
 }
 
 export const BlockTools = React.forwardRef<HTMLDivElement, BlockToolsProps>(
@@ -106,7 +133,15 @@ export const BlockTools = React.forwardRef<HTMLDivElement, BlockToolsProps>(
         ref={ref}
         className="mawy-table-tools mawy-block-tools"
         role="toolbar"
-        aria-label={target.kind === 'code' ? strings.codeBlock : strings.alert}
+        aria-label={
+          target.kind === 'code'
+            ? strings.codeBlock
+            : target.kind === 'alert'
+              ? strings.alert
+              : target.kind === 'link' || (target.kind === 'insert' && !target.image)
+                ? strings.link
+                : strings.image
+        }
         lang={strings.lang}
         data-mawy-block={target.kind}
         style={{ top, left }}
@@ -114,8 +149,10 @@ export const BlockTools = React.forwardRef<HTMLDivElement, BlockToolsProps>(
       >
         {target.kind === 'code' ? (
           <CodeTools {...props} target={target} />
-        ) : (
+        ) : target.kind === 'alert' ? (
           <AlertTools {...props} target={target} />
+        ) : (
+          <Fields {...props} target={target} />
         )}
       </div>
     );
@@ -191,6 +228,190 @@ function AlertTools({
         data-mawy-danger=""
         onClick={() => onEdit(blockRemoved(value, target.range), value, true)}
       />
+    </>
+  );
+}
+
+/**
+ * The address and the words of a picture or a link, as two fields, with what
+ * else can be done to it beside them; or the same two for one about to be
+ * written, with the button that writes it.
+ */
+function Fields({
+  target,
+  strings,
+  value,
+  onEdit,
+  onCancel,
+  focusRequest
+}: BlockToolsProps & {
+  target: Exclude<MawyBlockTarget, { kind: 'code' | 'alert' }> | MawyInsertTarget;
+}) {
+  const image = target.kind === 'image' || (target.kind === 'insert' && target.image);
+  const url0 = target.kind === 'insert' ? 'https://' : target.url;
+  const text0 = target.kind === 'image' ? target.alt : target.text;
+  const [url, setUrl] = React.useState(url0);
+  const [text, setText] = React.useState(text0);
+  const address = React.useRef<HTMLInputElement>(null);
+  const done = React.useRef(false);
+
+  // A new one is asked for its address first, with the caret after the
+  // `https://` it starts with.
+  React.useEffect(() => {
+    if (target.kind === 'insert' || focusRequest > 0) {
+      address.current?.focus();
+      address.current?.setSelectionRange(
+        address.current.value.length,
+        address.current.value.length
+      );
+    }
+  }, [focusRequest, target.kind]);
+
+  const write = (refocus: boolean) => {
+    if (done.current) {
+      return;
+    }
+
+    if (target.kind === 'insert') {
+      const clean = url.trim();
+
+      if (!clean || clean === 'https://') {
+        return;
+      }
+
+      done.current = true;
+      onEdit(inserted(value, target.range, { url: clean, text, image }), value, refocus);
+
+      return;
+    }
+
+    if (url === url0 && text === text0) {
+      if (refocus) {
+        onEdit(null, value, true);
+      }
+
+      return;
+    }
+
+    onEdit(
+      target.kind === 'image'
+        ? imageWritten(value, target, { url, alt: text })
+        : linkWritten(value, target, { url, text }),
+      value,
+      refocus
+    );
+  };
+
+  const keys = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      write(true);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (target.kind === 'insert') {
+        done.current = true;
+        onCancel();
+        onEdit(null, value, true);
+
+        return;
+      }
+
+      setUrl(url0);
+      setText(text0);
+      done.current = true;
+      onEdit(null, value, true);
+    }
+  };
+
+  // Left for somewhere outside the bar: what was typed is written, or a new
+  // link nobody finished is given up.
+  const left = (event: React.FocusEvent<HTMLInputElement>) => {
+    if (event.currentTarget.closest('.mawy-block-tools')?.contains(event.relatedTarget)) {
+      return;
+    }
+
+    if (target.kind === 'insert') {
+      if (!done.current) {
+        onCancel();
+      }
+
+      return;
+    }
+
+    write(false);
+  };
+  const href = safeUrl(url);
+
+  return (
+    <>
+      <input
+        ref={address}
+        className="mawy-block-field mawy-block-address"
+        type="url"
+        aria-label={image ? strings.imageAddress : strings.linkAddress}
+        placeholder="https://"
+        value={url}
+        spellCheck={false}
+        onChange={(event) => setUrl(event.target.value)}
+        onKeyDown={keys}
+        onBlur={left}
+      />
+      <input
+        className="mawy-block-field"
+        type="text"
+        aria-label={image ? strings.imageDescription : strings.linkText}
+        placeholder={image ? strings.imageDescription : strings.linkText}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onKeyDown={keys}
+        onBlur={left}
+      />
+      {target.kind === 'insert' ? (
+        <IconButton
+          label={strings.insertApply}
+          icon={<CheckIcon className="mawy-icon" aria-hidden="true" />}
+          disabled={!url.trim() || url.trim() === 'https://'}
+          onClick={() => write(true)}
+        />
+      ) : null}
+      {target.kind === 'link' ? (
+        <>
+          <IconButton
+            label={strings.linkOpen}
+            icon={<OpenLinkIcon className="mawy-icon" aria-hidden="true" />}
+            disabled={!href}
+            onClick={() => {
+              if (href) {
+                window.open(href, '_blank', 'noopener,noreferrer');
+              }
+            }}
+          />
+          <IconButton
+            label={strings.linkUnlink}
+            icon={<UnlinkIcon className="mawy-icon" aria-hidden="true" />}
+            onClick={() => {
+              done.current = true;
+              onEdit(linkRemoved(value, target), value, true);
+            }}
+          />
+        </>
+      ) : null}
+      {target.kind === 'insert' ? null : (
+        <>
+          <span className="mawy-toolbar-separator" aria-hidden="true" />
+          <IconButton
+            label={image ? strings.imageRemove : strings.linkRemove}
+            icon={<RemoveIcon className="mawy-icon" aria-hidden="true" />}
+            data-mawy-danger=""
+            onClick={() => {
+              done.current = true;
+              onEdit(inlineRemoved(value, target.range), value, true);
+            }}
+          />
+        </>
+      )}
     </>
   );
 }
