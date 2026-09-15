@@ -23,11 +23,13 @@ import {
   type RenderContext
 } from '../../internal/markdown/render.js';
 import {
+  blankParagraphs,
   blockAt,
   documentAt,
   editFor,
   editForText,
   markdownFor,
+  openedAt,
   type MawyAim,
   type MawyDrag,
   type MawyEdit
@@ -293,19 +295,23 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
      * throws away must not be able to leave anything behind here, and a
      * keystroke cannot arrive between the tree being changed and this.
      */
-    const latest = React.useRef({ value, readOnly, onEdit, onSelect, onImages, definitionLists });
+    const options = React.useMemo(
+      () => ({ gfm, breaks, definitionLists }),
+      [gfm, breaks, definitionLists]
+    );
+    const latest = React.useRef({ value, readOnly, onEdit, onSelect, onImages, options });
 
     React.useLayoutEffect(() => {
-      latest.current = { value, readOnly, onEdit, onSelect, onImages, definitionLists };
+      latest.current = { value, readOnly, onEdit, onSelect, onImages, options };
     });
 
     React.useImperativeHandle(ref, () => root.current as HTMLElement);
 
-    const document_ = React.useMemo(
-      () => parseMarkdown(value, { gfm, breaks, definitionLists }),
-      [value, gfm, breaks, definitionLists]
+    const document_ = React.useMemo(() => parseMarkdown(value, options), [value, options]);
+    const blocks = React.useMemo(
+      () => withRoom(document_.root.children, room, value),
+      [document_, room, value]
     );
-    const blocks = React.useMemo(() => withRoom(document_.root.children, room), [document_, room]);
     const footnotes = React.useMemo(
       () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
       [document_]
@@ -465,7 +471,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           element,
           now.value,
           aim.current,
-          now.definitionLists,
+          now.options,
           drag.current
         );
 
@@ -746,9 +752,19 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        // Into an empty paragraph with the blank lines that keep it one, the way
+        // a keystroke is. See `openedAt`.
+        const opened = was.before
+          ? { value, at: was.start }
+          : openedAt(element, was.host, value, was.start);
+        const shift = opened.at - was.start;
+
         onEdit({
-          value: value.slice(0, was.start) + after + value.slice(was.start + was.before.length),
-          caret
+          value:
+            opened.value.slice(0, opened.at) +
+            after +
+            opened.value.slice(opened.at + was.before.length),
+          caret: caret + shift
         });
       };
 
@@ -913,33 +929,58 @@ function restore(host: Node, content: string): void {
 }
 
 /**
- * A paragraph with nothing in it, where the caret has nowhere else to be.
+ * The document's blocks, with a paragraph with nothing in it wherever the
+ * source has one to draw and wherever the caret has nowhere else to be.
  *
- * Markdown cannot write an empty paragraph. A blank line separates two blocks
- * and a second blank line separates the same two, so pressing Enter at the end
- * of one and expecting a place to type is asking for something the file cannot
- * say. The document has to draw one anyway, or the caret would sit at the end
- * of the paragraph above and Enter would look like it did nothing.
+ * Markdown cannot write an empty paragraph, but it can write blank lines, and
+ * those are drawn: every second blank line past the one two blocks need
+ * between them is an empty paragraph, so what `Enter` wrote is what is on the
+ * page, and it stays there when the caret goes elsewhere. `blankParagraphs` has
+ * the counting.
  *
- * So exactly one is drawn, at the position the last edit left the caret, and it
- * is gone the moment anything is typed into it — at which point the blank line
- * around it is doing the work and the paragraph is real.
+ * The caret can still be left somewhere no blank line says anything — a list
+ * that goes on under the item that was just given up — and one more is drawn
+ * there, at the position the last edit left the caret, for as long as the caret
+ * is in it.
  */
-function withRoom(blocks: MdBlock[], room: number | null): MdBlock[] {
-  if (!blocks.length) {
-    return [empty(0)];
-  }
+function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBlock[] {
+  const blanks = blankParagraphs(value, blocks);
 
   if (
-    room === null ||
-    blocks.some((block) => block.range.start <= room && room <= block.range.end)
+    room !== null &&
+    !blanks.includes(room) &&
+    !blocks.some((block) => block.range.start <= room && room <= block.range.end)
   ) {
-    return blocks;
+    // In place of a blank line's paragraph on the same line: a caret left after
+    // a list item's indentation is on a line that is blank to the parser, and
+    // one paragraph is drawn for it rather than two.
+    const line = value.lastIndexOf('\n', room - 1) + 1;
+
+    blanks.splice(0, blanks.length, ...blanks.filter((at) => at < line || at > room), room);
+    blanks.sort((one, other) => one - other);
   }
 
-  const at = blocks.filter((block) => block.range.end < room).length;
+  if (!blanks.length) {
+    return blocks.length ? blocks : [empty(0)];
+  }
 
-  return [...blocks.slice(0, at), empty(room), ...blocks.slice(at)];
+  const out: MdBlock[] = [];
+  let next = 0;
+
+  for (const block of blocks) {
+    while (next < blanks.length && blanks[next] < block.range.start) {
+      out.push(empty(blanks[next]));
+      next += 1;
+    }
+
+    out.push(block);
+  }
+
+  for (; next < blanks.length; next += 1) {
+    out.push(empty(blanks[next]));
+  }
+
+  return out;
 }
 
 function empty(at: number): MdBlock {

@@ -2229,6 +2229,78 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('One \n\ntwo.');
   });
 
+  it('draws every paragraph Enter made, and keeps them once the caret has gone', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <div>
+        <MawyEditor defaultValue="Hello" mode="wysiwyg" onChange={onChange} />
+        <button type="button">Outside</button>
+      </div>
+    );
+    const body = bodyOf(screen);
+    const drawn = () => [...body.children].map((block) => block.textContent);
+
+    put(body, 'Hello', 5);
+    await userEvent.keyboard('{Enter}{Enter}{Enter}');
+
+    // Three presses, three paragraphs, and the source says the same: a blank
+    // line under each one to type on and a blank line under that.
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\n\n\n\n\n'));
+    expect(drawn()).toEqual(['Hello', '', '', '']);
+
+    (screen.container.querySelector('button:not([data-mawy-toolbar-item])') as HTMLElement).focus();
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(drawn()).toEqual(['Hello', '', '', '']);
+
+    body.focus();
+    await userEvent.keyboard('x');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\n\n\n\n\nx'));
+    expect(drawn()).toEqual(['Hello', '', '', 'x']);
+  });
+
+  it('takes an empty paragraph out with Backspace and Delete, one at a time', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'One\n\n\n\n\n\nTwo'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const drawn = () => [...body.children].map((block) => block.textContent);
+
+    expect(drawn()).toEqual(['One', '', '', 'Two']);
+
+    // At the start of a block, the empty paragraph above it goes and the block
+    // stays where it was rather than joining the words at the top.
+    put(body, 'Two', 0);
+    await userEvent.keyboard('{Backspace}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One\n\n\n\nTwo'));
+    expect(drawn()).toEqual(['One', '', 'Two']);
+
+    put(body, 'One', 3);
+    await userEvent.keyboard('{Delete}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One\n\nTwo'));
+    expect(drawn()).toEqual(['One', 'Two']);
+
+    put(body, 'One', 3);
+    await userEvent.keyboard('{Enter}{Enter}{Backspace}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One\n\n\n\nTwo'));
+    expect(drawn()).toEqual(['One', '', 'Two']);
+  });
+
+  it('gives a list item up onto a paragraph the document has', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="- a" mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'a', 1);
+    await userEvent.keyboard('{Enter}{Enter}x');
+
+    // Not `- a\nx`, which is the item's lazy continuation.
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- a\n\nx'));
+    expect(bodyOf(screen).querySelector('li')?.textContent).toBe('a');
+  });
+
   it('leaves somewhere to type when Enter ends the document', async () => {
     const screen = await render(<MawyEditor defaultValue="One." mode="wysiwyg" />);
 
@@ -2302,8 +2374,10 @@ describe('the document surface', () => {
     type(bodyOf(empty), 'insertParagraph');
 
     // The bullet goes rather than a second empty one arriving, which is how a
-    // list is left — the same rule the source surface has on `Enter`.
-    expect(gone).toHaveBeenLastCalledWith('- one\n');
+    // list is left — the same rule the source surface has on `Enter`. With a
+    // blank line under the list, so the paragraph the caret is left in is one
+    // the document has rather than one drawn until the caret moves.
+    expect(gone).toHaveBeenLastCalledWith('- one\n\n');
   });
 
   it('carries a quotation down, and a code block takes one newline', async () => {

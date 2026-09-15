@@ -17,6 +17,8 @@
  */
 
 import { continueList, continueTable } from './commands.js';
+import type { MdRange } from './markdown/ast.js';
+import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
 import { markdownFromHtml } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
 import { ruleFor } from './rules.js';
@@ -128,6 +130,203 @@ function joins(here: HTMLElement | null, there: HTMLElement | null): boolean {
 
 function splice(value: string, start: number, end: number, text: string): MawyEdit {
   return { value: value.slice(0, start) + text + value.slice(end), caret: start + text.length };
+}
+
+/**
+ * Where the blank lines between the document's blocks are drawn as empty
+ * paragraphs, as the offsets a caret in each of them is at.
+ *
+ * Markdown has no empty paragraph, and a drawn document that only ever showed
+ * one — where the caret had just been left — disagreed with its own source:
+ * `Enter` three times wrote six line endings and drew one paragraph, and the
+ * one it drew was gone as soon as the caret went anywhere else. So the blank
+ * lines are what is drawn. A blank line between two blocks is the separator
+ * they need and is nothing on the page; every second blank line past that is
+ * a paragraph with nothing in it, which is exactly the shape `Enter` at the end
+ * of a paragraph writes — a line to type on and a blank line under it.
+ *
+ * At the start and at the end of the document there is nothing on one side to
+ * be separated from, so the first blank line counts, and a document that is
+ * nothing but blank lines is a paragraph on every other one of them. The line
+ * ending a file closes with is not a paragraph, and neither is a second blank
+ * line somebody left between two sections by hand: an even count past the
+ * separator is the only one read as an empty paragraph.
+ *
+ * Only lines outside every block count. A blank line inside a list or a code
+ * block is that block's own, and the parser has already said where each block
+ * starts and ends.
+ */
+export function blankParagraphs(value: string, blocks: readonly { range: MdRange }[]): number[] {
+  const out: number[] = [];
+  let run: number[] = [];
+  let block = 0;
+  /** Whether anything that is not a blank line came before the run. */
+  let before = false;
+
+  const close = (after: boolean) => {
+    const count =
+      !before && !after
+        ? Math.ceil(run.length / 2)
+        : before && after
+          ? Math.floor((run.length - 1) / 2)
+          : Math.floor(run.length / 2);
+
+    for (let index = 0; index < count; index += 1) {
+      out.push(run[(before ? 1 : 0) + index * 2]);
+    }
+
+    run = [];
+  };
+
+  for (let start = 0; ;) {
+    const newline = value.indexOf('\n', start);
+    const end = newline === -1 ? value.length : newline;
+
+    while (block < blocks.length && blocks[block].range.end <= start) {
+      block += 1;
+    }
+
+    const inside = block < blocks.length && blocks[block].range.start <= end;
+
+    if (!inside && !value.slice(start, end).trim()) {
+      run.push(start);
+    } else {
+      close(true);
+      before = true;
+    }
+
+    if (newline === -1) {
+      break;
+    }
+
+    start = newline + 1;
+  }
+
+  close(false);
+
+  return out;
+}
+
+/** The element drawn straight under the document that holds this node. */
+function topOf(root: HTMLElement, node: Node): HTMLElement | null {
+  let at: Node | null = node;
+
+  while (at && at.parentNode !== root) {
+    at = at.parentNode;
+  }
+
+  return at?.nodeType === 1 ? (at as HTMLElement) : null;
+}
+
+/**
+ * Where an empty paragraph drawn straight under the document is, or `null` for
+ * anything else — which is what a blank line and the caret's own room are both
+ * drawn as. See `blankParagraphs`.
+ */
+function emptyAt(element: Element | null): number | null {
+  if (element?.tagName !== 'P' || element.firstChild) {
+    return null;
+  }
+
+  const range = rangeOf(element);
+
+  return range && range.start === range.end ? range.start : null;
+}
+
+/**
+ * What a block drawn straight under the document was drawn from.
+ *
+ * Its own range, or the first one inside it for the box a wide table scrolls
+ * inside, which the renderer put in and which says nothing.
+ */
+function topRange(element: Element | null): MdRange | null {
+  if (!element) {
+    return null;
+  }
+
+  const inner = rangeOf(element) ? element : element.querySelector('[data-mawy-range]');
+
+  return inner ? rangeOf(inner) : null;
+}
+
+/**
+ * A place in an empty paragraph, with whatever blank lines it needs to stay one
+ * once something is written into it.
+ *
+ * One drawn for a blank line has them already, and comes back unchanged. One
+ * drawn only for the caret may not: a list item given up leaves the caret on
+ * the line under the list, and `x` written there is the item's lazy
+ * continuation rather than a paragraph — the letter lands in the list the
+ * reader just left.
+ */
+export function openedAt(
+  root: HTMLElement,
+  node: Node,
+  value: string,
+  at: number
+): { value: string; at: number } {
+  const lineStart = at > 0 ? value.lastIndexOf('\n', at - 1) + 1 : 0;
+
+  // After a container's own prefix — a quotation's `> `, a list item's
+  // indentation — the caret was put there to write inside that container, and
+  // what is written belongs on that line as it is.
+  if (lineStart !== at || emptyAt(topOf(root, node)) === null) {
+    return { value, at };
+  }
+  const above =
+    lineStart > 0 ? value.slice(value.lastIndexOf('\n', lineStart - 2) + 1, lineStart - 1) : '';
+  const newline = value.indexOf('\n', at);
+  const rest = value.slice(at, newline === -1 ? value.length : newline);
+  const next = newline === -1 ? -1 : value.indexOf('\n', newline + 1);
+  const below = newline === -1 ? '' : value.slice(newline + 1, next === -1 ? value.length : next);
+  const prefix = above.trim() ? '\n' : '';
+  const suffix = rest.trim() ? '\n\n' : below.trim() ? '\n' : '';
+
+  if (!prefix && !suffix) {
+    return { value, at };
+  }
+
+  return {
+    value: value.slice(0, at) + prefix + suffix + value.slice(at),
+    at: at + prefix.length
+  };
+}
+
+/**
+ * An edit that leaves the caret between blocks, moved onto an empty paragraph.
+ *
+ * `Enter` on an item still empty gives its marker up and leaves the caret on
+ * the line under the list, where nothing is drawn, because one line ending is
+ * not a blank line to be a paragraph on. One more makes it one, and the drawn
+ * paragraph is then the document's own rather than a room kept for as long as
+ * the caret stays. Where no number of line endings makes one — inside a list
+ * that goes on below — the edit is left as it was, and the caret's room is what
+ * is drawn.
+ */
+function settle(edit: MawyEdit, options: MarkdownOptions): MawyEdit {
+  const lineStart = edit.caret > 0 ? edit.value.lastIndexOf('\n', edit.caret - 1) + 1 : 0;
+
+  // A caret after a container's prefix was left inside that container on
+  // purpose, and a blank line would take it out.
+  if (!edit.betweenBlocks || lineStart !== edit.caret) {
+    return edit;
+  }
+
+  for (const extra of ['', '\n', '\n\n']) {
+    const value = edit.value.slice(0, edit.caret) + extra + edit.value.slice(edit.caret);
+    const caret = edit.caret + extra.length;
+    const blocks = parseMarkdown(value, options).root.children;
+
+    if (!extra && blocks.some((block) => block.range.start <= caret && caret <= block.range.end)) {
+      return edit;
+    }
+
+    if (blankParagraphs(value, blocks).includes(caret)) {
+      return { value, caret, betweenBlocks: true };
+    }
+  }
+
+  return edit;
 }
 
 /**
@@ -256,7 +455,37 @@ function deleteBefore(
     return removeAtom(value, atom);
   }
 
+  const top = topOf(root, node);
+  const empty = emptyAt(top);
+
+  // In an empty paragraph, the paragraph goes: what lies between the end of
+  // whatever is drawn above it and the paragraph itself, which is its blank line
+  // and its separator. The caret lands at that end. Joining the paragraph to
+  // the text above, which is what the walk below does, would take every other
+  // empty paragraph between the two with it.
+  if (top && empty !== null) {
+    const above = topRange(top.previousElementSibling);
+
+    return above && above.end < empty
+      ? { value: value.slice(0, above.end) + value.slice(empty), caret: above.end }
+      : null;
+  }
+
   const back = before(root, node, offset);
+
+  // At the start of a block with an empty paragraph above it, the empty
+  // paragraph goes and the block stays what it is.
+  if (top && (!back || !top.contains(back.node))) {
+    const above = emptyAt(top.previousElementSibling);
+    const range = topRange(top);
+
+    if (above !== null && range && above < range.start) {
+      return {
+        value: value.slice(0, above) + value.slice(range.start),
+        caret: caret - (range.start - above)
+      };
+    }
+  }
 
   if (!back) {
     return null;
@@ -293,7 +522,31 @@ function deleteAfter(
     return removeAtom(value, atom);
   }
 
+  const top = topOf(root, node);
+  const empty = emptyAt(top);
+
+  // `Backspace`'s two rules for an empty paragraph, read from the other side:
+  // in one, it goes and the caret is where the next block starts; at the end
+  // of a block with one under it, that one goes.
+  if (top && empty !== null) {
+    const below = topRange(top.nextElementSibling);
+
+    return below && below.start > empty
+      ? { value: value.slice(0, empty) + value.slice(below.start), caret: empty }
+      : null;
+  }
+
   const ahead = after(root, node, offset);
+
+  if (top && (!ahead || !top.contains(ahead.node))) {
+    const below = emptyAt(top.nextElementSibling);
+    const range = topRange(top);
+    const from = range ? Math.max(caret, range.end) : caret;
+
+    if (below !== null && below > from) {
+      return { value: value.slice(0, from) + value.slice(below), caret };
+    }
+  }
 
   if (!ahead) {
     return null;
@@ -362,7 +615,7 @@ function breakAt(
   start: number,
   end: number,
   node: Node,
-  definitionLists: boolean
+  options: MarkdownOptions
 ): MawyEdit | null {
   const block = blockAt(root, node);
   const tag = block?.tagName;
@@ -376,7 +629,9 @@ function breakAt(
     // at the end of a quoted paragraph already leaves one.
     const line = row?.value.slice(row.value.lastIndexOf('\n', row.start - 1) + 1, row.start);
 
-    return row ? { value: row.value, caret: row.start, betweenBlocks: !line?.trim() } : null;
+    return row
+      ? settle({ value: row.value, caret: row.start, betweenBlocks: !line?.trim() }, options)
+      : null;
   }
 
   if (tag === 'PRE') {
@@ -384,26 +639,35 @@ function breakAt(
   }
 
   if (start === end) {
-    const item = continueList({ value, start, end }, definitionLists);
+    const item = continueList({ value, start, end }, options.definitionLists ?? true);
 
     if (item) {
-      return {
-        value: item.value,
-        caret: item.start,
-        // A marker given up leaves the caret where nothing is drawn any more,
-        // which is the whole point of giving it up.
-        betweenBlocks: item.value.length < value.length
-      };
+      return settle(
+        {
+          value: item.value,
+          caret: item.start,
+          // A marker given up leaves the caret where nothing is drawn any more,
+          // which is the whole point of giving it up.
+          betweenBlocks: item.value.length < value.length
+        },
+        options
+      );
     }
 
     const quoted = continueQuote(value, start);
 
     if (quoted) {
-      return quoted;
+      return settle(quoted, options);
     }
   }
 
-  return { ...splice(value, start, end, '\n\n'), betweenBlocks: true };
+  const opened = openedAt(root, node, value, start);
+  const shift = opened.at - start;
+
+  return settle(
+    { ...splice(opened.value, start + shift, end + shift, '\n\n'), betweenBlocks: true },
+    options
+  );
 }
 
 /**
@@ -529,7 +793,16 @@ export function editForText(
 ): MawyEdit | null {
   const place = placeOf(root, value, aim);
 
-  return place && text ? splice(value, place.start, place.end, text) : null;
+  if (!place || !text) {
+    return null;
+  }
+
+  const opened =
+    place.start === place.end
+      ? openedAt(root, place.node, value, place.start)
+      : { value, at: place.start };
+
+  return splice(opened.value, opened.at, opened.at + (place.end - place.start), text);
 }
 
 /**
@@ -546,7 +819,7 @@ export function editFor(
   root: HTMLElement,
   value: string,
   aim: MawyAim | null,
-  definitionLists = true,
+  options: MarkdownOptions = {},
   drag: MawyDrag = { taken: null }
 ): MawyEdit | null {
   const place = placeOf(root, value, aim);
@@ -593,19 +866,23 @@ export function editFor(
         };
       }
 
+      // Into an empty paragraph with the blank lines that keep it one, where it
+      // has not got them. See `openedAt`.
+      const opened =
+        start === end ? openedAt(root, range.startContainer, value, start) : { value, at: start };
       const rule =
         start === end && tag !== 'PRE' && tag !== 'TD' && tag !== 'TH'
-          ? ruleFor(value, start, event.data)
+          ? ruleFor(opened.value, opened.at, event.data)
           : null;
 
-      return rule ?? splice(value, start, end, event.data);
+      return rule ?? splice(opened.value, opened.at, opened.at + (end - start), event.data);
     }
 
     case 'insertReplacementText':
       return event.data === null ? null : splice(value, start, end, event.data);
 
     case 'insertParagraph':
-      return breakAt(root, value, start, end, range.startContainer, definitionLists);
+      return breakAt(root, value, start, end, range.startContainer, options);
 
     case 'insertLineBreak': {
       const block = blockAt(root, range.startContainer);
