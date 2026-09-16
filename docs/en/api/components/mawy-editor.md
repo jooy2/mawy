@@ -94,7 +94,7 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | Which controls the toolbar has, and in what order. |
-| `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3]` | Which heading levels the `heading` menu offers and `Mod`+`1` to `Mod`+`6` reach. |
+| `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3, 4, 5, 6]` | Which heading levels the `heading` menu offers and `Mod`+`1` to `Mod`+`6` reach. |
 | `frame` | [`MawyFrame`](../types/frame) | `'box'` | Whether the editor has a frame around it, or floats in the page. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | Which end the toolbar and the find bar are at. The status bar does not move. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | What the status bar counts. |
@@ -109,7 +109,7 @@ The two arrangements are the ones every text field in Flutter offers, and they a
 | Argument | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `toolbar` | `List<`[`MawyEditorToolbarItem`](../types/editor-toolbar-item)`>` | `kMawyEditorToolbar` | Which controls the toolbar has, and in what order. `const []` for none. |
-| `headingLevels` | `List<int>` | `const [1, 2, 3]` | Which heading levels the `heading` menu offers and `Mod`+`1` to `Mod`+`6` reach. A number outside one to six is left out. |
+| `headingLevels` | `List<int>` | `const [1, 2, 3, 4, 5, 6]` | Which heading levels the `heading` menu offers and `Mod`+`1` to `Mod`+`6` reach. A number outside one to six is left out. |
 | `frame` | [`MawyFrame`](../types/frame) | `MawyFrame.box` | Whether the editor has a frame around it, or floats on the screen. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `MawyToolbarPlacement.top` | Which end the toolbar and the find bar are at. The status bar does not move. |
 | `status` | `List<`[`MawyEditorStatusItem`](../types/editor-status-item)`>` | `kMawyEditorStatus` | What the status bar counts. `const []` for none. |

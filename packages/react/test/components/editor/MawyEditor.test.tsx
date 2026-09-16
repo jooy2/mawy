@@ -825,6 +825,37 @@ describe('the toolbar and the keyboard', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('## Section'));
   });
 
+  it('offers all six heading levels until it is told otherwise', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Section" modes={['plain']} onChange={onChange} style={WIDE} />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(3, 3);
+    await screen.getByRole('button', { name: 'Heading' }).click();
+
+    await expect.element(screen.getByRole('radio', { name: 'Heading 6' })).toBeInTheDocument();
+    expect(
+      [...screen.container.querySelectorAll('.mawy-choice-option')].map((each) => each.textContent)
+    ).toEqual([
+      'Heading 1',
+      'Heading 2',
+      'Heading 3',
+      'Heading 4',
+      'Heading 5',
+      'Heading 6',
+      'Body text'
+    ]);
+
+    await screen.getByRole('radio', { name: 'Heading 6' }).click();
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('###### Section'));
+
+    keys(input, '5');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('##### Section'));
+  });
+
   it('draws the document the way a page with its own `h1` will', async () => {
     for (const mode of ['wysiwyg', 'preview'] as const) {
       const screen = await render(

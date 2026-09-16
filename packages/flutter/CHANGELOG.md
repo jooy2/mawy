@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Changed
+
+- **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `const [1, 2, 3, 4, 5, 6]` now. An application whose screens only go so deep passes the levels it wants, as it always could.
+
 ## 1.6.0 (2026-09-15)
 
 ### Added

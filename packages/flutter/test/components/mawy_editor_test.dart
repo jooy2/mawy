@@ -1779,6 +1779,44 @@ void main() {
       expect(seen.last, 'Words.');
     });
 
+    testWidgets('offers all six heading levels until it is told otherwise', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'Words.',
+            mode: MawyEditorMode.plain,
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pump();
+
+      await press(tester, 'Heading');
+
+      for (int depth = 1; depth <= 6; depth += 1) {
+        expect(find.text('Heading $depth'), findsOneWidget);
+      }
+
+      await tester.tap(find.text('Heading 6'));
+      await tester.pumpAndSettle();
+      expect(seen.last, '###### Words.');
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+      await chord(tester, LogicalKeyboardKey.digit5);
+      expect(seen.last, '##### Words.');
+    });
+
     testWidgets('runs no command while the document is read only', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

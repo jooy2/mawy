@@ -206,7 +206,7 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 | `Mod` + `Shift` + `9`   | Task list                              |
 | `Mod` + `Shift` + `E`   | Code block                             |
 | `Mod` + `Shift` + `,`   | Divider                                |
-| `Mod` + `1` / `2` / `3` | Heading 1, 2, 3                        |
+| `Mod` + `1` to `6`      | Heading 1 to 6                         |
 | `Mod` + `0`             | Body text                              |
 | `Mod` + `F`             | Find and replace                       |
 | `Mod` + `S`             | Save                                   |
@@ -226,7 +226,7 @@ The lists and the quotation use the keys GitHub's comment box gives them, and th
 
 :::
 
-**`headingLevels` says which headings the menu offers**, for an application whose pages write the title as their own `h1` and whose documents start at `##`. Given heading 2, 3 and 4, the menu offers those and body text, and `Mod`+`2`, `Mod`+`3` and `Mod`+`4` toggle them, while `Mod`+`1` is handed on to whatever else answers it. The levels are the document's own depths, the number of `#` written.
+**`headingLevels` says which headings the menu offers.** All six by default, since that is how many Markdown has, and a menu that stops short of one is a heading the editor cannot write. Narrowing it is for an application whose pages write the title as their own `h1` and whose documents start at `##`: given heading 2, 3 and 4, the menu offers those and body text, and `Mod`+`2`, `Mod`+`3` and `Mod`+`4` toggle them, while `Mod`+`1` is handed on to whatever else answers it. The levels are the document's own depths, the number of `#` written.
 
 ::: fw react
 
@@ -266,7 +266,7 @@ The edits go in through the browser's own text-insertion command, which leaves t
 | --- | --- |
 | `'mode'` | The surface switch |
 | `'undo'`, `'redo'` | A step back through the history and forward again, disabled while there is none |
-| `'heading'` | A menu of heading 1, 2, 3 and body text, or of the levels in `headingLevels` |
+| `'heading'` | A menu of all six headings and body text, or of the levels in `headingLevels` |
 | `'bold'`, `'italic'`, `'strikethrough'`, `'code'`, `'link'`, `'image'` | Inline formatting |
 | `'quote'`, `'bulletList'`, `'orderedList'`, `'taskList'`, `'codeBlock'`, `'rule'` | Blocks |
 | `'table'` | A grid that inserts an empty table of the size pressed. See [tables](#tables) |

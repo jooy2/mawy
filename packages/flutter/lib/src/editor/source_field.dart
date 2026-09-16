@@ -485,7 +485,7 @@ class MawySourceField extends StatefulWidget {
     required this.onCommand,
     this.onTable,
     this.tableAvailable,
-    this.headingLevels = const <int>[1, 2, 3],
+    this.headingLevels = const <int>[1, 2, 3, 4, 5, 6],
     this.onHeading,
     this.undoController,
     this.scrollController,

@@ -252,7 +252,7 @@ class MawyEditor extends StatefulWidget {
     this.modes = kMawyEditorModes,
     this.onModeChange,
     this.toolbar = kMawyEditorToolbar,
-    this.headingLevels = const <int>[1, 2, 3],
+    this.headingLevels = const <int>[1, 2, 3, 4, 5, 6],
     this.frame = MawyFrame.box,
     this.toolbarPlacement = MawyToolbarPlacement.top,
     this.status = kMawyEditorStatus,
@@ -313,6 +313,10 @@ class MawyEditor extends StatefulWidget {
   /// text, and `Mod`+`2` to `Mod`+`4` toggle them, while `Mod`+`1` is handed on
   /// to whatever else answers it. The keys reach only what the menu offers, so
   /// the two cannot disagree. A number outside one to six is left out.
+  ///
+  /// All six by default, because Markdown has six and a menu that stops at
+  /// three is a document the editor cannot write. An application whose screens
+  /// only go so deep says so here.
   final List<int> headingLevels;
 
   /// Whether the editor has a frame around it, or floats on the screen.

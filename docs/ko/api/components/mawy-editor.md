@@ -94,7 +94,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
 | `toolbar` | [`MawyEditorToolbarOption`](../types/editor-toolbar-item) | `true` | 툴바에 둘 컨트롤과 그 순서. |
-| `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3]` | `heading` 메뉴가 보여 주고 `Mod`+`1`~`Mod`+`6`이 닿는 제목 수준. |
+| `headingLevels` | `readonly (1 \| 2 \| 3 \| 4 \| 5 \| 6)[]` | `[1, 2, 3, 4, 5, 6]` | `heading` 메뉴가 보여 주고 `Mod`+`1`~`Mod`+`6`이 닿는 제목 수준. |
 | `frame` | [`MawyFrame`](../types/frame) | `'box'` | 에디터가 테두리를 두를지, 페이지 위에 뜰지. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `'top'` | 툴바와 찾기 바가 어느 끝에 있을지. 상태 표시줄은 움직이지 않습니다. |
 | `status` | [`MawyEditorStatusOption`](../types/editor-status-item) | `true` | 상태 표시줄이 셀 것. |
@@ -109,7 +109,7 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 | 인자 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
 | `toolbar` | `List<`[`MawyEditorToolbarItem`](../types/editor-toolbar-item)`>` | `kMawyEditorToolbar` | 툴바에 둘 컨트롤과 그 순서. 없애려면 `const []`. |
-| `headingLevels` | `List<int>` | `const [1, 2, 3]` | `heading` 메뉴가 보여 주고 `Mod`+`1`~`Mod`+`6`이 닿는 제목 수준. 1에서 6 사이가 아닌 수는 뺍니다. |
+| `headingLevels` | `List<int>` | `const [1, 2, 3, 4, 5, 6]` | `heading` 메뉴가 보여 주고 `Mod`+`1`~`Mod`+`6`이 닿는 제목 수준. 1에서 6 사이가 아닌 수는 뺍니다. |
 | `frame` | [`MawyFrame`](../types/frame) | `MawyFrame.box` | 에디터가 테두리를 두를지, 화면 위에 뜰지. |
 | `toolbarPlacement` | [`MawyToolbarPlacement`](../types/frame#mawytoolbarplacement) | `MawyToolbarPlacement.top` | 툴바와 찾기 바가 어느 끝에 있을지. 상태 표시줄은 움직이지 않습니다. |
 | `status` | `List<`[`MawyEditorStatusItem`](../types/editor-status-item)`>` | `kMawyEditorStatus` | 상태 표시줄이 셀 것. 없애려면 `const []`. |

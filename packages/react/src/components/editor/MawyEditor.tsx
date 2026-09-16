@@ -261,7 +261,7 @@ function floated(
 const NOTHING_HELD: readonly MawyCommand[] = [];
 
 /** What the `heading` menu offers until an application says otherwise. */
-const DEFAULT_HEADING_LEVELS: readonly MawyHeadingLevel[] = [1, 2, 3];
+const DEFAULT_HEADING_LEVELS: readonly MawyHeadingLevel[] = [1, 2, 3, 4, 5, 6];
 
 /**
  * What an application can do to an editor from outside it.
@@ -480,7 +480,11 @@ export interface MawyEditorProps extends Omit<
    * is offered, so the keys and the menu say the same thing. Body text is always
    * offered, and is `Mod`+`0`.
    *
-   * @default [1, 2, 3]
+   * All six by default, because Markdown has six and a menu that stops at three
+   * is a document the editor cannot write. An application whose pages only go
+   * so deep says so here.
+   *
+   * @default [1, 2, 3, 4, 5, 6]
    */
   headingLevels?: readonly MawyHeadingLevel[];
   fonts?: readonly MawyFont[];
