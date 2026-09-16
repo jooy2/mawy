@@ -415,8 +415,16 @@ void main() {
       expect(enter('- [x] done|'), '- [x] done\n- [ ] |');
     });
 
-    test('takes the marker away when the item is still empty', () {
-      expect(enter('- one\n- |'), '- one\n|');
+    test('takes the marker away when the item is still empty, and parts it from the list', () {
+      // A blank line between, or the letter typed where the bullet was is the
+      // last item's lazy continuation and the next `Enter` carries the marker
+      // back down. See `_partedFrom`.
+      expect(enter('- one\n- |'), '- one\n\n|');
+      expect(enter('- |'), '|');
+      // Nothing to be parted from, and nothing that would make a third line
+      // ending in a row.
+      expect(enter('\n- |'), '\n|');
+      expect(enter('- one\n- |\n- two'), '- one\n|\n- two');
     });
 
     test('carries a definition marker down only where the parser reads one', () {

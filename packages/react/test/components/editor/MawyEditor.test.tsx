@@ -1014,7 +1014,9 @@ describe('the toolbar and the keyboard', () => {
 
     enter();
 
-    await expect.element(screen.getByRole('textbox')).toHaveValue('- one\n');
+    // A blank line under the list, so the next thing typed is a paragraph of
+    // its own rather than the item's lazy continuation. See `partedFrom`.
+    await expect.element(screen.getByRole('textbox')).toHaveValue('- one\n\n');
   });
 
   it('refuses a second space and a second blank line on the source, and says which', async () => {

@@ -419,7 +419,7 @@ describe('Enter, inside a list', () => {
     // The `:` behaves exactly as a bullet does, which is why it is on the same
     // list rather than beside it.
     expect(enter('Apple\n: A fruit.|')).toBe('Apple\n: A fruit.\n: |');
-    expect(enter('Apple\n: A fruit.\n: |')).toBe('Apple\n: A fruit.\n|');
+    expect(enter('Apple\n: A fruit.\n: |')).toBe('Apple\n: A fruit.\n\n|');
   });
 
   it('carries a bullet down to the next line', () => {
@@ -435,8 +435,23 @@ describe('Enter, inside a list', () => {
     expect(enter('- [x] done|')).toBe('- [x] done\n- [ ] |');
   });
 
-  it('takes the marker away when the item is still empty', () => {
-    expect(enter('- one\n- |')).toBe('- one\n|');
+  it('takes the marker away when the item is still empty, and parts it from the list', () => {
+    // A blank line between, or the letter typed where the bullet was is the
+    // last item's lazy continuation and the next `Enter` carries the marker
+    // back down. See `partedFrom`.
+    expect(enter('- one\n- |')).toBe('- one\n\n|');
+    expect(enter('- |')).toBe('|');
+    // Nothing to be parted from, and nothing that would make a third line
+    // ending in a row.
+    expect(enter('\n- |')).toBe('\n|');
+    expect(enter('- one\n- |\n- two')).toBe('- one\n|\n- two');
+  });
+
+  it('says nothing about a line the item above only carries on lazily', () => {
+    // `- one` over `two` is one item to CommonMark, and the words were drawn
+    // inside the bullet — but the bullet is given up a blank line away now, so
+    // a document reaches this shape only by being written that way.
+    expect(enter('- one\n\ntwo|')).toBeNull();
   });
 
   it('carries the marker down from the line an item runs on over', () => {

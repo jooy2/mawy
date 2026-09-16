@@ -670,12 +670,13 @@ EditState? continueList(EditState state, {bool definitionLists = true}) {
   }
 
   if (own != null && content.trim().isEmpty) {
-    // An empty item: the marker goes, and so does the list.
-    return EditState(
-      state.value.substring(0, from) + state.value.substring(state.start),
-      from,
-      from,
-    );
+    // An empty item: the marker goes, and so does the list. See [_partedFrom]
+    // for the line ending that keeps it gone.
+    final String without = state.value.substring(0, from) + state.value.substring(state.start);
+    final String parted = _partedFrom(without, from);
+    final int at = from + parted.length;
+
+    return EditState(without.substring(0, from) + parted + without.substring(from), at, at);
   }
 
   final String next = ordinal != null
@@ -689,6 +690,31 @@ EditState? continueList(EditState state, {bool definitionLists = true}) {
     state.start + text.length,
     state.start + text.length,
   );
+}
+
+/// The line ending that has to go in front of the line a given-up marker left
+/// behind, or nothing where one would not help.
+///
+/// Giving the marker up is the way out of a list, and one line ending does not
+/// take the caret out of one: a line of words straight under an item is that
+/// item's lazy continuation to CommonMark, drawn at the end of it. So the
+/// letter typed where the bullet was joined the item above, and the next
+/// `Enter` — over a line the parser reads as the item's — carried the marker
+/// back down, which looked like the bullet coming back on its own.
+///
+/// A second line ending puts a blank line between, which is what makes the
+/// caret's line a paragraph of its own. Not where the line above is already
+/// blank, since there is nothing to be parted from, and not where it would
+/// make a third line ending in a row, which is the run [crowdedBy] refuses and
+/// an empty paragraph nothing can draw the height of.
+String _partedFrom(String value, int at) {
+  if (at < 2 || (at < value.length && value[at] == '\n')) {
+    return '';
+  }
+
+  final String above = value.substring(value.lastIndexOf('\n', at - 2) + 1, at - 1);
+
+  return above.trim().isEmpty ? '' : '\n';
 }
 
 /// A line that might open a list item, somewhere in a document.

@@ -657,11 +657,16 @@ export function continueList(state: EditState, definitionLists = true): EditStat
   }
 
   if (own && !content.trim()) {
-    // An empty item: the marker goes, and so does the list.
+    // An empty item: the marker goes, and so does the list. See `partedFrom`
+    // for the line ending that keeps it gone.
+    const without = state.value.slice(0, from) + state.value.slice(state.start);
+    const parted = partedFrom(without, from);
+    const at = from + parted.length;
+
     return {
-      value: state.value.slice(0, from) + state.value.slice(state.start),
-      start: from,
-      end: from
+      value: without.slice(0, from) + parted + without.slice(from),
+      start: at,
+      end: at
     };
   }
 
@@ -676,6 +681,35 @@ export function continueList(state: EditState, definitionLists = true): EditStat
     start: state.start + text.length,
     end: state.start + text.length
   };
+}
+
+/**
+ * The line ending that has to go in front of the line a given-up marker left
+ * behind, or nothing where one would not help.
+ *
+ * Giving the marker up is the way out of a list, and one line ending does not
+ * take the caret out of one: a line of words straight under an item is that
+ * item's lazy continuation to CommonMark, drawn at the end of it. So the letter
+ * typed where the bullet was joined the item above, and the next `Enter` — over
+ * a line the parser reads as the item's — carried the marker back down, which
+ * looked like the bullet coming back on its own.
+ *
+ * A second line ending puts a blank line between, which is what makes the
+ * caret's line a paragraph of its own. Not where the line above is already
+ * blank, since there is nothing to be parted from, and not where it would make
+ * a third line ending in a row, which is the run `crowdedBy` refuses and an
+ * empty paragraph nothing can draw the height of. The drawn document reaches
+ * the same place through `settle`, which is why both surfaces leave a list the
+ * same way.
+ */
+function partedFrom(value: string, at: number): string {
+  if (at < 2 || value[at] === '\n') {
+    return '';
+  }
+
+  const above = value.slice(value.lastIndexOf('\n', at - 2) + 1, at - 1);
+
+  return above.trim() ? '\n' : '';
 }
 
 /** A line that might open a list item, somewhere in a document. */
