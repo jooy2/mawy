@@ -21,6 +21,7 @@ import {
   continueList,
   fencedAt,
   indent,
+  removeBlock,
   runCommand,
   runTableCommand,
   tableSpanAt,
@@ -532,6 +533,36 @@ function removeAtom(value: string, atom: HTMLElement): MawyEdit | null {
  * out is what joins them — which is what backspace at the start of a paragraph
  * is for.
  */
+/** How many line endings a run of the document holds. */
+function lines(value: string, from: number, to: number): number {
+  let count = 0;
+
+  for (let at = value.indexOf('\n', from); at !== -1 && at < to; at = value.indexOf('\n', at + 1)) {
+    count += 1;
+  }
+
+  return count;
+}
+
+/**
+ * A divider beside an empty paragraph taken away, with the caret left on that
+ * paragraph.
+ *
+ * `Backspace` in an empty paragraph takes the paragraph away and puts the caret
+ * at the end of whatever is above it. A divider has no end for a caret to be
+ * at — it draws no characters of its own — so the paragraph came away and the
+ * caret stayed where it was, which is a key that looks as though it did
+ * nothing; and between two dividers there was no way to take either of them
+ * out at all. The divider goes instead, which is the only thing the key can
+ * mean there, and the caret goes on the blank line the two blocks either side
+ * of it are left with. `Delete` is the same, read the other way.
+ */
+function asideRule(value: string, rule: MdRange): MawyEdit {
+  const gone = removeBlock(value, rule.start, rule.end);
+
+  return { value: gone.value, caret: Math.max(0, gone.start - 1), betweenBlocks: true };
+}
+
 function deleteBefore(
   root: HTMLElement,
   value: string,
@@ -579,9 +610,23 @@ function deleteBefore(
   // the text above, which is what the walk below does, would take every other
   // empty paragraph between the two with it.
   if (top && empty !== null) {
-    const above = topRange(top.previousElementSibling);
+    const previous = top.previousElementSibling;
+    const above = topRange(previous);
 
-    return above && above.end < empty
+    if (!above || above.end >= empty) {
+      return null;
+    }
+
+    if (previous?.tagName === 'HR') {
+      return asideRule(value, above);
+    }
+
+    // Only where the paragraph has a blank line of its own to give up. A
+    // paragraph `room` is drawing for a caret with nowhere else to be has none
+    // — the one line ending between it and the block above is the separator
+    // those two blocks need — and taking that away joins them: a paragraph
+    // over a divider is that paragraph underlined, which is a heading.
+    return lines(value, above.end, empty) > 1
       ? { value: value.slice(0, above.end) + value.slice(empty), caret: above.end }
       : null;
   }
@@ -644,9 +689,18 @@ function deleteAfter(
   // in one, it goes and the caret is where the next block starts; at the end
   // of a block with one under it, that one goes.
   if (top && empty !== null) {
-    const below = topRange(top.nextElementSibling);
+    const next = top.nextElementSibling;
+    const below = topRange(next);
 
-    return below && below.start > empty
+    if (!below || below.start <= empty) {
+      return null;
+    }
+
+    if (next?.tagName === 'HR') {
+      return asideRule(value, below);
+    }
+
+    return lines(value, empty, below.start) > 1
       ? { value: value.slice(0, empty) + value.slice(below.start), caret: empty }
       : null;
   }

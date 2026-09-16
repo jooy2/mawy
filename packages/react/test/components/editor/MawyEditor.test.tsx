@@ -3036,6 +3036,62 @@ describe('the document surface', () => {
     }
   });
 
+  it('opens a paragraph for a press between two blocks with nothing between them', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        style={{ height: 344 }}
+        modes={['wysiwyg']}
+        defaultValue={'a\n\n---\n\n---\n\nb'}
+        onChange={onChange}
+      />
+    );
+    const body = bodyOf(screen);
+    const gap = () => {
+      const [one, other] = [...body.querySelectorAll('hr')].map((rule) =>
+        rule.getBoundingClientRect()
+      );
+      const box = body.getBoundingClientRect();
+
+      return { x: one.width / 2, y: (one.top + other.top) / 2 - box.top };
+    };
+
+    // Two dividers one after the other draw nothing between them for a caret
+    // to be on, so the press used to leave it on the document itself.
+    await userEvent.click(page.elementLocator(body), { position: gap() });
+    await userEvent.keyboard('X');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('a\n\n---\n\nX\n\n---\n\nb'));
+  });
+
+  it('takes a divider away with Backspace or Delete from the paragraph beside it', async () => {
+    for (const key of ['{Backspace}', '{Delete}'] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor
+          style={{ height: 344 }}
+          modes={['wysiwyg']}
+          defaultValue={'a\n\n---\n\n---\n\nb'}
+          onChange={onChange}
+        />
+      );
+      const body = bodyOf(screen);
+      const [one, other] = [...body.querySelectorAll('hr')].map((rule) =>
+        rule.getBoundingClientRect()
+      );
+      const box = body.getBoundingClientRect();
+
+      await userEvent.click(page.elementLocator(body), {
+        position: { x: one.width / 2, y: (one.top + other.top) / 2 - box.top }
+      });
+      await userEvent.keyboard(key);
+
+      // A divider draws no characters, so the key had nothing to take and
+      // looked as though it had done nothing at all.
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('a\n\n---\n\nb'));
+      await screen.unmount();
+    }
+  });
+
   it('moves past the end of a code span or a bold run, so what is typed next is outside it', async () => {
     const onChange = vi.fn();
     const screen = await render(

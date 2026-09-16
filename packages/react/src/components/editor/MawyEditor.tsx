@@ -882,9 +882,15 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // it decides that while rendering — so a caret told afterwards is a link
       // that closes on the keystroke that was being typed into it.
       setSelection({ start: edit.caret, end: edit.caret });
-      write(edit.value);
+
+      // A caret moved onto a paragraph nothing has been written for yet is not
+      // a change to the document, and an application told about one would save
+      // a document nobody touched. The rule `run` follows, for the same reason.
+      if (edit.value !== text) {
+        write(edit.value);
+      }
     },
-    [write]
+    [text, write]
   );
 
   React.useLayoutEffect(() => {

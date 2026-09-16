@@ -1310,6 +1310,49 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     };
 
     /**
+     * The caret put on a paragraph between the two blocks a press landed
+     * between, or `null` where it landed somewhere else.
+     *
+     * Two dividers one after the other draw nothing between them but the space
+     * their own margins leave, and a press there left the caret on the document
+     * itself, between two elements: nothing could be typed there, and
+     * `Backspace` had neither divider to take away. It goes on the blank line
+     * the two blocks are already separated by, and the paragraph drawn for it
+     * is the one `room` draws for a caret with nowhere else to be — nothing is
+     * written until something is typed into it, so a document nobody changed is
+     * left the way it was. Only where the two are on lines with nothing between
+     * them at all is a blank line written, because there the caret has no line
+     * of its own to go on.
+     */
+    const openedInside = (element: HTMLElement): MawyEdit | null => {
+      const selection = element.ownerDocument.getSelection();
+
+      if (selection?.anchorNode !== element) {
+        return null;
+      }
+
+      const at = selection.anchorOffset;
+      const above = element.childNodes[at - 1];
+      const below = element.childNodes[at];
+      const top = above?.nodeType === 1 ? rangeOf(above as Element) : null;
+      const bottom = below?.nodeType === 1 ? rangeOf(below as Element) : null;
+      // The line ending that closes the block above, and the line under it.
+      const line = top ? value.indexOf('\n', top.end) : -1;
+
+      if (!top || !bottom || line === -1 || value.slice(top.end, bottom.start).trim()) {
+        return null;
+      }
+
+      return line + 1 < bottom.start
+        ? { value, caret: line + 1, betweenBlocks: true }
+        : {
+            value: `${value.slice(0, line + 1)}\n${value.slice(line + 1)}`,
+            caret: line + 1,
+            betweenBlocks: true
+          };
+    };
+
+    /**
      * The arrows at the edges of what a caret can reach, and at the edges of a
      * run of formatting.
      *
@@ -1528,9 +1571,20 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         !element ||
         readOnly ||
         event.target !== element ||
-        !element.ownerDocument.getSelection()?.isCollapsed ||
-        !belowAll(element, event.clientY)
+        !element.ownerDocument.getSelection()?.isCollapsed
       ) {
+        return;
+      }
+
+      // Between two blocks rather than below them all, where the caret the
+      // browser put down has nowhere to be. See `openedInside`.
+      if (!belowAll(element, event.clientY)) {
+        const inside = openedInside(element);
+
+        if (inside) {
+          onEdit(inside);
+        }
+
         return;
       }
 
