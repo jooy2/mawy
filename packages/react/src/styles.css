@@ -416,6 +416,39 @@
   cursor: default;
 }
 
+/* ---------------------------------------------------------------------------
+ * The library's own words are not the document's
+ *
+ * A drag that started on a toolbar's label, on the heading inside a menu or on
+ * the line of counts under an editor was a text selection like any other: it
+ * took the words of the control it started on and ran on into the document
+ * behind, so opening `Text size` and dragging from its name selected the
+ * heading of whatever was underneath and shut the menu on the way. None of
+ * this is anybody's text to copy — it is the interface — and an interface a
+ * drag can select is an interface that eats the drag.
+ *
+ * Only what the library wrote: the document, the source field and the outline's
+ * own links are not here. Fields are asked for their selection back, since
+ * selecting what is in one is the whole of what a field is for.
+ * ------------------------------------------------------------------------- */
+
+.mawy-root .mawy-toolbar,
+.mawy-root .mawy-menu-panel,
+.mawy-root .mawy-find,
+.mawy-root .mawy-table-tools,
+.mawy-root .mawy-block-tools,
+.mawy-root .mawy-notice,
+.mawy-root .mawy-status,
+.mawy-root .mawy-outline,
+.mawy-root .mawy-empty {
+  user-select: none;
+}
+
+.mawy-root input,
+.mawy-root textarea {
+  user-select: text;
+}
+
 .mawy-root .mawy-menu {
   position: relative;
   display: inline-flex;
