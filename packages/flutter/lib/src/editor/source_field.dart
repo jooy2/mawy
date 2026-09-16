@@ -533,6 +533,7 @@ class MawySourceField extends StatefulWidget {
     required this.readOnly,
     required this.placeholder,
     required this.onEnter,
+    required this.onBreak,
     required this.onIndent,
     required this.onCommand,
     required this.onCrowded,
@@ -572,6 +573,9 @@ class MawySourceField extends StatefulWidget {
 
   /// `Enter`, which carries a list marker down. `true` when it was handled.
   final bool Function() onEnter;
+
+  /// `Shift`+`Enter`, which writes a hard break. See [hardBreak].
+  final VoidCallback onBreak;
 
   /// `Tab` and `Shift`+`Tab`.
   final void Function({required bool out}) onIndent;
@@ -846,11 +850,23 @@ class _MawySourceFieldState extends State<MawySourceField>
     final HardwareKeyboard keyboard = HardwareKeyboard.instance;
 
     if (event.logicalKey == LogicalKeyboardKey.enter &&
-        !keyboard.isShiftPressed &&
         !keyboard.isControlPressed &&
-        !keyboard.isMetaPressed &&
-        widget.onEnter()) {
-      return KeyEventResult.handled;
+        !keyboard.isMetaPressed) {
+      // `Shift`+`Enter` is a break inside the block, which the field's own
+      // answer — a bare line ending, one space to a Markdown parser — is not.
+      if (keyboard.isShiftPressed) {
+        if (widget.readOnly) {
+          return KeyEventResult.ignored;
+        }
+
+        widget.onBreak();
+
+        return KeyEventResult.handled;
+      }
+
+      if (widget.onEnter()) {
+        return KeyEventResult.handled;
+      }
     }
 
     return KeyEventResult.ignored;

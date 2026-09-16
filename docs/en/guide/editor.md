@@ -200,7 +200,7 @@ Two line endings in a row are the blank line two blocks are separated by, so tha
 
 **Three places keep whatever whitespace they are given.** Inside a code block and inside raw HTML every character is the character it is. Inside a table, the spaces that set a cell off from its pipes are written by the editor rather than typed. And the whitespace a line opens with is what nests a list item and what an indented code block is made of, so it is indentation rather than a run of spaces in words.
 
-Only a keystroke is refused. A document pasted in, opened from a file or handed to the editor by the application keeps every space and every blank line it came with, because a document arriving is not somebody typing. A hard line break is written the way it always was: `Shift`+`Enter` writes the two spaces on the formatted document, and a `\` at the end of a line is the other way CommonMark writes one and the way to type one on the source.
+Only a keystroke is refused. A document pasted in, opened from a file or handed to the editor by the application keeps every space and every blank line it came with, because a document arriving is not somebody typing. And a hard line break has a key of its own: `Shift`+`Enter` writes the two spaces it is made of, on both surfaces.
 
 ## Formatting
 
@@ -229,6 +229,7 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 | `Mod` + `Z`             | Undo                                   |
 | `Mod` + `Shift` + `Z`   | Redo, and `Ctrl` + `Y` as well         |
 | `Enter`                 | Carries a list marker to the next line |
+| `Shift` + `Enter`       | A line break inside the block          |
 
 `Mod` is Command or Control, whichever the machine has. Both are accepted rather than guessed at.
 
@@ -267,6 +268,8 @@ A number outside one to six is left out.
 Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and the toolbar button shows which are in force. Markers replace each other rather than stacking, so turning a numbered list into a bulleted one gives a bulleted list and not `- 1. item`. The code block is taken off from anywhere inside it, since a caret in a code block asking for one is asking for it to stop being one. On a line with nothing on it yet, the lists, the quotation and the headings write their marker for the words still to come, and a caret stays among the words it was among rather than coming out selected around the line.
 
 `Enter` at the end of a list item carries the marker down and counts an ordered list on, from the line an item runs on over as well as from its first. Pressing it again on the item that is still empty takes the marker away instead of making another. Without that, leaving a list would mean deleting the bullet the editor had just added.
+
+**`Shift`+`Enter` is a break inside the block**, on both surfaces: two spaces and a line ending, which is the hard break nearly every Markdown file in the world is written with, however invisible it is. In a table cell it is `<br>`, since a row of a table is one line of the file and a line ending would end the row. Inside a code block it is a line ending and nothing else, because everything in there is the characters it is. The source used to hand the key to the field, which wrote a bare line ending — one space to a Markdown parser — so the same key said two different things on the two surfaces.
 
 **No key is answered while an input method is composing.** Korean is composed a jamo at a time and the key that finishes a syllable is an ordinary key: `Enter` commits one, and the browser sends that keystroke on with `isComposing` set rather than keeping it to itself. Answering it would write into a document the composition has not finished changing, and the caret this has to move to write it with ends the composition where it stands — so `Enter` at the end of a Korean list item lost the syllable being composed and left an empty item in its place. The key comes again once the composition is over, which is when it means what it says. `Escape` is the exception, because ending a composition is what it is for.
 

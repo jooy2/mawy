@@ -1652,6 +1652,67 @@ function clearCells(state: EditState): EditState | null {
   return caretAfter(next, table.lines[0].start, span.top, span.left);
 }
 
+/**
+ * `Shift`+`Enter`: a break inside the block rather than a block of its own.
+ *
+ * Two spaces and a line ending, which is the hard break nearly every Markdown
+ * file in the world is written with, however invisible it is. In a table cell
+ * it is `<br>`, because a row of a table is one line of the file and a line
+ * ending would end the row; that is what every GitHub table writes instead, and
+ * what this library draws in a cell under every `html` policy. Inside a code
+ * block a line ending is a line ending and nothing else, since everything in
+ * there is the characters it is.
+ *
+ * The drawn document answers `insertLineBreak` with the same three, read off
+ * the element the caret is in rather than off the document, and the source had
+ * only the browser's own answer: a bare line ending, which Markdown reads as
+ * one space in the middle of a paragraph. So the same key said two different
+ * things on the two surfaces.
+ */
+export function hardBreak(state: EditState): EditState {
+  const { value, start, end } = state;
+  const document = parseMarkdown(value);
+  const blocks = [...document.root.children, ...document.footnotes];
+  const mark = tableNodeAt(blocks, start) ? '<br>' : codeInsideAt(blocks, start) ? '\n' : '  \n';
+  const at = start + mark.length;
+
+  return { value: value.slice(0, start) + mark + value.slice(end), start: at, end: at };
+}
+
+/**
+ * Whether a place is inside a code block, read at the edges the way
+ * `verbatimAt` reads them.
+ *
+ * That one answers for raw HTML as well, and raw HTML is not this question: the
+ * drawn document writes it out as an ordinary run of characters with the caret
+ * in it, and gives it the hard break every other run of characters gets.
+ */
+function codeInsideAt(nodes: readonly MdNode[], offset: number): boolean {
+  for (const node of nodes) {
+    const { start, end } = node.range;
+
+    if (offset <= start || offset > end) {
+      continue;
+    }
+
+    if (node.type === 'code') {
+      const open = node.content.end === end && node.content.start > start;
+
+      if (offset < end || open) {
+        return true;
+      }
+
+      continue;
+    }
+
+    if ('children' in node && codeInsideAt(node.children as MdNode[], offset)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /** What a keystroke was refused for: a second space, or a second blank line. */
 export type MawyCrowding = 'space' | 'break';
 

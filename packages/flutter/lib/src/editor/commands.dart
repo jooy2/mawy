@@ -1760,6 +1760,67 @@ EditState? _removeTable(EditState state) {
       : removeBlock(state.value, table.lines.first.start, table.lines.last.end);
 }
 
+/// `Shift`+`Enter`: a break inside the block rather than a block of its own.
+///
+/// Two spaces and a line ending, which is the hard break nearly every Markdown
+/// file in the world is written with, however invisible it is. In a table cell
+/// it is `<br>`, because a row of a table is one line of the file and a line
+/// ending would end the row; that is what every GitHub table writes instead,
+/// and what this package draws in a cell. Inside a code block a line ending is
+/// a line ending and nothing else, since everything in there is the characters
+/// it is.
+///
+/// It is the React package's `hardBreak`, where the drawn document answers
+/// `insertLineBreak` with the same three, and the parity check compares the two.
+EditState hardBreak(EditState state) {
+  final String value = state.value;
+  final int start = state.start;
+  final MdDocument document = parseMarkdown(value);
+  final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
+  final String mark = _tableNodeAt(blocks, start) != null
+      ? '<br>'
+      : _codeInsideAt(blocks, start)
+      ? '\n'
+      : '  \n';
+  final int at = start + mark.length;
+
+  return EditState(value.substring(0, start) + mark + value.substring(state.end), at, at);
+}
+
+/// Whether a place is inside a code block, read at the edges the way
+/// [_verbatimAt] reads them.
+///
+/// That one answers for raw HTML as well, and raw HTML is not this question:
+/// the React package's drawn document writes it out as an ordinary run of
+/// characters with the caret in it, and gives it the hard break every other run
+/// of characters gets.
+bool _codeInsideAt(List<MdNode> nodes, int offset) {
+  for (final MdNode node in nodes) {
+    final int start = node.range.start;
+    final int end = node.range.end;
+
+    if (offset <= start || offset > end) {
+      continue;
+    }
+
+    if (node is MdCode) {
+      final bool open = node.content.end == end && node.content.start > start;
+
+      if (offset < end || open) {
+        return true;
+      }
+
+      continue;
+    }
+
+    if (_codeInsideAt(_blocksIn(node), offset)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// What a keystroke was refused for: a second space, or a second blank line.
 enum MawyCrowding {
   /// A second space in a row.

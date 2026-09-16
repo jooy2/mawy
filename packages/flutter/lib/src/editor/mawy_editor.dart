@@ -1067,6 +1067,7 @@ class _MawyEditorState extends State<MawyEditor> {
       readOnly: widget.readOnly,
       placeholder: widget.placeholder ?? strings.editorPlaceholder,
       onEnter: _enter,
+      onBreak: _break,
       onCrowded: _crowded,
       onIndent: _indent,
       onCommand: widget.readOnly ? null : _run,
@@ -1296,6 +1297,9 @@ class _MawyEditorState extends State<MawyEditor> {
 
     return true;
   }
+
+  /// `Shift`+`Enter`, which writes a break inside the block. See [hardBreak].
+  void _break() => _apply(hardBreak(_state));
 
   /// `Tab` and `Shift`+`Tab`. See [indent].
   void _indent({required bool out}) => _apply(indent(_state, out: out));

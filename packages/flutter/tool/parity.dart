@@ -435,6 +435,10 @@ List<Object?> _edits() {
         ? null
         : (crowding == MawyCrowding.space ? 'space' : 'break');
 
+    final EditState broken = hardBreak(state);
+
+    out['hardBreak'] = <Object?>[broken.value, broken.start, broken.end];
+
     return out;
   }).toList();
 }

@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **`Shift`+`Enter` writes a hard break on the source as well.** It was handed to the field, which wrote a bare line ending — one space to a Markdown parser — so the same key meant one thing on the drawn document and another beside it, and the source had no way to write a hard break at all. It writes the two spaces and the line ending a hard break is made of now, `<br>` in a table cell, whose row is one line of the file, and a bare line ending inside a code block, where every character is the character it is. `hardBreak` is the command behind it.
+
 ### Changed
 
 - **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `[1, 2, 3, 4, 5, 6]` now. An application whose pages only go so deep passes the levels it wants, as it always could.

@@ -1880,6 +1880,46 @@ void main() {
       expect(find.text('Only one blank line in a row.'), findsNothing);
     });
 
+    testWidgets('writes a hard break on Shift+Enter', (WidgetTester tester) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two\n\n```\ncode\n```',
+            mode: MawyEditorMode.plain,
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pump();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+
+      // Two spaces and a line ending. A bare line ending, which the field
+      // would have written on its own, is one space to a Markdown parser.
+      expect(seen.last, 'one  \n two\n\n```\ncode\n```');
+
+      field.controller.selection = const TextSelection.collapsed(offset: 18);
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+
+      // In a code block a line ending is a line ending and nothing else.
+      expect(seen.last, 'one  \n two\n\n```\nco\nde\n```');
+    });
+
     testWidgets('leaves Enter to the input method while a syllable is being composed', (
       WidgetTester tester,
     ) async {

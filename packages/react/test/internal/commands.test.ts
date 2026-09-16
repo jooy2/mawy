@@ -3,6 +3,7 @@ import {
   commandActive,
   continueList,
   crowdedBy,
+  hardBreak,
   indent,
   runCommand,
   runTableCommand,
@@ -703,5 +704,33 @@ describe('one space and one blank line', () => {
   it('leaves a table alone, whose cells the editor sets off with spaces itself', () => {
     expect(after('| a |  |\n| --- | --- |')).toBe(null);
     expect(after('| a | b |\n| --- | --- |\n| one  |  | b |')).toBe(null);
+  });
+});
+
+describe('a hard break', () => {
+  const broken = (marked: string) => show(hardBreak(at(marked)));
+
+  it('writes the two spaces a break is made of', () => {
+    expect(broken('one|two')).toBe('one  \n|two');
+    expect(broken('- a|')).toBe('- a  \n|');
+  });
+
+  it('writes a line ending inside a code block, where a character is itself', () => {
+    expect(broken('```\nco|de\n```')).toBe('```\nco\n|de\n```');
+    expect(broken('    co|de')).toBe('    co\n|de');
+  });
+
+  it('writes a `<br>` in a table cell, whose row is one line of the file', () => {
+    // Written out rather than marked, because the caret's mark is the
+    // character a table is made of.
+    const value = '| a | b |\n| --- | --- |';
+    const next = hardBreak({ value, start: 3, end: 3 });
+
+    expect(next.value).toBe('| a<br> | b |\n| --- | --- |');
+    expect(next.start).toBe(7);
+  });
+
+  it('replaces what is selected', () => {
+    expect(broken('one «two» three')).toBe('one   \n| three');
   });
 });

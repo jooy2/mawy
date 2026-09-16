@@ -1,7 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/editor/commands.dart'
-    show MawyCrowding, MawyTableCommand, crowdedBy, runTableCommand, tableAlignAt, tableOfSize;
+    show
+        MawyCrowding,
+        MawyTableCommand,
+        crowdedBy,
+        hardBreak,
+        runTableCommand,
+        tableAlignAt,
+        tableOfSize;
 
 /// The commands, as arithmetic on a string.
 ///
@@ -516,6 +523,34 @@ void main() {
       expect(after('```\ncode\n\n\n|\n```'), isNull);
       expect(after('<div>\n  a  |b\n</div>'), isNull);
       expect(after('| a |  |\n| --- | --- |'), isNull);
+    });
+  });
+
+  group('a hard break', () {
+    String broken(String marked) => show(hardBreak(at(marked)));
+
+    test('writes the two spaces a break is made of', () {
+      expect(broken('one|two'), 'one  \n|two');
+      expect(broken('- a|'), '- a  \n|');
+    });
+
+    test('writes a line ending inside a code block, where a character is itself', () {
+      expect(broken('```\nco|de\n```'), '```\nco\n|de\n```');
+      expect(broken('    co|de'), '    co\n|de');
+    });
+
+    test('writes a `<br>` in a table cell, whose row is one line of the file', () {
+      // Written out rather than marked, because the caret's mark is the
+      // character a table is made of.
+      const String value = '| a | b |\n| --- | --- |';
+      final EditState next = hardBreak(const EditState(value, 3, 3));
+
+      expect(next.value, '| a<br> | b |\n| --- | --- |');
+      expect(next.start, 7);
+    });
+
+    test('replaces what is selected', () {
+      expect(broken('one «two» three'), 'one   \n| three');
     });
   });
 }

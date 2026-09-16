@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **`Shift`+`Enter` writes a hard break.** The key was handed to the field, which wrote a bare line ending — one space to a Markdown parser — so a hard break could not be written at all. It writes the two spaces and the line ending a hard break is made of now, `<br>` in a table cell, whose row is one line of the file, and a bare line ending inside a code block, where every character is the character it is. It is the React package's `hardBreak`, and the parity check compares the two.
+
 ### Changed
 
 - **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `const [1, 2, 3, 4, 5, 6]` now. An application whose screens only go so deep passes the levels it wants, as it always could.

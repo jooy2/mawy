@@ -31,6 +31,7 @@ import {
   commandActive,
   continueList,
   crowdedBy,
+  hardBreak,
   headingActive,
   indent,
   runCommand,
@@ -260,6 +261,10 @@ const edits = JSON.parse(
   // which both packages have to answer the same way or the same document is
   // writable in one of them and not in the other.
   out.crowdedBy = crowdedBy({ value, caret: start });
+
+  const broken = hardBreak(state);
+
+  out.hardBreak = [broken.value, broken.start, broken.end];
 
   return out;
 });

@@ -1056,6 +1056,40 @@ describe('the toolbar and the keyboard', () => {
     expect(screen.container.querySelector('.mawy-notice')).toBeNull();
   });
 
+  it('writes a hard break on Shift+Enter, the way the drawn document does', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={'one two\n\n```\ncode\n```'} modes={['plain']} />
+    );
+    const input = sourceOf(screen);
+    const press = () => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true
+      });
+
+      input.dispatchEvent(event);
+
+      return event;
+    };
+
+    input.focus();
+    input.setSelectionRange(3, 3);
+
+    // Two spaces and a line ending. A bare line ending, which the field would
+    // have written on its own, is one space to a Markdown parser.
+    expect(press().defaultPrevented).toBe(true);
+    await expect.element(screen.getByRole('textbox')).toHaveValue('one  \n two\n\n```\ncode\n```');
+
+    // In a code block a line ending is a line ending and nothing else.
+    input.setSelectionRange(18, 18);
+    press();
+    await expect
+      .element(screen.getByRole('textbox'))
+      .toHaveValue('one  \n two\n\n```\nco\nde\n```');
+  });
+
   it('leaves Enter to the input method while a syllable is being composed', async () => {
     const screen = await render(<MawyEditor defaultValue="- 하" modes={['plain']} />);
     const input = sourceOf(screen);

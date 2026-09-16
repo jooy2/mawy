@@ -39,6 +39,7 @@ import {
   tableRangeAt,
   tableSpanAt,
   continueList,
+  hardBreak,
   headingActive,
   toggleHeading,
   indent,
@@ -2513,6 +2514,28 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         event.preventDefault();
         refuse(crowding, state.start);
       }
+
+      return;
+    }
+
+    /*
+     * `Shift`+`Enter` is a break inside the block: two spaces and a line ending,
+     * which is the same thing the drawn document writes for `insertLineBreak`.
+     * The browser's own answer here was a bare line ending, which Markdown reads
+     * as one space in the middle of a paragraph — so the same key said two
+     * different things on the two surfaces, and the source had no way to write a
+     * hard break at all. See `hardBreak`.
+     */
+    if (
+      event.key === 'Enter' &&
+      event.shiftKey &&
+      !showDocument &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey
+    ) {
+      event.preventDefault();
+      apply(state, hardBreak(state));
 
       return;
     }
