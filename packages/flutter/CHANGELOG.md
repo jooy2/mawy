@@ -10,6 +10,8 @@
 
 ### Fixed
 
+- **No key is answered while an input method is composing.** Korean is composed a jamo at a time and the key that finishes a syllable is an ordinary key, so carrying a list marker down there wrote into a document the composition had not finished changing and put the answer back over the composing run. Every key the source answers waits for the composition to finish now, and `Escape`, which is what ends one, does not. The React package reads it the same way.
+
 - **A second space in a row and a second blank line are refused, and the editor says which rule it was.** Markdown draws a run of spaces as one space, so a document holding three said one thing where it was drawn and another where it was written, with nothing on either to say which the file held. The keystroke that would write the extra character is refused now — drawing it would mean drawing whitespace the parser throws away — and a short sentence appears under the caret and goes again on its own. Two line endings are the blank line two blocks are separated by and still the most a run of them may be, so `Enter` twice is still how a paragraph is made. A code block, raw HTML, a table's own padding and the whitespace a line opens with are left alone, and so is every document that arrives pasted, opened or handed over rather than typed. It is the React package's `crowdedBy`, and the parity check compares the two. `MawyStrings` gained `oneSpace` and `oneBreak`.
 
 ## 1.6.0 (2026-09-15)

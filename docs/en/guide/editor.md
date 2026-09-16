@@ -268,6 +268,8 @@ Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and t
 
 `Enter` at the end of a list item carries the marker down and counts an ordered list on, from the line an item runs on over as well as from its first. Pressing it again on the item that is still empty takes the marker away instead of making another. Without that, leaving a list would mean deleting the bullet the editor had just added.
 
+**No key is answered while an input method is composing.** Korean is composed a jamo at a time and the key that finishes a syllable is an ordinary key: `Enter` commits one, and the browser sends that keystroke on with `isComposing` set rather than keeping it to itself. Answering it would write into a document the composition has not finished changing, and the caret this has to move to write it with ends the composition where it stands — so `Enter` at the end of a Korean list item lost the syllable being composed and left an empty item in its place. The key comes again once the composition is over, which is when it means what it says. `Escape` is the exception, because ending a composition is what it is for.
+
 The edits go in through the browser's own text-insertion command, which leaves the caret, the scroll position and any composition in progress exactly where they were. Writing the value directly guarantees none of that. Undo used to be the reason for this choice and is not any more; it has a section of its own below.
 
 `toolbar` takes `true`, `false`, or the controls to draw and the order to draw them in:

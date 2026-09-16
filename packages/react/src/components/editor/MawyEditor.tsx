@@ -2391,6 +2391,24 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
     leaving.current = false;
 
+    /*
+     * Nothing at all while an input method is composing.
+     *
+     * Korean is composed a jamo at a time, and the key that finishes a syllable
+     * is an ordinary key: `Enter` commits one, and the browser sends that
+     * keystroke on with `isComposing` set rather than keeping it to itself.
+     * Answering one writes into a document the composition has not finished
+     * changing, and the caret this has to move to write it with ends the
+     * composition where it stands — so `Enter` at the end of a Korean list item
+     * lost the syllable being composed and left an empty item in its place. The
+     * key comes again once the composition is over, which is when it means what
+     * it says. `Escape` is above this, because ending a composition is what it
+     * is for.
+     */
+    if (event.nativeEvent.isComposing) {
+      return;
+    }
+
     if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
       if (wasLeaving) {
         return;
@@ -2483,18 +2501,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
      * drawn document drew one and the same document said two different things
      * about itself. The drawn surface answers this in `beforeinput`; here the
      * key is the answer, because a textarea has no such event to refuse. Not
-     * while an input method is composing — a space is how a Korean syllable is
-     * finished — and not under a modifier, which makes it a shortcut. See
-     * `crowdedBy`.
+     * under a modifier, which makes it a shortcut. See `crowdedBy`.
      */
-    if (
-      event.key === ' ' &&
-      !showDocument &&
-      !event.metaKey &&
-      !event.ctrlKey &&
-      !event.altKey &&
-      !event.nativeEvent.isComposing
-    ) {
+    if (event.key === ' ' && !showDocument && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const crowding = crowdedBy({
         value: state.value.slice(0, state.start) + ' ' + state.value.slice(state.end),
         caret: state.start + 1
@@ -2529,7 +2538,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // is a line, two are the blank line that separates two blocks, and a
       // third is an empty paragraph nothing on either surface can show the
       // height of. See `crowdedBy`.
-      if (!showDocument && !event.nativeEvent.isComposing) {
+      if (!showDocument) {
         const after = next ?? {
           value: `${state.value.slice(0, state.start)}\n${state.value.slice(state.end)}`,
           start: state.start + 1

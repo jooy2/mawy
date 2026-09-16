@@ -805,6 +805,18 @@ class _MawySourceFieldState extends State<MawySourceField>
 
     _leaving = false;
 
+    // Nothing at all while an input method is composing. Korean is composed a
+    // jamo at a time, and the key that finishes a syllable is an ordinary key:
+    // answering one writes into a document the composition has not finished
+    // changing, and putting that answer back ends the composition where it
+    // stands. The key comes again once the composition is over, which is when
+    // it means what it says. The React package's `onKeyDown` reads it the same
+    // way, and `Escape` is above this in both, because ending a composition is
+    // what it is for.
+    if (widget.controller.value.composing.isValid) {
+      return KeyEventResult.ignored;
+    }
+
     if (event.logicalKey == LogicalKeyboardKey.tab) {
       final bool back = HardwareKeyboard.instance.isShiftPressed;
 

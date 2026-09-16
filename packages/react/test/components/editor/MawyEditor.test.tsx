@@ -1056,6 +1056,38 @@ describe('the toolbar and the keyboard', () => {
     expect(screen.container.querySelector('.mawy-notice')).toBeNull();
   });
 
+  it('leaves Enter to the input method while a syllable is being composed', async () => {
+    const screen = await render(<MawyEditor defaultValue="- 하" modes={['plain']} />);
+    const input = sourceOf(screen);
+    const enter = (composing: boolean) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        isComposing: composing,
+        bubbles: true,
+        cancelable: true
+      });
+
+      input.dispatchEvent(event);
+
+      return event;
+    };
+
+    input.focus();
+    input.setSelectionRange(3, 3);
+
+    // The key that finishes a Korean syllable reaches the page as an ordinary
+    // `Enter`, with `isComposing` set. Carrying the marker down there wrote
+    // into a document the composition had not finished changing and ended the
+    // composition to do it, so the syllable went and an empty item was left in
+    // its place.
+    expect(enter(true).defaultPrevented).toBe(false);
+    expect(input.value).toBe('- 하');
+
+    // And the key means what it says once the composition is over.
+    expect(enter(false).defaultPrevented).toBe(true);
+    await expect.element(screen.getByRole('textbox')).toHaveValue('- 하\n- ');
+  });
+
   it('indents with Tab, and lets go of it after Escape', async () => {
     const screen = await render(<MawyEditor defaultValue="one" modes={['plain']} />);
     const input = sourceOf(screen);

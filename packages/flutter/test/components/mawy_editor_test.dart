@@ -1880,6 +1880,56 @@ void main() {
       expect(find.text('Only one blank line in a row.'), findsNothing);
     });
 
+    testWidgets('leaves Enter to the input method while a syllable is being composed', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '- 하',
+            mode: MawyEditorMode.plain,
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+
+      // A syllable still being composed, which is what a composing range is.
+      field.controller.value = const TextEditingValue(
+        text: '- 하',
+        selection: TextSelection.collapsed(offset: 3),
+        composing: TextRange(start: 2, end: 3),
+      );
+      await tester.pump();
+
+      final int count = seen.length;
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+
+      // Carrying the marker down there writes into a document the composition
+      // has not finished changing, and putting that back ends the composition
+      // where it stands.
+      expect(seen.length, count);
+
+      field.controller.value = const TextEditingValue(
+        text: '- 하',
+        selection: TextSelection.collapsed(offset: 3),
+      );
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+
+      expect(seen.last, '- 하\n- ');
+    });
+
     testWidgets('keeps the spaces and the blank lines a code block is written with', (
       WidgetTester tester,
     ) async {
