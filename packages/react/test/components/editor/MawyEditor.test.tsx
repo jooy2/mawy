@@ -932,6 +932,47 @@ describe('the toolbar and the keyboard', () => {
     await expect.element(screen.getByRole('textbox')).toHaveValue('one **two** three');
   });
 
+  /**
+   * Both halves of a footnote at once, because the parser draws one only where
+   * there is a note to draw. `Mod`+`Alt`+`F` is where Word and Google Docs put
+   * it, and it has to arrive before the find bar's own `Mod`+`F`.
+   */
+  it('writes a footnote and its note, from the button and from Mod+Alt+F', async () => {
+    const screen = await render(
+      <div style={WIDE}>
+        <MawyEditor defaultValue="Garden notes." modes={['plain']} />
+      </div>
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(6, 6);
+
+    await screen.getByRole('button', { name: 'Footnote' }).click();
+
+    await expect.element(screen.getByRole('textbox')).toHaveValue('Garden[^1] notes.\n\n[^1]: ');
+    expect(input.selectionStart).toBe(25);
+
+    input.focus();
+    input.setSelectionRange(17, 17);
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'f',
+        code: 'KeyF',
+        metaKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true
+      })
+    );
+
+    // Counted on, and the second note goes on the line under the first.
+    await expect
+      .element(screen.getByRole('textbox'))
+      .toHaveValue('Garden[^1] notes.[^2]\n\n[^1]: \n[^2]: ');
+    expect(screen.container.querySelector('.mawy-find')).toBe(null);
+  });
+
   /*
    * Pressed rather than dispatched, because which of these arrive at all is
    * the question: under `Shift` a `7` is `&` and a `.` is `>`, so a handler

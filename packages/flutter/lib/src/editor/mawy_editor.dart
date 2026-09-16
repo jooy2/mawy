@@ -116,6 +116,9 @@ enum MawyEditorToolbarItem {
   /// `---`.
   rule,
 
+  /// `[^1]` where the caret is, and `[^1]: ` at the end of the document.
+  footnote,
+
   /// The find bar, over the source.
   find,
 
@@ -184,6 +187,7 @@ const List<MawyEditorToolbarItem> kMawyEditorToolbar = <MawyEditorToolbarItem>[
   MawyEditorToolbarItem.codeBlock,
   MawyEditorToolbarItem.table,
   MawyEditorToolbarItem.rule,
+  MawyEditorToolbarItem.footnote,
   MawyEditorToolbarItem.separator,
   MawyEditorToolbarItem.find,
   MawyEditorToolbarItem.open,
@@ -1812,30 +1816,28 @@ class _ToolbarState extends State<_Toolbar> {
   ///
   /// The label is not in here because it is not a constant: it is whichever of
   /// two languages the viewer was asked for, read off an object at build time.
-  static const Map<MawyEditorToolbarItem, ({MawyCommand command, IconData icon})> _controls =
-      <MawyEditorToolbarItem, ({MawyCommand command, IconData icon})>{
-        MawyEditorToolbarItem.bold: (command: MawyCommand.bold, icon: LucideIcons.bold),
-        MawyEditorToolbarItem.italic: (command: MawyCommand.italic, icon: LucideIcons.italic),
-        MawyEditorToolbarItem.strikethrough: (
-          command: MawyCommand.strikethrough,
-          icon: LucideIcons.strikethrough,
-        ),
-        MawyEditorToolbarItem.code: (command: MawyCommand.code, icon: LucideIcons.code),
-        MawyEditorToolbarItem.link: (command: MawyCommand.link, icon: LucideIcons.link),
-        MawyEditorToolbarItem.image: (command: MawyCommand.image, icon: LucideIcons.image),
-        MawyEditorToolbarItem.quote: (command: MawyCommand.quote, icon: LucideIcons.textQuote),
-        MawyEditorToolbarItem.bulletList: (command: MawyCommand.bulletList, icon: LucideIcons.list),
-        MawyEditorToolbarItem.orderedList: (
-          command: MawyCommand.orderedList,
-          icon: LucideIcons.listOrdered,
-        ),
-        MawyEditorToolbarItem.taskList: (
-          command: MawyCommand.taskList,
-          icon: LucideIcons.listChecks,
-        ),
-        MawyEditorToolbarItem.codeBlock: (command: MawyCommand.codeBlock, icon: LucideIcons.braces),
-        MawyEditorToolbarItem.rule: (command: MawyCommand.rule, icon: LucideIcons.minus),
-      };
+  static const Map<MawyEditorToolbarItem, ({MawyCommand command, IconData icon})>
+  _controls = <MawyEditorToolbarItem, ({MawyCommand command, IconData icon})>{
+    MawyEditorToolbarItem.bold: (command: MawyCommand.bold, icon: LucideIcons.bold),
+    MawyEditorToolbarItem.italic: (command: MawyCommand.italic, icon: LucideIcons.italic),
+    MawyEditorToolbarItem.strikethrough: (
+      command: MawyCommand.strikethrough,
+      icon: LucideIcons.strikethrough,
+    ),
+    MawyEditorToolbarItem.code: (command: MawyCommand.code, icon: LucideIcons.code),
+    MawyEditorToolbarItem.link: (command: MawyCommand.link, icon: LucideIcons.link),
+    MawyEditorToolbarItem.image: (command: MawyCommand.image, icon: LucideIcons.image),
+    MawyEditorToolbarItem.quote: (command: MawyCommand.quote, icon: LucideIcons.textQuote),
+    MawyEditorToolbarItem.bulletList: (command: MawyCommand.bulletList, icon: LucideIcons.list),
+    MawyEditorToolbarItem.orderedList: (
+      command: MawyCommand.orderedList,
+      icon: LucideIcons.listOrdered,
+    ),
+    MawyEditorToolbarItem.taskList: (command: MawyCommand.taskList, icon: LucideIcons.listChecks),
+    MawyEditorToolbarItem.codeBlock: (command: MawyCommand.codeBlock, icon: LucideIcons.braces),
+    MawyEditorToolbarItem.rule: (command: MawyCommand.rule, icon: LucideIcons.minus),
+    MawyEditorToolbarItem.footnote: (command: MawyCommand.footnote, icon: LucideIcons.superscript),
+  };
 
   String _labelFor(MawyEditorToolbarItem item) => switch (item) {
     MawyEditorToolbarItem.bold => widget.strings.bold,
@@ -1850,6 +1852,7 @@ class _ToolbarState extends State<_Toolbar> {
     MawyEditorToolbarItem.taskList => widget.strings.taskList,
     MawyEditorToolbarItem.codeBlock => widget.strings.codeBlock,
     MawyEditorToolbarItem.rule => widget.strings.thematicBreak,
+    MawyEditorToolbarItem.footnote => widget.strings.footnote,
     _ => '',
   };
 

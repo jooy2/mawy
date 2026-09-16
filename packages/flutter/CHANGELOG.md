@@ -6,6 +6,8 @@
 
 ### Added
 
+- **A footnote is written from the toolbar, both halves at once.** There was no command for one at all. `footnote` and `Mod`+`Alt`+`F` — where Word and Google Docs put it — write `[^1]` where the caret is, `[^1]: ` at the end of the document, and leave the caret in the note. Both halves together, because a reference with no note is nothing to the parser: a button that wrote `[^1]` and stopped would leave the document looking exactly as it did. The number is the first one nothing in the document has taken, counted over every `[^…]` written in it rather than over what the parser read, so a note nobody refers to yet still holds its own number, and a label that is not a number is in nobody's way. With words selected the reference goes at the end of them. `MawyCommand` gained `footnote`, `MawyEditorToolbarItem` the same, and `MawyStrings` a `footnote`. It is the React package's arithmetic, and the parity check compares the two.
+
 - **`Shift`+`Enter` writes a hard break.** The key was handed to the field, which wrote a bare line ending — one space to a Markdown parser — so a hard break could not be written at all. It writes the two spaces and the line ending a hard break is made of now, `<br>` in a table cell, whose row is one line of the file, and a bare line ending inside a code block, where every character is the character it is. It is the React package's `hardBreak`, and the parity check compares the two.
 
 ### Changed

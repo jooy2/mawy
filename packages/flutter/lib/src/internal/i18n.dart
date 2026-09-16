@@ -117,6 +117,7 @@ final class MawyStrings {
     required this.tableAlignRight,
     required this.tableRemove,
     required this.thematicBreak,
+    required this.footnote,
     required this.status,
     required this.statusPosition,
     required this.statusSelected,
@@ -389,6 +390,9 @@ final class MawyStrings {
   /// The editor: Divider.
   final String thematicBreak;
 
+  /// The editor: Footnote.
+  final String footnote;
+
   /// The editor: Document statistics.
   final String status;
 
@@ -558,6 +562,7 @@ final class MawyStrings {
     String? tableAlignRight,
     String? tableRemove,
     String? thematicBreak,
+    String? footnote,
     String? status,
     String? statusPosition,
     String? statusSelected,
@@ -667,6 +672,7 @@ final class MawyStrings {
       tableAlignRight: tableAlignRight ?? this.tableAlignRight,
       tableRemove: tableRemove ?? this.tableRemove,
       thematicBreak: thematicBreak ?? this.thematicBreak,
+      footnote: footnote ?? this.footnote,
       status: status ?? this.status,
       statusPosition: statusPosition ?? this.statusPosition,
       statusSelected: statusSelected ?? this.statusSelected,
@@ -782,6 +788,7 @@ final class MawyStrings {
       other.tableAlignRight == tableAlignRight &&
       other.tableRemove == tableRemove &&
       other.thematicBreak == thematicBreak &&
+      other.footnote == footnote &&
       other.status == status &&
       other.statusPosition == statusPosition &&
       other.statusSelected == statusSelected &&
@@ -892,6 +899,7 @@ final class MawyStrings {
     tableAlignRight,
     tableRemove,
     thematicBreak,
+    footnote,
     status,
     statusPosition,
     statusSelected,
@@ -1003,6 +1011,7 @@ const MawyStrings _en = MawyStrings._(
   tableAlignRight: 'Align right',
   tableRemove: 'Delete the table',
   thematicBreak: 'Divider',
+  footnote: 'Footnote',
   status: 'Document statistics',
   statusPosition: 'Ln %L, Col %C',
   statusSelected: '%N selected',
@@ -1113,6 +1122,7 @@ const MawyStrings _ko = MawyStrings._(
   tableAlignRight: '오른쪽 정렬',
   tableRemove: '표 삭제',
   thematicBreak: '구분선',
+  footnote: '각주',
   status: '문서 통계',
   statusPosition: '%L행 %C열',
   statusSelected: '%N자 선택',

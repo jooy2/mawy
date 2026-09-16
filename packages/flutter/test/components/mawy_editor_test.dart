@@ -335,6 +335,49 @@ void main() {
       expect(written, 'one **two** three');
     });
 
+    /// Both halves of a footnote at once, because the parser draws one only
+    /// where there is a note to draw.
+    testWidgets('writes a footnote and its note, from the button and from the key', (
+      WidgetTester tester,
+    ) async {
+      String? written;
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'Garden notes.',
+            defaultMode: MawyEditorMode.plain,
+            onChange: (String value) => written = value,
+          ),
+        ),
+      );
+
+      final EditableTextState field = tester.state(find.byType(EditableText));
+
+      field.widget.controller.selection = const TextSelection.collapsed(offset: 6);
+      await tester.pump();
+
+      await press(tester, 'Footnote');
+
+      expect(written, 'Garden[^1] notes.\n\n[^1]: ');
+      expect(field.widget.controller.selection.baseOffset, 25);
+
+      // `Mod`+`Alt`+`F`, which has to arrive before the find bar's own `Mod`+`F`.
+      field.widget.focusNode.requestFocus();
+      field.widget.controller.selection = const TextSelection.collapsed(offset: 17);
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      // Counted on, and the second note goes on the line under the first.
+      expect(written, 'Garden[^1] notes.[^2]\n\n[^1]: \n[^2]: ');
+      expect(find.byType(MawyFindBar), findsNothing);
+    });
+
     testWidgets('draws a command as pressed when it is already on', (WidgetTester tester) async {
       await tester.pumpWidget(
         host(const MawyEditor(defaultValue: '- one\n- two', defaultMode: MawyEditorMode.plain)),

@@ -80,6 +80,9 @@ enum MawyCommand {
 
   /// `---`.
   rule,
+
+  /// `[^1]` where the caret is, and `[^1]: ` at the end of the document.
+  footnote,
 }
 
 /* -------------------------------------------------------------------------
@@ -454,6 +457,60 @@ MdCode? _codeNodeAt(List<MdNode> nodes, int offset) {
   return null;
 }
 
+/// A label already spoken for, either by a reference or by the note itself.
+final RegExp _labels = RegExp(r'\[\^([^\]\s]+)\]');
+
+/// A line that opens a footnote's note.
+final RegExp _note = RegExp(r'^ {0,3}\[\^[^\]\s]+\]:');
+
+/// The line endings a document ends with.
+final RegExp _trailing = RegExp(r'\n+$');
+
+/// A footnote: its reference where the caret is, its note at the end of the
+/// document, and the caret in the note.
+///
+/// The two halves are written together because a reference with no note is
+/// nothing — the parser draws a footnote only where both are there, so a button
+/// that wrote `[^1]` and stopped would leave the document looking exactly as it
+/// did. The caret goes to the note rather than staying at the reference, since
+/// the note is the part that still has to be written.
+///
+/// The number is the first one nothing in the document has taken, counted over
+/// every `[^…]` in it rather than over the parse, so a note nobody refers to
+/// yet still holds its own number. The note goes at the end, a blank line from
+/// whatever is there — or one line ending, where the line above is a note of
+/// its own, which keeps them together the way a document that has any writes
+/// them.
+///
+/// A selection keeps its words and takes the reference at its end, which is
+/// where a footnote's mark goes: after what it is a note about.
+EditState _insertFootnote(EditState state) {
+  final String value = state.value;
+  final int end = state.end;
+  final Set<String> taken = _labels
+      .allMatches(value)
+      .map((RegExpMatch found) => found.group(1)!)
+      .toSet();
+  int label = 1;
+
+  while (taken.contains('$label')) {
+    label += 1;
+  }
+
+  final String marked = '${value.substring(0, end)}[^$label]${value.substring(end)}';
+  final String body = marked.replaceAll(_trailing, '');
+  final String last = body.substring(body.lastIndexOf('\n') + 1);
+  final int want = body.isEmpty
+      ? 0
+      : _note.hasMatch(last)
+      ? 1
+      : 2;
+  final String gap = '\n' * math.max(0, want - (marked.length - body.length));
+  final String text = '$marked$gap[^$label]: ';
+
+  return EditState(text, text.length, text.length);
+}
+
 EditState _insertRule(EditState state) {
   final String value = state.value;
   final int start = state.start;
@@ -537,6 +594,7 @@ EditState runCommand(MawyCommand command, EditState state) {
     MawyCommand.orderedList => _toggleOrdered(state),
     MawyCommand.codeBlock => _toggleCodeBlock(state),
     MawyCommand.rule => _insertRule(state),
+    MawyCommand.footnote => _insertFootnote(state),
   };
 }
 

@@ -67,6 +67,7 @@ export type MawyEditorToolbarItem =
   | 'codeBlock'
   | 'table'
   | 'rule'
+  | 'footnote'
   | 'find'
   | 'open'
   | 'save'
@@ -331,6 +332,8 @@ export interface MawyStrings {
   linkRemove: string;
   insertApply: string;
   thematicBreak: string;
+  /** The toolbar's footnote button, which writes a reference and its note. */
+  footnote: string;
   status: string;
   /** `%L` is the line and `%C` the column, both counted from one. */
   statusPosition: string;

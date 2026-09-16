@@ -179,7 +179,8 @@ const COMMANDS = [
   'orderedList',
   'taskList',
   'codeBlock',
-  'rule'
+  'rule',
+  'footnote'
 ];
 
 const TABLE_COMMANDS = [

@@ -35,7 +35,8 @@ export type MawyCommand =
   | 'orderedList'
   | 'taskList'
   | 'codeBlock'
-  | 'rule';
+  | 'rule'
+  | 'footnote';
 
 /* -------------------------------------------------------------------------
  * Lines
@@ -404,6 +405,50 @@ function codeNodeAt(nodes: readonly MdNode[], offset: number): MdCode | null {
   return null;
 }
 
+/** A label already spoken for, either by a reference or by the note itself. */
+const LABELS = /\[\^([^\]\s]+)\]/g;
+
+/** A line that opens a footnote's note. */
+const NOTE = /^ {0,3}\[\^[^\]\s]+\]:/;
+
+/**
+ * A footnote: its reference where the caret is, its note at the end of the
+ * document, and the caret in the note.
+ *
+ * The two halves are written together because a reference with no note is
+ * nothing — the parser draws a footnote only where both are there, so a button
+ * that wrote `[^1]` and stopped would leave the document looking exactly as it
+ * did. The caret goes to the note rather than staying at the reference, since
+ * the note is the part that still has to be written.
+ *
+ * The number is the first one nothing in the document has taken, counted over
+ * every `[^…]` in it rather than over the parse, so a note nobody refers to
+ * yet still holds its own number. The note goes at the end, a blank line from
+ * whatever is there — or one line ending, where the line above is a note of its
+ * own, which keeps them together the way a document that has any writes them.
+ *
+ * A selection keeps its words and takes the reference at its end, which is
+ * where a footnote's mark goes: after what it is a note about.
+ */
+function insertFootnote(state: EditState): EditState {
+  const { value, end } = state;
+  const taken = new Set([...value.matchAll(LABELS)].map((found) => found[1]));
+  let label = 1;
+
+  while (taken.has(String(label))) {
+    label += 1;
+  }
+
+  const marked = `${value.slice(0, end)}[^${label}]${value.slice(end)}`;
+  const body = marked.replace(/\n+$/, '');
+  const last = body.slice(body.lastIndexOf('\n') + 1);
+  const want = !body ? 0 : NOTE.test(last) ? 1 : 2;
+  const gap = '\n'.repeat(Math.max(0, want - (marked.length - body.length)));
+  const text = `${marked}${gap}[^${label}]: `;
+
+  return { value: text, start: text.length, end: text.length };
+}
+
 function insertRule(state: EditState): EditState {
   const { value, start, end } = state;
   const before = start > 0 && value[start - 1] !== '\n' ? '\n\n' : '';
@@ -506,6 +551,8 @@ export function runCommand(command: MawyCommand, state: EditState): EditState {
       return toggleCodeBlock(state);
     case 'rule':
       return insertRule(state);
+    case 'footnote':
+      return insertFootnote(state);
     default:
       return state;
   }

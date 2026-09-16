@@ -175,6 +175,35 @@ void main() {
     });
   });
 
+  group('a footnote', () {
+    test('writes its reference and its note, with the caret in the note', () {
+      // Both halves at once: the parser draws a footnote only where there is a
+      // note to draw, so a reference on its own leaves the document as it was.
+      expect(run(MawyCommand.footnote, 'text|'), 'text[^1]\n\n[^1]: |');
+      // The end of the selection is where a footnote's mark goes.
+      expect(run(MawyCommand.footnote, 'one «two» three'), 'one two[^1] three\n\n[^1]: |');
+    });
+
+    test('counts on from the numbers the document has taken', () {
+      expect(
+        run(MawyCommand.footnote, 'a[^1] b|\n\n[^1]: one'),
+        'a[^1] b[^2]\n\n[^1]: one\n[^2]: |',
+      );
+      // A note nobody refers to yet still holds its number, and a label that is
+      // not a number is in nobody's way.
+      expect(run(MawyCommand.footnote, 'a|\n\n[^2]: two'), 'a[^1]\n\n[^2]: two\n[^1]: |');
+      expect(
+        run(MawyCommand.footnote, 'a[^why] b|\n\n[^why]: because'),
+        'a[^why] b[^1]\n\n[^why]: because\n[^1]: |',
+      );
+    });
+
+    test('keeps the line ending a document ends with rather than writing another', () {
+      expect(run(MawyCommand.footnote, 'text|\n'), 'text[^1]\n\n[^1]: |');
+      expect(run(MawyCommand.footnote, 'text|\n\n'), 'text[^1]\n\n[^1]: |');
+    });
+  });
+
   group('tables', () {
     test('makes no block of a row, which a cell has no room for', () {
       const EditState state = EditState('Intro.\n\n| a | b |\n| - | - |', 12, 12);

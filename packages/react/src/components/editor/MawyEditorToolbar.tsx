@@ -19,6 +19,7 @@ import {
   CodeIcon,
   DarkIcon,
   FindIcon,
+  FootnoteIcon,
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
@@ -136,7 +137,8 @@ const COMMANDS: Partial<
   orderedList: { command: 'orderedList', icon: OrderedListIcon, label: 'orderedList' },
   taskList: { command: 'taskList', icon: TaskListIcon, label: 'taskList' },
   codeBlock: { command: 'codeBlock', icon: CodeBlockIcon, label: 'codeBlock' },
-  rule: { command: 'rule', icon: RuleIcon, label: 'thematicBreak' }
+  rule: { command: 'rule', icon: RuleIcon, label: 'thematicBreak' },
+  footnote: { command: 'footnote', icon: FootnoteIcon, label: 'footnote' }
 };
 
 /**
@@ -648,6 +650,7 @@ export const DEFAULT_EDITOR_TOOLBAR: readonly MawyEditorToolbarItem[] = [
   'codeBlock',
   'table',
   'rule',
+  'footnote',
   'separator',
   'find',
   'open',

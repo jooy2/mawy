@@ -28,6 +28,7 @@ type MawyEditorToolbarItem =
   | 'codeBlock'
   | 'table'
   | 'rule'
+  | 'footnote'
   | 'find'
   | 'open'
   | 'save'
@@ -58,6 +59,7 @@ enum MawyEditorToolbarItem {
   codeBlock,
   table,
   rule,
+  footnote,
   find,
   open,
   colorScheme,
@@ -70,6 +72,8 @@ enum MawyEditorToolbarItem {
 `mode`, `undo`, `redo`, `find`, `open`, `save`, `colorScheme`, `separator`를 뺀 나머지는 모두 서식 명령이고, 그 하나하나에 단축키도 있습니다. `find`에도 `Mod`+`F`가 있고 버튼을 그리든 말든 동작합니다. `separator`는 컨트롤이 아니라 가는 선을 그립니다.
 
 `undo`와 `redo`는 되돌리기 기록이고 단축키는 `Mod`+`Z`와 `Mod`+`Shift`+`Z`입니다. 되돌리거나 다시 할 단계가 없으면 비활성화됩니다.
+
+`footnote`은 커서 자리에 각주의 참조를, 문서 끝에 각주의 내용을 쓰고, 커서를 내용 쪽에 둡니다. 두 쪽을 한 번에 쓰는 이유는 파서가 내용이 있어야만 각주를 그리기 때문입니다. 번호는 문서에서 아직 아무도 쓰지 않은 첫 번호입니다. [서식](../../guide/editor#서식)을 보세요.
 
 `table`은 누른 크기의 빈 표를 넣는 격자입니다. 표의 행과 열은 커서가 있는 표 옆에 뜨는 막대에서 바꾸고, 그 명령마다 단축키가 따로 있습니다. [표](../../guide/editor#표)를 보세요.
 

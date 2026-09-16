@@ -455,6 +455,14 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
   SingleActivator(LogicalKeyboardKey.comma, meta: true, shift: true): _CommandIntent(
     MawyCommand.rule,
   ),
+  // Where Word and Google Docs put a footnote, and the one key here that is
+  // neither the modifier alone nor the modifier with `Shift`.
+  SingleActivator(LogicalKeyboardKey.keyF, control: true, alt: true): _CommandIntent(
+    MawyCommand.footnote,
+  ),
+  SingleActivator(LogicalKeyboardKey.keyF, meta: true, alt: true): _CommandIntent(
+    MawyCommand.footnote,
+  ),
 };
 
 /// One space in a row and one blank line, refused as they are typed.

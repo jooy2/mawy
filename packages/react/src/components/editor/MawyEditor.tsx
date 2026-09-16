@@ -2635,6 +2635,17 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    // `Mod`+`Alt`+`F`, which is where Word and Google Docs put a footnote, and
+    // before the find bar's own `f` below, which would otherwise take it on a
+    // keyboard where `Alt` types nothing of its own. `code` as well as `key`
+    // for the reason `insertTable` reads both: `Option`+`F` on a Mac is `ƒ`.
+    if (event.altKey && !event.shiftKey && (event.code === 'KeyF' || key === 'f')) {
+      event.preventDefault();
+      command('footnote');
+
+      return;
+    }
+
     // Before the modifiers are read for anything else, because `Cmd`+`Shift`+`Z`
     // is a redo rather than a shifted shortcut, and `Ctrl`+`Y` is the same thing
     // where Windows put it.

@@ -383,6 +383,29 @@ describe('blocks', () => {
   it('gives a rule the blank lines it needs to be one', () => {
     expect(run('rule', 'text|')).toBe('text\n\n---\n|');
   });
+
+  it('writes a footnote as its reference and its note, with the caret in the note', () => {
+    // Both halves at once: the parser draws a footnote only where there is a
+    // note to draw, so a reference on its own leaves the document as it was.
+    expect(run('footnote', 'text|')).toBe('text[^1]\n\n[^1]: |');
+    // The end of the selection is where a footnote's mark goes.
+    expect(run('footnote', 'one «two» three')).toBe('one two[^1] three\n\n[^1]: |');
+  });
+
+  it('counts a footnote on from the numbers the document has taken', () => {
+    expect(run('footnote', 'a[^1] b|\n\n[^1]: one')).toBe('a[^1] b[^2]\n\n[^1]: one\n[^2]: |');
+    // A note nobody refers to yet still holds its number.
+    expect(run('footnote', 'a|\n\n[^2]: two')).toBe('a[^1]\n\n[^2]: two\n[^1]: |');
+    // A label that is not a number is in nobody's way.
+    expect(run('footnote', 'a[^why] b|\n\n[^why]: because')).toBe(
+      'a[^why] b[^1]\n\n[^why]: because\n[^1]: |'
+    );
+  });
+
+  it('keeps the line ending a document ends with rather than writing another', () => {
+    expect(run('footnote', 'text|\n')).toBe('text[^1]\n\n[^1]: |');
+    expect(run('footnote', 'text|\n\n')).toBe('text[^1]\n\n[^1]: |');
+  });
 });
 
 describe('what is already in force', () => {

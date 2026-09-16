@@ -43,6 +43,7 @@ export {
   Pilcrow as ParagraphIcon,
   SquarePen as WysiwygIcon,
   Strikethrough as StrikethroughIcon,
+  Superscript as FootnoteIcon,
   Table as TableIcon,
   Trash2 as RemoveIcon,
   Redo2 as RedoIcon,

@@ -224,6 +224,7 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 | `Mod` + `Shift` + `9`   | Task list                              |
 | `Mod` + `Shift` + `E`   | Code block                             |
 | `Mod` + `Shift` + `,`   | Divider                                |
+| `Mod` + `Alt` + `F`     | Footnote                               |
 | `Mod` + `1` to `6`      | Heading 1 to 6                         |
 | `Mod` + `0`             | Body text                              |
 | `Mod` + `F`             | Find and replace                       |
@@ -237,13 +238,15 @@ Every button on the toolbar runs a command that also has a keyboard shortcut. No
 
 `Mod` is Command or Control, whichever the machine has. Both are accepted rather than guessed at.
 
-The lists and the quotation use the keys GitHub's comment box gives them, and the task list takes the digit after. The image and the code block are the link and the code span with `Shift` added. The divider is on `,` because the key a divider is written with is taken: `Mod`+`Shift`+`-` shrinks the page in Chromium and Firefox. The digits and the punctuation are read by where the key is rather than by what it types, since under `Shift` a `7` types `&` on one keyboard and `/` on another. In Firefox on Windows and Linux, `Ctrl`+`Shift`+`K` and `Ctrl`+`Shift`+`E` open developer tools; they still do everywhere on the page except inside the editor.
+The footnote is where Word and Google Docs put it, and it is the one command here reached with `Alt` rather than with `Shift`. The lists and the quotation use the keys GitHub's comment box gives them, and the task list takes the digit after. The image and the code block are the link and the code span with `Shift` added. The divider is on `,` because the key a divider is written with is taken: `Mod`+`Shift`+`-` shrinks the page in Chromium and Firefox. The digits and the punctuation are read by where the key is rather than by what it types, since under `Shift` a `7` types `&` on one keyboard and `/` on another. In Firefox on Windows and Linux, `Ctrl`+`Shift`+`K` and `Ctrl`+`Shift`+`E` open developer tools; they still do everywhere on the page except inside the editor.
 
 ::: fw flutter
 
 `Mod`+`S` and `Mod`+`Shift`+`U` are the lines of that table this package does not handle, because there is nothing here to save to and no image upload. [Opening and saving](#opening-and-saving) has the reason. Undo belongs to the platform rather than this package, as [undo](#undo) explains, and everything else is the same keyboard.
 
 :::
+
+**A footnote is written as both of its halves at once.** `footnote` and `Mod`+`Alt`+`F` write `[^1]` where the caret is, `[^1]: ` at the end of the document, and leave the caret in the note. Both halves, because a reference with no note is nothing to the parser: a button that wrote `[^1]` and stopped would leave the document looking exactly as it did. The number is the first one nothing in the document has taken, counted over every `[^…]` written in it rather than over what the parser read, so a note nobody refers to yet still holds its own number. With words selected, the reference goes at the end of them, which is where a footnote's mark belongs.
 
 **`headingLevels` says which headings the menu offers.** All six by default, since that is how many Markdown has, and a menu that stops short of one is a heading the editor cannot write. Narrowing it is for an application whose pages write the title as their own `h1` and whose documents start at `##`: given heading 2, 3 and 4, the menu offers those and body text, and `Mod`+`2`, `Mod`+`3` and `Mod`+`4` toggle them, while `Mod`+`1` is handed on to whatever else answers it. The levels are the document's own depths, the number of `#` written.
 

@@ -28,6 +28,7 @@ type MawyEditorToolbarItem =
   | 'codeBlock'
   | 'table'
   | 'rule'
+  | 'footnote'
   | 'find'
   | 'open'
   | 'save'
@@ -58,6 +59,7 @@ enum MawyEditorToolbarItem {
   codeBlock,
   table,
   rule,
+  footnote,
   find,
   open,
   colorScheme,
@@ -70,6 +72,8 @@ enum MawyEditorToolbarItem {
 Everything except `mode`, `undo`, `redo`, `find`, `open`, `save`, `colorScheme` and `separator` is a formatting command, and every one of those also has a keyboard shortcut. `find` has one too, `Mod`+`F`, and it works whether or not the button is drawn. `separator` draws a hairline rather than a control.
 
 `undo` and `redo` are the history, `Mod`+`Z` and `Mod`+`Shift`+`Z`, drawn disabled while there is nothing to take back or put back.
+
+`footnote` writes a footnote's reference where the caret is and its note at the end of the document, and leaves the caret in the note. Both halves at once, because the parser draws a footnote only where there is a note to draw. The number is the first one nothing in the document has taken; see [formatting](../../guide/editor#formatting).
 
 `table` is a grid that inserts an empty table of the size pressed. The rows and columns of a table are changed from a bar hung beside the table the caret is in, and each of those commands has a shortcut of its own; see [tables](../../guide/editor#tables).
 
