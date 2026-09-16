@@ -50,6 +50,8 @@ What draws one directive, passed to the viewer as a `Map<String, MawyDirectiveBu
 
 A `MawyDirectiveKind.text` directive is placed in the sentence as a `WidgetSpan`, so a builder for an inline directive should return something that fits on a line of text. A `Text.rich` of its own is the usual choice.
 
+The `context` a builder is given carries the type of the words around the directive, as a `DefaultTextStyle`. `DefaultTextStyle.of(context).style` is the paragraph's own style, so a key cap or a chip can be sized in ems of the sentence it sits in and grows with a document the reader has set larger — which is what `font: inherit` gives the React package's builder for nothing.
+
 ## `MawyDirective`
 
 ```dart

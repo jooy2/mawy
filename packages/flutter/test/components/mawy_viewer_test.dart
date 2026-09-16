@@ -1497,8 +1497,9 @@ void main() {
       // Inside the note's last paragraph rather than under it, where an arrow
       // on a line of its own reads as another sentence. Drawn from the icon
       // font this package already ships, because `\u21a9` is in none of a web
-      // build's fonts and has an emoji form besides.
-      final String arrow = String.fromCharCode(LucideIcons.cornerUpLeft.codePoint);
+      // build's fonts and has an emoji form besides, and pointing the way that
+      // character points: down from the right and then left.
+      final String arrow = String.fromCharCode(LucideIcons.cornerDownLeft.codePoint);
 
       expect(
         find.byWidgetPredicate(
@@ -1509,6 +1510,100 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  group('lists', () {
+    /// `li { margin: 0.25em 0 }` in a browser is a quarter of a line *between*
+    /// two items and nothing at either end of the list: two margins between two
+    /// items collapse into one, and the one at the top collapses out through
+    /// the list. Half of that space was drawn twice here.
+    testWidgets('puts a quarter of a line between its items and none at the ends', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: 'Words.\n\n- one\n- two\n- three')));
+
+      final Rect words = tester.getRect(find.textContaining('Words.'));
+      final Rect one = tester.getRect(find.textContaining('one'));
+      final Rect two = tester.getRect(find.textContaining('two'));
+      final Rect three = tester.getRect(find.textContaining('three'));
+
+      // The same step between every pair of items, and no step of its own
+      // before the first: what sets the list off from the paragraph above is
+      // the space between two blocks and nothing else.
+      expect(two.top - one.top, closeTo(three.top - two.top, 0.5));
+      expect(one.top - words.bottom, lessThan(two.top - one.top));
+    });
+
+    /// `•` is whatever size the typeface decided to draw it, which on the
+    /// web is whatever font the page fell back to. A browser's own `disc` is a
+    /// circle of a known size, and so is this.
+    testWidgets('draws its bullet as a circle rather than as a character', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(host(const MawyViewer(value: '- one')));
+
+      final Finder dot = find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration! as BoxDecoration).shape == BoxShape.circle,
+      );
+
+      expect(dot, findsOneWidget);
+
+      final Size size = tester.getSize(dot);
+      final Rect words = tester.getRect(find.textContaining('one'));
+
+      // Three tenths of the type it marks, and down the middle of its line.
+      expect(size.width, closeTo(16 * 0.3, 0.1));
+      expect(size.width, closeTo(size.height, 0.01));
+      expect(tester.getRect(dot).center.dy, closeTo(words.center.dy, 0.6));
+    });
+  });
+
+  group('tables', () {
+    /// `width: 100%` inside an `overflow-x: auto`, which is what the React
+    /// package's table is. A horizontal scroll view hands its child an
+    /// unbounded width, and an unbounded width is every column at the width it
+    /// would like — the whole sentence, unwrapped — so the table was as wide as
+    /// its longest cell whatever room it had. See `_TableWidth`.
+    testWidgets('wraps its cells into the room it has rather than scrolling sideways', (
+      WidgetTester tester,
+    ) async {
+      const String table =
+          '| Zone | Planting |\n'
+          '| --- | --- |\n'
+          '| A — inlet | river stone and nothing green, checked once a month |\n'
+          '| B — swale | sedge, blue flag iris and coneflower, checked weekly |';
+
+      await tester.pumpWidget(host(const MawyViewer(value: table), size: const Size(420, 800)));
+
+      final Size drawn = tester.getSize(find.byType(Table));
+      final Size room = tester.getSize(find.byType(SingleChildScrollView).last);
+
+      expect(drawn.width, lessThanOrEqualTo(room.width));
+
+      // And still as wide as the room, rather than only as wide as its words.
+      expect(drawn.width, greaterThan(room.width - 1));
+    });
+
+    /// The other half of `overflow-x: auto`: a word nothing can break is a
+    /// table wider than the page, and then it scrolls.
+    testWidgets('grows past the room for a word that cannot be broken', (
+      WidgetTester tester,
+    ) async {
+      const String table =
+          '| Zone | Planting |\n'
+          '| --- | --- |\n'
+          '| Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | Bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb |';
+
+      await tester.pumpWidget(host(const MawyViewer(value: table), size: const Size(320, 800)));
+
+      final Size drawn = tester.getSize(find.byType(Table));
+      final Size room = tester.getSize(find.byType(SingleChildScrollView).last);
+
+      expect(drawn.width, greaterThan(room.width));
     });
   });
 

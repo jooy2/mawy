@@ -11,7 +11,10 @@
 /// in behind it.
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -216,13 +219,22 @@ double _em(MawyRenderContext context) => context.typography.fontSize;
 /// the application composes widgets, and there is no markup on the path from
 /// the document to the screen in either direction.
 class _Directive extends StatelessWidget {
-  const _Directive({required this.directive, required this.builder});
+  const _Directive({required this.directive, required this.builder, required this.body});
 
   final MawyDirective directive;
   final MawyDirectiveBuilder builder;
 
+  /// The style of the words around it, for the builder to read.
+  ///
+  /// A React builder has this for nothing: `font: inherit` on the element it
+  /// draws is the paragraph's type, so a key cap written into a document set
+  /// larger grows with it. Here the type is a `TextStyle` a widget cannot see
+  /// from inside a span, so it is put where `DefaultTextStyle.of` will find it.
+  final TextStyle body;
+
   @override
-  Widget build(BuildContext buildContext) => builder(buildContext, directive);
+  Widget build(BuildContext buildContext) =>
+      DefaultTextStyle(style: body, child: builder(buildContext, directive));
 }
 
 /// The characters a node was written with, in the document: a directive nobody
@@ -273,6 +285,7 @@ Widget _directive(
 
   return _Directive(
     builder: builder,
+    body: context.body,
     directive: MawyDirective(
       name: name,
       kind: kind,
@@ -553,6 +566,7 @@ InlineSpan _inlineSpan(MdInline node, MawyRenderContext context, TextStyle style
       alignment: PlaceholderAlignment.middle,
       child: _Directive(
         builder: builder,
+        body: style,
         directive: MawyDirective(
           name: node.name,
           kind: MawyDirectiveKind.text,
@@ -1221,7 +1235,12 @@ class _List extends StatelessWidget {
 
       rows.add(
         Padding(
-          padding: EdgeInsets.symmetric(vertical: em * 0.25),
+          // Between the items and nowhere else, which is what `li { margin:
+          // 0.25em 0 }` comes to in a browser: two margins between two items
+          // collapse into one, and the one at either end of the list collapses
+          // out of it. Half of the space was drawn twice and the whole list sat
+          // a quarter of a line lower than the paragraph above it.
+          padding: EdgeInsets.only(top: index == 0 ? 0 : em * 0.25),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -1243,10 +1262,12 @@ class _List extends StatelessWidget {
                               : context.tokens.foregroundSubtle,
                         ),
                       )
-                    : Text(
-                        block.ordered ? '${block.start + index}.' : '•',
+                    : block.ordered
+                    ? Text(
+                        '${block.start + index}.',
                         style: context.body.copyWith(color: context.tokens.foregroundSubtle),
-                      ),
+                      )
+                    : _Bullet(em: em, context: context),
               ),
               Expanded(
                 child: Column(
@@ -1261,6 +1282,59 @@ class _List extends StatelessWidget {
     }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
+  }
+}
+
+/// The dot in front of an item of a bulleted list.
+///
+/// Drawn rather than written. `\u2022` is whatever size the typeface decided to
+/// draw it, which on the web is whatever font the page fell back to, and it came
+/// out a good deal smaller than the one a browser draws for `list-style: disc`.
+/// A circle of a known size is the same dot in every typeface and beside the
+/// React package's.
+///
+/// Down the middle of the first line the way the task box is: the line box is
+/// `em * lineHeight` tall and the dot is centred in it, which is where a
+/// browser puts its own.
+class _Bullet extends StatelessWidget {
+  const _Bullet({required this.em, required this.context});
+
+  final double em;
+  final MawyRenderContext context;
+
+  /// How wide a browser draws `disc`, in ems of the text it marks. Measured off
+  /// one, rather than guessed at: a `disc` at 160px comes out 48 across.
+  static const double _size = 0.3;
+
+  /// How far the gutter reaches, which is the list's `padding-inline-start`.
+  static const double _gutter = 1.5;
+
+  /// What a browser leaves between the dot and the words it marks.
+  static const double _gap = 0.36;
+
+  @override
+  Widget build(BuildContext buildContext) {
+    final double size = em * _size;
+
+    return Padding(
+      padding: EdgeInsetsDirectional.only(
+        start: em * (_gutter - _gap) - size,
+        top: em * context.typography.lineHeight / 2 - size / 2,
+      ),
+      // The gutter is as wide as the list's own, and a box told to be that wide
+      // is told it tightly: a dot inside one is stretched across it and drawn
+      // down the middle of it. This holds the dot to its own size and puts it
+      // where the words start, which is where a browser hangs its own.
+      child: Align(
+        alignment: AlignmentDirectional.topStart,
+        heightFactor: 1,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(color: context.tokens.foregroundSubtle, shape: BoxShape.circle),
+        ),
+      ),
+    );
   }
 }
 
@@ -1299,8 +1373,8 @@ class _Table extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext _, BoxConstraints room) => SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: room.hasBoundedWidth ? room.maxWidth : 0),
+        child: _TableWidth(
+          room: room.hasBoundedWidth ? room.maxWidth : 0,
           child: Table(
             border: TableBorder.all(color: tokens.border),
             defaultColumnWidth: const IntrinsicColumnWidth(),
@@ -1335,7 +1409,66 @@ class _Table extends StatelessWidget {
   }
 }
 
-/// A cell's contents, with a bare `<br>` read as the line break it is.
+/// A table as wide as the room it has, and wider only where its words cannot be
+/// broken any smaller.
+///
+/// A horizontal [SingleChildScrollView] hands its child an unbounded width, and
+/// an unbounded width is what [RenderTable] reads as "every column at the width
+/// it would like" — which for a column of sentences is the sentence, unwrapped.
+/// So the table was as wide as its longest cell whatever room it had, and the
+/// scrollbar was there from the first sentence on. A browser wraps instead, and
+/// scrolls only when the longest *word* of every column together is more than
+/// the page has.
+///
+/// That is what a table already does when its width is bounded: it shrinks the
+/// columns towards their minimums and the cells wrap. So the width is worked
+/// out here — the room, or the sum of those minimums where even they will not
+/// fit — and handed down as a tight one.
+class _TableWidth extends SingleChildRenderObjectWidget {
+  const _TableWidth({required this.room, required Widget super.child});
+
+  /// How wide what holds the table is.
+  final double room;
+
+  @override
+  _RenderTableWidth createRenderObject(BuildContext context) => _RenderTableWidth(room);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderTableWidth renderObject) {
+    renderObject.room = room;
+  }
+}
+
+class _RenderTableWidth extends RenderProxyBox {
+  _RenderTableWidth(this._room);
+
+  double _room;
+
+  set room(double value) {
+    if (_room != value) {
+      _room = value;
+      markNeedsLayout();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final RenderBox? inside = child;
+
+    if (inside == null) {
+      size = constraints.smallest;
+
+      return;
+    }
+
+    final double least = inside.getMinIntrinsicWidth(double.infinity);
+
+    inside.layout(BoxConstraints.tightFor(width: math.max(_room, least)), parentUsesSize: true);
+    size = inside.size;
+  }
+}
+
+/// A cell's contents, with a bare `<br>` read as the line break it is./// A cell's contents, with a bare `<br>` read as the line break it is.
 ///
 /// In a table cell it is the only way there is to write one: a row is one line
 /// of the file, so a hard break, which is a line ending, ends the row. Every
@@ -1542,10 +1675,12 @@ List<Widget> _note(MdFootnoteDefinition footnote, MawyRenderContext context) {
   // The arrow the React package writes as a character, drawn from the icon font
   // this package already ships. `\u21a9` is not in a web build's fonts and has
   // an emoji form besides, so what arrived on the page was a coloured box; an
-  // icon is the same shape everywhere. As a span rather than as an `Icon`,
+  // icon is the same shape everywhere. Down and to the left, which is the way
+  // `\u21a9` is drawn — its tail rises to the right — and the mirror of the one
+  // that was here, which pointed back the other way. As a span rather than as an `Icon`,
   // because a span sits on the line the sentence ends on and can be tapped
   // through the same path a link is.
-  const IconData mark = LucideIcons.cornerUpLeft;
+  const IconData mark = LucideIcons.cornerDownLeft;
   final double size = (context.body.fontSize ?? _em(context)) * 0.9;
   final TextSpan arrow = TextSpan(
     text: ' ${String.fromCharCode(mark.codePoint)}',

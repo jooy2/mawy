@@ -545,8 +545,16 @@ class _Kbd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // In ems of the sentence it sits in rather than in pixels, the way the
+    // React package's cap is: a key written into a document set larger has to
+    // grow with it. `height: 1` is what keeps the cap the height of its own
+    // words — a run that takes the paragraph's line height fills the paragraph's
+    // line, and the cap was drawn from the line above to the line below.
+    final double em = DefaultTextStyle.of(context).style.fontSize ?? 16;
+    final double size = em * 0.85;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      padding: EdgeInsets.symmetric(horizontal: size * 0.4, vertical: size * 0.1),
       decoration: BoxDecoration(
         color: tokens.codeBackground,
         border: Border.all(color: tokens.borderStrong),
@@ -554,7 +562,7 @@ class _Kbd extends StatelessWidget {
       ),
       child: Text.rich(
         label ?? const TextSpan(),
-        style: TextStyle(color: tokens.codeForeground, fontSize: 13),
+        style: TextStyle(color: tokens.codeForeground, fontSize: size, height: 1),
       ),
     );
   }

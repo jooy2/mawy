@@ -50,6 +50,8 @@ typedef MawyDirectiveBuilder = Widget Function(BuildContext context, MawyDirecti
 
 `MawyDirectiveKind.text` 디렉티브는 문장 안에 `WidgetSpan`으로 놓이므로, 인라인 디렉티브의 빌더는 글줄 위에 들어갈 것을 돌려주어야 합니다. 보통은 `Text.rich`를 씁니다.
 
+빌더가 받는 `context`에는 디렉티브를 둘러싼 글자의 서체가 `DefaultTextStyle`로 실려 옵니다. `DefaultTextStyle.of(context).style`이 그 문단의 서체이므로, 키 캡이나 칩을 문장의 em 단위로 잡으면 독자가 글자를 키운 문서에서 함께 커집니다. React 패키지의 빌더는 `font: inherit`으로 그냥 얻는 것입니다.
+
 ## `MawyDirective`
 
 ```dart
