@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **Words typed at either end of a link on `wysiwyg` go beside it rather than into its words.** A link is drawn as its words and written as `[words](address)`, so the caret at the end of them was in two places in the document at once and always took the first: a space typed there went inside the link, where Markdown keeps none of the whitespace at either end of a link's words, so the key looked as though it had done nothing and everything typed after it joined the link. The other end had the opposite trouble — a link that opened a paragraph had nowhere in front of it to type at all. A composition at the end of a link was worse still: Chromium writes what is composed the other side of the `<a>`, as a run of text the drawing never made, and the words were dropped. Changing a link's own words is the caret among them, or the field in its bar.
+
 ### Changed
 
 - **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `[1, 2, 3, 4, 5, 6]` now. An application whose pages only go so deep passes the levels it wants, as it always could.

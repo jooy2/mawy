@@ -1924,6 +1924,50 @@ describe('the document surface', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('See the **docs** for more.'));
   });
 
+  it('types beside a link rather than into its words, at either edge', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Read [the office](https://example.org) now."
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+
+    // At the end of the words, where a space used to be swallowed: Markdown
+    // keeps none of the whitespace at either end of a link's words.
+    put(bodyOf(screen), 'the office', 10);
+    await userEvent.keyboard(' tail');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Read [the office](https://example.org) tail now.')
+    );
+
+    await screen.unmount();
+
+    const other = await render(
+      <MawyEditor
+        defaultValue="[the office](https://example.org) matters"
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+
+    // At the start, which is otherwise the one place in the paragraph nothing
+    // can be typed at all.
+    put(bodyOf(other), 'the office', 0);
+    await userEvent.keyboard('Read ');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Read [the office](https://example.org) matters')
+    );
+
+    // Among the words, which is still the words.
+    put(bodyOf(other), 'the office', 4);
+    await userEvent.keyboard('X');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Read [the Xoffice](https://example.org) matters')
+    );
+  });
+
   it('takes the bar away once the caret has left the link', async () => {
     const screen = await render(
       <MawyEditor defaultValue="See [the docs](/guide) for more." mode="wysiwyg" />
@@ -3323,6 +3367,40 @@ describe('the document surface', () => {
     // Drawn `A * b`, which is one character short of what it was written with.
     compose(bodyOf(screen), 'A * b', 5, '한');
     expect(onChange).toHaveBeenLastCalledWith('A \\* b한');
+  });
+
+  it('composes beside a link rather than into its words', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Read [the office](https://example.org)"
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'the office', 10);
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+
+    // What Chromium does with a composition at the end of a link: the run goes
+    // the other side of the `<a>`, as a run of text of its own, and nothing in
+    // the link's words changes at all.
+    const outside = document.createTextNode('한글');
+    const range = document.createRange();
+    const selection = document.getSelection() as Selection;
+
+    (body.querySelector('a') as HTMLAnchorElement).after(outside);
+    range.setStart(outside, 2);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '한글' }));
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('Read [the office](https://example.org)한글')
+    );
   });
 
   it('leaves the tree to the browser while a composition is running', async () => {

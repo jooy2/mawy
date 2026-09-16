@@ -27,6 +27,7 @@ import {
   type RenderContext
 } from '../../internal/markdown/render.js';
 import {
+  besideLink,
   blankParagraphs,
   blockAt,
   documentAt,
@@ -317,6 +318,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       between: boolean;
       /** The selection the composition began over, where it ran past one run of text. */
       over: { start: number; end: number } | null;
+      /**
+       * Where what is composed goes when the caret began at the outer edge of a
+       * link: beside the link rather than into its words. See `besideLink`.
+       */
+      beside: number | null;
     } | null>(null);
     /** Bumped to throw the drawing away and make it again from the document. */
     const [generation, setGeneration] = React.useState(0);
@@ -892,7 +898,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           start,
           offset: node.nodeType === 3 ? at : between ? before.toString().length : 0,
           between,
-          over
+          over,
+          beside:
+            between || over
+              ? null
+              : besideLink(element, node, at, sourceAt(element, node, at, value) ?? start)
         };
       };
 
@@ -929,6 +939,29 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           after.slice(was.offset + grown) === was.before.slice(was.offset)
             ? after.slice(was.offset, was.offset + grown)
             : '';
+
+        // Composed at the outer edge of a link, where what was composed goes
+        // beside the link rather than into its words. See `besideLink`.
+        //
+        // Chromium writes the run the other side of the `<a>`, as a run of
+        // text React never drew, and the words were lost: nothing had changed
+        // in the run the composition started in, so there was nothing to read
+        // back. The drawing is thrown away and made again from the document,
+        // and what the composition itself says it wrote is what goes in.
+        if (was.beside !== null) {
+          const outside = typed || event.data;
+
+          setGeneration((each) => each + 1);
+
+          if (outside) {
+            onEdit({
+              value: value.slice(0, was.beside) + outside + value.slice(was.beside),
+              caret: was.beside + outside.length
+            });
+          }
+
+          return;
+        }
 
         if (was.between || was.over) {
           // Between two things the browser wrote a run of text of its own, and

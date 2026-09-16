@@ -295,6 +295,58 @@ function topRange(element: Element | null): MdRange | null {
 }
 
 /**
+ * Where words typed at the outer edge of a link go — beside it rather than
+ * into it — or `null` where the caret is not at one of those edges.
+ *
+ * A link is drawn as its words and written as `[words](address)`, so the caret
+ * at the end of the words is at one place on the page and at two in the
+ * document: after the last letter of the words, and after the `)`. It was
+ * always the first of those, and there was no way to reach the second. A space
+ * typed there went inside the link, where Markdown throws away the whitespace
+ * at either end of the words, so the key looked as though it had done nothing
+ * and everything typed after it became part of the link's words. The words go
+ * after the link now, and before it at the other edge, which is otherwise the
+ * one place in a paragraph nothing can be typed at all: a link that opens a
+ * paragraph had no room in front of it either.
+ *
+ * Changing the words themselves is the caret among them, or the field in the
+ * bar beside the link, which is what that field is for.
+ */
+export function besideLink(
+  root: HTMLElement,
+  node: Node,
+  offset: number,
+  at: number
+): number | null {
+  const host = node.nodeType === 1 ? (node as Element) : node.parentElement;
+  const link = host?.closest('a[data-mawy-range]');
+  const range = link && root.contains(link) ? rangeOf(link) : null;
+
+  // Already outside, which is where `MawyAim` leaves the caret after a link is
+  // written, and there is nothing to move.
+  if (!link || !range || at <= range.start || at >= range.end) {
+    return null;
+  }
+
+  const owner = link.ownerDocument;
+  const before = owner.createRange();
+
+  before.selectNodeContents(link);
+  before.setEnd(node, offset);
+
+  if (!before.toString()) {
+    return range.start;
+  }
+
+  const after = owner.createRange();
+
+  after.selectNodeContents(link);
+  after.setStart(node, offset);
+
+  return after.toString() ? null : range.end;
+}
+
+/**
  * A place in an empty paragraph, with whatever blank lines it needs to stay one
  * once something is written into it.
  *
@@ -1714,6 +1766,17 @@ export function editFor(
           value: `${value.slice(0, from)} ${event.data} ${value.slice(start)}`,
           caret: from + 1 + event.data.length
         };
+      }
+
+      // At the outer edge of a link, where what is typed goes beside the link
+      // rather than into its words. See `besideLink`.
+      const beside =
+        start === end ? besideLink(root, range.startContainer, range.startOffset, start) : null;
+
+      if (beside !== null) {
+        return (
+          heldText(value, beside, event.data, held) ?? splice(value, beside, beside, event.data)
+        );
       }
 
       // Formatting the caret was told to hold, around what is typed. See
