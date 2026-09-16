@@ -1213,6 +1213,97 @@ export function wraps(command: MawyCommand): boolean {
 }
 
 /**
+ * The inlines whose markers are written in the document rather than drawn in
+ * it, which are the ones a selection can cut through without anybody seeing
+ * where.
+ *
+ * A `text` is its own characters and a `break` has nothing between two ends, so
+ * neither is here. Every other inline is a pair of markers around some words:
+ * the `[` and `](url)` of a link, a code span's backticks, the asterisks of a
+ * bold run.
+ */
+const MARKED: ReadonlySet<MdNode['type']> = new Set<MdNode['type']>([
+  'emphasis',
+  'strong',
+  'delete',
+  'inlineCode',
+  'link',
+  'image',
+  'footnoteReference',
+  'textDirective'
+]);
+
+/**
+ * The selection a wrap command is run over on the drawn document, widened out
+ * of any inline whose markers it would cut through.
+ *
+ * The drawn document shows a link as its words and writes it as
+ * `[words](address)`, so a selection that starts among those words and ends
+ * after the link starts, in the document, between the `[` and the `]`. Wrapping
+ * that put the opening marker inside the brackets and the closing one past the
+ * address — `one [**link](https://example.org) two**` — which is neither a link
+ * nor bold. A code span, a bold run and every other inline with markers of its
+ * own broke the same way, because every one of them is drawn shorter than it is
+ * written.
+ *
+ * So an end that sits between an inline's markers while the other end is
+ * outside that inline is moved out to the inline's own edge: bolding a link and
+ * the words after it bolds the whole link. An end inside an inline the other end
+ * is inside too is left where it is, since `[**link**](url)` is a bold word in a
+ * link's words and exactly what was asked for.
+ *
+ * Only the drawn document asks. On the source the markers are characters a
+ * writer can see and put a selection through on purpose.
+ */
+export function wrapRange(
+  value: string,
+  start: number,
+  end: number,
+  options: MarkdownOptions = {}
+): { start: number; end: number } {
+  if (start === end) {
+    return { start, end };
+  }
+
+  const document = parseMarkdown(value, options);
+  const blocks = [...document.root.children, ...document.footnotes];
+  const opens = markedAt(blocks, start, []).filter((node) => end > node.range.end);
+  const closes = markedAt(blocks, end, []).filter((node) => start < node.range.start);
+
+  return {
+    start: Math.min(start, ...opens.map((node) => node.range.start)),
+    end: Math.max(end, ...closes.map((node) => node.range.end))
+  };
+}
+
+/**
+ * Every marked inline a place sits strictly between the markers of, outermost
+ * first.
+ *
+ * Strictly, because an end at an inline's own edge is already outside it and
+ * has nothing to be moved out of. Blocks are walked through rather than
+ * collected: a paragraph's range is not a pair of markers and a wrap widened to
+ * one would be a wrap around the paragraph.
+ */
+function markedAt(nodes: readonly MdNode[], at: number, found: MdNode[]): MdNode[] {
+  for (const node of nodes) {
+    if (at <= node.range.start || at >= node.range.end) {
+      continue;
+    }
+
+    if (MARKED.has(node.type)) {
+      found.push(node);
+    }
+
+    if ('children' in node) {
+      markedAt(node.children as MdNode[], at, found);
+    }
+  }
+
+  return found;
+}
+
+/**
  * The runs of formatting a place is inside, each with where its words start
  * and end — after its opening marker and before its closing one.
  *

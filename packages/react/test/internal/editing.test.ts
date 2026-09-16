@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blankParagraphs, heldText, marksAt } from '../../src/internal/editing.js';
+import { blankParagraphs, heldText, marksAt, wrapRange } from '../../src/internal/editing.js';
 import type { MawyCommand } from '../../src/internal/commands.js';
 import { parseMarkdown } from '../../src/internal/markdown/parse.js';
 
@@ -93,5 +93,58 @@ describe('formatting a caret holds', () => {
     expect([...marksAt('A **bold _both_** word', 11)].sort()).toEqual(['bold', 'italic']);
     expect([...marksAt('A `code` word', 7)]).toEqual(['code']);
     expect([...marksAt('A `code` word', 8)]).toEqual([]);
+  });
+});
+
+/**
+ * The range a wrap command is run over on the drawn document.
+ *
+ * `«words»` is the selection, as everywhere else, and the answer is the same
+ * document with the range the command would be given marked the same way.
+ */
+describe('a wrap over a selection made on the drawn document', () => {
+  const over = (marked: string): string => {
+    const start = marked.indexOf('«');
+    const end = marked.indexOf('»') - 1;
+    const value = marked.replace('«', '').replace('»', '');
+    const range = wrapRange(value, start, end);
+
+    return `${value.slice(0, range.start)}«${value.slice(range.start, range.end)}»${value.slice(range.end)}`;
+  };
+
+  it('widens out of a link the selection would cut in half', () => {
+    // The drawn document shows `link` and writes `[link](…)`, so a selection
+    // from its words to the words after it starts between the brackets.
+    expect(over('one [«link](https://example.org) two»')).toBe(
+      'one «[link](https://example.org) two»'
+    );
+    expect(over('«one [link](https://exa»mple.org) two')).toBe(
+      '«one [link](https://example.org)» two'
+    );
+  });
+
+  it('widens out of a code span, a bold run and the rest of the marked inlines', () => {
+    expect(over('one `c«ode` two»')).toBe('one «`code` two»');
+    expect(over('**o«ne** two»')).toBe('«**one** two»');
+    expect(over('~~o«ne~~ two»')).toBe('«~~one~~ two»');
+    expect(over('a ![p«ic](u) b»')).toBe('a «![pic](u) b»');
+  });
+
+  it('widens out of every inline the selection is still inside, not only the innermost', () => {
+    expect(over('*a [l«ink](u)* b»')).toBe('«*a [link](u)* b»');
+  });
+
+  it('leaves a selection that is inside one inline where it is', () => {
+    // `[**link**](url)` is a bold word among a link's words, which is what was
+    // asked for.
+    expect(over('one [«li»nk](https://example.org) two')).toBe(
+      'one [«li»nk](https://example.org) two'
+    );
+    expect(over('a **b«ol»d** c')).toBe('a **b«ol»d** c');
+  });
+
+  it('leaves a selection with nothing in it, and one that cuts through nothing', () => {
+    expect(over('one «two» three')).toBe('one «two» three');
+    expect(over('one [link](u) «two»')).toBe('one [link](u) «two»');
   });
 });

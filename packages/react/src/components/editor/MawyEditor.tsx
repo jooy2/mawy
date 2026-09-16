@@ -53,6 +53,7 @@ import {
 import {
   marksAt,
   nestingWaits,
+  wrapRange,
   wraps,
   type MawyAim,
   type MawyEdit
@@ -737,6 +738,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const showPreview = current === 'preview' || current === 'split';
   const editable = (showSource || showDocument) && !readOnly;
 
+  /** What `parse` says, with the defaults filled in, for everything here that reads the document. */
+  const options = React.useMemo(
+    () => ({
+      gfm: parse?.gfm ?? true,
+      breaks: parse?.breaks ?? false,
+      definitionLists: parse?.definitionLists ?? true
+    }),
+    [parse?.breaks, parse?.definitionLists, parse?.gfm]
+  );
+
   /* ---------------------------------------------------------------------
    * The bar between the two panes of split
    * ------------------------------------------------------------------ */
@@ -1153,6 +1164,18 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       showDocument && selection.start === selection.end ? marksAt(text, selection.start) : null,
     [showDocument, selection.start, selection.end, text]
   );
+  /**
+   * The range a wrap command would be run over, which on the drawn document is
+   * not always the selection. Read once for all four of them, and only for a
+   * selection with something in it — a caret is `marks` above. See `wrapRange`.
+   */
+  const wrapped = React.useMemo(
+    () =>
+      showDocument && selection.start !== selection.end
+        ? wrapRange(text, selection.start, selection.end, options)
+        : selection,
+    [options, selection, showDocument, text]
+  );
 
   /**
    * What the caret is inside on the drawn document, of the things a floating
@@ -1213,9 +1236,19 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
-      run(before, runCommand(name, before));
+      // A selection made on the drawn document can start or end between an
+      // inline's own markers, which are drawn nowhere: a wrap written there
+      // cuts the link or the code span it lands in half. Read again rather than
+      // taken from `wrapped`, since the state a press acts on is the one read
+      // at the press. See `wrapRange`.
+      const over =
+        showDocument && wraps(name)
+          ? { ...before, ...wrapRange(before.value, before.start, before.end, options) }
+          : before;
+
+      run(before, runCommand(name, over));
     },
-    [blockTarget, focusDrawn, holds, readOnly, run, showDocument, stateNow]
+    [blockTarget, focusDrawn, holds, options, readOnly, run, showDocument, stateNow]
   );
 
   React.useImperativeHandle(
@@ -2766,15 +2799,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * count is the count a reader can see.
    */
   const matches = React.useMemo(
-    () =>
-      showDocument && searched.length
-        ? drawnMatches(text, searched, {
-            gfm: parse?.gfm ?? true,
-            breaks: parse?.breaks ?? false,
-            definitionLists: parse?.definitionLists ?? true
-          })
-        : searched,
-    [parse?.breaks, parse?.definitionLists, parse?.gfm, searched, showDocument, text]
+    () => (showDocument && searched.length ? drawnMatches(text, searched, options) : searched),
+    [options, searched, showDocument, text]
   );
 
   /**
@@ -2993,7 +3019,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           active={(name) =>
             marks && wraps(name)
               ? marks.has(name) !== holds.includes(name)
-              : commandActive(name, { value: text, ...selection })
+              : commandActive(name, { value: text, ...(wraps(name) ? wrapped : selection) })
           }
           headingLevels={headingLevels}
           headingActive={(depth) => headingActive({ value: text, ...selection }, depth)}

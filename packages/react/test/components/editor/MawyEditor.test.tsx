@@ -3497,6 +3497,72 @@ describe('the document surface', () => {
   });
 
   /**
+   * A link is drawn as its words and written as `[words](address)`, so a
+   * selection that runs from those words into the words after it starts, in the
+   * document, between the brackets. Wrapping there put the opening marker inside
+   * them and the closing one past the address. See `wrapRange`.
+   */
+  it('wraps around a link the selection only half covers, rather than through it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <div style={WIDE}>
+        <MawyEditor
+          defaultValue="one [link](https://example.org) two"
+          mode="wysiwyg"
+          onChange={onChange}
+        />
+      </div>
+    );
+    const body = bodyOf(screen);
+    const paragraph = body.querySelector('p') as HTMLElement;
+    const link = paragraph.querySelector('a') as HTMLElement;
+
+    const across = (from: Node, at: number, to: Node, through: number) => {
+      const range = document.createRange();
+      const selection = document.getSelection() as Selection;
+
+      body.focus();
+      range.setStart(from, at);
+      range.setEnd(to, through);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+
+    across(link.firstChild as Text, 0, paragraph.lastChild as Text, 4);
+
+    await screen.getByRole('button', { name: 'Bold' }).click();
+
+    expect(onChange).toHaveBeenLastCalledWith('one **[link](https://example.org) two**');
+
+    // Pressed, so a second press takes it off again rather than looking like it
+    // would add something.
+    await expect
+      .element(screen.getByRole('button', { name: 'Bold' }))
+      .toHaveAttribute('aria-pressed', 'true');
+
+    // A selection inside the link's own words is left where it is: a bold word
+    // among them is what was asked for.
+    await screen.unmount();
+
+    const inside = vi.fn();
+    const second = await render(
+      <div style={WIDE}>
+        <MawyEditor
+          defaultValue="one [link](https://example.org) two"
+          mode="wysiwyg"
+          onChange={inside}
+        />
+      </div>
+    );
+
+    put(bodyOf(second), 'link', 0, 4);
+
+    await second.getByRole('button', { name: 'Bold' }).click();
+
+    expect(inside).toHaveBeenLastCalledWith('one [**link**](https://example.org) two');
+  });
+
+  /**
    * A composition, played out the way a browser plays one.
    *
    * There is no way to drive a real input method from a test, and there does not
