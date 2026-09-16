@@ -33,6 +33,7 @@ import { fill } from '../../internal/i18n.js';
 import { useStrings } from '../../internal/strings.js';
 import {
   commandActive,
+  crowdedBy,
   tableAlignAt,
   tableOfSize,
   tableRangeAt,
@@ -45,6 +46,7 @@ import {
   runTableCommand,
   type EditState,
   type MawyCommand,
+  type MawyCrowding,
   type MawyTableCommand
 } from '../../internal/commands.js';
 import {
@@ -262,6 +264,15 @@ const NOTHING_HELD: readonly MawyCommand[] = [];
 
 /** What the `heading` menu offers until an application says otherwise. */
 const DEFAULT_HEADING_LEVELS: readonly MawyHeadingLevel[] = [1, 2, 3, 4, 5, 6];
+
+/**
+ * How long a refused keystroke's word stays on screen, in milliseconds.
+ *
+ * Long enough to read a short sentence and short enough not to sit over the
+ * next one being typed. A keystroke refused again says it again, from the
+ * start, because somebody pressing the key twice meant it twice.
+ */
+const NOTICE_TIME = 1800;
 
 /**
  * What an application can do to an editor from outside it.
@@ -1496,6 +1507,112 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     };
   }, [placeTools, showDocument, tableHere]);
 
+  /**
+   * What a refused keystroke said, and where it was said, for as long as it is
+   * on screen. See `refuse`.
+   */
+  const [notice, setNotice] = React.useState<{ text: string; at: number; key: number } | null>(
+    null
+  );
+  const [noticeAt, setNoticeAt] = React.useState<{ top: number; left: number } | null>(null);
+  const noticeBox = React.useRef<HTMLDivElement>(null);
+  const noticeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noticeCount = React.useRef(0);
+
+  /**
+   * A keystroke refused, said once beside the caret and then taken away.
+   *
+   * Refusing a key silently is a key that looks broken, so the editor says
+   * which rule it was and goes quiet again. Live rather than a tooltip: it is
+   * not attached to anything a pointer is over, and somebody who cannot see it
+   * still typed the key. See `crowdedBy`.
+   */
+  const refuse = React.useCallback(
+    (kind: MawyCrowding, at: number) => {
+      noticeCount.current += 1;
+      setNotice({
+        text: kind === 'space' ? strings.oneSpace : strings.oneBreak,
+        at,
+        key: noticeCount.current
+      });
+    },
+    [strings]
+  );
+
+  React.useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timer = setTimeout(() => setNotice(null), NOTICE_TIME);
+
+    noticeTimer.current = timer;
+
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  /** Where that word goes: under the caret it was refused at, in its own pane. */
+  const placeNotice = React.useCallback(() => {
+    const pane = showDocument ? documentPane.current : sourcePane.current;
+
+    if (!notice || !pane) {
+      setNoticeAt(null);
+
+      return;
+    }
+
+    const element = drawn.current;
+    const place = showDocument && element ? domAt(element, notice.at, text) : null;
+    let box: DOMRect | null = null;
+
+    if (showDocument) {
+      if (element && place) {
+        const range = element.ownerDocument.createRange();
+
+        range.setStart(place.node, place.offset);
+        range.collapse(true);
+
+        box =
+          range.getClientRects()[0] ??
+          (place.node.nodeType === 1
+            ? (place.node as Element)
+            : place.node.parentElement
+          )?.getBoundingClientRect() ??
+          null;
+      }
+    } else {
+      const lines = pane.querySelector('.mawy-source-lines');
+
+      box =
+        (lines &&
+          caretRect(
+            lines,
+            lineAt(text, notice.at),
+            notice.at - text.lastIndexOf('\n', notice.at - 1) - 1,
+            rowHeight(lines)
+          )) ||
+        null;
+    }
+
+    if (!box) {
+      setNoticeAt(null);
+
+      return;
+    }
+
+    const { top, left } = floated(
+      pane,
+      { top: box.top, bottom: box.bottom, x: box.left },
+      noticeBox.current
+    );
+
+    setNoticeAt((was) => (was && was.top === top && was.left === left ? was : { top, left }));
+  }, [notice, showDocument, text]);
+
+  React.useLayoutEffect(() => {
+    placeNotice();
+  });
+
   /*
    * The bar over a code block or an alert on the drawn document, where the caret
    * is in one and not in a table, whose own bar is nearer what is being written.
@@ -1693,6 +1810,24 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         onCancel={cancelInsert}
         focusRequest={focusRequest}
       />
+    ) : null;
+
+  /**
+   * The word a refused keystroke left, drawn under the caret in the pane that
+   * has it. A live region rather than a tooltip: nothing is being hovered, and
+   * somebody who cannot see it pressed the key all the same.
+   */
+  const noticeTip =
+    notice && noticeAt ? (
+      <div
+        key={notice.key}
+        ref={noticeBox}
+        className="mawy-notice"
+        role="status"
+        style={{ top: noticeAt.top, left: noticeAt.left }}
+      >
+        {notice.text}
+      </div>
     ) : null;
 
   const tableTools =
@@ -2341,6 +2476,38 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       return;
     }
 
+    /*
+     * A second space in a row is refused and said out loud instead.
+     *
+     * Markdown draws a run of spaces as one, so the source drew three where the
+     * drawn document drew one and the same document said two different things
+     * about itself. The drawn surface answers this in `beforeinput`; here the
+     * key is the answer, because a textarea has no such event to refuse. Not
+     * while an input method is composing — a space is how a Korean syllable is
+     * finished — and not under a modifier, which makes it a shortcut. See
+     * `crowdedBy`.
+     */
+    if (
+      event.key === ' ' &&
+      !showDocument &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      const crowding = crowdedBy({
+        value: state.value.slice(0, state.start) + ' ' + state.value.slice(state.end),
+        caret: state.start + 1
+      });
+
+      if (crowding) {
+        event.preventDefault();
+        refuse(crowding, state.start);
+      }
+
+      return;
+    }
+
     if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey) {
       // An empty item held a level in steps back out, the way one written a
       // level in does, and nothing is written. See `movedOut`.
@@ -2357,6 +2524,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // answers for in the container it was pressed in — this one is a list,
       // and that one is every one of them.
       const next = showDocument ? null : continueList(state, parse?.definitionLists ?? true);
+
+      // A second blank line, refused the way a second space is. One line ending
+      // is a line, two are the blank line that separates two blocks, and a
+      // third is an empty paragraph nothing on either surface can show the
+      // height of. See `crowdedBy`.
+      if (!showDocument && !event.nativeEvent.isComposing) {
+        const after = next ?? {
+          value: `${state.value.slice(0, state.start)}\n${state.value.slice(state.end)}`,
+          start: state.start + 1
+        };
+        const crowding = crowdedBy({ value: after.value, caret: after.start });
+
+        if (crowding) {
+          event.preventDefault();
+          refuse(crowding, state.start);
+
+          return;
+        }
+      }
 
       if (next) {
         event.preventDefault();
@@ -2937,6 +3123,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               placeholder={placeholder ?? strings.editorPlaceholder}
             />
             {tableTools}
+            {showDocument ? null : noticeTip}
           </div>
         ) : null}
 
@@ -2951,6 +3138,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               value={text}
               highlight={highlight}
               onEdit={applyEdit}
+              onCrowded={(kind) => refuse(kind, selection.start)}
               onSelect={readDrawnSelection}
               selection={selection}
               focused={focused}
@@ -2985,6 +3173,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             ) : null}
             {tableTools}
             {blockTools}
+            {noticeTip}
           </div>
         ) : null}
 

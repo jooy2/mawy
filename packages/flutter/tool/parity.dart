@@ -426,6 +426,15 @@ List<Object?> _edits() {
     out['indent'] = <Object?>[indented.value, indented.start, indented.end];
     out['outdent'] = <Object?>[outdented.value, outdented.start, outdented.end];
 
+    // Whether a space or an `Enter` typed where the caret is would be refused,
+    // which both packages have to answer the same way or the same document is
+    // writable in one of them and not in the other.
+    final MawyCrowding? crowding = crowdedBy(state.value, state.start);
+
+    out['crowdedBy'] = crowding == null
+        ? null
+        : (crowding == MawyCrowding.space ? 'space' : 'break');
+
     return out;
   }).toList();
 }

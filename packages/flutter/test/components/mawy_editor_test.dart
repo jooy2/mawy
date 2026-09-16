@@ -1817,6 +1817,110 @@ void main() {
       expect(seen.last, '##### Words.');
     });
 
+    testWidgets('refuses a second space and a second blank line, and says which', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one',
+            mode: MawyEditorMode.plain,
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+      await tester.showKeyboard(_sourceField);
+
+      /// One character typed where the caret is, the way the platform sends it.
+      Future<void> type(String character) async {
+        final TextEditingValue was = field.controller.value;
+        final int at = was.selection.baseOffset;
+
+        tester.testTextInput.updateEditingValue(
+          TextEditingValue(
+            text: was.text.substring(0, at) + character + was.text.substring(at),
+            selection: TextSelection.collapsed(offset: at + 1),
+          ),
+        );
+        await tester.pump();
+      }
+
+      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pump();
+
+      await type(' ');
+      await type(' ');
+      await type('t');
+
+      // Markdown draws a run of spaces as one, so a field that kept them said
+      // something a viewer beside it could not show. See `crowdedBy`.
+      expect(field.controller.text, 'one t');
+      expect(find.text('Only one space in a row.'), findsOneWidget);
+
+      await type('\n');
+      await type('\n');
+      await type('\n');
+      await type('x');
+
+      expect(field.controller.text, 'one t\n\nx');
+      expect(find.text('Only one blank line in a row.'), findsOneWidget);
+
+      // And it goes again on its own.
+      await tester.pump(const Duration(milliseconds: 1900));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Only one blank line in a row.'), findsNothing);
+    });
+
+    testWidgets('keeps the spaces and the blank lines a code block is written with', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: '```\ncode\n```',
+            mode: MawyEditorMode.plain,
+            status: <MawyEditorStatusItem>[],
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+      await tester.showKeyboard(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 8);
+      await tester.pump();
+
+      for (final String character in <String>[' ', ' ', 'x', '\n', '\n', 'y']) {
+        final TextEditingValue was = field.controller.value;
+        final int at = was.selection.baseOffset;
+
+        tester.testTextInput.updateEditingValue(
+          TextEditingValue(
+            text: was.text.substring(0, at) + character + was.text.substring(at),
+            selection: TextSelection.collapsed(offset: at + 1),
+          ),
+        );
+        await tester.pump();
+      }
+
+      // Every character in there is the character it is, which is the whole of
+      // what a code block is for.
+      expect(field.controller.text, '```\ncode  x\n\ny\n```');
+      expect(find.text('Only one space in a row.'), findsNothing);
+    });
+
     testWidgets('runs no command while the document is read only', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

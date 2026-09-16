@@ -192,6 +192,16 @@ A rule that writes a line ending is its own step on the undo stack, so `Mod`+`Z`
 
 The source surface has no input rules. The characters typed are the document, and `# ` at the start of a line is already a heading.
 
+## One space, one blank line
+
+**A second space in a row is refused, and so is a second blank line.** Markdown draws a run of spaces as one space, so a document holding three said one thing where it was drawn and another where it was written: one space in the formatted document and three in the source beside it, with nothing on either to say which the file held. The extra characters are not drawn — that would mean drawing whitespace the parser throws away — so the keystroke that writes them is refused instead, and a short sentence appears under the caret to say which rule it was. It goes on its own after a second and a half. `oneSpace` and `oneBreak` in [`MawyStrings`](../api/types/locale) are the two sentences.
+
+Two line endings in a row are the blank line two blocks are separated by, so that is as long as a run of them may be. A third is a second blank line, which is an empty paragraph neither surface can show the height of. So `Enter` twice is how a new paragraph is made on the source, and once on the formatted document; pressing it again where the caret is already on an empty paragraph writes nothing.
+
+**Three places keep whatever whitespace they are given.** Inside a code block and inside raw HTML every character is the character it is. Inside a table, the spaces that set a cell off from its pipes are written by the editor rather than typed. And the whitespace a line opens with is what nests a list item and what an indented code block is made of, so it is indentation rather than a run of spaces in words.
+
+Only a keystroke is refused. A document pasted in, opened from a file or handed to the editor by the application keeps every space and every blank line it came with, because a document arriving is not somebody typing. A hard line break is written the way it always was: `Shift`+`Enter` writes the two spaces on the formatted document, and a `\` at the end of a line is the other way CommonMark writes one and the way to type one on the source.
+
 ## Formatting
 
 Every button on the toolbar runs a command that also has a keyboard shortcut. No command is reachable only from the toolbar, because that would make the editor unusable without a pointer.

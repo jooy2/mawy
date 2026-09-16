@@ -1017,6 +1017,45 @@ describe('the toolbar and the keyboard', () => {
     await expect.element(screen.getByRole('textbox')).toHaveValue('- one\n');
   });
 
+  it('refuses a second space and a second blank line on the source, and says which', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="one" modes={['plain']} onChange={onChange} />
+    );
+    const input = sourceOf(screen);
+    const said = () => screen.container.querySelector('.mawy-notice')?.textContent;
+
+    input.focus();
+    input.setSelectionRange(3, 3);
+    await userEvent.keyboard('   two');
+
+    // Markdown draws a run of spaces as one and a run of blank lines as
+    // nothing, so a source that kept them said something the drawn document
+    // could not show. See `crowdedBy`.
+    await vi.waitFor(() => expect(input.value).toBe('one two'));
+    expect(said()).toBe('Only one space in a row.');
+
+    input.setSelectionRange(7, 7);
+    await userEvent.keyboard('{Enter}{Enter}{Enter}three');
+
+    await vi.waitFor(() => expect(input.value).toBe('one two\n\nthree'));
+    expect(said()).toBe('Only one blank line in a row.');
+  });
+
+  it('keeps the spaces and the blank lines a code block is written with', async () => {
+    const screen = await render(<MawyEditor defaultValue={'```\ncode\n```'} modes={['plain']} />);
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(8, 8);
+    await userEvent.keyboard('  x{Enter}{Enter}y');
+
+    // Every character in there is the character it is, which is the whole of
+    // what a code block is for.
+    await vi.waitFor(() => expect(input.value).toBe('```\ncode  x\n\ny\n```'));
+    expect(screen.container.querySelector('.mawy-notice')).toBeNull();
+  });
+
   it('indents with Tab, and lets go of it after Escape', async () => {
     const screen = await render(<MawyEditor defaultValue="one" modes={['plain']} />);
     const input = sourceOf(screen);
@@ -1937,9 +1976,9 @@ describe('the document surface', () => {
     // At the end of the words, where a space used to be swallowed: Markdown
     // keeps none of the whitespace at either end of a link's words.
     put(bodyOf(screen), 'the office', 10);
-    await userEvent.keyboard(' tail');
+    await userEvent.keyboard('!');
     await vi.waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith('Read [the office](https://example.org) tail now.')
+      expect(onChange).toHaveBeenLastCalledWith('Read [the office](https://example.org)! now.')
     );
 
     await screen.unmount();
@@ -1965,6 +2004,21 @@ describe('the document surface', () => {
     await userEvent.keyboard('X');
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith('Read [the Xoffice](https://example.org) matters')
+    );
+  });
+
+  it('refuses a second space on the drawn document, and says which', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Words" mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'Words', 5);
+    await userEvent.keyboard('   more');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Words more'));
+    expect(screen.container.querySelector('.mawy-notice')?.textContent).toBe(
+      'Only one space in a row.'
     );
   });
 
@@ -2471,7 +2525,7 @@ describe('the document surface', () => {
     expect(onChange).toHaveBeenLastCalledWith('One \n\ntwo.');
   });
 
-  it('draws every paragraph Enter made, and keeps them once the caret has gone', async () => {
+  it('draws the paragraph Enter made, keeps it once the caret has gone, and refuses a second', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <div>
@@ -2483,22 +2537,32 @@ describe('the document surface', () => {
     const drawn = () => [...body.children].map((block) => block.textContent);
 
     put(body, 'Hello', 5);
-    await userEvent.keyboard('{Enter}{Enter}{Enter}');
+    await userEvent.keyboard('{Enter}');
 
-    // Three presses, three paragraphs, and the source says the same: a blank
-    // line under each one to type on and a blank line under that.
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\n\n\n\n\n'));
-    expect(drawn()).toEqual(['Hello', '', '', '']);
+    // One press, one paragraph, and the source says the same: a blank line
+    // under the words to type on.
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\n'));
+    expect(drawn()).toEqual(['Hello', '']);
+
+    // A second writes nothing and says why. See `crowdedBy`.
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() =>
+      expect(screen.container.querySelector('.mawy-notice')?.textContent).toBe(
+        'Only one blank line in a row.'
+      )
+    );
+    expect(onChange).toHaveBeenLastCalledWith('Hello\n\n');
+    expect(drawn()).toEqual(['Hello', '']);
 
     (screen.container.querySelector('button:not([data-mawy-toolbar-item])') as HTMLElement).focus();
     await new Promise((done) => setTimeout(done, 30));
 
-    expect(drawn()).toEqual(['Hello', '', '', '']);
+    expect(drawn()).toEqual(['Hello', '']);
 
     body.focus();
     await userEvent.keyboard('x');
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\n\n\n\n\nx'));
-    expect(drawn()).toEqual(['Hello', '', '', 'x']);
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\nx'));
+    expect(drawn()).toEqual(['Hello', 'x']);
   });
 
   it('takes an empty paragraph out with Backspace and Delete, one at a time', async () => {
@@ -2524,9 +2588,13 @@ describe('the document surface', () => {
     expect(drawn()).toEqual(['One', 'Two']);
 
     put(body, 'One', 3);
-    await userEvent.keyboard('{Enter}{Enter}{Backspace}');
+    await userEvent.keyboard('{Enter}');
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One\n\n\n\nTwo'));
     expect(drawn()).toEqual(['One', '', 'Two']);
+
+    await userEvent.keyboard('{Backspace}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One\n\nTwo'));
+    expect(drawn()).toEqual(['One', 'Two']);
   });
 
   it('makes a list item an item of the one above it with Tab, and brings it back', async () => {

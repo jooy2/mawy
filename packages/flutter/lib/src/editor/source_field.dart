@@ -457,6 +457,58 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
   ),
 };
 
+/// One space in a row and one blank line, refused as they are typed.
+///
+/// A formatter rather than a key, because what a field is given comes down the
+/// text input connection at least as often as it comes from a key: a soft
+/// keyboard, an input method finishing a syllable, a hardware key on a platform
+/// that never sends one. All of them arrive here.
+///
+/// Only one character landing where the caret is is looked at, so a paste, a
+/// replacement and a document handed to the editor keep whatever whitespace
+/// they came with; a composition is left to finish first. See [crowdedBy] for
+/// the rule and for why it is one.
+class _OneOfEach extends TextInputFormatter {
+  const _OneOfEach(this.onCrowded);
+
+  final ValueChanged<MawyCrowding> onCrowded;
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue before, TextEditingValue after) {
+    final int caret = after.selection.baseOffset;
+
+    if (after.text.length != before.text.length + 1 ||
+        !after.selection.isCollapsed ||
+        caret < 1 ||
+        before.composing.isValid ||
+        after.composing.isValid) {
+      return after;
+    }
+
+    final String typed = after.text[caret - 1];
+
+    if (typed != ' ' && typed != '\n') {
+      return after;
+    }
+
+    // The one character is where the caret is and everything else came through
+    // as it was: anything else is a replacement rather than a keystroke.
+    if (before.text != after.text.substring(0, caret - 1) + after.text.substring(caret)) {
+      return after;
+    }
+
+    final MawyCrowding? crowding = crowdedBy(after.text, caret);
+
+    if (crowding == null) {
+      return after;
+    }
+
+    onCrowded(crowding);
+
+    return before;
+  }
+}
+
 /// The source surface: one text field, coloured, with the keys an editor needs.
 ///
 /// A bare [EditableText] puts the caret where it is tapped and does nothing
@@ -483,6 +535,7 @@ class MawySourceField extends StatefulWidget {
     required this.onEnter,
     required this.onIndent,
     required this.onCommand,
+    required this.onCrowded,
     this.onTable,
     this.tableAvailable,
     this.headingLevels = const <int>[1, 2, 3, 4, 5, 6],
@@ -522,6 +575,10 @@ class MawySourceField extends StatefulWidget {
 
   /// `Tab` and `Shift`+`Tab`.
   final void Function({required bool out}) onIndent;
+
+  /// A keystroke refused for writing a second space in a row or a second blank
+  /// line, and which of the two it was. See [crowdedBy].
+  final ValueChanged<MawyCrowding> onCrowded;
 
   /// What a formatting shortcut runs. Absent while the document is read only.
   final void Function(MawyCommand)? onCommand;
@@ -868,6 +925,7 @@ class _MawySourceFieldState extends State<MawySourceField>
                     // The detector above reads the pointer. Two things reading
                     // one gesture is a caret that jumps to where a selection
                     // was meant to start.
+                    inputFormatters: <TextInputFormatter>[_OneOfEach(widget.onCrowded)],
                     rendererIgnoresPointer: true,
                     enableInteractiveSelection: true,
                   ),

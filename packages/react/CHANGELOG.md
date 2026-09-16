@@ -4,15 +4,17 @@
 
 ## vNext
 
+### Changed
+
+- **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `[1, 2, 3, 4, 5, 6]` now. An application whose pages only go so deep passes the levels it wants, as it always could.
+
 ### Fixed
+
+- **A second space in a row and a second blank line are refused, on both surfaces, and the editor says which rule it was.** Markdown draws a run of spaces as one space, so a document holding three said one thing on the drawn document and another in the source beside it, with nothing on either to say which the file held. The keystroke that would write the extra character is refused now — drawing it would mean drawing whitespace the parser throws away — and a short sentence appears under the caret and goes again on its own. Two line endings are the blank line two blocks are separated by and still the most a run of them may be, so `Enter` twice makes a paragraph on the source and once on the drawn document, and a press on a paragraph that is already empty writes nothing. A code block, raw HTML, a table's own padding and the whitespace a line opens with are left alone, and so is every document that arrives pasted, opened or handed over rather than typed. `MawyStrings` gained `oneSpace` and `oneBreak`.
 
 - **A press between two blocks with nothing drawn between them opens a paragraph there on `wysiwyg`, and a divider beside that paragraph can be deleted.** Two dividers one after the other leave nothing between them but the space their own margins take, so a press there put the caret on the document itself: nothing could be typed, `Backspace` and `Delete` had neither divider to take away, and the caret was somewhere a reader could not see. The gap now draws the same paragraph a caret with nowhere else to be is always given — written into the document only once something is typed into it, so a document nobody changed is left alone — and `Backspace` on it takes the divider above away, `Delete` the one below. An empty paragraph with no blank line of its own no longer gives up the one line ending the blocks either side of it need to stay two blocks, which turned a paragraph over a divider into a heading underlined by it.
 
 - **Words typed at either end of a link on `wysiwyg` go beside it rather than into its words.** A link is drawn as its words and written as `[words](address)`, so the caret at the end of them was in two places in the document at once and always took the first: a space typed there went inside the link, where Markdown keeps none of the whitespace at either end of a link's words, so the key looked as though it had done nothing and everything typed after it joined the link. The other end had the opposite trouble — a link that opened a paragraph had nowhere in front of it to type at all. A composition at the end of a link was worse still: Chromium writes what is composed the other side of the `<a>`, as a run of text the drawing never made, and the words were dropped. Changing a link's own words is the caret among them, or the field in its bar.
-
-### Changed
-
-- **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `[1, 2, 3, 4, 5, 6]` now. An application whose pages only go so deep passes the levels it wants, as it always could.
 
 ## 1.6.0 (2026-09-15)
 

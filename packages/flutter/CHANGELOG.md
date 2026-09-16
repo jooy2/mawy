@@ -8,6 +8,10 @@
 
 - **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `const [1, 2, 3, 4, 5, 6]` now. An application whose screens only go so deep passes the levels it wants, as it always could.
 
+### Fixed
+
+- **A second space in a row and a second blank line are refused, and the editor says which rule it was.** Markdown draws a run of spaces as one space, so a document holding three said one thing where it was drawn and another where it was written, with nothing on either to say which the file held. The keystroke that would write the extra character is refused now — drawing it would mean drawing whitespace the parser throws away — and a short sentence appears under the caret and goes again on its own. Two line endings are the blank line two blocks are separated by and still the most a run of them may be, so `Enter` twice is still how a paragraph is made. A code block, raw HTML, a table's own padding and the whitespace a line opens with are left alone, and so is every document that arrives pasted, opened or handed over rather than typed. It is the React package's `crowdedBy`, and the parity check compares the two. `MawyStrings` gained `oneSpace` and `oneBreak`.
+
 ## 1.6.0 (2026-09-15)
 
 ### Added

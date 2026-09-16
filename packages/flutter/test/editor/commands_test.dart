@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/editor/commands.dart'
-    show MawyTableCommand, runTableCommand, tableAlignAt, tableOfSize;
+    show MawyCrowding, MawyTableCommand, crowdedBy, runTableCommand, tableAlignAt, tableOfSize;
 
 /// The commands, as arithmetic on a string.
 ///
@@ -480,6 +480,42 @@ void main() {
       expect(tab('- on|e\n- two'), '- on|e\n- two');
       expect(tab('Words.\n\n- on|e'), 'Words.\n\n- on|e');
       expect(tab('- one\n  mo|re', out: true), '- one\n  mo|re');
+    });
+  });
+
+  group('one space and one blank line', () {
+    /// `'a |b'` is the document as the keystroke would leave it, with the caret.
+    MawyCrowding? after(String marked) =>
+        crowdedBy(marked.replaceFirst('|', ''), marked.indexOf('|'));
+
+    test('refuses a second space in a row, and nothing less', () {
+      expect(after('one |two'), isNull);
+      expect(after('one  |two'), MawyCrowding.space);
+      expect(after('one | two'), MawyCrowding.space);
+      expect(after('one   |two'), MawyCrowding.space);
+      // Markdown throws away the whitespace at the end of a line, so two spaces
+      // there are as invisible as two between words.
+      expect(after('one  |'), MawyCrowding.space);
+    });
+
+    test('leaves the whitespace a line opens with alone', () {
+      expect(after('- one\n    |- two'), isNull);
+      expect(after('  |  code'), isNull);
+    });
+
+    test('refuses a second blank line in a row, and nothing less', () {
+      expect(after('one\n|two'), isNull);
+      expect(after('one\n\n|two'), isNull);
+      expect(after('one\n\n\n|two'), MawyCrowding.breaks);
+      expect(after('one\n\n|'), isNull);
+      expect(after('one\n\n\n|'), MawyCrowding.breaks);
+    });
+
+    test('leaves code, raw HTML and a table alone', () {
+      expect(after('```\ncode  |\n```'), isNull);
+      expect(after('```\ncode\n\n\n|\n```'), isNull);
+      expect(after('<div>\n  a  |b\n</div>'), isNull);
+      expect(after('| a |  |\n| --- | --- |'), isNull);
     });
   });
 }

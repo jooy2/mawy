@@ -13,7 +13,7 @@ import type {
   MawyParseOptions,
   MawyUrlResolver
 } from '../../types.js';
-import { indent, type MawyCommand } from '../../internal/commands.js';
+import { crowdedBy, indent, type MawyCommand, type MawyCrowding } from '../../internal/commands.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type { MdBlock, MdList, MdNode, MdRange } from '../../internal/markdown/ast.js';
 import { useHighlighter } from '../../internal/highlighter.js';
@@ -57,6 +57,11 @@ export interface MawyEditorDocumentProps {
   /** What colours a code block that names its language. See `MawyEditor.highlight`. */
   highlight?: MawyHighlight;
   onEdit: (edit: MawyEdit) => void;
+  /**
+   * A keystroke refused for writing a second space in a row or a second blank
+   * line, and which of the two it was. See `crowdedBy`.
+   */
+  onCrowded: (kind: MawyCrowding) => void;
   /** Where the caret is, in the document's own offsets. */
   onSelect: (selection: { start: number; end: number }) => void;
   /**
@@ -272,6 +277,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       onTarget,
       highlight,
       onEdit,
+      onCrowded,
       onSelect,
       selection,
       focused,
@@ -352,6 +358,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       value,
       readOnly,
       onEdit,
+      onCrowded,
       onSelect,
       onImages,
       options,
@@ -360,7 +367,17 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     });
 
     React.useLayoutEffect(() => {
-      latest.current = { value, readOnly, onEdit, onSelect, onImages, options, held, nested };
+      latest.current = {
+        value,
+        readOnly,
+        onEdit,
+        onCrowded,
+        onSelect,
+        onImages,
+        options,
+        held,
+        nested
+      };
       selectionRef.current = selection;
     });
 
@@ -607,8 +624,9 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        const input = event as InputEvent;
         const edit = editFor(
-          event as InputEvent,
+          input,
           element,
           now.value,
           aim.current,
@@ -618,9 +636,44 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           now.nested
         );
 
-        if (edit) {
-          now.onEdit(edit);
+        if (!edit) {
+          return;
         }
+
+        /*
+         * A space or an `Enter` that would leave a second space in a row or a
+         * second empty paragraph is refused and said out loud instead, so this
+         * surface and the source can only ever show the same document.
+         *
+         * `Enter` is asked about the paragraph it was pressed in rather than
+         * about the line endings its edit writes: here one press writes the
+         * blank lines a new paragraph is made of, and the same count means
+         * something else on the source, where a press writes one line ending.
+         * An empty item, an empty quoted line and an empty line of a code block
+         * are all somewhere `Enter` still has work to do, and `breakAt` has
+         * already done it by the time this is asked.
+         *
+         * Only those two keys: `Shift`+`Enter` writes the two spaces a hard
+         * break is made of, and a paste is left exactly as it came. See
+         * `crowdedBy`.
+         */
+        const block = blockAt(element, element.ownerDocument.getSelection()?.anchorNode ?? element);
+        const crowding: MawyCrowding | null =
+          input.inputType === 'insertParagraph'
+            ? block?.tagName === 'P' && !block.textContent
+              ? 'break'
+              : null
+            : input.inputType === 'insertText' && input.data === ' '
+              ? crowdedBy({ value: edit.value, caret: edit.caret })
+              : null;
+
+        if (crowding) {
+          now.onCrowded(crowding);
+
+          return;
+        }
+
+        now.onEdit(edit);
       };
 
       /**

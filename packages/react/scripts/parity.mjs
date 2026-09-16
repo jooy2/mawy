@@ -30,6 +30,7 @@ import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
 import {
   commandActive,
   continueList,
+  crowdedBy,
   headingActive,
   indent,
   runCommand,
@@ -255,6 +256,10 @@ const edits = JSON.parse(
   out.tableAlignAt = tableAlignAt(value, start, end);
   out.indent = [indented.value, indented.start, indented.end];
   out.outdent = [outdented.value, outdented.start, outdented.end];
+  // Whether a space or an `Enter` typed where the caret is would be refused,
+  // which both packages have to answer the same way or the same document is
+  // writable in one of them and not in the other.
+  out.crowdedBy = crowdedBy({ value, caret: start });
 
   return out;
 });

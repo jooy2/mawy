@@ -124,6 +124,8 @@ final class MawyStrings {
     required this.statusWords,
     required this.statusCharacters,
     required this.editorPlaceholder,
+    required this.oneSpace,
+    required this.oneBreak,
     required this.openFile,
     required this.emptyTitle,
     required this.emptyHint,
@@ -408,6 +410,16 @@ final class MawyStrings {
   /// What the source surface says when it is empty.
   final String editorPlaceholder;
 
+  /// Said beside the caret when a second space in a row is refused.
+  ///
+  /// Markdown draws a run of spaces as one, so a document holding two said one
+  /// thing where it was drawn and another where it was written. The keystroke
+  /// is refused rather than the extra character drawn, and this says so.
+  final String oneSpace;
+
+  /// Said beside the caret when a second blank line in a row is refused.
+  final String oneBreak;
+
   /// The control that opens a document.
   final String openFile;
 
@@ -553,6 +565,8 @@ final class MawyStrings {
     String? statusWords,
     String? statusCharacters,
     String? editorPlaceholder,
+    String? oneSpace,
+    String? oneBreak,
     String? openFile,
     String? emptyTitle,
     String? emptyHint,
@@ -660,6 +674,8 @@ final class MawyStrings {
       statusWords: statusWords ?? this.statusWords,
       statusCharacters: statusCharacters ?? this.statusCharacters,
       editorPlaceholder: editorPlaceholder ?? this.editorPlaceholder,
+      oneSpace: oneSpace ?? this.oneSpace,
+      oneBreak: oneBreak ?? this.oneBreak,
       openFile: openFile ?? this.openFile,
       emptyTitle: emptyTitle ?? this.emptyTitle,
       emptyHint: emptyHint ?? this.emptyHint,
@@ -773,6 +789,8 @@ final class MawyStrings {
       other.statusWords == statusWords &&
       other.statusCharacters == statusCharacters &&
       other.editorPlaceholder == editorPlaceholder &&
+      other.oneSpace == oneSpace &&
+      other.oneBreak == oneBreak &&
       other.openFile == openFile &&
       other.emptyTitle == emptyTitle &&
       other.emptyHint == emptyHint &&
@@ -881,6 +899,8 @@ final class MawyStrings {
     statusWords,
     statusCharacters,
     editorPlaceholder,
+    oneSpace,
+    oneBreak,
     openFile,
     emptyTitle,
     emptyHint,
@@ -990,6 +1010,8 @@ const MawyStrings _en = MawyStrings._(
   statusWords: 'words',
   statusCharacters: 'characters',
   editorPlaceholder: 'Write here…',
+  oneSpace: 'Only one space in a row.',
+  oneBreak: 'Only one blank line in a row.',
   openFile: 'Open a file',
   emptyTitle: 'Open a Markdown file',
   emptyHint: 'Drop a .md file here, or choose one to open.',
@@ -1098,6 +1120,8 @@ const MawyStrings _ko = MawyStrings._(
   statusWords: '단어',
   statusCharacters: '자',
   editorPlaceholder: '여기에 입력…',
+  oneSpace: '공백은 한 번만 입력할 수 있습니다.',
+  oneBreak: '개행은 한 번만 입력할 수 있습니다.',
   openFile: '파일 열기',
   emptyTitle: '마크다운 파일 열기',
   emptyHint: '여기에 .md 파일을 놓거나, 열 파일을 고르세요.',

@@ -341,6 +341,16 @@ export interface MawyStrings {
   statusCharacters: string;
   editorPlaceholder: string;
   /**
+   * Said beside the caret when a second space in a row is refused.
+   *
+   * Markdown draws a run of spaces as one, so a document holding two said one
+   * thing on the drawn surface and another on the source. The keystroke is
+   * refused rather than the extra character drawn, and this is what says so.
+   */
+  oneSpace: string;
+  /** Said beside the caret when a second blank line in a row is refused. */
+  oneBreak: string;
+  /**
    * How to get out, said to a screen reader beside the surface.
    *
    * `Tab` indents here, which makes this a keyboard trap unless somebody is

@@ -1760,6 +1760,86 @@ EditState? _removeTable(EditState state) {
       : removeBlock(state.value, table.lines.first.start, table.lines.last.end);
 }
 
+/// What a keystroke was refused for: a second space, or a second blank line.
+enum MawyCrowding {
+  /// A second space in a row.
+  space,
+
+  /// A second blank line in a row.
+  breaks,
+}
+
+/// Whether what a keystroke is about to write leaves a longer run of spaces, or
+/// of blank lines, than a document written here holds, and which of the two it
+/// is. `null` for a keystroke with nothing wrong with it.
+///
+/// Markdown draws a run of spaces as one space, and a viewer drew one; the
+/// field beside it drew all three. So the same document said two different
+/// things about itself, with nothing on either side to say which of them the
+/// file held. The answer is not to draw the characters — that would mean
+/// drawing whitespace the parser throws away — but to refuse the keystroke that
+/// writes them, and to say so.
+///
+/// Two line endings in a row are the blank line two blocks are separated by, so
+/// that is as long as a run of them may be; a third is a second blank line, and
+/// an empty paragraph nobody can see the height of. A run of spaces may be one.
+///
+/// Not in a code block or in raw HTML, where every character is the character
+/// it is, not in a table, whose cells this editor sets off from their pipes
+/// with spaces of its own, and not in the whitespace a line opens with, which
+/// is what nests a list item and what an indented code block is written with.
+/// Only a keystroke is asked: a document that arrives with a run in it is left
+/// exactly as it came.
+///
+/// It is the React package's `crowdedBy`, and the parity check compares the two.
+MawyCrowding? crowdedBy(String value, int caret) {
+  final ({int from, int to}) breaks = _runAround(value, caret, '\n');
+
+  if (breaks.to - breaks.from > 2) {
+    return _literalAt(value, caret) ? null : MawyCrowding.breaks;
+  }
+
+  final ({int from, int to}) spaces = _runAround(value, caret, ' ');
+  final String lead = value.substring(_lineStartOf(value, spaces.from), spaces.from);
+
+  if (spaces.to - spaces.from < 2 || lead.trim().isEmpty) {
+    return null;
+  }
+
+  return _literalAt(value, caret) ? null : MawyCrowding.space;
+}
+
+/// The run of one character a place is inside, from where it starts to where it
+/// ends.
+({int from, int to}) _runAround(String value, int at, String mark) {
+  int from = at;
+  int to = at;
+
+  while (from > 0 && value[from - 1] == mark) {
+    from -= 1;
+  }
+
+  while (to < value.length && value[to] == mark) {
+    to += 1;
+  }
+
+  return (from: from, to: to);
+}
+
+/// Whether a run of whitespace at a place is the characters it is rather than a
+/// run nothing draws.
+///
+/// Inside a code block or raw HTML, where every character is itself, and inside
+/// a table, whose cells are set off from their pipes by spaces this editor
+/// writes for them: a space typed at the end of a cell's words is beside one of
+/// those, and refusing it would be refusing the word.
+bool _literalAt(String value, int at) {
+  final MdDocument document = parseMarkdown(value);
+  final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
+
+  return _verbatimAt(blocks, at) || _tableNodeAt(blocks, at) != null;
+}
+
 /// A block taken out of the document, and the caret where it was.
 ///
 /// The lines it is written on go whole, a container's prefix with them, so a

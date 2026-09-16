@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   commandActive,
   continueList,
+  crowdedBy,
   indent,
   runCommand,
   runTableCommand,
@@ -661,5 +662,46 @@ describe('tables', () => {
     // A no-break space is a row to the parser and trims away to nothing, which
     // leaves a cell whose end is before its start unless it is kept in order.
     expect(table('removeColumn', '| a | b |\n| - | - |\n\u00a0^')).toBe('| b |\n| - |\n\u00a0|^');
+  });
+});
+
+describe('one space and one blank line', () => {
+  /** `'a |b'` is the document as the keystroke would leave it, with the caret. */
+  const after = (marked: string) =>
+    crowdedBy({ value: marked.replace('|', ''), caret: marked.indexOf('|') });
+
+  it('refuses a second space in a row, and nothing less', () => {
+    expect(after('one |two')).toBe(null);
+    expect(after('one  |two')).toBe('space');
+    expect(after('one | two')).toBe('space');
+    expect(after('one   |two')).toBe('space');
+    // Markdown throws away the whitespace at the end of a line, so two spaces
+    // there are as invisible as two between words.
+    expect(after('one  |')).toBe('space');
+  });
+
+  it('leaves the whitespace a line opens with alone', () => {
+    // What nests a list item, and what an indented code block is written with.
+    expect(after('- one\n    |- two')).toBe(null);
+    expect(after('  |  code')).toBe(null);
+  });
+
+  it('refuses a second blank line in a row, and nothing less', () => {
+    expect(after('one\n|two')).toBe(null);
+    expect(after('one\n\n|two')).toBe(null);
+    expect(after('one\n\n\n|two')).toBe('break');
+    expect(after('one\n\n|')).toBe(null);
+    expect(after('one\n\n\n|')).toBe('break');
+  });
+
+  it('leaves code and raw HTML alone, where every character is the character it is', () => {
+    expect(after('```\ncode  |\n```')).toBe(null);
+    expect(after('```\ncode\n\n\n|\n```')).toBe(null);
+    expect(after('<div>\n  a  |b\n</div>')).toBe(null);
+  });
+
+  it('leaves a table alone, whose cells the editor sets off with spaces itself', () => {
+    expect(after('| a |  |\n| --- | --- |')).toBe(null);
+    expect(after('| a | b |\n| --- | --- |\n| one  |  | b |')).toBe(null);
   });
 });

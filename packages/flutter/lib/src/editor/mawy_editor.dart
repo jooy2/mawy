@@ -16,6 +16,7 @@
 /// under the same names, and `tool/parity.dart` diffs all three.
 library;
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
@@ -455,6 +456,11 @@ class _MawyEditorState extends State<MawyEditor> {
   double _measuredPreview = -1;
   bool _syncing = false;
 
+  /// What a refused keystroke said, and which press said it. See [_crowded].
+  ({String text, int count})? _notice;
+  Timer? _noticeTimer;
+  int _noticeCount = 0;
+
   late MawyEditorMode _mode = widget.mode ?? widget.defaultMode;
   late MawyColorScheme _held = widget.colorScheme ?? widget.defaultColorScheme;
   late MawyTypography _type = widget.typography ?? widget.defaultTypography;
@@ -613,6 +619,7 @@ class _MawyEditorState extends State<MawyEditor> {
     _focus.dispose();
     _history.removeListener(_historyMoved);
     _history.dispose();
+    _noticeTimer?.cancel();
     _sourceScroll.removeListener(_syncScroll);
     _sourceScroll.dispose();
     _previewScroll.dispose();
@@ -1060,6 +1067,7 @@ class _MawyEditorState extends State<MawyEditor> {
       readOnly: widget.readOnly,
       placeholder: widget.placeholder ?? strings.editorPlaceholder,
       onEnter: _enter,
+      onCrowded: _crowded,
       onIndent: _indent,
       onCommand: widget.readOnly ? null : _run,
       onTable: _runTable,
@@ -1084,7 +1092,14 @@ class _MawyEditorState extends State<MawyEditor> {
       strings: strings,
       available: _tableAvailable,
       onCommand: _runTable,
-      child: source,
+      child: _NoticeHost(
+        controller: _controller,
+        scroll: _sourceScroll,
+        editableKey: _editable,
+        notice: _notice,
+        tokens: tokens,
+        child: source,
+      ),
     );
 
     final Widget preview = _previewOf(tokens, strings);
@@ -1284,6 +1299,193 @@ class _MawyEditorState extends State<MawyEditor> {
 
   /// `Tab` and `Shift`+`Tab`. See [indent].
   void _indent({required bool out}) => _apply(indent(_state, out: out));
+
+  /// A keystroke refused, said once beside the caret and then taken away.
+  ///
+  /// Refusing a key silently is a key that looks broken, so the editor says
+  /// which rule it was and goes quiet again. See [crowdedBy].
+  void _crowded(MawyCrowding crowding) {
+    final MawyStrings strings = widget.strings ?? stringsFor(widget.locale);
+
+    _noticeTimer?.cancel();
+    setState(() {
+      _noticeCount += 1;
+      _notice = (
+        text: crowding == MawyCrowding.space ? strings.oneSpace : strings.oneBreak,
+        count: _noticeCount,
+      );
+    });
+    _noticeTimer = Timer(kMawyNoticeTime, () {
+      if (mounted) {
+        setState(() => _notice = null);
+      }
+    });
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * A refused keystroke's word
+ * ---------------------------------------------------------------------- */
+
+/// How long a refused keystroke's word stays on screen.
+///
+/// Long enough to read a short sentence and short enough not to sit over the
+/// next one being typed. A keystroke refused again says it again, from the
+/// start, because somebody pressing the key twice meant it twice.
+const Duration kMawyNoticeTime = Duration(milliseconds: 1800);
+
+/// The source, with the word a refused keystroke left drawn under the caret.
+///
+/// A second space in a row and a second blank line are not written, and a key
+/// that does nothing without saying why is a key that reads as broken. So the
+/// rule is said once where the caret is and then goes. It takes no pointer:
+/// whatever is under it is the document being written in, and a word that
+/// appears for a second and a half must not swallow a press. See [crowdedBy].
+class _NoticeHost extends StatefulWidget {
+  const _NoticeHost({
+    required this.controller,
+    required this.scroll,
+    required this.editableKey,
+    required this.notice,
+    required this.tokens,
+    required this.child,
+  });
+
+  final TextEditingController controller;
+  final ScrollController scroll;
+  final GlobalKey<EditableTextState> editableKey;
+
+  /// What to say and which press said it, or `null` while there is nothing.
+  final ({String text, int count})? notice;
+  final MawyTokens tokens;
+  final Widget child;
+
+  @override
+  State<_NoticeHost> createState() => _NoticeHostState();
+}
+
+class _NoticeHostState extends State<_NoticeHost> {
+  final GlobalKey _stack = GlobalKey(debugLabel: 'MawyEditor notice');
+
+  double? _top;
+  double _left = 0;
+  bool _queued = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scroll.addListener(_queue);
+    _queue();
+  }
+
+  @override
+  void didUpdateWidget(_NoticeHost old) {
+    super.didUpdateWidget(old);
+
+    if (old.scroll != widget.scroll) {
+      old.scroll.removeListener(_queue);
+      widget.scroll.addListener(_queue);
+    }
+
+    _queue();
+  }
+
+  @override
+  void dispose() {
+    widget.scroll.removeListener(_queue);
+    super.dispose();
+  }
+
+  void _queue() {
+    if (_queued) {
+      return;
+    }
+
+    _queued = true;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      _queued = false;
+
+      if (mounted) {
+        _place();
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _place() {
+    final TextSelection selection = widget.controller.selection;
+    final RenderEditable? editable = widget.editableKey.currentState?.renderEditable;
+    final RenderObject? stack = _stack.currentContext?.findRenderObject();
+    double? top;
+    double left = _left;
+
+    if (widget.notice != null &&
+        selection.isValid &&
+        editable != null &&
+        editable.attached &&
+        stack is RenderBox &&
+        stack.hasSize) {
+      final Rect caret = editable.getLocalRectForCaret(
+        TextPosition(offset: selection.extentOffset),
+      );
+      final Offset foot = stack.globalToLocal(editable.localToGlobal(caret.bottomLeft));
+
+      top = math.max(4, math.min(foot.dy + 8, stack.size.height - 34));
+      left = math.max(4, math.min(foot.dx - 4, stack.size.width - 4));
+    }
+
+    if (top != _top || left != _left) {
+      setState(() {
+        _top = top;
+        _left = left;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ({String text, int count})? notice = widget.notice;
+    final MawyTokens tokens = widget.tokens;
+
+    return Stack(
+      key: _stack,
+      fit: StackFit.passthrough,
+      children: <Widget>[
+        widget.child,
+        if (notice != null && _top != null)
+          Positioned(
+            top: _top,
+            left: _left,
+            right: 4,
+            child: IgnorePointer(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Container(
+                  key: ValueKey<int>(notice.count),
+                  padding: const EdgeInsets.fromLTRB(9, 4, 9, 4),
+                  decoration: BoxDecoration(
+                    color: tokens.backgroundRaised,
+                    borderRadius: BorderRadius.circular(MawyRadius.medium),
+                    border: Border.all(color: tokens.border),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: const Color(0xFF101018).withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    notice.text,
+                    style: TextStyle(color: tokens.foregroundMuted, fontSize: 13, height: 1.4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 /* -------------------------------------------------------------------------

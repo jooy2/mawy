@@ -1652,6 +1652,82 @@ function clearCells(state: EditState): EditState | null {
   return caretAfter(next, table.lines[0].start, span.top, span.left);
 }
 
+/** What a keystroke was refused for: a second space, or a second blank line. */
+export type MawyCrowding = 'space' | 'break';
+
+/**
+ * Whether what a keystroke is about to write leaves a longer run of spaces, or
+ * of blank lines, than a document written here holds, and which of the two it
+ * is. `null` for a keystroke with nothing wrong with it.
+ *
+ * Markdown draws a run of spaces as one space, and the drawn document drew one;
+ * the source beside it drew all three. So the same document said two different
+ * things about itself, with nothing on either surface to say which of them the
+ * file held. The answer is not to draw the characters — the drawn document
+ * would be drawing whitespace the parser throws away — but to refuse the
+ * keystroke that writes them, and to say so, so that both surfaces can only
+ * ever show a document with one of each.
+ *
+ * Two line endings in a row are the blank line two blocks are separated by, so
+ * that is as long as a run of them may be; a third is a second blank line, and
+ * an empty paragraph nobody can see the height of. A run of spaces may be one.
+ *
+ * Not in a code block or in raw HTML, where every character is the character it
+ * is, and not in the whitespace a line opens with, which is what nests a list
+ * item and what an indented code block is written with. Only a keystroke is
+ * asked: a document that arrives with a run in it — pasted, opened, loaded from
+ * an application — is left exactly as it came.
+ */
+export function crowdedBy(next: { value: string; caret: number }): MawyCrowding | null {
+  const { value, caret } = next;
+  const breaks = runAround(value, caret, '\n');
+
+  if (breaks.to - breaks.from > 2) {
+    return literalAt(value, caret) ? null : 'break';
+  }
+
+  const spaces = runAround(value, caret, ' ');
+  const lead = value.slice(lineStartOf(value, spaces.from), spaces.from);
+
+  if (spaces.to - spaces.from < 2 || !lead.trim()) {
+    return null;
+  }
+
+  return literalAt(value, caret) ? null : 'space';
+}
+
+/** The run of one character a place is inside, from where it starts to where it ends. */
+function runAround(value: string, at: number, mark: string): { from: number; to: number } {
+  let from = at;
+  let to = at;
+
+  while (from > 0 && value[from - 1] === mark) {
+    from -= 1;
+  }
+
+  while (to < value.length && value[to] === mark) {
+    to += 1;
+  }
+
+  return { from, to };
+}
+
+/**
+ * Whether a run of whitespace at a place is the characters it is rather than a
+ * run nothing draws.
+ *
+ * Inside a code block or raw HTML, where every character is itself, and inside
+ * a table, whose cells are set off from their pipes by spaces this editor
+ * writes for them: a space typed at the end of a cell's words is beside one of
+ * those, and refusing it would be refusing the word.
+ */
+function literalAt(value: string, at: number): boolean {
+  const document = parseMarkdown(value);
+  const blocks = [...document.root.children, ...document.footnotes];
+
+  return verbatimAt(blocks, at) || tableNodeAt(blocks, at) !== null;
+}
+
 /**
  * A block taken out of the document, and the caret where it was.
  *

@@ -2041,6 +2041,41 @@
   pointer-events: none;
 }
 
+/* A refused keystroke's word ------------------------------------------------
+ *
+ * A second space in a row and a second blank line are not written, and a key
+ * that does nothing without saying why is a key that reads as broken. So the
+ * rule is said once under the caret and then goes. Not a tooltip: nothing is
+ * being hovered, it belongs to what was just typed rather than to a control,
+ * and it is a live region so that somebody who cannot see it is told as well.
+ *
+ * It takes no pointer events. Whatever is under it is the document being
+ * written in, and a word that appears for a second and a half must not be able
+ * to swallow the press that lands there.
+ */
+.mawy-root .mawy-notice {
+  position: absolute;
+  z-index: 20;
+  max-width: calc(100% - 8px);
+  padding: 4px 9px;
+  border: 1px solid var(--mawy-border);
+  border-radius: var(--mawy-radius-md);
+  background: var(--mawy-bg-raised);
+  box-shadow: var(--mawy-shadow-1);
+  color: var(--mawy-fg-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: mawy-menu-in 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mawy-root .mawy-notice {
+    animation: none;
+  }
+}
+
 /* A table's own controls ---------------------------------------------------
  *
  * The rows and columns of the table the caret is in, hung beside that table.
