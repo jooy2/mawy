@@ -439,6 +439,20 @@ List<Object?> _edits() {
 
     out['hardBreak'] = <Object?>[broken.value, broken.start, broken.end];
 
+    // A letter typed where the caret is, and what the list above it needs
+    // written as well. Both packages have to answer the same way, or the same
+    // keystroke leaves two different documents behind.
+    final String typed =
+        '${state.value.substring(0, state.start)}x${state.value.substring(state.start)}';
+    final ({String value, int caret})? kept = keptList(
+      state.value,
+      state.start,
+      typed,
+      state.start + 1,
+    );
+
+    out['keptList'] = kept == null ? null : <Object?>[kept.value, kept.caret];
+
     return out;
   }).toList();
 }

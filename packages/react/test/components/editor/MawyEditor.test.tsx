@@ -1060,6 +1060,55 @@ describe('the toolbar and the keyboard', () => {
     await expect.element(screen.getByRole('textbox')).toHaveValue('- one\n\n');
   });
 
+  /**
+   * The way out of the middle of a list. `Enter` gives the marker up, and
+   * between two items there is nowhere to put the blank line that would part
+   * the caret from them, so the first letter typed there writes it. Both
+   * surfaces, because both draw the same parse. See `keptList`.
+   */
+  it('parts the line a given-up bullet left from the list, on the first letter typed', async () => {
+    const screen = await render(
+      <div style={WIDE}>
+        <MawyEditor defaultValue={'- a\n- \n- b'} modes={['plain']} />
+      </div>
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(6, 6);
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    );
+
+    await expect.element(screen.getByRole('textbox')).toHaveValue('- a\n\n- b');
+
+    await userEvent.keyboard('c');
+
+    await expect.element(screen.getByRole('textbox')).toHaveValue('- a\n\nc\n- b');
+    expect(input.selectionStart).toBe(6);
+
+    // And the next letter is an ordinary one, written where the caret is.
+    await userEvent.keyboard('d');
+
+    await expect.element(screen.getByRole('textbox')).toHaveValue('- a\n\ncd\n- b');
+
+    await screen.unmount();
+
+    const drawn = vi.fn();
+    const document_ = await render(
+      <div style={WIDE}>
+        <MawyEditor defaultValue={'- a\n- \n- b'} mode="wysiwyg" onChange={drawn} />
+      </div>
+    );
+
+    put(bodyOf(document_), '', 0);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(drawn).toHaveBeenLastCalledWith('- a\n\n- b'));
+    await userEvent.keyboard('c');
+    await vi.waitFor(() => expect(drawn).toHaveBeenLastCalledWith('- a\n\nc\n- b'));
+  });
+
   it('refuses a second space and a second blank line on the source, and says which', async () => {
     const onChange = vi.fn();
     const screen = await render(

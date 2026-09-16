@@ -1923,6 +1923,60 @@ void main() {
       expect(find.text('Only one blank line in a row.'), findsNothing);
     });
 
+    /// The way out of the middle of a list. `Enter` gives the marker up, and
+    /// between two items there is nowhere to put the blank line that would part
+    /// the caret from them, so the first letter typed there writes it. See
+    /// [keptList], which the React package follows too.
+    testWidgets('parts the line a given-up bullet left, on the first letter typed', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: '- a\n- \n- b',
+            mode: MawyEditorMode.plain,
+            status: <MawyEditorStatusItem>[],
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+      await tester.showKeyboard(_sourceField);
+
+      Future<void> type(String run) async {
+        final TextEditingValue was = field.controller.value;
+        final int at = was.selection.baseOffset;
+
+        tester.testTextInput.updateEditingValue(
+          TextEditingValue(
+            text: was.text.substring(0, at) + run + was.text.substring(at),
+            selection: TextSelection.collapsed(offset: at + run.length),
+          ),
+        );
+        await tester.pump();
+      }
+
+      field.controller.selection = const TextSelection.collapsed(offset: 6);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+
+      expect(field.controller.text, '- a\n\n- b');
+
+      await type('c');
+
+      expect(field.controller.text, '- a\n\nc\n- b');
+      expect(field.controller.selection.baseOffset, 6);
+
+      // And the next letter is an ordinary one, written where the caret is.
+      await type('d');
+
+      expect(field.controller.text, '- a\n\ncd\n- b');
+    });
+
     testWidgets('writes a hard break on Shift+Enter', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

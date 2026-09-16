@@ -5,6 +5,7 @@ import {
   crowdedBy,
   hardBreak,
   indent,
+  keptList,
   runCommand,
   runTableCommand,
   tableAlignAt,
@@ -701,6 +702,55 @@ describe('tables', () => {
     // A no-break space is a row to the parser and trims away to nothing, which
     // leaves a cell whose end is before its start unless it is kept in order.
     expect(table('removeColumn', '| a | b |\n| - | - |\n\u00a0^')).toBe('| b |\n| - |\n\u00a0|^');
+  });
+});
+
+/**
+ * A list's shape, kept as a keystroke lands under it.
+ *
+ * `'- a\n|'` is the document and the caret before the keystroke, and the letter
+ * typed there is an `x`, which is what the parity corpus types too.
+ */
+describe('a keystroke on a line under a list', () => {
+  const typed = (marked: string, letter = 'x') => {
+    const at = marked.indexOf('|');
+    const was = marked.replace('|', '');
+    const value = was.slice(0, at) + letter + was.slice(at);
+    const kept = keptList(was, at, { value, caret: at + letter.length });
+
+    return kept && `${kept.value.slice(0, kept.caret)}|${kept.value.slice(kept.caret)}`;
+  };
+
+  it('parts the line a given-up bullet left from the list above it', () => {
+    // The way out of the middle of a list: `Enter` on the empty item cannot
+    // write the blank line that would part the caret from the two items either
+    // side, so the first letter typed there writes it. See `partedFrom`.
+    expect(typed('- a\n|\n- b')).toBe('- a\n\nx|\n- b');
+    expect(typed('- a\n|\n- b', '한')).toBe('- a\n\n한|\n- b');
+  });
+
+  it('parts a line that was an item until a letter was typed after its marker', () => {
+    // `-x` is no longer an item and is the item above it's lazy continuation,
+    // so its words would be drawn at the end of that item.
+    expect(typed('- a\n-|')).toBe('- a\n\n-x|');
+  });
+
+  it('leaves a line the parser already reads as its own paragraph', () => {
+    expect(typed('- a\n\n|')).toBe(null);
+    expect(typed('- a\n\n|\n\n- b')).toBe(null);
+    // Indented is the item's own second block, which is what it looks like.
+    expect(typed('- a\n\n  |\n- b')).toBe(null);
+  });
+
+  it('leaves a line with nothing above it, and a document with no list in it', () => {
+    expect(typed('Words.\n|')).toBe(null);
+    expect(typed('|')).toBe(null);
+  });
+
+  it('takes the blank line off a marker typed under a list, so it joins that list', () => {
+    // A blank line between two items does not end a list, and the list it joins
+    // would become loose: every item a paragraph and a gap from the rest.
+    expect(typed('- a\n\n|', '- ')).toBe('- a\n- |');
   });
 });
 

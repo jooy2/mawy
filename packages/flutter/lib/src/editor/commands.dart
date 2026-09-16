@@ -834,6 +834,121 @@ MdListItem? _itemNodeAt(List<MdNode> nodes, int offset) {
 }
 
 /* -------------------------------------------------------------------------
+ * A list's shape, kept
+ * ---------------------------------------------------------------------- */
+
+/// A line that opens a list item, or is a list item's marker so far.
+final RegExp _opensItem = RegExp(r'^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)');
+
+/// A line that opens with whitespace, which a list item holds its own blocks at.
+final RegExp _indented = RegExp(r'^[ \t]');
+
+/// The line a place in a document is on, without its line ending.
+String _lineAt(String value, int at) {
+  final int stop = value.indexOf('\n', at);
+
+  return value.substring(_lineStartOf(value, at), stop == -1 ? value.length : stop);
+}
+
+/// The top-level list a place in a document is inside, where it is inside one.
+MdRange? _listAt(String value, int at, bool definitionLists) {
+  final MdDocument document = parseMarkdown(
+    value,
+    MawyParseOptions(definitionLists: definitionLists),
+  );
+
+  for (final MdNode block in document.root.children) {
+    if (block is MdList && block.range.start <= at && at <= block.range.end) {
+      return block.range;
+    }
+  }
+
+  return null;
+}
+
+/// What a keystroke on a line under a list has to write as well, so that the
+/// list above keeps the shape it had, or `null` where it writes nothing.
+///
+/// [was] is the document before the keystroke and [at] where the caret was in
+/// it; [value] is what the field has written and [caret] where the caret is now.
+///
+/// Giving up an item leaves the caret on an empty paragraph under the list, a
+/// blank line away from it. A marker typed there joins that list, since a blank
+/// line between two items does not end a list in CommonMark, and the list it
+/// joins becomes loose: every item a paragraph, every item further apart, and
+/// the new one a gap away from the rest. So a line that has just become an item
+/// of the list above it loses the blank line in front of it and is the next
+/// item, the way it looks it should be.
+///
+/// The other way round as well. A line inside a list that is not an item — one
+/// that was an item until a letter was typed straight after its `-`, or one
+/// that had nothing on it at all — is the item above it's lazy continuation to
+/// the parser, and its words would be drawn at the end of that item; a blank
+/// line in front of it keeps it the paragraph it reads as.
+///
+/// The blank one is the way out of the middle of a list. `Enter` on an item
+/// with nothing in it gives the marker up, and between two items there is
+/// nowhere to put the blank line that would part the caret from them: one is
+/// already there and a second is the run neither surface will write. So the
+/// line waits, and the first thing typed on it is what parts it — which is the
+/// same answer [_partedFrom] gives at the end of a list, arriving a keystroke
+/// later.
+///
+/// Only a line the keystroke made one or the other, and only under a list at
+/// the top of the document, so a list written loose on purpose is left loose.
+({String value, int caret})? keptList(
+  String was,
+  int at,
+  String value,
+  int caret, {
+  bool definitionLists = true,
+}) {
+  final int lineStart = _lineStartOf(value, caret);
+  final String line = _lineAt(value, caret);
+
+  if (lineStart < 2 || value == was) {
+    return null;
+  }
+
+  final int aboveStart = value.lastIndexOf('\n', lineStart - 2) + 1;
+  final String above = value.substring(aboveStart, lineStart - 1);
+  final String before = _lineAt(was, at);
+  final bool wasItem = _opensItem.hasMatch(before);
+
+  // Asked of the text before the parser, which is what spares a keystroke in
+  // the words of an item already there the parse.
+  if (_opensItem.hasMatch(line) && !wasItem && above.trim().isEmpty && aboveStart > 0) {
+    final MdRange? joined = _lineAt(value, aboveStart - 1).trim().isEmpty
+        ? null
+        : _listAt(value, lineStart, definitionLists);
+
+    if (joined == null || joined.start >= aboveStart || _listAt(was, at, definitionLists) != null) {
+      return null;
+    }
+
+    final String shorter = value.substring(0, aboveStart) + value.substring(lineStart);
+
+    return _listAt(shorter, aboveStart, definitionLists)?.start == joined.start
+        ? (value: shorter, caret: caret - (lineStart - aboveStart))
+        : null;
+  }
+
+  if (!_opensItem.hasMatch(line) &&
+      above.trim().isNotEmpty &&
+      !_indented.hasMatch(line) &&
+      (wasItem || before.trim().isEmpty) &&
+      _listAt(value, lineStart, definitionLists) != null) {
+    final String parted = '${value.substring(0, lineStart)}\n${value.substring(lineStart)}';
+
+    return _listAt(parted, lineStart + 1, definitionLists) != null
+        ? null
+        : (value: parted, caret: caret + 1);
+  }
+
+  return null;
+}
+
+/* -------------------------------------------------------------------------
  * Indentation
  * ---------------------------------------------------------------------- */
 

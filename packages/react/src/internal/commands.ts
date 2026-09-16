@@ -10,7 +10,7 @@
  * sounds obvious and is the half people leave out.
  */
 
-import type { MdCode, MdListItem, MdNode, MdTable } from './markdown/ast.js';
+import type { MdCode, MdListItem, MdNode, MdRange, MdTable } from './markdown/ast.js';
 import { parseMarkdown } from './markdown/parse.js';
 
 export interface EditState {
@@ -818,6 +818,114 @@ function itemNodeAt(nodes: readonly MdNode[], offset: number): MdListItem | null
     if (node.type === 'listItem') {
       return node;
     }
+  }
+
+  return null;
+}
+
+/* -------------------------------------------------------------------------
+ * A list's shape, kept
+ * ---------------------------------------------------------------------- */
+
+/** A line that opens a list item, or is a list item's marker so far. */
+const OPENS_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
+
+/** The line a place in a document is on, without its line ending. */
+function lineAt(value: string, at: number): string {
+  const stop = value.indexOf('\n', at);
+
+  return value.slice(lineStartOf(value, at), stop === -1 ? value.length : stop);
+}
+
+/** The top-level list a place in a document is inside, where it is inside one. */
+function listAt(value: string, at: number, definitionLists: boolean): MdRange | null {
+  const list = parseMarkdown(value, { definitionLists }).root.children.find(
+    (block) => block.type === 'list' && block.range.start <= at && at <= block.range.end
+  );
+
+  return list ? list.range : null;
+}
+
+/**
+ * What a keystroke on a line under a list has to write as well, so that the
+ * list above keeps the shape it had, or `null` where it writes nothing.
+ *
+ * `was` is the document before the keystroke and `at` where the caret was in
+ * it; `next` is what the surface has written and where the caret is now.
+ *
+ * Giving up an item leaves the caret on an empty paragraph under the list, a
+ * blank line away from it. A marker typed there joins that list, since a blank
+ * line between two items does not end a list in CommonMark, and the list it
+ * joins becomes loose: every item a paragraph, every item further apart, and
+ * the new one a gap away from the rest. So a line that has just become an item
+ * of the list above it loses the blank line in front of it and is the next
+ * item, the way it looks it should be.
+ *
+ * The other way round as well. A line inside a list that is not an item — one
+ * that was an item until a letter was typed straight after its `-`, or one that
+ * had nothing on it at all — is the item above it's lazy continuation to the
+ * parser, and its words would be drawn at the end of that item; a blank line in
+ * front of it keeps it the paragraph it reads as.
+ *
+ * The blank one is the way out of the middle of a list. `Enter` on an item with
+ * nothing in it gives the marker up, and between two items there is nowhere to
+ * put the blank line that would part the caret from them: one is already there
+ * and a second is the run neither surface will write. So the line waits, and
+ * the first thing typed on it is what parts it — which is the same answer
+ * `partedFrom` gives at the end of a list, arriving a keystroke later.
+ *
+ * Only a line the keystroke made one or the other, and only under a list at the
+ * top of the document, so a list written loose on purpose is left loose.
+ */
+export function keptList(
+  was: string,
+  at: number,
+  next: { value: string; caret: number },
+  definitionLists = true
+): { value: string; caret: number } | null {
+  const { value, caret } = next;
+  const lineStart = lineStartOf(value, caret);
+  const line = lineAt(value, caret);
+
+  if (lineStart < 2 || value === was) {
+    return null;
+  }
+
+  const aboveStart = value.lastIndexOf('\n', lineStart - 2) + 1;
+  const above = value.slice(aboveStart, lineStart - 1);
+  const before = lineAt(was, at);
+  const wasItem = OPENS_ITEM.test(before);
+
+  // Asked of the text before the parser, which is what spares a keystroke in
+  // the words of an item already there the parse.
+  if (OPENS_ITEM.test(line) && !wasItem && !above.trim() && aboveStart > 0) {
+    const joined = lineAt(value, aboveStart - 1).trim()
+      ? listAt(value, lineStart, definitionLists)
+      : null;
+
+    if (!joined || joined.start >= aboveStart || listAt(was, at, definitionLists)) {
+      return null;
+    }
+
+    const shorter = value.slice(0, aboveStart) + value.slice(lineStart);
+
+    return listAt(shorter, aboveStart, definitionLists)?.start === joined.start
+      ? { value: shorter, caret: caret - (lineStart - aboveStart) }
+      : null;
+  }
+
+  if (
+    !OPENS_ITEM.test(line) &&
+    above.trim() &&
+    !/^[ \t]/.test(line) &&
+    (wasItem || !before.trim()) &&
+    listAt(value, lineStart, definitionLists)
+  ) {
+    const parted = `${value.slice(0, lineStart)}\n${value.slice(lineStart)}`;
+
+    return listAt(parted, lineStart + 1, definitionLists)
+      ? null
+      : { value: parted, caret: caret + 1 };
   }
 
   return null;

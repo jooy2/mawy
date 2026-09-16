@@ -51,6 +51,7 @@ import {
   type MawyTableCommand
 } from '../../internal/commands.js';
 import {
+  listKept,
   marksAt,
   nestingWaits,
   wrapRange,
@@ -915,6 +916,107 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     },
     [text, write]
   );
+
+  /**
+   * The document the field is composing into, as it was before the composition
+   * started, and where the caret was in it.
+   *
+   * An input method rewrites the run under the caret a jamo at a time, and what
+   * it has written is not what it means until it says so. `listKept` below wants
+   * the document before the change, and by the time the composition ends the
+   * field has already written several of them.
+   */
+  const composing = React.useRef<{ value: string; at: number } | null>(null);
+
+  /**
+   * What the source field has just written, with the list above it kept the
+   * shape it had.
+   *
+   * A line of words straight under a list item is that item's lazy continuation
+   * to CommonMark, drawn at the end of it, so the first letter typed where a
+   * given-up bullet was joined the item above — on this surface as on the drawn
+   * one, since both draw the same parse. The drawn document answers for it in
+   * `beforeinput`; here the field has already written the character and what is
+   * left is to read the result. See `listKept`.
+   */
+  const kept = React.useCallback(
+    (was: string, at: number, next: string, caret: number) => {
+      const edit = listKept(was, at, { value: next, caret }, options);
+
+      if (edit.value !== next) {
+        pending.current = [edit.caret, edit.caret];
+      }
+
+      write(edit.value);
+    },
+    [options, write]
+  );
+
+  /**
+   * The field's own writes, which are a keystroke, a paste, a drop or an input
+   * method finishing a syllable.
+   *
+   * Where the caret was is read back out of the change rather than off the
+   * selection, which has already moved by the time this runs: a run written at
+   * the caret leaves it that much further on. Only a run written in one piece
+   * with no line ending in it is read, which is a keystroke and not a document
+   * arriving — the rule `crowdedBy` follows, for the same reason. Nothing is
+   * read while an input method is composing either; `compositionend` asks
+   * instead, with the document as it was when the composition started.
+   */
+  const wrote = React.useCallback(
+    (next: string) => {
+      const field = source.current;
+      const was = drew.current.value;
+      const caret = field?.selectionStart ?? 0;
+      const at = caret - (next.length - was.length);
+
+      if (
+        composing.current ||
+        !field ||
+        at >= caret ||
+        at < 0 ||
+        next.slice(at, caret).includes('\n')
+      ) {
+        write(next);
+
+        return;
+      }
+
+      kept(was, at, next, caret);
+    },
+    [kept, write]
+  );
+
+  React.useEffect(() => {
+    const field = showSource ? source.current : null;
+
+    if (!field) {
+      return;
+    }
+
+    const opened = () => {
+      composing.current = { value: field.value, at: field.selectionStart };
+    };
+    const closed = () => {
+      const was = composing.current;
+
+      composing.current = null;
+
+      if (was && field.value !== was.value) {
+        kept(was.value, was.at, field.value, field.selectionStart);
+      }
+    };
+
+    field.addEventListener('compositionstart', opened);
+    field.addEventListener('compositionend', closed);
+
+    return () => {
+      field.removeEventListener('compositionstart', opened);
+      field.removeEventListener('compositionend', closed);
+      composing.current = null;
+    };
+  }, [kept, showSource]);
 
   React.useLayoutEffect(() => {
     if (!pending.current) {
@@ -3177,7 +3279,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
             <MawyEditorSource
               ref={source}
               value={text}
-              onChange={write}
+              onChange={wrote}
               onSelect={readSelection}
               onKeyDown={onKeyDown}
               onScroll={syncScroll}

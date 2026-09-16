@@ -6,6 +6,7 @@ import 'package:mawy/src/editor/commands.dart'
         MawyTableCommand,
         crowdedBy,
         hardBreak,
+        keptList,
         runTableCommand,
         tableAlignAt,
         tableOfSize;
@@ -524,6 +525,50 @@ void main() {
       expect(tab('- on|e\n- two'), '- on|e\n- two');
       expect(tab('Words.\n\n- on|e'), 'Words.\n\n- on|e');
       expect(tab('- one\n  mo|re', out: true), '- one\n  mo|re');
+    });
+  });
+
+  /// A list's shape, kept as a keystroke lands under it.
+  ///
+  /// `'- a\n|'` is the document and the caret before the keystroke, and the
+  /// letter typed there is an `x`, which is what the parity corpus types too.
+  group('a keystroke on a line under a list', () {
+    String? typed(String marked, [String letter = 'x']) {
+      final int at = marked.indexOf('|');
+      final String was = marked.replaceFirst('|', '');
+      final String value = was.substring(0, at) + letter + was.substring(at);
+      final ({String value, int caret})? kept = keptList(was, at, value, at + letter.length);
+
+      return kept == null
+          ? null
+          : '${kept.value.substring(0, kept.caret)}|${kept.value.substring(kept.caret)}';
+    }
+
+    test('parts the line a given-up bullet left from the list above it', () {
+      // The way out of the middle of a list: `Enter` on the empty item cannot
+      // write the blank line that would part the caret from the two items
+      // either side, so the first letter typed there writes it.
+      expect(typed('- a\n|\n- b'), '- a\n\nx|\n- b');
+      expect(typed('- a\n|\n- b', '한'), '- a\n\n한|\n- b');
+    });
+
+    test('parts a line that was an item until a letter was typed after its marker', () {
+      expect(typed('- a\n-|'), '- a\n\n-x|');
+    });
+
+    test('leaves a line the parser already reads as its own paragraph', () {
+      expect(typed('- a\n\n|'), isNull);
+      expect(typed('- a\n\n|\n\n- b'), isNull);
+      expect(typed('- a\n\n  |\n- b'), isNull);
+    });
+
+    test('leaves a line with nothing above it, and a document with no list in it', () {
+      expect(typed('Words.\n|'), isNull);
+      expect(typed('|'), isNull);
+    });
+
+    test('takes the blank line off a marker typed under a list, so it joins that list', () {
+      expect(typed('- a\n\n|', '- '), '- a\n- |');
     });
   });
 

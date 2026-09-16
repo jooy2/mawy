@@ -22,6 +22,7 @@ import {
   fencedAt,
   hardBreak,
   indent,
+  keptList,
   removeBlock,
   runCommand,
   runTableCommand,
@@ -990,38 +991,11 @@ function breakAt(
   );
 }
 
-/** A line that opens a list item, or is a list item's marker so far. */
-const OPENS_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
-
-/** The top-level list a place in a document is inside, where it is inside one. */
-function listAt(value: string, at: number, options: MarkdownOptions): MdRange | null {
-  const list = parseMarkdown(value, options).root.children.find(
-    (block) => block.type === 'list' && block.range.start <= at && at <= block.range.end
-  );
-
-  return list ? list.range : null;
-}
-
 /**
- * An edit to a line under a list, written so the list above keeps the shape it
- * had.
+ * An edit to a line under a list, with the list above kept the shape it had.
  *
- * Giving up an item leaves the caret on an empty paragraph under the list, a
- * blank line away from it. A marker typed there joins that list, since a blank
- * line between two items does not end a list in CommonMark, and the list it
- * joins becomes loose: every item a paragraph, every item further apart, and
- * the new one a gap away from the rest. So a line that has just become an item
- * of the list above it loses the blank line in front of it and is the next
- * item, the way it looks it should be.
- *
- * The other way round as well. A line under a list that was an item and has
- * stopped being one — a letter typed straight after its `-` — is the last
- * item's lazy continuation to the parser, and its words would be drawn at the
- * end of that item; a blank line in front of it keeps it the paragraph it
- * reads as.
- *
- * Only a line the edit made one or the other, and only under a list at the top
- * of the document, so a list written loose on purpose is left loose.
+ * `keptList` in `commands.ts` is the rule, and both packages follow it; this is
+ * the drawn surface asking, in the shape its edits are written in.
  */
 export function listKept(
   was: string,
@@ -1029,50 +1003,9 @@ export function listKept(
   edit: MawyEdit,
   options: MarkdownOptions
 ): MawyEdit {
-  const { value, caret } = edit;
-  const lineStart = caret > 0 ? value.lastIndexOf('\n', caret - 1) + 1 : 0;
-  const line = lineAround(value, caret);
+  const next = keptList(was, at, edit, options.definitionLists ?? true);
 
-  if (lineStart < 2 || edit.value === was) {
-    return edit;
-  }
-
-  const aboveStart = value.lastIndexOf('\n', lineStart - 2) + 1;
-  const above = value.slice(aboveStart, lineStart - 1);
-
-  const wasItem = OPENS_ITEM.test(lineAround(was, at));
-
-  // Asked of the text before the parser, which is what spares a keystroke in
-  // the words of an item already there the parse.
-  if (OPENS_ITEM.test(line) && !wasItem && !above.trim() && aboveStart > 0) {
-    const joined = lineAround(value, aboveStart - 1).trim()
-      ? listAt(value, lineStart, options)
-      : null;
-
-    if (!joined || joined.start >= aboveStart || listAt(was, at, options)) {
-      return edit;
-    }
-
-    const next = value.slice(0, aboveStart) + value.slice(lineStart);
-
-    return listAt(next, aboveStart, options)?.start === joined.start
-      ? { value: next, caret: caret - (lineStart - aboveStart) }
-      : edit;
-  }
-
-  if (
-    !OPENS_ITEM.test(line) &&
-    above.trim() &&
-    !/^[ \t]/.test(line) &&
-    wasItem &&
-    listAt(value, lineStart, options)
-  ) {
-    const next = `${value.slice(0, lineStart)}\n${value.slice(lineStart)}`;
-
-    return listAt(next, lineStart + 1, options) ? edit : { value: next, caret: caret + 1 };
-  }
-
-  return edit;
+  return next ? next : edit;
 }
 
 /** The line a place in a document is on, without its line ending. */

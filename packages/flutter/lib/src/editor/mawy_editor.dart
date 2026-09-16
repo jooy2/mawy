@@ -1068,6 +1068,7 @@ class _MawyEditorState extends State<MawyEditor> {
       tokens: tokens,
       strings: strings,
       gfm: widget.parse.gfm,
+      definitionLists: widget.parse.definitionLists,
       readOnly: widget.readOnly,
       placeholder: widget.placeholder ?? strings.editorPlaceholder,
       onEnter: _enter,

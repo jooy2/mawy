@@ -476,6 +476,74 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
 /// replacement and a document handed to the editor keep whatever whitespace
 /// they came with; a composition is left to finish first. See [crowdedBy] for
 /// the rule and for why it is one.
+/// A list's shape, kept as the field is typed into.
+///
+/// A line of words straight under a list item is that item's lazy continuation
+/// to CommonMark, drawn at the end of it, so the first letter typed where a
+/// given-up bullet was joined the item above. [keptList] is the rule and the
+/// React package follows the same one; this is the field asking.
+///
+/// A formatter rather than a key, for the reason [_OneOfEach] is one: what a
+/// field is given comes down the text input connection at least as often as it
+/// comes from a key. Only a run written in one piece with no line ending in it
+/// is read, which is a keystroke and not a document arriving.
+///
+/// An input method rewrites the run under the caret a jamo at a time, and what
+/// it has written is not what it means until it says so. So the document as it
+/// was before the composition started is kept, and the question is asked once,
+/// on the update that ends it.
+class _ListKept extends TextInputFormatter {
+  _ListKept(this.definitionLists);
+
+  /// The parser's own option, which says whether a `: ` line ends a list.
+  final bool definitionLists;
+
+  /// The document before the composition the field is in, or `null`.
+  TextEditingValue? _composing;
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue before, TextEditingValue after) {
+    if (after.composing.isValid) {
+      _composing ??= before;
+
+      return after;
+    }
+
+    final TextEditingValue was = _composing ?? before;
+
+    _composing = null;
+
+    final int caret = after.selection.baseOffset;
+    final int at = caret - (after.text.length - was.text.length);
+
+    if (!after.selection.isCollapsed ||
+        at < 0 ||
+        at >= caret ||
+        caret > after.text.length ||
+        after.text.substring(at, caret).contains('\n')) {
+      return after;
+    }
+
+    final ({String value, int caret})? kept = keptList(
+      was.text,
+      at,
+      after.text,
+      caret,
+      definitionLists: definitionLists,
+    );
+
+    if (kept == null) {
+      return after;
+    }
+
+    return after.copyWith(
+      text: kept.value,
+      selection: TextSelection.collapsed(offset: kept.caret),
+      composing: TextRange.empty,
+    );
+  }
+}
+
 class _OneOfEach extends TextInputFormatter {
   const _OneOfEach(this.onCrowded);
 
@@ -538,6 +606,7 @@ class MawySourceField extends StatefulWidget {
     required this.tokens,
     required this.strings,
     required this.gfm,
+    required this.definitionLists,
     required this.readOnly,
     required this.placeholder,
     required this.onEnter,
@@ -572,6 +641,9 @@ class MawySourceField extends StatefulWidget {
 
   /// Whether GitHub's additions are read.
   final bool gfm;
+
+  /// Whether a `: ` line under a line of text is a definition. See [keptList].
+  final bool definitionLists;
 
   /// Whether the document can be changed.
   final bool readOnly;
@@ -659,6 +731,10 @@ class _MawySourceFieldState extends State<MawySourceField>
   /// Whether `Escape` was the last key pressed, and so whether the next `Tab`
   /// leaves the surface rather than indenting. See [_onKey].
   bool _leaving = false;
+
+  /// The list's shape, kept as the field is typed into. It holds the document
+  /// an input method is composing over, so it outlives a build. See [_ListKept].
+  late final _ListKept _listKept = _ListKept(widget.definitionLists);
 
   /* ---------------------------------------------------------------------
    * Colouring only what can be seen
@@ -961,7 +1037,7 @@ class _MawySourceFieldState extends State<MawySourceField>
                     // The detector above reads the pointer. Two things reading
                     // one gesture is a caret that jumps to where a selection
                     // was meant to start.
-                    inputFormatters: <TextInputFormatter>[_OneOfEach(widget.onCrowded)],
+                    inputFormatters: <TextInputFormatter>[_OneOfEach(widget.onCrowded), _listKept],
                     rendererIgnoresPointer: true,
                     enableInteractiveSelection: true,
                   ),

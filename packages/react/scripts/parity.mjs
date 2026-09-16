@@ -34,6 +34,7 @@ import {
   hardBreak,
   headingActive,
   indent,
+  keptList,
   runCommand,
   runTableCommand,
   tableAlignAt,
@@ -266,6 +267,14 @@ const edits = JSON.parse(
   const broken = hardBreak(state);
 
   out.hardBreak = [broken.value, broken.start, broken.end];
+
+  // A letter typed where the caret is, and what the list above it needs written
+  // as well. Both packages have to answer the same way, or the same keystroke
+  // leaves two different documents behind.
+  const typed = `${value.slice(0, start)}x${value.slice(start)}`;
+  const kept = keptList(value, start, { value: typed, caret: start + 1 });
+
+  out.keptList = kept && [kept.value, kept.caret];
 
   return out;
 });
