@@ -1109,6 +1109,70 @@ describe('the toolbar and the keyboard', () => {
     await vi.waitFor(() => expect(drawn).toHaveBeenLastCalledWith('- a\n\nc\n- b'));
   });
 
+  /**
+   * On a Mac the platform means the document by these two: `End` scrolls to the
+   * bottom and leaves the caret where it was, and `Shift`+`End` selects to the
+   * end of the whole document. An editor means the line.
+   */
+  it('goes to the ends of the line on Home and End', async () => {
+    const wrapped = 'zero one two three four five six seven eight nine ten eleven twelve';
+    const screen = await render(
+      <div style={{ width: 320, height: 240 }}>
+        <MawyEditor defaultValue={`first line\n${wrapped}\nlast line`} modes={['plain']} />
+      </div>
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(51, 51);
+    await userEvent.keyboard('{Home}');
+
+    // The line the gutter numbers, whichever row of it the caret was drawn on.
+    await vi.waitFor(() => expect(input.selectionStart).toBe(11));
+
+    await userEvent.keyboard('{End}');
+
+    await vi.waitFor(() => expect(input.selectionEnd).toBe(11 + wrapped.length));
+
+    // `Shift` extends from where the selection started rather than moving.
+    input.setSelectionRange(51, 51);
+    await userEvent.keyboard('{Shift>}{Home}{/Shift}');
+
+    await vi.waitFor(() => expect([input.selectionStart, input.selectionEnd]).toEqual([11, 51]));
+    expect(input.selectionDirection).toBe('backward');
+
+    // On the drawn document the line is the row, which is what `Home` already
+    // does there and what `End` is answered for.
+    await screen.unmount();
+
+    const long = `${wrapped} thirteen fourteen fifteen sixteen seventeen eighteen nineteen`;
+    const drawn = await render(
+      <div style={{ width: 320, height: 240 }}>
+        <MawyEditor defaultValue={`first line\n\n${long}\n\nlast line`} mode="wysiwyg" />
+      </div>
+    );
+    const body = bodyOf(drawn);
+    const paragraph = [...body.querySelectorAll('p')].find((each) =>
+      each.textContent?.startsWith('zero ')
+    ) as HTMLElement;
+
+    put(body, paragraph.textContent as string, 40);
+    await new Promise((done) => setTimeout(done, 30));
+    await userEvent.keyboard('{End}');
+
+    const after = await vi.waitFor(() => {
+      const at = (document.getSelection() as Selection).anchorOffset;
+
+      expect(at).toBeGreaterThan(40);
+
+      return at;
+    });
+
+    // The end of the row rather than of the paragraph, which is the line a
+    // surface that draws rows and numbers nothing has.
+    expect(after).toBeLessThan(long.length);
+  });
+
   it('refuses a second space and a second blank line on the source, and says which', async () => {
     const onChange = vi.fn();
     const screen = await render(

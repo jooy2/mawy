@@ -280,6 +280,58 @@ class _HeadingAction extends Action<_HeadingIntent> {
   }
 }
 
+/// `Home` or `End`, on its way to the ends of the line the caret is on.
+class _LineEndIntent extends Intent {
+  const _LineEndIntent({required this.forward, required this.extend});
+
+  /// `End` rather than `Home`.
+  final bool forward;
+
+  /// Whether `Shift` was down, so the selection is extended rather than moved.
+  final bool extend;
+}
+
+/// What `Home` and `End` do: the ends of the line the caret is on.
+///
+/// On a Mac neither did. The platform means the document by them — `End`
+/// scrolls to the bottom and leaves the caret where it was — and Flutter binds
+/// them to exactly that. In an editor they mean the line, which is what they
+/// mean on every other platform and in every editor on this one.
+///
+/// The line is the one the gutter numbers: a paragraph wrapped over three rows
+/// is one line with one number beside it, and the offsets this whole package
+/// counts in are offsets into the document rather than into a row whose length
+/// is a property of how wide the pane happens to be. The React package's source
+/// answers the same keys the same way.
+class _LineEndAction extends Action<_LineEndIntent> {
+  _LineEndAction(this.field);
+
+  final MawySourceField field;
+
+  @override
+  Object? invoke(_LineEndIntent intent) {
+    final TextEditingValue value = field.controller.value;
+    final TextSelection selection = value.selection;
+
+    if (!selection.isValid) {
+      return null;
+    }
+
+    final String text = value.text;
+    final int focus = selection.extentOffset;
+    final int stop = text.indexOf('\n', focus);
+    final int to = intent.forward
+        ? (stop == -1 ? text.length : stop)
+        : (focus <= 0 ? 0 : text.lastIndexOf('\n', focus - 1) + 1);
+
+    field.controller.selection = intent.extend
+        ? TextSelection(baseOffset: selection.baseOffset, extentOffset: to)
+        : TextSelection.collapsed(offset: to);
+
+    return null;
+  }
+}
+
 /// One table command, on its way from a chord to [MawySourceField].
 class _TableIntent extends Intent {
   const _TableIntent(this.command);
@@ -455,6 +507,15 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
   SingleActivator(LogicalKeyboardKey.comma, meta: true, shift: true): _CommandIntent(
     MawyCommand.rule,
   ),
+  // The ends of the line, which are what an editor means by these two. See
+  // [_LineEndAction] for what the platform means by them instead.
+  SingleActivator(LogicalKeyboardKey.home): _LineEndIntent(forward: false, extend: false),
+  SingleActivator(LogicalKeyboardKey.end): _LineEndIntent(forward: true, extend: false),
+  SingleActivator(LogicalKeyboardKey.home, shift: true): _LineEndIntent(
+    forward: false,
+    extend: true,
+  ),
+  SingleActivator(LogicalKeyboardKey.end, shift: true): _LineEndIntent(forward: true, extend: true),
   // Where Word and Google Docs put a footnote, and the one key here that is
   // neither the modifier alone nor the modifier with `Shift`.
   SingleActivator(LogicalKeyboardKey.keyF, control: true, alt: true): _CommandIntent(
@@ -1002,6 +1063,7 @@ class _MawySourceFieldState extends State<MawySourceField>
               ),
               _TableIntent: _TableAction(widget),
               _HeadingIntent: _HeadingAction(widget),
+              _LineEndIntent: _LineEndAction(widget),
             },
             child: Focus(
               onKeyEvent: _onKey,

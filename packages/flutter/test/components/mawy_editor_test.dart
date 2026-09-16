@@ -1977,6 +1977,64 @@ void main() {
       expect(field.controller.text, '- a\n\ncd\n- b');
     });
 
+    /// The platform means the document by `Home` and `End` on a Mac — `End`
+    /// scrolls to the bottom and leaves the caret where it was. An editor means
+    /// the line. See [_LineEndAction], which the React package matches.
+    testWidgets('goes to the ends of the line on Home and End', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: 'first line\nsecond line here\nlast line',
+            mode: MawyEditorMode.plain,
+            status: <MawyEditorStatusItem>[],
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+
+      Future<void> press(LogicalKeyboardKey key, {bool shift = false}) async {
+        if (shift) {
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        }
+
+        await tester.sendKeyEvent(key);
+
+        if (shift) {
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        }
+
+        await tester.pump();
+      }
+
+      // The second line runs from 11 to 27.
+      field.controller.selection = const TextSelection.collapsed(offset: 18);
+      await tester.pump();
+      await press(LogicalKeyboardKey.home);
+
+      expect(field.controller.selection, const TextSelection.collapsed(offset: 11));
+
+      await press(LogicalKeyboardKey.end);
+
+      expect(field.controller.selection, const TextSelection.collapsed(offset: 27));
+
+      // `Shift` extends from where the selection started.
+      field.controller.selection = const TextSelection.collapsed(offset: 18);
+      await tester.pump();
+      await press(LogicalKeyboardKey.end, shift: true);
+
+      expect(field.controller.selection.baseOffset, 18);
+      expect(field.controller.selection.extentOffset, 27);
+
+      await press(LogicalKeyboardKey.home, shift: true);
+
+      expect(field.controller.selection.baseOffset, 18);
+      expect(field.controller.selection.extentOffset, 11);
+    });
+
     testWidgets('writes a hard break on Shift+Enter', (WidgetTester tester) async {
       final List<String> seen = <String>[];
 

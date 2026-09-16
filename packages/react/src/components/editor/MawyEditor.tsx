@@ -2528,6 +2528,81 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     leaving.current = false;
 
     /*
+     * `Home` and `End`, which go to the ends of the line the caret is on.
+     *
+     * On a Mac neither did: `End` scrolled to the bottom of the document and
+     * left the caret where it was, `Shift`+`End` selected to the end of the
+     * whole document, and that is what the platform means by those keys. In an
+     * editor they mean the line, which is what they mean on every other
+     * platform and in every editor on this one.
+     *
+     * The line the *source* means is the line its gutter numbers: a paragraph
+     * wrapped over three rows is one line with one number beside it, and the
+     * offsets this whole library counts in are offsets into the document rather
+     * than into a row whose length is a property of how wide the pane happens
+     * to be. The drawn document numbers nothing and draws rows, so there the
+     * browser's own `lineboundary` is the line, which is already what `Home`
+     * does there — only `End` has to be answered for.
+     *
+     * `Shift` extends rather than moves, from whichever end of the selection
+     * the caret is at. Under a modifier the key is the platform's own — that is
+     * where the ends of the document are — and is left alone.
+     */
+    if (
+      (event.key === 'Home' || event.key === 'End') &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey
+    ) {
+      const forward = event.key === 'End';
+
+      if (showDocument) {
+        const drawnSelection = event.currentTarget.ownerDocument.defaultView?.getSelection();
+
+        // Not every browser has `modify`, and one that has not still has a key
+        // that does the right thing on the surface it is drawing.
+        if (forward && typeof drawnSelection?.modify === 'function') {
+          event.preventDefault();
+          drawnSelection.modify(event.shiftKey ? 'extend' : 'move', 'forward', 'lineboundary');
+        }
+
+        return;
+      }
+
+      const field = source.current;
+
+      if (!field) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const back = field.selectionDirection === 'backward';
+      const focus = back ? field.selectionStart : field.selectionEnd;
+      const anchor = back ? field.selectionEnd : field.selectionStart;
+      const stop = state.value.indexOf('\n', focus);
+      const to = forward
+        ? stop === -1
+          ? state.value.length
+          : stop
+        : field.value.lastIndexOf('\n', focus - 1) + 1;
+
+      if (event.shiftKey) {
+        field.setSelectionRange(
+          Math.min(anchor, to),
+          Math.max(anchor, to),
+          to < anchor ? 'backward' : 'forward'
+        );
+      } else {
+        field.setSelectionRange(to, to);
+      }
+
+      readSelection();
+
+      return;
+    }
+
+    /*
      * Nothing at all while an input method is composing.
      *
      * Korean is composed a jamo at a time, and the key that finishes a syllable
