@@ -1697,6 +1697,16 @@ function clearCells(state: EditState): EditState | null {
  * block a line ending is a line ending and nothing else, since everything in
  * there is the characters it is.
  *
+ * The line it starts opens with whatever the containers the caret is in write
+ * on every line of themselves: a quotation's `>`, the indentation a list item
+ * holds its later lines at. Without it the break took the words out of the
+ * quotation they were in — the second line was only a lazy continuation of the
+ * first, so the drawn document still showed them quoted and the file said
+ * something else, and a `>` typed after it was a second quotation rather than
+ * more of the first. Inside a code block the prefix is read off where the
+ * block's own line begins rather than out of the line, since a `> ` among the
+ * words in there is code and not a quotation. See `containerOf` and `codeAt`.
+ *
  * The drawn document answers `insertLineBreak` with the same three, read off
  * the element the caret is in rather than off the document, and the source had
  * only the browser's own answer: a bare line ending, which Markdown reads as
@@ -1707,21 +1717,46 @@ export function hardBreak(state: EditState): EditState {
   const { value, start, end } = state;
   const document = parseMarkdown(value);
   const blocks = [...document.root.children, ...document.footnotes];
-  const mark = tableNodeAt(blocks, start) ? '<br>' : codeInsideAt(blocks, start) ? '\n' : '  \n';
+  const from = lineStartOf(value, start);
+  const code = codeAt(blocks, start);
+  const mark = tableNodeAt(blocks, start)
+    ? '<br>'
+    : code
+      ? `\n${insideOf(value, code, from)}`
+      : `  \n${containerOf(value.slice(from, start)).carry}`;
   const at = start + mark.length;
 
   return { value: value.slice(0, start) + mark + value.slice(end), start: at, end: at };
 }
 
 /**
- * Whether a place is inside a code block, read at the edges the way
- * `verbatimAt` reads them.
+ * What the line a code block's own characters sit on opens with, which is the
+ * prefix of every container the block is inside.
+ *
+ * Read off `lines`, which says where each line of the code begins in the
+ * document, so the answer is the characters between the start of the line and
+ * the start of the code on it — `> ` for a block in a quotation, the item's
+ * indentation for one in a list, nothing for one at the top of the document.
+ * A caret on a fence has no line of code to read, and the fence's own line is
+ * the next best thing; there is nothing left to read for a block with neither.
+ */
+function insideOf(value: string, code: MdCode, from: number): string {
+  const anchor = [code.range.start, ...code.lines].find(
+    (place) => lineStartOf(value, place) === from
+  );
+
+  return anchor === undefined ? '' : value.slice(from, anchor);
+}
+
+/**
+ * The code block a place is inside, read at the edges the way `verbatimAt`
+ * reads them, or `null`.
  *
  * That one answers for raw HTML as well, and raw HTML is not this question: the
  * drawn document writes it out as an ordinary run of characters with the caret
  * in it, and gives it the hard break every other run of characters gets.
  */
-function codeInsideAt(nodes: readonly MdNode[], offset: number): boolean {
+function codeAt(nodes: readonly MdNode[], offset: number): MdCode | null {
   for (const node of nodes) {
     const { start, end } = node.range;
 
@@ -1733,18 +1768,20 @@ function codeInsideAt(nodes: readonly MdNode[], offset: number): boolean {
       const open = node.content.end === end && node.content.start > start;
 
       if (offset < end || open) {
-        return true;
+        return node;
       }
 
       continue;
     }
 
-    if ('children' in node && codeInsideAt(node.children as MdNode[], offset)) {
-      return true;
+    const inside = 'children' in node ? codeAt(node.children as MdNode[], offset) : null;
+
+    if (inside) {
+      return inside;
     }
   }
 
-  return false;
+  return null;
 }
 
 /** What a keystroke was refused for: a second space, or a second blank line. */

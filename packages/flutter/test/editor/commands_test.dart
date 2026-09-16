@@ -539,12 +539,28 @@ void main() {
 
     test('writes the two spaces a break is made of', () {
       expect(broken('one|two'), 'one  \n|two');
-      expect(broken('- a|'), '- a  \n|');
+    });
+
+    test('opens the line it starts with what the containers write on every line', () {
+      // Without the `>` the second line is only the first's lazy continuation:
+      // drawn quoted, written as something else, and a `>` typed after it is a
+      // second quotation rather than more of the first.
+      expect(broken('> one|two'), '> one  \n> |two');
+      expect(broken('> > deep|'), '> > deep  \n> > |');
+      // A list item writes its marker once and indents the rest.
+      expect(broken('- a|'), '- a  \n  |');
+      expect(broken('1. a|'), '1. a  \n   |');
+      expect(broken('> - a|'), '> - a  \n>   |');
     });
 
     test('writes a line ending inside a code block, where a character is itself', () {
       expect(broken('```\nco|de\n```'), '```\nco\n|de\n```');
       expect(broken('    co|de'), '    co\n|de');
+      // The block's own line says what the prefix is, so a `> ` among the words
+      // in there is code rather than a quotation.
+      expect(broken('```\n> co|de\n```'), '```\n> co\n|de\n```');
+      expect(broken('> ```\n> co|de\n> ```'), '> ```\n> co\n> |de\n> ```');
+      expect(broken('- ```\n  co|de\n  ```'), '- ```\n  co\n  |de\n  ```');
     });
 
     test('writes a `<br>` in a table cell, whose row is one line of the file', () {

@@ -1796,6 +1796,17 @@ EditState? _removeTable(EditState state) {
 /// a line ending and nothing else, since everything in there is the characters
 /// it is.
 ///
+/// The line it starts opens with whatever the containers the caret is in write
+/// on every line of themselves: a quotation's `>`, the indentation a list item
+/// holds its later lines at. Without it the break took the words out of the
+/// quotation they were in — the second line was only a lazy continuation of the
+/// first, so the drawn document still showed them quoted and the file said
+/// something else, and a `>` typed after it was a second quotation rather than
+/// more of the first. Inside a code block the prefix is read off where the
+/// block's own line begins rather than out of the line, since a `> ` among the
+/// words in there is code and not a quotation. See [_containerOf] and
+/// [_codeAt].
+///
 /// It is the React package's `hardBreak`, where the drawn document answers
 /// `insertLineBreak` with the same three, and the parity check compares the two.
 EditState hardBreak(EditState state) {
@@ -1803,24 +1814,46 @@ EditState hardBreak(EditState state) {
   final int start = state.start;
   final MdDocument document = parseMarkdown(value);
   final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
+  final int from = _lineStartOf(value, start);
+  final MdCode? code = _codeAt(blocks, start);
   final String mark = _tableNodeAt(blocks, start) != null
       ? '<br>'
-      : _codeInsideAt(blocks, start)
-      ? '\n'
-      : '  \n';
+      : code != null
+      ? '\n${_insideOf(value, code, from)}'
+      : '  \n${_containerOf(value.substring(from, start)).carry}';
   final int at = start + mark.length;
 
   return EditState(value.substring(0, start) + mark + value.substring(state.end), at, at);
 }
 
-/// Whether a place is inside a code block, read at the edges the way
-/// [_verbatimAt] reads them.
+/// What the line a code block's own characters sit on opens with, which is the
+/// prefix of every container the block is inside.
+///
+/// Read off [MdCode.lines], which says where each line of the code begins in
+/// the document, so the answer is the characters between the start of the line
+/// and the start of the code on it — `> ` for a block in a quotation, the
+/// item's indentation for one in a list, nothing for one at the top of the
+/// document. A caret on a fence has no line of code to read, and the fence's
+/// own line is the next best thing; there is nothing left to read for a block
+/// with neither.
+String _insideOf(String value, MdCode code, int from) {
+  for (final int place in <int>[code.range.start, ...code.lines]) {
+    if (_lineStartOf(value, place) == from) {
+      return value.substring(from, place);
+    }
+  }
+
+  return '';
+}
+
+/// The code block a place is inside, read at the edges the way [_verbatimAt]
+/// reads them, or `null`.
 ///
 /// That one answers for raw HTML as well, and raw HTML is not this question:
 /// the React package's drawn document writes it out as an ordinary run of
 /// characters with the caret in it, and gives it the hard break every other run
 /// of characters gets.
-bool _codeInsideAt(List<MdNode> nodes, int offset) {
+MdCode? _codeAt(List<MdNode> nodes, int offset) {
   for (final MdNode node in nodes) {
     final int start = node.range.start;
     final int end = node.range.end;
@@ -1833,18 +1866,20 @@ bool _codeInsideAt(List<MdNode> nodes, int offset) {
       final bool open = node.content.end == end && node.content.start > start;
 
       if (offset < end || open) {
-        return true;
+        return node;
       }
 
       continue;
     }
 
-    if (_codeInsideAt(_blocksIn(node), offset)) {
-      return true;
+    final MdCode? inside = _codeAt(_blocksIn(node), offset);
+
+    if (inside != null) {
+      return inside;
     }
   }
 
-  return false;
+  return null;
 }
 
 /// What a keystroke was refused for: a second space, or a second blank line.

@@ -20,6 +20,7 @@ import {
   containerOf,
   continueList,
   fencedAt,
+  hardBreak,
   indent,
   removeBlock,
   runCommand,
@@ -1878,8 +1879,13 @@ export function editFor(
 
       // Two spaces and a newline: the hard break nearly every Markdown file in
       // the world is written with, however invisible it is. Inside a code block
-      // a newline is just a newline.
-      return splice(value, start, end, block?.tagName === 'PRE' ? '\n' : '  \n');
+      // a newline is just a newline, and either way the line it starts opens
+      // with what the containers around it write on every line of themselves.
+      // The source answers the same key with the same function, which is what
+      // keeps one key one thing on the two surfaces. See `hardBreak`.
+      const broken = hardBreak({ value, start, end });
+
+      return { value: broken.value, caret: broken.start };
     }
 
     case 'deleteContentBackward':
