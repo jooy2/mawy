@@ -463,6 +463,17 @@ void main() {
       expect(show(continueList(at('- one|'), definitionLists: false)!), '- one\n- |');
     });
 
+    test('leaves a quoted line under an item to the quotation', () {
+      // The line is the quotation's rather than the item's words run on, so the
+      // marker `Enter` carries down is the quotation's. What this says is that
+      // the list does not answer first.
+      expect(continueList(at('- aa\n  > bb|')), isNull);
+      // A line of the item's own words still carries the bullet down.
+      expect(enter('- aa\n  bb|'), '- aa\n  bb\n- |');
+      // And a line that opens an item is the item's, whatever it goes on with.
+      expect(enter('- > aa|'), '- > aa\n- |');
+    });
+
     test('carries the marker down from the line an item runs on over', () {
       expect(enter('- one\n- two  \n  more|\n\nAfter.'), '- one\n- two  \n  more\n- |\n\nAfter.');
       expect(enter('1. one\n   more|'), '1. one\n   more\n2. |');

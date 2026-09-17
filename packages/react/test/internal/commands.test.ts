@@ -172,6 +172,19 @@ describe('line markers', () => {
     expect(continueList(at('- one'), false)?.value).toBe('- one\n- ');
   });
 
+  it('leaves a quoted line under an item to the quotation', () => {
+    const at = (value: string) => ({ value, start: value.length, end: value.length });
+
+    // The line is the quotation's rather than the item's words run on, so the
+    // marker `Enter` carries down is the quotation's. `continueQuote` writes
+    // it; what this says is that the list does not answer first.
+    expect(continueList(at('- aa\n  > bb'))).toBe(null);
+    // A line of the item's own words still carries the bullet down.
+    expect(continueList(at('- aa\n  bb'))?.value).toBe('- aa\n  bb\n- ');
+    // And a line that opens an item is the item's, whatever it goes on with.
+    expect(continueList(at('- > aa'))?.value).toBe('- > aa\n- ');
+  });
+
   it('acts on a blank first line with the caret in front of everything', () => {
     // Asked to look from before the start, JavaScript's `lastIndexOf` looks at
     // the first character instead, so a document opening with a line ending

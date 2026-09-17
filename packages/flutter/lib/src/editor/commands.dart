@@ -710,6 +710,15 @@ EditState? continueList(EditState state, {bool definitionLists = true}) {
   final int from = state.start <= 0 ? 0 : state.value.lastIndexOf('\n', state.start - 1) + 1;
   final String line = state.value.substring(from, state.start);
   final RegExpMatch? own = _item.firstMatch(line);
+
+  // A quoted line under an item is the quotation's line rather than the item's
+  // words run on, so `Enter` there carries the quotation's marker down and not
+  // the bullet. `own` is what tells the two apart: a line that opens an item is
+  // the item's however it goes on, and this is a line that does not.
+  if (own == null && _quotedLine.hasMatch(line)) {
+    return null;
+  }
+
   final RegExpMatch? item = own ?? _ownerOf(state.value, from, state.start)?.item;
 
   if (item == null) {
@@ -776,6 +785,9 @@ String _partedFrom(String value, int at) {
 }
 
 /// A line that might open a list item, somewhere in a document.
+/// A line a quotation carries, which is the quotation's rather than an item's.
+final RegExp _quotedLine = RegExp(r'^[ \t]*>');
+
 final RegExp _anyItem = RegExp(r'^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]', multiLine: true);
 
 /// The first line of the list item a line of words carries on, read the way

@@ -22,6 +22,8 @@
 
 ### Fixed
 
+- **`Enter` on a quoted line inside a list item carries the quotation down rather than the bullet.** A line under an item that is not an item of its own is that item's words run on, and `Enter` at the end of one carries the item's marker down — which is right for a line of words and wrong for a line the quotation owns. `- one` with `  > two` under it gave a second bullet and left the quotation behind; it now opens the next quoted line, inside the item where the caret was. It is the React package's rule, and `continueList` is where both packages ask it.
+
 - **A table wraps its cells into the room it has rather than scrolling sideways.** `width: 100%` inside an `overflow-x: auto` is what the React package's table is, and a horizontal scroll view hands its child an unbounded width — which a table reads as every column at the width it would like, the whole sentence unwrapped. So the scrollbar was there from the first sentence on, whatever room the table had. The width is worked out now and handed down: the room, or the sum of the columns' longest words where even those will not fit, which is the one case a browser scrolls in too.
 
 - **A bulleted list's dot is the size a browser draws, and hangs where a browser hangs it.** `•` is whatever size the typeface decided to draw it, and on the web that is whatever font the page fell back to; it came out a good deal smaller than the `disc` beside it in the React package, and sat down the middle of the gutter rather than beside the words. It is a circle three tenths of the type it marks now, its right edge the same fraction of an em from the words as a browser leaves.

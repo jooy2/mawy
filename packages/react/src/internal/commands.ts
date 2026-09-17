@@ -691,6 +691,15 @@ export function continueList(state: EditState, definitionLists = true): EditStat
   const from = lineStartOf(state.value, state.start);
   const line = state.value.slice(from, state.start);
   const own = ITEM.exec(line);
+
+  // A quoted line under an item is the quotation's line rather than the item's
+  // words run on, so `Enter` there carries the quotation's marker down and not
+  // the bullet. `own` is what tells the two apart: a line that opens an item is
+  // the item's however it goes on, and this is a line that does not.
+  if (!own && QUOTED_LINE.test(line)) {
+    return null;
+  }
+
   const item = own ?? ownerOf(state.value, from, state.start)?.item;
 
   if (!item) {
@@ -758,6 +767,9 @@ function partedFrom(value: string, at: number): string {
 
   return above.trim() ? '\n' : '';
 }
+
+/** A line a quotation carries, which is the quotation's rather than an item's. */
+const QUOTED_LINE = /^[ \t]*>/;
 
 /** A line that might open a list item, somewhere in a document. */
 const ANY_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]/m;
