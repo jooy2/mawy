@@ -28,7 +28,7 @@ A leaf is a line of its own. This one draws a bar, and the number in it came out
 
 A text directive sits inside a sentence: press :kbd[Ctrl] + :kbd[K] to search, :kbd[Esc] to leave.
 
-The head has a second spelling as well, which is what every tool that shipped containers before the proposal writes. \`MawyCodeGroup\` is the one drawing this library ships, and this page registered it under two names. Several blocks in one group are tabs:
+The head has a second spelling as well, which is what every tool that shipped containers before the proposal writes. \`MawyCodeGroup\` is the one drawing this library ships, and this page registered it under two names. Several blocks in one group are tabs, named by the language each fence was written with, or by the name a fence wrote in brackets after it:
 
 ::: code-group
 
@@ -40,7 +40,7 @@ sub(10, 1, 5); // 4
 sub(<int>[10, 1, 5]); // 4
 \`\`\`
 
-\`\`\`python
+\`\`\`python [Python 3]
 sub(10, 1, 5)  # 4
 \`\`\`
 
