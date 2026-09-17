@@ -3695,6 +3695,29 @@ describe('the document surface', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n> three'));
   });
 
+  /**
+   * And the press after it still leaves the quotation. The paragraph a caret
+   * is given on a quoted line is empty, and a press on an empty paragraph is
+   * the one that writes nothing — but that rule is about the blank lines the
+   * document holds, which are drawn straight under it, and this one is not.
+   */
+  it('leaves a quotation from the line Enter opened in it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'> one\n> two'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'one\ntwo', 7);
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n> '));
+
+    await userEvent.keyboard('{Enter}');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n\n'));
+    await userEvent.keyboard('after');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n\nafter'));
+  });
+
   it('types into words an underline is drawn around', async () => {
     const onChange = vi.fn();
     const screen = await render(

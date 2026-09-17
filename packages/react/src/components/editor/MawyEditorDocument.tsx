@@ -660,6 +660,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
          * are all somewhere `Enter` still has work to do, and `breakAt` has
          * already done it by the time this is asked.
          *
+         * A paragraph drawn straight under the document, because only those
+         * are the blank lines the document holds. The one drawn inside a
+         * quotation is the room a caret was given on a line the parser reads
+         * as blank, and `Enter` there is how a quotation is left — the very
+         * work this would be refusing. See `withinQuote`.
+         *
          * Only those two keys: `Shift`+`Enter` writes the two spaces a hard
          * break is made of, and a paste is left exactly as it came. See
          * `crowdedBy`.
@@ -667,7 +673,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         const block = blockAt(element, element.ownerDocument.getSelection()?.anchorNode ?? element);
         const crowding: MawyCrowding | null =
           input.inputType === 'insertParagraph'
-            ? block?.tagName === 'P' && !block.textContent
+            ? block?.tagName === 'P' && !block.textContent && block.parentElement === element
               ? 'break'
               : null
             : input.inputType === 'insertText' && input.data === ' '
