@@ -3353,6 +3353,35 @@ describe('the document surface', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('a\n\n---\n\nX\n\n---\n\nb'));
   });
 
+  it('leaves a press between two paragraphs on the word nearest it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        style={{ height: 344 }}
+        modes={['wysiwyg']}
+        defaultValue={'a\n\nb'}
+        onChange={onChange}
+      />
+    );
+    const body = bodyOf(screen);
+    const [one, other] = [...body.children].map((block) => block.getBoundingClientRect());
+    const box = body.getBoundingClientRect();
+
+    // The space between two paragraphs is their own margins, and a caret there
+    // has the end of one and the start of the other to go to. Which of the two
+    // the browser picks is the browser's, and both are somewhere to type: only
+    // a gap with nothing to type into either side of it gets a paragraph.
+    await userEvent.click(page.elementLocator(body), {
+      position: { x: 40, y: (one.bottom + other.top) / 2 - box.top }
+    });
+    await userEvent.keyboard('X');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(expect.stringMatching(/^(aX\n\nb|a\n\nXb)$/))
+    );
+    expect(body.querySelectorAll('p')).toHaveLength(2);
+  });
+
   it('takes a divider away with Backspace or Delete from the paragraph beside it', async () => {
     for (const key of ['{Backspace}', '{Delete}'] as const) {
       const onChange = vi.fn();

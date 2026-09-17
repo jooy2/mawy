@@ -1377,19 +1377,33 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
      * left the way it was. Only where the two are on lines with nothing between
      * them at all is a blank line written, because there the caret has no line
      * of its own to go on.
+     *
+     * A caret the browser put in a text node is a caret with somewhere to be,
+     * and a press in the space between two paragraphs is one of those: it goes
+     * to the nearest word, as it always has. What says there is nowhere is the
+     * browser anchoring it on an element instead. Which gap it was is then read
+     * off the press's own `y` rather than off that anchor, because the anchor
+     * disagrees from browser to browser — Chromium and WebKit leave it on the
+     * document itself between the two blocks, and Firefox puts it at the start
+     * of a divider the press was nowhere near. The press happened in one place
+     * and the boxes say which two blocks that is between.
      */
-    const openedInside = (element: HTMLElement): MawyEdit | null => {
-      const selection = element.ownerDocument.getSelection();
+    const openedInside = (element: HTMLElement, y: number): MawyEdit | null => {
+      const anchor = element.ownerDocument.getSelection()?.anchorNode;
 
-      if (selection?.anchorNode !== element) {
+      if (!anchor || anchor.nodeType !== 1 || !element.contains(anchor)) {
         return null;
       }
 
-      const at = selection.anchorOffset;
-      const above = element.childNodes[at - 1];
-      const below = element.childNodes[at];
-      const top = above?.nodeType === 1 ? rangeOf(above as Element) : null;
-      const bottom = below?.nodeType === 1 ? rangeOf(below as Element) : null;
+      const blocks = [...element.children];
+      const at = blocks.findIndex((block) => y < block.getBoundingClientRect().top);
+
+      if (at < 1) {
+        return null;
+      }
+
+      const top = rangeOf(blocks[at - 1]);
+      const bottom = rangeOf(blocks[at]);
       // The line ending that closes the block above, and the line under it.
       const line = top ? value.indexOf('\n', top.end) : -1;
 
@@ -1633,7 +1647,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       // Between two blocks rather than below them all, where the caret the
       // browser put down has nowhere to be. See `openedInside`.
       if (!belowAll(element, event.clientY)) {
-        const inside = openedInside(element);
+        const inside = openedInside(element, event.clientY);
 
         if (inside) {
           onEdit(inside);
