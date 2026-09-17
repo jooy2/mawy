@@ -3,7 +3,8 @@ import { DEMO_DIRECTIVES } from '../directives.js';
 import type { DemoProps } from '../types.js';
 
 /**
- * The three shapes, and the fourth case that matters as much as they do.
+ * The three shapes, the fourth case that matters as much as they do, and the
+ * one drawing the library ships for a name an application chooses.
  *
  * `callout` is a container, `progress` a leaf and `kbd` a text one — they are
  * declared in `demos/directives.tsx`, which the playground reads too. `youtube`
@@ -26,6 +27,34 @@ A leaf is a line of its own. This one draws a bar, and the number in it came out
 ::progress{value=72 label=Coverage}
 
 A text directive sits inside a sentence: press :kbd[Ctrl] + :kbd[K] to search, :kbd[Esc] to leave.
+
+The head has a second spelling as well, which is what every tool that shipped containers before the proposal writes. \`MawyCodeGroup\` is the one drawing this library ships, and this page registered it under two names. Several blocks in one group are tabs:
+
+::: code-group
+
+\`\`\`js
+sub(10, 1, 5); // 4
+\`\`\`
+
+\`\`\`dart
+sub(<int>[10, 1, 5]); // 4
+\`\`\`
+
+\`\`\`python
+sub(10, 1, 5)  # 4
+\`\`\`
+
+:::
+
+And a group of one takes its name from the title the line wrote:
+
+::: lang bash
+
+\`\`\`bash
+npm install mawy-react
+\`\`\`
+
+:::
 
 :::callout[And nothing claimed this one]{kind=warning}
 No component was handed the name \`youtube\`, so the line under this box is drawn as the characters it was written with rather than quietly dropped — the same answer raw HTML gets, and for the same reason.

@@ -441,7 +441,8 @@
 .mawy-root .mawy-status,
 .mawy-root .mawy-outline,
 .mawy-root .mawy-empty,
-.mawy-root .mawy-md-anchor {
+.mawy-root .mawy-md-anchor,
+.mawy-root .mawy-md-code-tabs {
   user-select: none;
 }
 
@@ -1290,6 +1291,71 @@
   white-space: pre-wrap;
   overflow-wrap: break-word;
   tab-size: 2;
+}
+
+/*
+ * One piece of code written several ways, drawn as tabs.
+ *
+ * A block per language stacked down the page makes a reader scroll past two
+ * answers to reach theirs, so `MawyCodeGroup` draws one at a time with a row of
+ * names over it. The names sit on the block's own surface and the chosen one
+ * carries the accent under it, which is the least a tab row can be and still
+ * say which of them is showing.
+ */
+.mawy-root .mawy-md-code-group {
+  margin: 1.1em 0;
+  border: 1px solid var(--mawy-border);
+  border-radius: var(--mawy-radius-lg);
+  overflow: hidden;
+}
+
+.mawy-root .mawy-md-code-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--mawy-border);
+  background: var(--mawy-code-bg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mawy-root .mawy-md-code-group-label {
+  margin-inline-end: 6px;
+  padding: 0 4px;
+  color: var(--mawy-fg-muted);
+  font-size: 0.82em;
+  font-weight: 600;
+}
+
+.mawy-root .mawy-md-code-tab {
+  flex: none;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--mawy-fg-muted);
+  font: inherit;
+  font-size: 0.82em;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mawy-root .mawy-md-code-tab:hover {
+  color: var(--mawy-fg);
+}
+
+.mawy-root .mawy-md-code-tab[aria-selected='true'] {
+  border-bottom-color: var(--mawy-accent);
+  color: var(--mawy-fg);
+}
+
+/* The block inside has the group's edge around it and needs none of its own. */
+.mawy-root .mawy-md-code-panel > pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
 }
 
 /* Headings ---------------------------------------------------------------- */

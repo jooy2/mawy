@@ -326,6 +326,36 @@ The title is the label said another way, so `::: tip Some title` and `:::tip[Som
 
 The cost is that a line of prose opening `:: like this` is a directive rather than a paragraph. That is the trade every reader of this syntax has already made, and a directive nobody registered is drawn as the characters it was written with, so such a line still says what it said.
 
+### The one drawing this library ships
+
+The parser reads the shape and stops there, so a name is the application's to choose — but one directive turns up in every set of documentation, and the drawing for it is the same everywhere: one piece of code written several ways, with a tab per language. `MawyCodeGroup` is that drawing, under whatever name your documents use for it.
+
+```tsx
+import { MawyCodeGroup, MawyViewer } from 'mawy-react';
+
+<MawyViewer value={document} directives={{ 'code-group': MawyCodeGroup, lang: MawyCodeGroup }} />;
+```
+
+````md
+::: code-group
+
+```js
+sub(10, 1, 5);
+```
+
+```dart
+sub(<int>[10, 1, 5]);
+```
+
+:::
+````
+
+A tab per block, named by the language the fence was written with. `{tabs=Browser,Flutter}` names them instead where a fence's language is not the word a reader should see — `sh` for a tab that means Terminal. A group holding one block takes its name from the title the line wrote, so `::: lang js` is a panel called `js` rather than a tab beside a label saying the same word twice.
+
+One tab is in the tab order and the arrows move between them, `Home` and `End` to the ends, which is what the tab pattern asks for. Only the chosen block is in the page, so a find on the page finds what a reader can see.
+
+It is a React component and there is no Flutter half yet.
+
 ::: fw react
 
 Which component each name becomes is one prop:

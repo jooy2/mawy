@@ -1,4 +1,4 @@
-import type { MawyDirectiveProps, MawyDirectives } from 'mawy-react';
+import { MawyCodeGroup, type MawyDirectiveProps, type MawyDirectives } from 'mawy-react';
 
 /**
  * The three directives this site declares, for the demos that want them.
@@ -130,5 +130,10 @@ function Kbd({ label }: MawyDirectiveProps) {
 export const DEMO_DIRECTIVES: MawyDirectives = {
   callout: Callout,
   progress: Progress,
-  kbd: Kbd
+  kbd: Kbd,
+  // The one drawing the library ships, registered under the name this site
+  // uses for it. `lang` as well, which is what the README of a package that
+  // ships for several of them writes.
+  'code-group': MawyCodeGroup,
+  lang: MawyCodeGroup
 };
