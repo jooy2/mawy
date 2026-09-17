@@ -248,7 +248,7 @@ Column(
 
 ::: fw react
 
-`parse`, `html`, `linkTarget`, `linkRel`, `links`, `images`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`, `anchorPrefix`, `headingBase`, `links`, `images`, `highlight`는 그려진 문서에도 닿습니다.
+`parse`, `html`, `linkTarget`, `linkRel`, `links`, `images`, `highlight`, `fonts`, `directives`, `image`, `resolveUrl`, `anchorPrefix`, `headingBase`, `headingAnchors`, `typography`, `defaultTypography`, `colorScheme`, `defaultColorScheme`, `onColorSchemeChange`는 [`MawyViewer`](./mawy-viewer)에서와 정확히 같은 의미이고, 문서를 어떻게 그릴지 말하는 것은 모두 미리보기로 그대로 전달됩니다. `directives`, `anchorPrefix`, `headingBase`, `links`, `images`, `highlight`는 그려진 문서에도 닿습니다. `headingAnchors`는 닿지 않습니다. 그려진 문서에서 제목 옆을 누르면 캐럿이 놓이는데, 그 누름을 링크가 가로챈다면 캐럿을 넣을 수 없는 낱말이 생깁니다.
 
 그려진 문서에서는 `links`와 `images`가 무엇이든 캐럿이 들어간 링크나 그림을 늘 그래 왔듯 원문으로 풀어 씁니다. 캐럿이 고칠 수 있는 곳이 거기뿐이기 때문입니다. `hide`로 둔 링크와 그림은 캐럿이 닿기 전까지 화면에 없습니다. 독자에게 보일 모습을 작성자에게도 보여 주는 에디터라면 그것이 원하는 동작입니다.
 

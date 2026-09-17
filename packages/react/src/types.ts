@@ -246,6 +246,11 @@ export interface MawyStrings {
   reset: string;
   footnotes: string;
   footnoteBack: string;
+  /**
+   * The mark beside a heading that links to the heading. See `headingAnchors`
+   * on `MawyViewer`.
+   */
+  headingAnchor: string;
   task: string;
   alertNote: string;
   alertTip: string;

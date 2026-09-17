@@ -486,6 +486,18 @@ export interface MawyEditorProps extends Omit<
   headingBase?: number;
 
   /**
+   * Whether each heading in the preview is drawn with a `#` beside it that
+   * links to that heading. See `MawyViewer`'s own `headingAnchors`.
+   *
+   * The preview only. On the drawn document a press beside a heading puts the
+   * caret there, and a link that took the press instead would be a word of the
+   * document nobody could get a caret into.
+   *
+   * @default true
+   */
+  headingAnchors?: boolean;
+
+  /**
    * Which heading levels the `heading` menu offers, and in what order.
    *
    * The document's own depths, written with that many `#`: `[2, 3, 4]` for an
@@ -599,6 +611,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     resolveUrl,
     anchorPrefix,
     headingBase,
+    headingAnchors,
     headingLevels = DEFAULT_HEADING_LEVELS,
     onSave,
     accept = MAWY_ACCEPT,
@@ -3473,6 +3486,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               resolveUrl={resolveUrl}
               anchorPrefix={anchorPrefix}
               headingBase={headingBase}
+              headingAnchors={headingAnchors}
               fonts={fonts}
               locale={locale}
               strings={overrides}

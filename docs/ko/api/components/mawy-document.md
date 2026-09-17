@@ -45,6 +45,7 @@ React 서버 컴포넌트를 가진 프레임워크에서는 서버 컴포넌트
 | `image` | `ComponentType<`[`MawyImageProps`](../types/image)`>` | — | 문서가 가리키는 그림을 무엇으로 그릴지. 프레임워크의 이미지 컴포넌트를 꽂는 자리입니다. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | 문서의 상대 URL이 어디를 가리키는지. |
 | `headingBase` | `number` | `1` | 문서의 `#`을 `h1`부터 `h6` 중 무엇으로 그릴지. |
+| `headingAnchors` | `boolean` | `true` | 제목마다 그 제목으로 가는 `#`을 옆에 그릴지. |
 | `anchorPrefix` | `string` | — | 이 그림이 제목과 각주에 주는 앵커 앞에 붙일 것. 한 페이지에 문서가 둘일 때 이름이 부딪히지 않게 합니다. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | 이 라이브러리가 직접 쓰는 몇 낱말의 언어. |
 | `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | 인터페이스의 낱말 일부나 전부. 나머지는 `locale`에서 가져옵니다. |

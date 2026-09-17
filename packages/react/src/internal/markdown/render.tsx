@@ -212,6 +212,17 @@ export interface RenderContext {
    */
   headingBase?: number;
   /**
+   * Whether a heading is drawn with the mark beside it that links to it. See
+   * `MawyViewer`'s own `headingAnchors`.
+   *
+   * Never on the surface being typed into, whatever this says: there a press
+   * beside a heading puts the caret there, and a link that took the press
+   * instead would be a word of the document nobody could get a caret into.
+   *
+   * @default true
+   */
+  headingAnchors?: boolean;
+  /**
    * Whether the drawing is the surface being typed into.
    *
    * The editor's drawn document is one `textbox`, and a caret moves through a
@@ -1686,11 +1697,12 @@ export function renderBlocks(
     switch (block.type) {
       case 'heading': {
         const Tag = `h${headingLevel(block.depth, context)}` as 'h1';
+        const name = `${context.anchorPrefix ?? ''}${block.slug}`;
 
         return (
           <Tag
             key={index}
-            id={`${context.anchorPrefix ?? ''}${block.slug}`}
+            id={name}
             className="mawy-md-heading"
             // Somewhere the focus can be *put* without being a stop on the way
             // anywhere: following an outline entry has to move the focus as
@@ -1703,6 +1715,28 @@ export function renderBlocks(
           >
             {renderInline(block.children, context)}
             {spacesAfter(block.children, context)}
+            {context.headingAnchors !== false && !context.editing ? (
+              // Inside the heading, because what it points at is the heading
+              // and the margin it is drawn in is measured from it — and out of
+              // the accessibility tree, because anything in here is part of the
+              // heading's name. A link named `Link to this heading` read out
+              // after the words of every heading in a document is the whole of
+              // what it would add, and the outline panel already goes to a
+              // heading from a keyboard and says where it is going. So this is
+              // the pointer's way to the same place, and `title` is what says
+              // so to the pointer.
+              // Empty, with the `#` drawn by the stylesheet: a character
+              // written here would be a character in the heading — in what
+              // `textContent` answers, in what a copy of the heading takes,
+              // and in what the find bar has to be told to skip.
+              <a
+                className="mawy-md-anchor"
+                href={`#${name}`}
+                title={context.strings.headingAnchor}
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+            ) : null}
           </Tag>
         );
       }

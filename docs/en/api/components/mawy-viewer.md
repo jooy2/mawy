@@ -76,6 +76,7 @@ With neither `value` nor `defaultValue`, the viewer becomes the file picker. Tha
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | Where a relative URL in the document points. |
 | `anchorPrefix` | `string` | — | Put in front of every anchor this viewer gives a heading or a footnote, so two viewers on one page stop colliding. |
 | `headingBase` | `number` | `1` | Which of `h1` to `h6` the document's own `#` is drawn as. |
+| `headingAnchors` | `boolean` | `true` | Whether each heading is drawn with a `#` beside it that links to it. |
 
 :::
 

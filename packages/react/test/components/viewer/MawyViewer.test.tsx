@@ -92,6 +92,35 @@ describe('the document', () => {
     expect(heading.id).toBe('second');
   });
 
+  it('gives every heading a mark that links to it, and moves it under a prefix', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} />);
+    const anchor = screen.container.querySelector('h2 .mawy-md-anchor') as HTMLAnchorElement;
+
+    expect(anchor.getAttribute('href')).toBe('#second');
+    expect(anchor.getAttribute('title')).toBe('Link to this heading');
+    // Out of the accessibility tree, so the heading is still named by its own
+    // words rather than by its own words and a link.
+    expect(anchor.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.getByRole('heading', { name: 'Second' }).element()).toBe(anchor.parentElement);
+    // And the heading's characters are still the author's own: the `#` is
+    // drawn by the stylesheet rather than written into the document.
+    expect(anchor.parentElement?.textContent).toBe('Second');
+
+    const prefixed = await render(<MawyViewer value={SAMPLE} anchorPrefix="right-" />);
+
+    expect(prefixed.container.querySelector('h2 .mawy-md-anchor')?.getAttribute('href')).toBe(
+      '#right-second'
+    );
+  });
+
+  it('leaves the marks out when it is told to', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} headingAnchors={false} />);
+
+    expect(screen.container.querySelectorAll('.mawy-md-anchor')).toHaveLength(0);
+    // The heading still has the name a link written by hand is aimed at.
+    expect(screen.container.querySelector('h2')?.id).toBe('second');
+  });
+
   it('puts a tight list item on one line and a loose one in a paragraph', async () => {
     const tight = await render(<MawyViewer value={'- [x] done\n- [ ] not'} />);
 

@@ -196,6 +196,14 @@ export interface MawyDocumentProps {
    */
   headingBase?: number;
 
+  /**
+   * Whether each heading is drawn with a `#` beside it that links to that
+   * heading. See `MawyViewer`'s own `headingAnchors`.
+   *
+   * @default true
+   */
+  headingAnchors?: boolean;
+
   /** The language of the few words this library writes itself. */
   locale?: MawyLocale;
 
@@ -259,6 +267,7 @@ export function MawyDocument({
   resolveUrl,
   anchorPrefix,
   headingBase,
+  headingAnchors,
   locale = 'en',
   strings: overrides,
   highlight,
@@ -285,6 +294,7 @@ export function MawyDocument({
     resolveUrl,
     anchorPrefix,
     headingBase,
+    headingAnchors,
     linkTarget,
     linkRel,
     links,

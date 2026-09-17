@@ -45,6 +45,7 @@ A React Server Component in a framework that has them, and an ordinary component
 | `image` | `ComponentType<`[`MawyImageProps`](../types/image)`>` | — | What draws a picture the document points at, and how a framework's own image component gets used. |
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | Where a relative URL in the document points. |
 | `headingBase` | `number` | `1` | Which of `h1` to `h6` the document's own `#` is drawn as. |
+| `headingAnchors` | `boolean` | `true` | Whether each heading is drawn with a `#` beside it that links to it. |
 | `anchorPrefix` | `string` | — | Put in front of every anchor this drawing gives a heading or a footnote, so two documents on one page stop colliding. |
 | `locale` | [`MawyLocale`](../types/locale) | `'en'` | The language of the few words this library writes itself. |
 | `strings` | `Partial<`[`MawyStrings`](../types/locale#mawystrings)`>` | — | The interface's words, some or all of them, over the ones `locale` has. |

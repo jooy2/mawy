@@ -440,7 +440,8 @@
 .mawy-root .mawy-notice,
 .mawy-root .mawy-status,
 .mawy-root .mawy-outline,
-.mawy-root .mawy-empty {
+.mawy-root .mawy-empty,
+.mawy-root .mawy-md-anchor {
   user-select: none;
 }
 
@@ -1275,6 +1276,7 @@
 /* Headings ---------------------------------------------------------------- */
 
 .mawy-root .mawy-md-heading {
+  position: relative;
   margin: 2em 0 0.6em;
   padding: 0;
   border: 0;
@@ -1286,6 +1288,56 @@
 
 .mawy-root .mawy-md-heading:focus {
   outline: none;
+}
+
+/*
+ * A reader who wants to send somebody to one section of a long document has
+ * the heading's `id` to aim at and no way to read it off the page. The mark is
+ * that address, drawn where the heading is. It sits in the margin the document
+ * already has either side of it, so no heading moves to make room for it, and
+ * it is drawn only while the pointer is over the heading or the mark itself
+ * has the focus: a `#` beside every heading of a document being read is
+ * decoration nobody asked for.
+ *
+ * A touch screen has no pointer to hover with, so there the mark is what a
+ * keyboard reaches and the outline panel is the way everybody else moves about
+ * the document.
+ */
+.mawy-root .mawy-md-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-left: -0.78em;
+  color: var(--mawy-accent);
+  font-weight: inherit;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity var(--mawy-duration) var(--mawy-easing);
+}
+
+/*
+ * The glyph is here rather than in the markup, so that a heading's characters
+ * stay the author's: `textContent` answers the heading's own words, a copy of
+ * the heading takes nothing extra, and the find bar has nothing to skip.
+ */
+.mawy-root .mawy-md-anchor::before {
+  content: '#';
+}
+
+@media (hover: hover) {
+  .mawy-root .mawy-md-heading:hover .mawy-md-anchor {
+    opacity: 1;
+  }
+}
+
+.mawy-root .mawy-md-anchor:focus-visible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mawy-root .mawy-md-anchor {
+    transition: none;
+  }
 }
 
 .mawy-root .mawy-md h1.mawy-md-heading {
@@ -2689,6 +2741,7 @@
   .mawy-root .mawy-menu-panel,
   .mawy-root .mawy-code-copy,
   .mawy-root .mawy-md-footnote-back,
+  .mawy-root .mawy-md-anchor,
   .mawy-root .mawy-editor-note {
     display: none;
   }

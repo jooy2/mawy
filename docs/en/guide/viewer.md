@@ -802,11 +802,27 @@ The anchors do not move. A heading's `id` is its own words either way, so a link
 
 The two headings this library writes itself — the outline's title and the empty state's — are `h2` and stay there. See [Accessibility](#accessibility).
 
+### The mark that links to a heading
+
+A heading carries its own `id`, and a reader who wants to send somebody to one section of a long document has no way to read it off the page. So each heading is drawn with a `#` in the margin beside it, which appears while the pointer is over the heading and puts the heading's name in the address when it is followed.
+
+```tsx
+<MawyViewer value={value} headingAnchors={false} />
+```
+
+Turn it off where the page's address is not somewhere a reader can go back to — a document in a dialog, or a route whose fragment the application is already using for something of its own.
+
+The mark is the pointer's way to a heading and nothing else's. It is out of the accessibility tree and takes no focus, because everything inside a heading is part of that heading's name, and `Link to this heading` read out after the words of every heading is the whole of what it would add. A keyboard reaches a heading through the outline panel, which says where it is going. The `#` itself is drawn by the stylesheet rather than written into the document, so a heading's characters stay the author's: `textContent` answers its words, and a copy of it takes nothing extra.
+
+There is no mark on the editor's drawn document. A press beside a heading there puts the caret there, and a link that took the press instead would be a word of the document nobody could get a caret into. The editor's preview has them, and `MawyEditor` takes the same `headingAnchors`.
+
 :::
 
 ::: fw flutter
 
 A heading is a run of text at a size, and there is no `h1` to be. The depth is on the node, and [`MawyViewerAnchors`](../api/types/viewer-anchors) is how an application reads the structure back.
+
+There is no mark beside a heading either. What it would do is write the heading's name into the page's address, and an app has no address bar to write it into — [`MawyViewerAnchors`](../api/types/viewer-anchors) is what an application scrolls to a heading with.
 
 :::
 

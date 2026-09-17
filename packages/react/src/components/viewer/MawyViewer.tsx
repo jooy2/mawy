@@ -343,6 +343,24 @@ export interface MawyViewerProps extends Omit<
    */
   headingBase?: number;
 
+  /**
+   * Whether each heading is drawn with a `#` beside it that links to that
+   * heading.
+   *
+   * A heading already carries its own `id`, and a reader who wants to send
+   * somebody to one section of a long document has no way to find out what it
+   * is. The mark is that address written where the heading is: it appears in
+   * the margin while the pointer is over the heading, or when it has the focus
+   * itself, and following it puts the heading's name in the page's address.
+   *
+   * Turn it off where the page's own address is not somewhere a reader can go
+   * back to — a document in a dialog, or a route whose fragment the
+   * application is already using for something of its own.
+   *
+   * @default true
+   */
+  headingAnchors?: boolean;
+
   /** What to draw instead of the file picker when there is no document. */
   empty?: React.ReactNode;
 }
@@ -387,6 +405,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     resolveUrl,
     anchorPrefix,
     headingBase,
+    headingAnchors,
     empty,
     className,
     style,
@@ -523,6 +542,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       resolveUrl,
       anchorPrefix,
       headingBase,
+      headingAnchors,
       firstImage: picture,
       source: text,
       found,
@@ -543,6 +563,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
       resolveUrl,
       anchorPrefix,
       headingBase,
+      headingAnchors,
       picture,
       text,
       found,
