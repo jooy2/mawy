@@ -814,6 +814,10 @@ Turn it off where the page's address is not somewhere a reader can go back to â€
 
 The mark is the pointer's way to a heading and nothing else's. It is out of the accessibility tree and takes no focus, because everything inside a heading is part of that heading's name, and `Link to this heading` read out after the words of every heading is the whole of what it would add. A keyboard reaches a heading through the outline panel, which says where it is going. The `#` itself is drawn by the stylesheet rather than written into the document, so a heading's characters stay the author's: `textContent` answers its words, and a copy of it takes nothing extra.
 
+`headingAnchors` covers the address, not only the mark. Following an entry in the outline puts the heading's name there too, and leaves the history entry that takes the reader back where they were â€” so what a reader copies out of the address bar after using the outline is a link to that section. And an address that names a heading of this document is gone to, when the viewer opens and whenever the address changes afterwards. That last part is the viewer's own work rather than the browser's: the document is drawn once the component has mounted, which is after the browser has looked for what the address names and found nothing.
+
+Turned off, the outline still goes to the heading. It just says nothing about it in the address, and an address the application wrote is left alone.
+
 There is no mark on the editor's drawn document. A press beside a heading there puts the caret there, and a link that took the press instead would be a word of the document nobody could get a caret into. The editor's preview has them, and `MawyEditor` takes the same `headingAnchors`.
 
 :::

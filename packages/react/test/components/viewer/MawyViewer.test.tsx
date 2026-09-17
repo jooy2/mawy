@@ -435,6 +435,70 @@ describe('anchors', () => {
       expect(document.activeElement).toBe(screen.container.querySelector('h1'))
     );
   });
+
+  /**
+   * The address an outline entry writes, and the one it answers. A reader who
+   * followed an entry has something to copy, and what they copied is somewhere
+   * whoever opens it lands — which the browser cannot do on its own, because
+   * the document is drawn after it has looked for the name and found nothing.
+   */
+  it('puts the heading in the address, and goes to a heading the address names', async () => {
+    const was = window.location.hash;
+    const LONG = `# One\n\n${'Words. '.repeat(200)}\n\n## Two\n\nMore.`;
+
+    try {
+      const screen = await render(<MawyViewer value={LONG} toolbar={['outline']} />);
+
+      await screen.getByRole('button', { name: 'Contents' }).click();
+      (screen.container.querySelectorAll('.mawy-outline-link')[1] as HTMLElement).click();
+
+      await vi.waitFor(() => expect(window.location.hash).toBe('#two'));
+      await screen.unmount();
+
+      // And a viewer opened at that address goes there on its own, which the
+      // browser cannot: it looked for `two` before this document was drawn.
+      // The scrolling is the page's — this file draws without the stylesheet,
+      // so there is no box with an overflow to move — and what is checked here
+      // is that the viewer asked for it, of the heading the address named.
+      const asked: Element[] = [];
+      const was_ = Element.prototype.scrollIntoView;
+
+      Element.prototype.scrollIntoView = function into(this: Element, ...rest: unknown[]) {
+        asked.push(this);
+
+        return (was_ as (...args: unknown[]) => void).apply(this, rest);
+      } as typeof was_;
+
+      try {
+        const again = await render(<MawyViewer value={LONG} style={{ height: '20rem' }} />);
+        const heading = again.container.querySelector('h2.mawy-md-heading');
+
+        await vi.waitFor(() => expect(asked).toContain(heading));
+        expect(document.activeElement).toBe(heading);
+        await again.unmount();
+      } finally {
+        Element.prototype.scrollIntoView = was_;
+      }
+
+      // Not where the address is the application's to write.
+      window.history.replaceState(null, '', '#one');
+
+      const quiet = await render(
+        <MawyViewer value={LONG} toolbar={['outline']} headingAnchors={false} />
+      );
+
+      await quiet.getByRole('button', { name: 'Contents' }).click();
+      (quiet.container.querySelectorAll('.mawy-outline-link')[1] as HTMLElement).click();
+
+      // It still goes to the heading, and says nothing about it in the address.
+      await vi.waitFor(() =>
+        expect(document.activeElement).toBe(quiet.container.querySelector('h2.mawy-md-heading'))
+      );
+      expect(window.location.hash).toBe('#one');
+    } finally {
+      window.history.replaceState(null, '', was || window.location.pathname);
+    }
+  });
 });
 
 /**

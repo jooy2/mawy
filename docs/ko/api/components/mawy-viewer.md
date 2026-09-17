@@ -76,7 +76,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `resolveUrl` | [`MawyUrlResolver`](../types/url-resolver) | — | 문서의 상대 URL이 어디를 가리키는지. |
 | `anchorPrefix` | `string` | — | 이 뷰어가 제목과 각주에 주는 앵커 앞에 붙일 것. 한 페이지에 뷰어가 둘일 때 이름이 부딪히지 않게 합니다. |
 | `headingBase` | `number` | `1` | 문서의 `#`을 `h1`부터 `h6` 중 무엇으로 그릴지. |
-| `headingAnchors` | `boolean` | `true` | 제목마다 그 제목으로 가는 `#`을 옆에 그릴지. |
+| `headingAnchors` | `boolean` | `true` | 이 뷰어가 페이지 주소로 제목을 가리킬지. 제목 옆의 `#`, 목차 항목이 쓰는 주소, 주소가 가리키는 제목으로 가는 것까지. |
 
 :::
 

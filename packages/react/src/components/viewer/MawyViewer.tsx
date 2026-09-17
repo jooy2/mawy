@@ -344,18 +344,27 @@ export interface MawyViewerProps extends Omit<
   headingBase?: number;
 
   /**
-   * Whether each heading is drawn with a `#` beside it that links to that
-   * heading.
+   * Whether this viewer uses the page's address to name a heading.
    *
    * A heading already carries its own `id`, and a reader who wants to send
    * somebody to one section of a long document has no way to find out what it
-   * is. The mark is that address written where the heading is: it appears in
-   * the margin while the pointer is over the heading, or when it has the focus
-   * itself, and following it puts the heading's name in the page's address.
+   * is. Three things follow from this being on:
+   *
+   * - Each heading is drawn with a `#` beside it, in the margin while the
+   *   pointer is over the heading or the mark has the focus, and following it
+   *   puts the heading's name in the address.
+   * - Following an entry in the outline puts it there too, and leaves the
+   *   history entry that takes the reader back where they were.
+   * - An address that names a heading of this document is gone to, when the
+   *   viewer opens and whenever that address changes afterwards. Without it,
+   *   the address the outline wrote would be one nobody could come back to:
+   *   the document is drawn after the browser has looked for what the address
+   *   names and found nothing.
    *
    * Turn it off where the page's own address is not somewhere a reader can go
    * back to — a document in a dialog, or a route whose fragment the
-   * application is already using for something of its own.
+   * application is already using for something of its own. The outline still
+   * goes to the heading; it just says nothing about it in the address.
    *
    * @default true
    */
@@ -829,29 +838,114 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
     };
   }, [outlineOpen, document_, anchorPrefix]);
 
-  const goTo = React.useCallback(
-    (slug: string) => {
+  /**
+   * The name in the page's address this viewer has already gone to.
+   *
+   * A document redrawn — a value that arrived, a file opened — runs the effect
+   * below again, and without this the reader would be carried back to the
+   * heading in the address every time, however far they had scrolled since.
+   */
+  const landed = React.useRef<string | null>(null);
+
+  /**
+   * The document moved to one of its headings, or `false` where this document
+   * has no such heading drawn.
+   *
+   * Smoothly when the reader chose it from the outline, and at once when the
+   * page's address is what asked: an address opened at a heading is at that
+   * heading, rather than starting at the top and travelling there, and the
+   * browser has already jumped when a `#` beside a heading was followed.
+   */
+  const land = React.useCallback(
+    (slug: string, smooth: boolean): boolean => {
       const heading = [
         ...(scroller.current?.querySelectorAll<HTMLElement>('.mawy-md-heading') ?? [])
       ].find((element) => element.id === `${anchorPrefix ?? ''}${slug}`);
 
       if (!heading) {
-        return;
+        return false;
       }
 
       chosen.current = slug;
+      landed.current = slug;
       setActiveHeading(slug);
 
-      heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      // `instant` rather than `auto`, which is not the opposite of `smooth`:
+      // it means whatever the stylesheet says, and the stylesheet says the
+      // pane scrolls smoothly. An address opened at a heading would then
+      // travel there from the top of the document.
+      heading.scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'instant' });
       // Moving the page is only half of following a link. The focus has to go
       // with it, or the next Tab carries on from wherever the outline was.
       // Every heading is drawn able to take it — see the renderer — rather
       // than being made able to here, which would be writing an attribute into
       // a tree React owns and would never take back out.
       heading.focus({ preventScroll: true });
+
+      return true;
     },
     [anchorPrefix]
   );
+
+  const goTo = React.useCallback(
+    (slug: string) => {
+      if (!land(slug, true) || headingAnchors === false) {
+        return;
+      }
+
+      const name = `#${anchorPrefix ?? ''}${slug}`;
+
+      // The address the reader can copy, and the history entry that takes them
+      // back where they were — which is what following a link to a heading
+      // does, and the outline is that link written as a panel. Pushed rather
+      // than assigned to `location.hash`, which would ask the browser to go
+      // there as well, and it has just been taken there.
+      if (window.location.hash !== name) {
+        window.history.pushState(null, '', name);
+      }
+    },
+    [anchorPrefix, headingAnchors, land]
+  );
+
+  /**
+   * The heading the page's address names, gone to when the viewer opens and
+   * whenever that address changes.
+   *
+   * Without this, an address the outline wrote is one nobody can come back to:
+   * the document is drawn once this component has mounted, which is after the
+   * browser has looked for the element the address names and found nothing.
+   * `hashchange` is the rest of it — the two arrows of the browser, and a `#`
+   * beside a heading followed on a page that is already open.
+   *
+   * Only a name this document has a heading for. A fragment the application is
+   * using for something of its own is not this viewer's to answer.
+   */
+  React.useEffect(() => {
+    if (headingAnchors === false) {
+      return;
+    }
+
+    const prefix = anchorPrefix ?? '';
+
+    const arrive = () => {
+      const name = window.location.hash.slice(1);
+      const slug = name.startsWith(prefix) ? name.slice(prefix.length) : '';
+
+      if (!slug || landed.current === slug) {
+        return;
+      }
+
+      if (document_.outline.some((entry) => entry.slug === slug)) {
+        land(slug, false);
+      }
+    };
+
+    arrive();
+
+    window.addEventListener('hashchange', arrive);
+
+    return () => window.removeEventListener('hashchange', arrive);
+  }, [anchorPrefix, document_, headingAnchors, land]);
 
   /* ---------------------------------------------------------------------
    * Dragging a file over
