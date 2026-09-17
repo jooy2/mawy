@@ -218,7 +218,8 @@ function toggleOrdered(state: EditState): EditState {
  */
 export function toggleHeading(state: EditState, depth: number): EditState {
   // A heading is a block, and a cell of a table holds none. See `BLOCK_COMMANDS`.
-  if (inTable(state)) {
+  // Nor is a `#` in a code block a heading. See `commandWorks`.
+  if (inTable(state) || inCode(state)) {
     return state;
   }
 
@@ -506,7 +507,40 @@ function inTable(state: EditState): boolean {
   );
 }
 
+/** Whether either end of the selection is in a fenced code block. */
+function inCode(state: EditState): boolean {
+  return (
+    fencedAt(state.value, state.start) !== null ||
+    (state.end !== state.start && fencedAt(state.value, state.end) !== null)
+  );
+}
+
+/**
+ * Whether a command has anything to do where the selection is.
+ *
+ * Everything in a code block is the characters it is, so there is no formatting
+ * in there to turn on or off: `**` put around a word in code is two asterisks
+ * and a word, and a `>` somebody typed is a greater-than sign. Run from inside
+ * one, every command wrote its markers into the code, and the toolbar read
+ * those same markers back and drew its buttons pressed.
+ *
+ * `codeBlock` is the one that still answers, because it is the way out: a caret
+ * in a code block asking for a code block is asking for it to stop being one.
+ *
+ * A toolbar asks this to draw a control disabled, the way it asks `blockCommand`
+ * for the ones a table has no room for.
+ */
+export function commandWorks(command: MawyCommand, state: EditState): boolean {
+  return command === 'codeBlock' || !inCode(state);
+}
+
 export function runCommand(command: MawyCommand, state: EditState): EditState {
+  // Nothing in a code block is formatting, so nothing but the way out of one
+  // has anything to do in there. See `commandWorks`.
+  if (!commandWorks(command, state)) {
+    return state;
+  }
+
   if (BLOCK_COMMANDS.has(command) && inTable(state)) {
     return state;
   }
@@ -597,7 +631,9 @@ function everyLineIs(state: EditState, pattern: RegExp): boolean {
  * to offer others asks this instead. `toggleHeading` is the command for all six.
  */
 export function headingActive(state: EditState, depth: number): boolean {
-  return everyLineIs(state, new RegExp(`^[ \\t]*${'#'.repeat(depth)} `));
+  // Asked second, because it takes a parse and the pattern almost always says
+  // no on its own. See `commandWorks`.
+  return everyLineIs(state, new RegExp(`^[ \\t]*${'#'.repeat(depth)} `)) && !inCode(state);
 }
 
 /**
@@ -608,6 +644,15 @@ export function headingActive(state: EditState, depth: number): boolean {
  * press to find out what it does.
  */
 export function commandActive(command: MawyCommand, state: EditState): boolean {
+  // A `#` or a `>` among the characters of a code block is the character it is
+  // rather than a heading or a quotation, so a command that looks on in there
+  // is not. Asked second, and only of a command that looked on: the answer
+  // takes a parse, and this runs for every button on the toolbar every time the
+  // caret moves. See `commandWorks`.
+  return activeIn(command, state) && commandWorks(command, state);
+}
+
+function activeIn(command: MawyCommand, state: EditState): boolean {
   // Read at the edges of the selection rather than by copying what is between
   // them. A selection can be the whole document, and this runs once for every
   // button on the toolbar every time the caret moves.

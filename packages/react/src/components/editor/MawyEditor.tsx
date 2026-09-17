@@ -34,6 +34,7 @@ import { useStrings } from '../../internal/strings.js';
 import {
   commandActive,
   crowdedBy,
+  fencedAt,
   tableAlignAt,
   tableOfSize,
   tableRangeAt,
@@ -1535,6 +1536,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   /** Whether the caret is in a table, which is where a toolbar's blocks have nothing to make. */
   const caretInTable = React.useMemo(
     () => editable && tableRangeAt(text, selection.start) !== null,
+    [editable, selection.start, text]
+  );
+  /** And whether it is in a code block, where nothing at all is formatting. See `commandWorks`. */
+  const caretInCode = React.useMemo(
+    () => editable && fencedAt(text, selection.start) !== null,
     [editable, selection.start, text]
   );
 
@@ -3284,6 +3290,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           }}
           editable={editable}
           inTable={caretInTable}
+          inCode={caretInCode}
           onFind={showSource || showDocument ? openFind : undefined}
           finding={finding && (showSource || showDocument)}
           onOpen={readOnly ? undefined : openFile}

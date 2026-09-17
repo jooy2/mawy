@@ -6,6 +6,7 @@ import 'package:mawy/src/editor/commands.dart'
         MawyTableCommand,
         crowdedBy,
         hardBreak,
+        headingActive,
         keptList,
         runTableCommand,
         tableAlignAt,
@@ -425,6 +426,41 @@ void main() {
     test('reads past the blank lines and says no about a selection of them', () {
       expect(active(MawyCommand.heading2, '«## a\n\n## b»'), isTrue);
       expect(active(MawyCommand.heading2, '«\n\n»'), isFalse);
+    });
+  });
+
+  /// Inside a code block, where everything is the characters it is and nothing
+  /// is formatting. See [commandWorks].
+  group('a caret in a code block', () {
+    bool active(MawyCommand command, String marked) => commandActive(command, at(marked));
+
+    test('leaves the document alone whatever command is run', () {
+      expect(run(MawyCommand.quote, '```\n> co|de\n```'), '```\n> co|de\n```');
+      expect(run(MawyCommand.bold, '```\n«code»\n```'), '```\n«code»\n```');
+      expect(run(MawyCommand.heading1, '```\nco|de\n```'), '```\nco|de\n```');
+      expect(run(MawyCommand.bulletList, '```\nco|de\n```'), '```\nco|de\n```');
+      expect(run(MawyCommand.rule, '```\nco|de\n```'), '```\nco|de\n```');
+    });
+
+    test('still takes the block off, which is the way out of one', () {
+      expect(run(MawyCommand.codeBlock, '```\nco|de\n```'), 'co|de');
+    });
+
+    test('reads no marker in there as formatting', () {
+      // The very thing a reader sees: typing a `>` in code drew the quote
+      // button pressed.
+      expect(active(MawyCommand.quote, '```\n> co|de\n```'), isFalse);
+      expect(active(MawyCommand.heading1, '```\n# co|de\n```'), isFalse);
+      expect(active(MawyCommand.bulletList, '```\n- co|de\n```'), isFalse);
+      expect(active(MawyCommand.bold, '```\n**«a»**\n```'), isFalse);
+      expect(headingActive(at('```\n# co|de\n```'), 1), isFalse);
+      // And the same markers outside a block are what they always were.
+      expect(active(MawyCommand.quote, '> co|de'), isTrue);
+      expect(headingActive(at('# co|de'), 1), isTrue);
+    });
+
+    test('answers for a fence a document never closed the same way', () {
+      expect(active(MawyCommand.quote, '```\n> co|de'), isFalse);
     });
   });
 

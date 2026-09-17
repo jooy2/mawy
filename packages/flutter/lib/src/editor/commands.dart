@@ -256,7 +256,8 @@ EditState _toggleOrdered(EditState state) {
 /// this; an editor told to offer other levels calls it directly.
 EditState toggleHeading(EditState state, int depth) {
   // A heading is a block, and a cell of a table holds none. See [_blockCommands].
-  if (_inTable(state)) {
+  // Nor is a `#` in a code block a heading. See [commandWorks].
+  if (_inTable(state) || _inCode(state)) {
     return state;
   }
 
@@ -383,7 +384,7 @@ EditState _toggleCodeBlock(EditState state) {
   final String value = state.value;
   final int start = state.start;
   final int end = state.end;
-  final MdCode? code = _fencedAt(value, start);
+  final MdCode? code = fencedAt(value, start);
 
   if (code != null && start == end) {
     final int opening = code.content.start - code.range.start;
@@ -427,7 +428,7 @@ EditState _toggleCodeBlock(EditState state) {
 /// caret put at the start of the block sits on. Not an indented block, which
 /// has no fence to take off, and not a document with no fence in it at all,
 /// which is the common case and is answered without a parse.
-MdCode? _fencedAt(String value, int offset) {
+MdCode? fencedAt(String value, int offset) {
   if (!value.contains('```') && !value.contains('~~~')) {
     return null;
   }
@@ -567,8 +568,36 @@ bool _inTable(EditState state) =>
     _tableAt(state.value, state.start) != null ||
     (state.end != state.start && _tableAt(state.value, state.end) != null);
 
+/// Whether either end of the selection is in a fenced code block.
+bool _inCode(EditState state) =>
+    fencedAt(state.value, state.start) != null ||
+    (state.end != state.start && fencedAt(state.value, state.end) != null);
+
+/// Whether [command] has anything to do where the selection is.
+///
+/// Everything in a code block is the characters it is, so there is no
+/// formatting in there to turn on or off: `**` put around a word in code is two
+/// asterisks and a word, and a `>` somebody typed is a greater-than sign. Run
+/// from inside one, every command wrote its markers into the code, and the
+/// toolbar read those same markers back and drew its buttons pressed.
+///
+/// [MawyCommand.codeBlock] is the one that still answers, because it is the way
+/// out: a caret in a code block asking for a code block is asking for it to
+/// stop being one.
+///
+/// A toolbar asks this to draw a control disabled, the way it asks
+/// [blockCommand] for the ones a table has no room for.
+bool commandWorks(MawyCommand command, EditState state) =>
+    command == MawyCommand.codeBlock || !_inCode(state);
+
 /// What [command] makes of [state].
 EditState runCommand(MawyCommand command, EditState state) {
+  // Nothing in a code block is formatting, so nothing but the way out of one
+  // has anything to do in there. See [commandWorks].
+  if (!commandWorks(command, state)) {
+    return state;
+  }
+
   if (_blockCommands.contains(command) && _inTable(state)) {
     return state;
   }
@@ -633,15 +662,25 @@ bool _everyLineIs(EditState state, RegExp pattern) {
 /// [commandActive] answers for the three the default menu offers; an editor
 /// told to offer others asks this instead. [toggleHeading] is the command for
 /// all six.
+/// Asked second, because it takes a parse and the pattern almost always says
+/// no on its own. See [commandWorks].
 bool headingActive(EditState state, int depth) =>
-    _everyLineIs(state, RegExp('^[ \\t]*${'#' * depth} '));
+    _everyLineIs(state, RegExp('^[ \\t]*${'#' * depth} ')) && !_inCode(state);
 
 /// Whether the selection is already what the command would make it.
 ///
 /// This is what lets a toolbar button be drawn as pressed, and it matters more
 /// than it looks: a toggle that never shows its state is a button you have to
 /// press to find out what it does.
-bool commandActive(MawyCommand command, EditState state) {
+bool commandActive(MawyCommand command, EditState state) =>
+    // A `#` or a `>` among the characters of a code block is the character it
+    // is rather than a heading or a quotation, so a command that looks on in
+    // there is not. Asked second, and only of a command that looked on: the
+    // answer takes a parse, and this runs for every button on the toolbar every
+    // time the caret moves. See [commandWorks].
+    _activeIn(command, state) && commandWorks(command, state);
+
+bool _activeIn(MawyCommand command, EditState state) {
   // Read at the edges of the selection rather than by copying what is between
   // them. A selection can be the whole document, and this runs once for every
   // button on the toolbar every time the caret moves.
@@ -670,8 +709,7 @@ bool commandActive(MawyCommand command, EditState state) {
     MawyCommand.orderedList =>
       everyLine(_markers[_orderedList]!) || _cellListActive(state, command),
     MawyCommand.taskList => everyLine(_markers[_taskList]!) || _cellListActive(state, command),
-    MawyCommand.codeBlock =>
-      state.start == state.end && _fencedAt(state.value, state.start) != null,
+    MawyCommand.codeBlock => state.start == state.end && fencedAt(state.value, state.start) != null,
     _ => false,
   };
 }

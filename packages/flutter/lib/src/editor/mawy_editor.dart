@@ -1137,6 +1137,7 @@ class _MawyEditorState extends State<MawyEditor> {
           onTravel: _travel,
           editable: showSource && !widget.readOnly,
           inTable: showSource && tableRangeAt(_value, _state.start) != null,
+          inCode: showSource && fencedAt(_value, _state.start) != null,
           onInsertTable: _insertTableSized,
           tableAvailable: _tableAvailable,
           headingLevels: _headingLevels,
@@ -1753,6 +1754,7 @@ class _Toolbar extends StatefulWidget {
     required this.onTravel,
     required this.editable,
     required this.inTable,
+    required this.inCode,
     required this.onInsertTable,
     required this.tableAvailable,
     required this.headingLevels,
@@ -1785,6 +1787,10 @@ class _Toolbar extends StatefulWidget {
   /// Whether the caret is in a table, where the commands that make a block have
   /// nothing to make. See [blockCommand].
   final bool inTable;
+
+  /// Whether the caret is in a fenced code block, where everything is the
+  /// characters it is and nothing is formatting. See [commandWorks].
+  final bool inCode;
   final void Function(int columns, int rows) onInsertTable;
   final bool Function(MawyTableCommand) tableAvailable;
   final List<int> headingLevels;
@@ -2069,7 +2075,7 @@ class _ToolbarState extends State<_Toolbar> {
             label: widget.strings.heading,
             tokens: widget.tokens,
             focusNode: next(),
-            enabled: !widget.inTable,
+            enabled: !widget.inTable && !widget.inCode,
             builder: (VoidCallback close) => MawyToolbarChoice<int>(
               tokens: widget.tokens,
               value: widget.headingLevels.firstWhere(
@@ -2109,7 +2115,9 @@ class _ToolbarState extends State<_Toolbar> {
           tokens: widget.tokens,
           focusNode: next(),
           pressed: commandActive(control.command, widget.state),
-          enabled: !(widget.inTable && blockCommand(control.command)),
+          enabled:
+              !(widget.inTable && blockCommand(control.command)) &&
+              !(widget.inCode && control.command != MawyCommand.codeBlock),
           onPressed: () => widget.onCommand?.call(control.command),
         ),
       );

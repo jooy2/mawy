@@ -4,6 +4,7 @@ import {
   continueList,
   crowdedBy,
   hardBreak,
+  headingActive,
   indent,
   keptList,
   runCommand,
@@ -442,6 +443,43 @@ describe('what is already in force', () => {
     expect(active('bulletList', '«- a\nb»')).toBe(false);
     expect(active('heading2', '## a|')).toBe(true);
     expect(active('heading1', '## a|')).toBe(false);
+  });
+});
+
+/**
+ * Inside a code block, where everything is the characters it is and nothing is
+ * formatting. See `commandWorks`.
+ */
+describe('a caret in a code block', () => {
+  const active = (command: MawyCommand, marked: string) => commandActive(command, at(marked));
+
+  it('leaves the document alone whatever command is run', () => {
+    expect(run('quote', '```\n> co|de\n```')).toBe('```\n> co|de\n```');
+    expect(run('bold', '```\n«code»\n```')).toBe('```\n«code»\n```');
+    expect(run('heading1', '```\nco|de\n```')).toBe('```\nco|de\n```');
+    expect(run('bulletList', '```\nco|de\n```')).toBe('```\nco|de\n```');
+    expect(run('rule', '```\nco|de\n```')).toBe('```\nco|de\n```');
+  });
+
+  it('still takes the block off, which is the way out of one', () => {
+    expect(run('codeBlock', '```\nco|de\n```')).toBe('co|de');
+  });
+
+  it('reads no marker in there as formatting', () => {
+    // The very thing a reader sees: typing a `>` in code drew the quote button
+    // pressed.
+    expect(active('quote', '```\n> co|de\n```')).toBe(false);
+    expect(active('heading1', '```\n# co|de\n```')).toBe(false);
+    expect(active('bulletList', '```\n- co|de\n```')).toBe(false);
+    expect(active('bold', '```\n**«a»**\n```')).toBe(false);
+    expect(headingActive(at('```\n# co|de\n```'), 1)).toBe(false);
+    // And the same markers outside a block are what they always were.
+    expect(active('quote', '> co|de')).toBe(true);
+    expect(headingActive(at('# co|de'), 1)).toBe(true);
+  });
+
+  it('answers for a fence a document never closed the same way', () => {
+    expect(active('quote', '```\n> co|de')).toBe(false);
   });
 });
 

@@ -425,6 +425,48 @@ void main() {
       // The preview is handed the same words.
       expect(documentText(tester), contains('Hinweis'));
     });
+
+    testWidgets('offers no formatting in a code block but the way out of one', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: '```\n> code\n```',
+            mode: MawyEditorMode.plain,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      MawyToolbarButton button(String label) => tester.widget(
+        find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == label,
+        ),
+      );
+      final EditableText field = tester.widget(_sourceField);
+
+      // A `>` among the characters of a code block is a greater-than sign, and
+      // the quote button was being drawn pressed for it.
+      field.controller.selection = const TextSelection.collapsed(offset: 7);
+      await tester.pumpAndSettle();
+
+      expect(button('Quotation').enabled, isFalse);
+      expect(button('Quotation').pressed, isFalse);
+      expect(button('Bold').enabled, isFalse);
+      expect(button('Heading').enabled, isFalse);
+      // The block is left the way it is entered, so that one stays.
+      expect(button('Code block').enabled, isTrue);
+
+      // And on the opening fence, which is a line of the block as well.
+      field.controller.selection = const TextSelection.collapsed(offset: 1);
+      await tester.pumpAndSettle();
+
+      expect(button('Quotation').enabled, isFalse);
+      expect(seen, isEmpty);
+    });
   });
 
   group('finding', () {

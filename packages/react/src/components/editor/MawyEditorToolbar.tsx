@@ -75,6 +75,11 @@ export interface MawyEditorToolbarProps {
    * nothing to make. See `BLOCK_COMMANDS`.
    */
   inTable?: boolean;
+  /**
+   * Whether the caret is in a fenced code block, where everything is the
+   * characters it is and nothing is formatting. See `commandWorks`.
+   */
+  inCode?: boolean;
   /** Opens the find bar. Absent in the modes that have no source to search. */
   onFind?: () => void;
   finding: boolean;
@@ -273,6 +278,7 @@ export function MawyEditorToolbar({
   headingActive,
   editable,
   inTable = false,
+  inCode = false,
   onFind,
   finding,
   onOpen,
@@ -369,7 +375,7 @@ export function MawyEditorToolbar({
           key={key}
           label={strings.heading}
           icon={<HeadingIcon className="mawy-icon" aria-hidden="true" />}
-          disabled={inTable}
+          disabled={inTable || inCode}
           {...itemProps(at)}
         >
           <Choice<string>
@@ -561,7 +567,11 @@ export function MawyEditorToolbar({
         icon={<Icon className="mawy-icon" aria-hidden="true" />}
         pressed={on}
         aria-pressed={on}
-        disabled={!editable || (inTable && blockCommand(entry.command))}
+        disabled={
+          !editable ||
+          (inTable && blockCommand(entry.command)) ||
+          (inCode && entry.command !== 'codeBlock')
+        }
         data-mawy-toolbar-item=""
         onClick={() => onCommand(entry.command)}
         {...itemProps(at)}

@@ -3417,6 +3417,39 @@ describe('the document surface', () => {
     );
   });
 
+  it('offers no formatting in a code block but the way out of one', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        style={WIDE}
+        defaultValue={'```\n> code\n```'}
+        mode="wysiwyg"
+        onChange={onChange}
+      />
+    );
+
+    put(bodyOf(screen), '> code', 3);
+
+    // A `>` among the characters of a code block is a greater-than sign, and
+    // the quote button was being drawn pressed for it.
+    await vi.waitFor(() =>
+      expect(page.getByRole('button', { name: 'Quotation' }).element()).toBeDisabled()
+    );
+    expect(page.getByRole('button', { name: 'Quotation' }).element()).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(page.getByRole('button', { name: 'Bold' }).element()).toBeDisabled();
+    expect(page.getByRole('button', { name: 'Heading' }).element()).toBeDisabled();
+    // The block is left the way it is entered, so that one stays.
+    expect(page.getByRole('button', { name: 'Code block' }).element()).not.toBeDisabled();
+
+    // And the key does nothing either.
+    await userEvent.keyboard('{ControlOrMeta>}{Shift>}.{/Shift}{/ControlOrMeta}');
+    await new Promise((done) => setTimeout(done, 30));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('grows the fences around a code block a fence was typed into', async () => {
     const onChange = vi.fn();
     const screen = await render(
