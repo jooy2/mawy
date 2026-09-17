@@ -41,14 +41,23 @@ export interface MarkdownOptions {
   /**
    * Whether a line opening with `: ` under a line of text is a definition list.
    *
-   * On, and one of the two things Mawy reads that GitHub does not — the other
-   * is a heading's own `{#id}`, which has no option because a document that
-   * wrote one wrote it to be linked to. The syntax is PHP Markdown Extra's and
-   * it is the one everybody who writes these uses. Turn it off for a document
-   * that has to mean exactly what it would mean there.
+   * On, and one of the two things Mawy reads that GitHub does not. The syntax
+   * is PHP Markdown Extra's and it is the one everybody who writes these uses.
+   * Turn it off for a document that has to mean exactly what it would mean
+   * there.
    * @default true
    */
   definitionLists?: boolean;
+  /**
+   * Whether a trailing `{#id}` on a heading is the name that heading is drawn
+   * under.
+   *
+   * On, and the other of the two things Mawy reads that GitHub does not. Turn
+   * it off for a document that has to mean exactly what it would mean there,
+   * where the braces are characters in the heading.
+   * @default true
+   */
+  headingIds?: boolean;
 }
 
 /* -------------------------------------------------------------------------
@@ -351,6 +360,7 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
   const gfm = options.gfm ?? true;
   const breaks = options.breaks ?? false;
   const definitionLists = options.definitionLists ?? true;
+  const headingIds = options.headingIds ?? true;
 
   const definitions = new Map<string, MdDefinition>();
   const footnotes = new Map<string, MdFootnoteDefinition>();
@@ -360,6 +370,7 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
   const children = parseBlocks(reading.lines, {
     gfm,
     definitionLists,
+    headingIds,
     definitions,
     footnotes,
     pending

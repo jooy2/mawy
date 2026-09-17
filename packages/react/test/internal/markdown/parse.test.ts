@@ -148,7 +148,7 @@ describe('block structure', () => {
 });
 
 /**
- * A term and what it means, which is the one thing Mawy reads that GitHub does
+ * A term and what it means, one of the two things Mawy reads that GitHub does
  * not. The syntax is PHP Markdown Extra's, which is the one everybody who
  * writes these uses.
  */
@@ -933,6 +933,15 @@ describe('the outline', () => {
     expect(parseMarkdown('# A {#same}\n# B {#same}').outline.map((entry) => entry.slug)).toEqual([
       'same',
       'same-1'
+    ]);
+  });
+
+  it('reads no anchor at all when the option is off', () => {
+    const source = '## Overview {#what-to-try}\n\nAnchored {#by-hand}\n---';
+
+    expect(bare(parseMarkdown(source, { headingIds: false }).outline)).toEqual([
+      { depth: 2, slug: 'overview-what-to-try', text: 'Overview {#what-to-try}' },
+      { depth: 2, slug: 'anchored-by-hand', text: 'Anchored {#by-hand}' }
     ]);
   });
 });

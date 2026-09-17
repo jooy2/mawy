@@ -15,7 +15,12 @@ import 'package:mawy/src/markdown/source.dart';
 /// How the Markdown itself is read.
 class MawyParseOptions {
   /// Creates a set of parse options.
-  const MawyParseOptions({this.gfm = true, this.breaks = false, this.definitionLists = true});
+  const MawyParseOptions({
+    this.gfm = true,
+    this.breaks = false,
+    this.definitionLists = true,
+    this.headingIds = true,
+  });
 
   /// GitHub Flavored Markdown: tables, task lists, `~~strikethrough~~`, alerts,
   /// footnotes and bare URLs becoming links.
@@ -32,22 +37,29 @@ class MawyParseOptions {
   /// Whether a line opening with `: ` under a line of text is a definition
   /// list.
   ///
-  /// On, and one of the two things Mawy reads that GitHub does not — the other
-  /// is a heading's own `{#id}`, which has no option because a document that
-  /// wrote one wrote it to be linked to. The syntax is PHP Markdown Extra's and
-  /// it is the one everybody who writes these uses. Turn it off for a document
-  /// that has to mean exactly what it would mean there.
+  /// On, and one of the two things Mawy reads that GitHub does not. The syntax
+  /// is PHP Markdown Extra's and it is the one everybody who writes these uses.
+  /// Turn it off for a document that has to mean exactly what it would mean
+  /// there.
   final bool definitionLists;
+
+  /// Whether a trailing `{#id}` on a heading is the name that heading is drawn
+  /// under, rather than characters in the heading.
+  ///
+  /// On, and the other of the two things Mawy reads that GitHub does not. Turn
+  /// it off for a document that has to mean exactly what it would mean there.
+  final bool headingIds;
 
   @override
   bool operator ==(Object other) =>
       other is MawyParseOptions &&
       other.gfm == gfm &&
       other.breaks == breaks &&
-      other.definitionLists == definitionLists;
+      other.definitionLists == definitionLists &&
+      other.headingIds == headingIds;
 
   @override
-  int get hashCode => Object.hash(gfm, breaks, definitionLists);
+  int get hashCode => Object.hash(gfm, breaks, definitionLists, headingIds);
 }
 
 /* -------------------------------------------------------------------------
@@ -417,6 +429,7 @@ MdDocument parseMarkdown(String source, [MawyParseOptions options = const MawyPa
     BlockContext(
       gfm: options.gfm,
       definitionLists: options.definitionLists,
+      headingIds: options.headingIds,
       definitions: definitions,
       footnotes: footnotes,
       pending: pending,

@@ -744,9 +744,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     () => ({
       gfm: parse?.gfm ?? true,
       breaks: parse?.breaks ?? false,
-      definitionLists: parse?.definitionLists ?? true
+      definitionLists: parse?.definitionLists ?? true,
+      headingIds: parse?.headingIds ?? true
     }),
-    [parse?.breaks, parse?.definitionLists, parse?.gfm]
+    [parse?.breaks, parse?.definitionLists, parse?.gfm, parse?.headingIds]
   );
 
   /* ---------------------------------------------------------------------

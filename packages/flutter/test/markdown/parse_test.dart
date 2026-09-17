@@ -236,6 +236,22 @@ void main() {
       ]);
     });
 
+    test('reads no anchor at all when the option is off', () {
+      final MdDocument document = parseMarkdown(
+        '## Overview {#what-to-try}\n\nAnchored {#by-hand}\n---',
+        const MawyParseOptions(headingIds: false),
+      );
+
+      expect(document.outline.map((MdOutlineEntry entry) => entry.text).toList(), <String>[
+        'Overview {#what-to-try}',
+        'Anchored {#by-hand}',
+      ]);
+      expect(document.outline.map((MdOutlineEntry entry) => entry.slug).toList(), <String>[
+        'overview-what-to-try',
+        'anchored-by-hand',
+      ]);
+    });
+
     test('keeps the heading as wide as the line the anchor was written on', () {
       // The braces are the heading's characters even though nothing draws them,
       // the way the closing hashes of `## Two ##` are. Anything replacing the

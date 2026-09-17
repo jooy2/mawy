@@ -114,7 +114,10 @@ CommonMark, 그리고 그 위에 GitHub이 더한 것들입니다.
 ::: fw react
 
 ```tsx
-<MawyViewer value={document} parse={{ gfm: true, breaks: false, definitionLists: true }} />
+<MawyViewer
+  value={document}
+  parse={{ gfm: true, breaks: false, definitionLists: true, headingIds: true }}
+/>
 ```
 
 :::
@@ -124,7 +127,12 @@ CommonMark, 그리고 그 위에 GitHub이 더한 것들입니다.
 ```dart
 MawyViewer(
   value: document,
-  parse: const MawyParseOptions(gfm: true, breaks: false, definitionLists: true),
+  parse: const MawyParseOptions(
+    gfm: true,
+    breaks: false,
+    definitionLists: true,
+    headingIds: true,
+  ),
 );
 ```
 
@@ -133,6 +141,7 @@ MawyViewer(
 - **`gfm`** (기본값 `true`) — GitHub의 확장. 끄면 `|`는 그냥 세로줄이고 `~~`는 물결 넷입니다.
 - **`breaks`** (기본값 `false`) — 문단 안의 줄바꿈 하나를 줄바꿈으로 볼지. CommonMark 명세는 줄바꿈으로 보지 않지만, 채팅 클라이언트와 이슈 트래커는 줄바꿈으로 처리합니다. 마크다운을 써 본 적 없는 독자는 후자를 기대하므로, 한쪽으로 정하지 않고 옵션으로 두었습니다.
 - **`definitionLists`** (기본값 `true`) — 글줄 아래의 `: `을 용어와 그 뜻으로 읽을지. 아래를 보세요.
+- **`headingIds`** (기본값 `true`) — 제목 끝의 `{#id}`를 그 제목이 달 이름으로 읽을지. 아래를 보세요.
 
 **표 셀에서 목록 항목처럼 쓴 줄은 목록 항목으로 그립니다.** GitHub 표의 셀에는 블록이 들어가지 않으므로 `- 파기<br>  - 더 깊이<br>- [x] 물 주기`는 이 파서를 포함한 모든 파서에게 그냥 글이고, GitHub은 대시를 그대로 그립니다. 이 패키지는 그런 줄마다 목록이었다면 붙었을 기호를 그립니다. `-`, `*`, `+`는 글머리표, 체크박스 항목은 체크박스, 번호 항목은 번호로 그리고, 기호 앞의 공백 두 칸마다 한 단계씩 들여 그립니다. 글은 어느 쪽이든 같고, 기호를 그리는 방식만 다릅니다. 많은 표가 빈 셀에 넣는 `-`처럼 기호만 있는 줄은 대시로 남습니다.
 
@@ -193,6 +202,8 @@ GitHub이 읽지 않는 나머지 하나가 이것이고, 그쪽에서는 중괄
 앵커가 아닌 것은 쓰인 글자 그대로 남습니다. `{.warning}`과 `{key=value}`는 [디렉티브](#디렉티브)의 속성이고 제목에서는 아무 뜻이 없습니다. `## A {#b} c`는 `{#b}`를 말하는 제목입니다. 중괄호를 그대로 말해야 하는 제목을 위해 `\{#id}`가 있습니다.
 
 같은 앵커를 부른 제목이 둘이면, 같은 낱말을 쓴 제목이 둘일 때와 똑같이 갈라집니다. 두 번째가 `id-1`이 됩니다. 제목이 이름을 부르지 않았을 때 무엇으로 불리는지는 [`slugify`](../api/functions/slugify)에 있습니다.
+
+`parse`에 `headingIds: false`를 넘기면 꺼집니다. GitHub에서와 정확히 같게 읽혀야 하는 문서를 위한 옵션입니다. 그때 중괄호는 제목의 낱말이고, 앵커도 그 낱말까지 함께 따서 만듭니다.
 
 ## 코드 블록에 색 입히기
 

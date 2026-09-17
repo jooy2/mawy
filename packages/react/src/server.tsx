@@ -272,7 +272,8 @@ export function MawyDocument({
   const document_ = parseMarkdown(value, {
     gfm: parse?.gfm ?? true,
     breaks: parse?.breaks ?? false,
-    definitionLists: parse?.definitionLists ?? true
+    definitionLists: parse?.definitionLists ?? true,
+    headingIds: parse?.headingIds ?? true
   });
 
   const context = {

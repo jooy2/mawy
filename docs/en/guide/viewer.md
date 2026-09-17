@@ -114,7 +114,10 @@ CommonMark, and GitHub's additions on top of it:
 ::: fw react
 
 ```tsx
-<MawyViewer value={document} parse={{ gfm: true, breaks: false, definitionLists: true }} />
+<MawyViewer
+  value={document}
+  parse={{ gfm: true, breaks: false, definitionLists: true, headingIds: true }}
+/>
 ```
 
 :::
@@ -124,7 +127,12 @@ CommonMark, and GitHub's additions on top of it:
 ```dart
 MawyViewer(
   value: document,
-  parse: const MawyParseOptions(gfm: true, breaks: false, definitionLists: true),
+  parse: const MawyParseOptions(
+    gfm: true,
+    breaks: false,
+    definitionLists: true,
+    headingIds: true,
+  ),
 );
 ```
 
@@ -133,6 +141,7 @@ MawyViewer(
 - **`gfm`** (default `true`) — GitHub's additions. Off, a `|` is a pipe and `~~` is four tildes.
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. The CommonMark specification says it is not, while chat clients and issue trackers treat it as one. A reader who has never written Markdown expects the latter, so this is an option rather than a fixed behaviour.
 - **`definitionLists`** (default `true`) — whether `: ` under a line of text is a term and what it means. See below.
+- **`headingIds`** (default `true`) — whether a trailing `{#id}` on a heading is the name that heading is drawn under. See below.
 
 **A line of a table cell written as a list item is drawn as one.** A cell of a GitHub table holds no block, so `- dig<br>  - deeper<br>- [x] water` is words to every parser, this one included, and GitHub draws the dashes. This package draws each such line with the marker the list it reads as would have: a bullet for `-`, `*` or `+`, a checkbox for a task, the number for a numbered item, and each two spaces in front of the marker one step further in. The words are the same words either way; only the markers are drawn differently. A line that is a marker and nothing else, such as the `-` many tables put in an empty cell, stays a dash.
 
@@ -193,6 +202,8 @@ This is the other syntax GitHub does not read, and it draws the braces instead. 
 What is not an anchor stays the characters it was written with. `{.warning}` and `{key=value}` are a [directive](#directives)'s attributes and mean nothing on a heading. `## A {#b} c` is a heading about `{#b}`. And `\{#id}` is there for a heading that has to say the braces.
 
 Two headings asking for the same anchor are told apart the way two headings with the same words are: the second is `id-1`. [`slugify`](../api/functions/slugify) is what a heading is called when it does not ask.
+
+Pass `headingIds: false` in `parse` to turn it off, for a document that has to mean exactly what it would mean on GitHub. The braces are words in the heading then, and the anchor comes out of them along with everything else.
 
 ## Colouring a code block
 

@@ -44,6 +44,7 @@ class BlockContext {
   BlockContext({
     required this.gfm,
     required this.definitionLists,
+    required this.headingIds,
     required this.definitions,
     required this.footnotes,
     required this.pending,
@@ -54,6 +55,9 @@ class BlockContext {
 
   /// Whether `Term` over `: what it means` is a definition list.
   final bool definitionLists;
+
+  /// Whether a trailing `{#id}` on a heading names it.
+  final bool headingIds;
 
   /// The link reference definitions collected so far.
   final Map<String, MdDefinition> definitions;
@@ -249,13 +253,15 @@ class _Head {
 ///
 /// Only a lone `{#id}` is taken. `{.warning}` and `{key=value}` are attributes
 /// a directive reads and mean nothing on a heading, so they stay the characters
-/// they were written with rather than quietly going missing.
+/// they were written with rather than quietly going missing. [reading] is the
+/// `headingIds` option: off, none of this happens and the braces are the
+/// heading's own characters, which is what they are on GitHub.
 ///
 /// Both heading syntaxes come through here, since the text is assembled by the
 /// time either of them has one and the underlined form is as much a heading as
 /// the hashed one.
-_Head _headingId(Sourced text) {
-  final RegExpMatch? match = _headingIdPattern.firstMatch(text.text);
+_Head _headingId(Sourced text, bool reading) {
+  final RegExpMatch? match = reading ? _headingIdPattern.firstMatch(text.text) : null;
 
   if (match == null) {
     return _Head(text, '');
@@ -850,7 +856,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
     final _Atx? atx = _atxAt(line.text);
 
     if (atx != null) {
-      final _Head head = _headingId(fromText(atx.text, line.start + atx.at));
+      final _Head head = _headingId(fromText(atx.text, line.start + atx.at), context.headingIds);
 
       blocks.add(
         MdHeading(across(at, at), depth: atx.depth, children: later(head.text), id: head.id),
@@ -1441,7 +1447,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
           continue;
         }
 
-        final _Head head = _headingId(text);
+        final _Head head = _headingId(text, context.headingIds);
 
         blocks.add(
           MdHeading(

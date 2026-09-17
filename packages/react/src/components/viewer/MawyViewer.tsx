@@ -105,7 +105,10 @@ export interface MawyViewerProps extends Omit<
    */
   toolbar?: MawyViewerToolbarOption;
 
-  /** How the Markdown is read. @default `{ gfm: true, breaks: false, definitionLists: true }` */
+  /**
+   * How the Markdown is read.
+   * @default `{ gfm: true, breaks: false, definitionLists: true, headingIds: true }`
+   */
   parse?: MawyParseOptions;
 
   /**
@@ -395,6 +398,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const gfm = parse?.gfm ?? true;
   const breaks = parse?.breaks ?? false;
   const definitionLists = parse?.definitionLists ?? true;
+  const headingIds = parse?.headingIds ?? true;
 
   const controlled = value !== undefined;
   /**
@@ -485,8 +489,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
    * ------------------------------------------------------------------ */
 
   const document_ = React.useMemo(
-    () => parseMarkdown(text, { gfm, breaks, definitionLists }),
-    [text, gfm, breaks, definitionLists]
+    () => parseMarkdown(text, { gfm, breaks, definitionLists, headingIds }),
+    [text, gfm, breaks, definitionLists, headingIds]
   );
   const highlighter = useHighlighter(highlight, document_);
   const footnotes = React.useMemo(

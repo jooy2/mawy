@@ -131,7 +131,11 @@ class Out {
 
 /** The document as HTML, in the shape the specification writes its answers in. */
 export function writeHtml(source: string): string {
-  const document = parseMarkdown(source, { gfm: false, definitionLists: false });
+  const document = parseMarkdown(source, {
+    gfm: false,
+    definitionLists: false,
+    headingIds: false
+  });
   const out = new Out();
 
   writeBlocks(out, document.root.children, source, false);

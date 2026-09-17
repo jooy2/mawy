@@ -64,6 +64,8 @@ export interface BlockContext {
   gfm: boolean;
   /** Whether `Term` over `: what it means` is a definition list. */
   definitionLists: boolean;
+  /** Whether a trailing `{#id}` on a heading names it. */
+  headingIds: boolean;
   definitions: Map<string, MdDefinition>;
   /** Footnotes, lifted out of the flow wherever in the document they were written. */
   footnotes: Map<string, MdFootnoteDefinition>;
@@ -226,14 +228,16 @@ function atxAt(line: string): { depth: number; text: string; at: number } | null
  *
  * Only a lone `{#id}` is taken. `{.warning}` and `{key=value}` are attributes a
  * directive reads and mean nothing on a heading, so they stay the characters
- * they were written with rather than quietly going missing.
+ * they were written with rather than quietly going missing. `reading` is the
+ * `headingIds` option: off, none of this happens and the braces are the
+ * heading's own characters, which is what they are on GitHub.
  *
  * Both heading syntaxes come through here, since the text is assembled by the
  * time either of them has one and the underlined form is as much a heading as
  * the hashed one.
  */
-function headingId(text: Sourced): { text: Sourced; id: string } {
-  const match = HEADING_ID.exec(text.text);
+function headingId(text: Sourced, reading: boolean): { text: Sourced; id: string } {
+  const match = reading ? HEADING_ID.exec(text.text) : null;
 
   if (!match) {
     return { text, id: '' };
@@ -806,7 +810,7 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
     const atx = atxAt(line.text);
 
     if (atx) {
-      const head = headingId(fromText(atx.text, line.start + atx.at));
+      const head = headingId(fromText(atx.text, line.start + atx.at), context.headingIds);
 
       blocks.push(
         withInline<MdHeading>(
@@ -1407,7 +1411,7 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
           continue;
         }
 
-        const head = headingId(text);
+        const head = headingId(text, context.headingIds);
 
         blocks.push(
           withInline<MdHeading>(
