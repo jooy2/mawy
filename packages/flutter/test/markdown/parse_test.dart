@@ -148,13 +148,30 @@ void main() {
       });
     });
 
-    test('leaves what was never a directive alone', () {
-      // A space after the colons is what every document that already writes
-      // containers that way means, and a colon in a sentence is a colon.
-      expect(first('::: tip\nBody.\n:::'), isA<MdParagraph>());
-      expect(first('::video{src=/a.mp4} and more'), isA<MdParagraph>());
-      expect(first('::a{'), isA<MdParagraph>());
+    test('reads the name a space away from the colons, and the words after it', () {
+      // What VitePress, Docusaurus and Python-Markdown's admonitions all write,
+      // and the same directive as `:::tip` written against the colons.
+      final MdContainerDirective spaced = first('::: tip\nBody.\n:::') as MdContainerDirective;
 
+      expect(spaced.name, 'tip');
+
+      final MdContainerDirective titled =
+          first('::: tip Some title\nBody.\n:::') as MdContainerDirective;
+
+      expect(titled.name, 'tip');
+      expect(titled.label.whereType<MdText>().map((MdText t) => t.value), <String>['Some title']);
+
+      // Words after a head that closed are its title, so this one is a leaf
+      // with `and more` in its label.
+      expect(first('::video{src=/a.mp4} and more'), isA<MdLeafDirective>());
+
+      // A line that wrote a label of its own means two things, and a head that
+      // does not close is not a head.
+      expect(first(':::tip[One] Two\nBody.\n:::'), isA<MdParagraph>());
+      expect(first('::a{'), isA<MdParagraph>());
+    });
+
+    test('leaves a colon in a sentence as a colon', () {
       final MdParagraph sentence = first('Note: something. See http://a:b too.') as MdParagraph;
 
       expect(sentence.children.whereType<MdTextDirective>(), isEmpty);

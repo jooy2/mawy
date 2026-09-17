@@ -312,6 +312,20 @@ Press :kbd[Ctrl] to go.
 
 A container holds blocks and closes on colons of its own length or more, so `::::` can hold a `:::`. A leaf is a single line with nothing under it. A text directive sits inside a sentence.
 
+**The head has two spellings, and both are read.** The one above is the directives proposal's, which is what `remark-directive` reads. Every tool that shipped containers before it — VitePress, Docusaurus, Python-Markdown's admonitions — writes the name a space away from the colons and the title as the rest of the line, and a document written that way is read here too:
+
+```md
+::: lang js
+
+The blocks, as blocks.
+
+:::
+```
+
+The title is the label said another way, so `::: tip Some title` and `:::tip[Some title]` hand a component the same `label`. A line that wrote a `[label]` of its own keeps it and the words after it are left alone, since two labels on one line is a line that means two things.
+
+The cost is that a line of prose opening `:: like this` is a directive rather than a paragraph. That is the trade every reader of this syntax has already made, and a directive nobody registered is drawn as the characters it was written with, so such a line still says what it said.
+
 ::: fw react
 
 Which component each name becomes is one prop:

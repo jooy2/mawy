@@ -825,10 +825,27 @@ describe('directives', () => {
     expect(block.type === 'leafDirective' && block.attributes.title).toBe('one " two');
   });
 
-  it('leaves a line with a space after the colons as the paragraph it was', () => {
-    // Which is what every document that already writes `::: tip` containers
-    // means, and what this one meant before the syntax existed.
-    expect(first('::: tip\nBody.\n:::').type).toBe('paragraph');
+  it('reads the name a space away from the colons, which is the other spelling', () => {
+    // What VitePress, Docusaurus and Python-Markdown's admonitions all write,
+    // and the same directive as `:::tip` written against the colons.
+    expect(first('::: tip\nBody.\n:::')).toMatchObject({
+      type: 'containerDirective',
+      name: 'tip'
+    });
+  });
+
+  it('reads the words after the head as the label that spelling writes there', () => {
+    const titled = first('::: tip Some title\nBody.\n:::');
+
+    expect(titled).toMatchObject({ type: 'containerDirective', name: 'tip' });
+    expect(
+      titled.type === 'containerDirective' &&
+        titled.label.map((node) => (node.type === 'text' ? node.value : ''))
+    ).toEqual(['Some title']);
+
+    // A line that wrote a label of its own has one, so the words after it are
+    // a line that means two things and are left as the paragraph they were.
+    expect(first(':::tip[One] Two\nBody.\n:::').type).toBe('paragraph');
   });
 
   it('leaves a colon in a sentence as a colon', () => {
@@ -839,8 +856,15 @@ describe('directives', () => {
     ).toBe(true);
   });
 
-  it('leaves a line with anything after the head as a paragraph', () => {
-    expect(first('::video{src=/a.mp4} and more').type).toBe('paragraph');
+  it('leaves a line whose head does not close as the paragraph it was', () => {
+    // Words after a head that closed are its title now, so the line is a
+    // directive with `and more` in its label.
+    expect(first('::video{src=/a.mp4} and more')).toMatchObject({
+      type: 'leafDirective',
+      name: 'video'
+    });
+
+    // A head that does not close is not a head, whatever follows it.
     expect(first('::a{').type).toBe('paragraph');
     expect(first('::a[unclosed').type).toBe('paragraph');
   });

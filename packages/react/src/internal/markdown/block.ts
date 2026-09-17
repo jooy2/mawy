@@ -106,6 +106,8 @@ const FOOTNOTE = /^ {0,3}\[\^([^\]\n]+)\]:[ \t]*/;
 const DESCRIBES = /^ {0,3}:[ \t]+/;
 const DIRECTIVE_INDENT = /^ {0,3}/;
 const TRAILING = /^[ \t]*$/;
+/** The run of blanks between the colons and the name, or the head and its title. */
+const SPACING = /^[ \t]*/;
 
 /** How far a block that opened on one line has to be indented to carry on. */
 const CONTINUATION = 4;
@@ -274,11 +276,20 @@ interface DirectiveLine {
 /**
  * A line that is a directive and nothing else.
  *
- * The colons have to be followed immediately by the name — `::: tip` with a
- * space is a paragraph, which is what it was before this syntax existed and
- * what every document that already writes containers that way still means —
- * and nothing but whitespace may follow the head, because a line with words
- * after it is a line of prose that happens to start with punctuation.
+ * Two spellings of one head, because the documents that carry these are
+ * written in both. The proposal's is `:::name[label]{key=value}`, with the name
+ * against the colons; every tool that shipped containers before it — VitePress,
+ * Docusaurus, Python-Markdown's admonitions — writes `::: name Some title`,
+ * with the name a space away and the title as the rest of the line. A document
+ * written for one is read by the other here, and the title is the label said
+ * another way, so a builder is handed the same `label` either way.
+ *
+ * Only where the line wrote no `[label]` of its own: two labels on one line is
+ * a line that means two things. The cost of reading the second spelling is that
+ * a line of prose opening `:: like this` is now a directive rather than a
+ * paragraph — which is the trade every reader of this syntax has already made,
+ * and an unregistered directive is drawn as the characters it was written with,
+ * so such a line still says what it said.
  */
 function directiveAt(line: string): DirectiveLine | null {
   const indent = DIRECTIVE_INDENT.exec(line)![0].length;
@@ -294,9 +305,31 @@ function directiveAt(line: string): DirectiveLine | null {
     return null;
   }
 
-  const head = readDirectiveHead(line, at);
+  const spaced = at + SPACING.exec(line.slice(at))![0].length;
+  const head = readDirectiveHead(line, spaced);
 
-  return head && TRAILING.test(line.slice(head.end)) ? { colons, indent, head } : null;
+  if (!head) {
+    return null;
+  }
+
+  if (TRAILING.test(line.slice(head.end))) {
+    return { colons, indent, head };
+  }
+
+  const lead = SPACING.exec(line.slice(head.end))![0].length;
+  const title = line.slice(head.end + lead).trimEnd();
+
+  return lead > 0 && title && !head.label
+    ? {
+        colons,
+        indent,
+        head: {
+          ...head,
+          label: { start: head.end + lead, end: head.end + lead + title.length },
+          end: head.end + lead + title.length
+        }
+      }
+    : null;
 }
 
 const RAW_TEXT = /^ {0,3}<(script|pre|style|textarea)(?:[\s>]|$)/i;

@@ -108,6 +108,9 @@ final RegExp _describes = RegExp(r'^ {0,3}:[ \t]+');
 final RegExp _directiveIndent = RegExp(r'^ {0,3}');
 final RegExp _trailing = RegExp(r'^[ \t]*$');
 
+/// The run of blanks between the colons and the name, or the head and its title.
+final RegExp _spacing = RegExp(r'^[ \t]*');
+
 /// How far a block that opened on one line has to be indented to carry on.
 const int _continuation = 4;
 
@@ -300,11 +303,21 @@ class _DirectiveLine {
 
 /// Whether [line] is a directive on a line of its own, and which.
 ///
-/// The colons have to be followed immediately by the name — `::: tip` with a
-/// space is a paragraph, which is what it was before this syntax existed and
-/// what every document that already writes containers that way still means —
-/// and nothing but whitespace may follow the head, because a line with words
-/// after it is a line of prose that happens to start with punctuation.
+/// Two spellings of one head, because the documents that carry these are
+/// written in both. The proposal's is `:::name[label]{key=value}`, with the
+/// name against the colons; every tool that shipped containers before it —
+/// VitePress, Docusaurus, Python-Markdown's admonitions — writes
+/// `::: name Some title`, with the name a space away and the title as the rest
+/// of the line. A document written for one is read by the other here, and the
+/// title is the label said another way, so a builder is handed the same label
+/// either way.
+///
+/// Only where the line wrote no `[label]` of its own: two labels on one line is
+/// a line that means two things. The cost of reading the second spelling is
+/// that a line of prose opening `:: like this` is now a directive rather than a
+/// paragraph — which is the trade every reader of this syntax has already made,
+/// and an unregistered directive is drawn as the characters it was written
+/// with, so such a line still says what it said.
 _DirectiveLine? _directiveAt(String line) {
   final int indent = _directiveIndent.firstMatch(line)![0]!.length;
   int at = indent;
@@ -319,13 +332,34 @@ _DirectiveLine? _directiveAt(String line) {
     return null;
   }
 
-  final DirectiveHead? head = readDirectiveHead(line, at);
+  final int spaced = at + _spacing.firstMatch(line.substring(at))![0]!.length;
+  final DirectiveHead? head = readDirectiveHead(line, spaced);
 
-  if (head == null || !_trailing.hasMatch(line.substring(head.end))) {
+  if (head == null) {
     return null;
   }
 
-  return _DirectiveLine(colons, indent, head);
+  if (_trailing.hasMatch(line.substring(head.end))) {
+    return _DirectiveLine(colons, indent, head);
+  }
+
+  final int lead = _spacing.firstMatch(line.substring(head.end))![0]!.length;
+  final String title = line.substring(head.end + lead).trimRight();
+
+  if (lead == 0 || title.isEmpty || head.label != null) {
+    return null;
+  }
+
+  return _DirectiveLine(
+    colons,
+    indent,
+    DirectiveHead(
+      name: head.name,
+      label: DirectiveLabel(head.end + lead, head.end + lead + title.length),
+      attributes: head.attributes,
+      end: head.end + lead + title.length,
+    ),
+  );
 }
 
 final RegExp _rawText = RegExp(
