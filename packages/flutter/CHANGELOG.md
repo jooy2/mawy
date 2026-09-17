@@ -30,6 +30,8 @@
 
 ### Fixed
 
+- **A code group that named itself is one tab.** A group that wrote a title still held a tab per block in it, so `::: lang js` holding a paragraph, a code block and two more paragraphs came out as four tabs called `javascript`, `2`, `3` and `4`, with the title beside them saying the language a fifth time. A group that named itself is one answer written out, prose and code together, so the whole of it is one tab under that name; a group that named nothing is still a tab per block. It is the React package's rule.
+
 - **`Enter` on a quoted line inside a list item carries the quotation down rather than the bullet.** A line under an item that is not an item of its own is that item's words run on, and `Enter` at the end of one carries the item's marker down — which is right for a line of words and wrong for a line the quotation owns. `- one` with `  > two` under it gave a second bullet and left the quotation behind; it now opens the next quoted line, inside the item where the caret was. It is the React package's rule, and `continueList` is where both packages ask it.
 
 - **A table wraps its cells into the room it has rather than scrolling sideways.** `width: 100%` inside an `overflow-x: auto` is what the React package's table is, and a horizontal scroll view hands its child an unbounded width — which a table reads as every column at the width it would like, the whole sentence unwrapped. So the scrollbar was there from the first sentence on, whatever room the table had. The width is worked out now and handed down: the room, or the sum of the columns' longest words where even those will not fit, which is the one case a browser scrolls in too.

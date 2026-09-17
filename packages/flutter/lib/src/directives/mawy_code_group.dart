@@ -124,18 +124,20 @@ class _MawyCodeGroupState extends State<MawyCodeGroup> {
       return const SizedBox.shrink();
     }
 
+    // A group that named itself is one answer written out — `::: lang js` is
+    // the JavaScript of it, prose and code together — so the whole of it is one
+    // tab under that name. A group that named nothing is a tab per block, which
+    // is what `::: code-group` around three fences means.
+    final InlineSpan? titled = widget.directive.label;
+    final List<List<Widget>> panels = titled != null
+        ? <List<Widget>>[blocks]
+        : blocks.map((Widget block) => <Widget>[block]).toList();
+    final List<String> names = titled != null
+        ? const <String>['']
+        : _namesFor(widget.directive.source, widget.directive.attributes, blocks.length);
     // A group whose blocks changed under a chosen tab keeps a number it no
     // longer has, and a panel nobody can see.
-    final int chosen = _at.clamp(0, blocks.length - 1);
-    // A group of one is named by the title the directive wrote, where it wrote
-    // one: `::: lang js` is a block called `js`, and a tab beside a label that
-    // says the same word twice is a word too many.
-    final InlineSpan? titled = blocks.length == 1 ? widget.directive.label : null;
-    final List<String> names = _namesFor(
-      widget.directive.source,
-      widget.directive.attributes,
-      blocks.length,
-    );
+    final int chosen = _at.clamp(0, panels.length - 1);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
@@ -156,18 +158,6 @@ class _MawyCodeGroupState extends State<MawyCodeGroup> {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Row(
                   children: <Widget>[
-                    if (widget.directive.label != null && titled == null)
-                      Padding(
-                        padding: const EdgeInsetsDirectional.only(end: 6, start: 4),
-                        child: DefaultTextStyle.merge(
-                          style: TextStyle(
-                            color: widget.tokens.foregroundMuted,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          child: Text.rich(widget.directive.label!),
-                        ),
-                      ),
                     for (int at = 0; at < names.length; at += 1)
                       _Tab(
                         tokens: widget.tokens,
@@ -181,7 +171,13 @@ class _MawyCodeGroupState extends State<MawyCodeGroup> {
               ),
             ),
           ),
-          blocks[chosen],
+          // Prose in a group is a paragraph in a box and wants the padding a box
+          // gives its words; a code block brings its own and needs none.
+          for (final Widget block in panels[chosen])
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: panels[chosen].length > 1 ? 14 : 0),
+              child: block,
+            ),
         ],
       ),
     );

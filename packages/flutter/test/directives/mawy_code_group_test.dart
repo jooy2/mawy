@@ -83,6 +83,28 @@ void main() {
       expect(find.text('bash'), findsOneWidget);
     });
 
+    /// A group that named itself is one answer written out rather than a block
+    /// per tab: `::: lang js` is the JavaScript of something, prose and code
+    /// together, and a tab per paragraph in it is a row of numbers nobody wrote.
+    testWidgets('makes a titled group one tab holding everything in it', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          _viewer(
+            '::: lang js\n\nWords about it.\n\n```javascript\nconst a = 1;\n```\n\nAnd more.\n\n:::',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('js'), findsOneWidget);
+      expect(find.text('javascript'), findsNothing);
+      expect(find.textContaining('Words about it.'), findsOneWidget);
+      expect(find.textContaining('const a = 1;'), findsOneWidget);
+      expect(find.textContaining('And more.'), findsOneWidget);
+    });
+
     testWidgets('draws nothing for a group with nothing in it', (WidgetTester tester) async {
       await tester.pumpWidget(host(_viewer('::: code-group\n:::')));
       await tester.pumpAndSettle();
