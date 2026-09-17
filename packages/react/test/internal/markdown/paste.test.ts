@@ -258,6 +258,30 @@ describe('a document a browser was showing as plain text', () => {
     expect(wrappedPlainText(`<p>Before.</p>${wrapper}`, file)).toBe(false);
   });
 
+  it('is the wrapper whatever else the clipboard wrote around it', () => {
+    // A browser writes the charset in front of the markup and marks where the
+    // selection began, and neither is something the page showed.
+    expect(wrappedPlainText(`<meta charset='utf-8'>${wrapper}`, file)).toBe(true);
+    expect(
+      wrappedPlainText(
+        `<meta charset='utf-8'><!--StartFragment-->${wrapper}<!--EndFragment-->`,
+        file
+      )
+    ).toBe(true);
+    expect(
+      wrappedPlainText(
+        `<html><head><meta charset="utf-8"></head><body>${wrapper}</body></html>`,
+        file
+      )
+    ).toBe(true);
+  });
+
+  it('reads the two flavours as lines, because they need not end them the same way', () => {
+    // The plain flavour is whatever the platform writes, and the markup's text
+    // is what the parser read: one may be `\r\n` where the other is `\n`.
+    expect(wrappedPlainText(wrapper, file.replace(/\n/g, '\r\n'))).toBe(true);
+  });
+
   it('says nothing about markup whose text is not what the clipboard carried', () => {
     expect(wrappedPlainText(wrapper, 'something else')).toBe(false);
     expect(wrappedPlainText(wrapper, '')).toBe(false);

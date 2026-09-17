@@ -447,15 +447,30 @@ export function wrappedPlainText(html: string, plain: string): boolean {
   }
 
   const body = new DOMParser().parseFromString(html, 'text/html').body;
-  const only = body.children.length === 1 ? body.children[0] : null;
+  // A clipboard carries more than what was drawn: a browser writes the charset
+  // in front of the markup and marks where the selection began, and neither is
+  // something the page showed.
+  const drawn = [...body.children].filter((element) => !UNDRAWN.test(element.tagName));
+  const only = drawn.length === 1 ? drawn[0] : null;
 
   return (
     only?.tagName === 'PRE' &&
     only.children.length === 0 &&
     !only.className &&
-    (only.textContent ?? '').trim() === plain.trim() &&
-    (body.textContent ?? '').trim() === plain.trim()
+    // A clipboard's text and its markup do not have to agree about how a line
+    // ends — the plain flavour is whatever the platform writes — so the two are
+    // compared as lines rather than as characters.
+    lines(only.textContent) === lines(plain) &&
+    lines(body.textContent) === lines(plain)
   );
+}
+
+/** What a browser puts on a clipboard that the page it came from never drew. */
+const UNDRAWN = /^(?:META|STYLE|LINK|BASE|TITLE|SCRIPT)$/;
+
+/** A run of text with the line endings every platform writes read as one. */
+function lines(text: string | null): string {
+  return (text ?? '').replace(/\r\n?/g, '\n').trim();
 }
 
 /**

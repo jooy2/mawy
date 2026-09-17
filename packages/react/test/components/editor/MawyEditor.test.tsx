@@ -4969,6 +4969,24 @@ describe('tables', () => {
     );
   });
 
+  it('pastes it as the text it showed on the source surface too', async () => {
+    const onChange = vi.fn();
+    const screen = await render(<MawyEditor modes={['plain']} onChange={onChange} />);
+    const file = '# Title\n\n```js\nconst a = 1;\n```\n\nWords.';
+    const input = sourceOf(screen);
+    const clipboard = new DataTransfer();
+
+    clipboard.setData('text/plain', file);
+    clipboard.setData('text/html', `<meta charset='utf-8'><pre>${file}</pre>`);
+    input.focus();
+    input.dispatchEvent(clipboardEvent(clipboard));
+
+    // Left to the browser, which pastes the plain flavour — so the handler
+    // writes nothing and the fence it would have written is not there.
+    await new Promise((done) => setTimeout(done, 40));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('keeps a code block copied off a page as the code block it is', async () => {
     const onChange = vi.fn();
     const screen = await render(<MawyEditor mode="wysiwyg" onChange={onChange} />);

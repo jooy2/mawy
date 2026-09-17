@@ -66,7 +66,11 @@ import {
   markdownForImage,
   pastedImagesIn
 } from '../../internal/images.js';
-import { markdownFromHtml, pasteFromHtml } from '../../internal/markdown/paste.js';
+import {
+  markdownFromHtml,
+  pasteFromHtml,
+  wrappedPlainText
+} from '../../internal/markdown/paste.js';
 import {
   difference,
   emptyHistory,
@@ -2509,6 +2513,16 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
 
       const html = event.clipboardData.getData('text/html');
+
+      // A document a browser was showing as plain text is the text it showed:
+      // the markup is one `<pre>` the browser wrote around the file, and
+      // reading it as the preformatted block it looks like puts a Markdown
+      // file inside a fence. Left to the browser, which pastes the plain
+      // flavour, the way this handler leaves anything it makes nothing of.
+      if (wrappedPlainText(html, event.clipboardData.getData('text/plain'))) {
+        return;
+      }
+
       const { markdown, images: inline } = upload.current
         ? pasteFromHtml(html, event.clipboardData.getData('text/rtf'))
         : { markdown: markdownFromHtml(html), images: [] };
