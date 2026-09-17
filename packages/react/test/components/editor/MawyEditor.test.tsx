@@ -755,8 +755,8 @@ describe('the toolbar and the keyboard', () => {
     const tip = (label: string) =>
       getComputedStyle(page.getByRole('radio', { name: label }).element(), '::after');
 
-    expect(tip('Formatted').left).toBe('0px');
-    expect(tip('Formatted').translate).not.toContain('%');
+    expect(tip('WYSIWYG').left).toBe('0px');
+    expect(tip('WYSIWYG').translate).not.toContain('%');
     expect(tip('Source').left).toBe('0px');
 
     await screen.unmount();
@@ -6204,7 +6204,7 @@ describe('images', () => {
       pasteFiles(input, [png()]);
 
       await screen
-        .getByRole('radio', { name: other === 'wysiwyg' ? 'Formatted' : 'Preview' })
+        .getByRole('radio', { name: other === 'wysiwyg' ? 'WYSIWYG' : 'Preview' })
         .click();
       await upload.settle('/a.png');
 
