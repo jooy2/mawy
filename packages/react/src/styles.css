@@ -1766,6 +1766,12 @@
   opacity: 1;
 }
 
+/* No ring where the pointer is what put the focus in the block. See
+ * `CodeBlock`: the tab stop is for a keyboard, and so is the ring. */
+.mawy-root .mawy-md-pre pre[data-mawy-pointer]:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mawy-root .mawy-md-pre[data-mawy-lang]::after {
     transition: none;

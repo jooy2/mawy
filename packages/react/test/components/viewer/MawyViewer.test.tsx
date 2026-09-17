@@ -1193,6 +1193,31 @@ describe('copying', () => {
 });
 
 /**
+ * The box a code block is drawn in, which is a tab stop so a keyboard can reach
+ * the right-hand end of code that scrolls sideways.
+ */
+describe('a code block', () => {
+  it("says the pointer put the focus in it, so the ring stays the keyboard's", async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={false} />);
+    const box = screen.container.querySelector('pre') as HTMLElement;
+
+    expect(box.tabIndex).toBe(0);
+    expect(box.hasAttribute('data-mawy-pointer')).toBe(false);
+
+    box.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+    expect(box.hasAttribute('data-mawy-pointer')).toBe(true);
+
+    // And leaving takes it off, so a `Tab` back into the block is a keyboard
+    // arriving and draws the ring.
+    box.focus();
+    box.blur();
+
+    expect(box.hasAttribute('data-mawy-pointer')).toBe(false);
+  });
+});
+
+/**
  * Footnotes, which are the one thing on the page whose place is the renderer's
  * decision rather than the document's: a footnote is written wherever it suited
  * the author and read at the bottom.

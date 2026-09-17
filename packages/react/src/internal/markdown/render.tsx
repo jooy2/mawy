@@ -1282,7 +1282,8 @@ export function drawnCode(
   block: MdCode,
   context: RenderContext,
   tokens: MawyCodeToken[] | null,
-  copy: React.ReactNode
+  copy: React.ReactNode,
+  box: React.ComponentPropsWithoutRef<'pre'> = {}
 ): React.ReactElement {
   const { value, lang } = block;
 
@@ -1300,6 +1301,7 @@ export function drawnCode(
       <pre
         tabIndex={context.editing ? undefined : 0}
         spellCheck={context.editing ? false : undefined}
+        {...box}
       >
         {/* The range on the `code` rather than only on the box around it: the
             box holds the fences and the copy button as well, and a caret in an

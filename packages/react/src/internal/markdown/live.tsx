@@ -168,6 +168,26 @@ function CodeBlock({
   const [state, copy] = useCopy();
   const Icon = state === 'copied' ? CheckIcon : CopyIcon;
   const said = state === 'copied' ? context.strings.copied : context.strings.copyCode;
+  /*
+   * The ring on a block the pointer put the focus in.
+   *
+   * The box is a tab stop so a keyboard can reach the right-hand end of code
+   * that scrolls sideways, and the ring around it is what says the keyboard is
+   * there. A pointer leaves the focus in it as well — a press to take a line
+   * out of the code — and `:focus-visible` turns that into a ring at the next
+   * press, so copying a selection lit the whole block up in the accent colour.
+   * The mark says the pointer is what put the focus there, the stylesheet draws
+   * no ring while it is on, and leaving the block takes it off. A `Tab` into
+   * the block never sets it, so the keyboard keeps the ring it needs.
+   */
+  const box = context.editing
+    ? {}
+    : {
+        onPointerDown: (event: React.PointerEvent<HTMLPreElement>) =>
+          event.currentTarget.setAttribute('data-mawy-pointer', ''),
+        onBlur: (event: React.FocusEvent<HTMLPreElement>) =>
+          event.currentTarget.removeAttribute('data-mawy-pointer')
+      };
 
   return drawnCode(
     block,
@@ -185,7 +205,8 @@ function CodeBlock({
       data-mawy-tip={said}
     >
       <Icon className="mawy-icon" aria-hidden="true" />
-    </button>
+    </button>,
+    box
   );
 }
 
