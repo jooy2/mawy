@@ -2328,7 +2328,11 @@ describe('the document surface', () => {
     );
     // The focus goes back to the document a frame after the edit, at the end
     // of the link's words; a caret put anywhere before then is put back there.
+    // The focus arrives inside that frame and the caret at the end of it, so
+    // the frame is what is waited for — waiting for the focus alone left the
+    // line below moving a caret the editor had not finished putting down.
     await vi.waitFor(() => expect(document.activeElement).toBe(bodyOf(screen)));
+    await new Promise((ran) => requestAnimationFrame(() => ran(null)));
 
     // And `Escape` gives a new one up with nothing written. Off the link first,
     // or the button is asking for that link's address.
