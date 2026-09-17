@@ -1730,18 +1730,33 @@
  * over a block labelled `JAVASCRIPT`, said the same word twice. It is there to
  * be read when it is looked for, so it arrives with the pointer, the way the
  * button next to it does.
+ *
+ * Both stand on a plate of the code's own colour, blurred over whatever is
+ * under them. A narrow block is one with a line of code running through the
+ * corner these two sit in, and two sets of letters in one place leaves neither
+ * of them readable. The alternatives were a strip of padding held open for a
+ * label nobody is looking at, or a label that goes away on a narrow block,
+ * which is where a reader is most likely to be wondering what the language is.
  */
 .mawy-root .mawy-md-pre[data-mawy-lang]::after {
   content: attr(data-mawy-lang);
   position: absolute;
-  top: 12px;
+  top: 6px;
   inset-inline-end: 40px;
+  /* As tall as the button beside it, so the two plates read as one row. */
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: var(--mawy-radius-sm);
+  background: color-mix(in srgb, var(--mawy-code-bg) 82%, transparent);
   color: var(--mawy-fg-subtle);
   font-family: var(--mawy-font-mono);
   font-size: 0.7em;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   opacity: 0;
+  backdrop-filter: blur(4px);
   pointer-events: none;
   transition: opacity var(--mawy-duration) var(--mawy-easing);
 }
@@ -1769,10 +1784,11 @@
   padding: 0;
   border: 1px solid transparent;
   border-radius: var(--mawy-radius-sm);
-  background: transparent;
+  background: color-mix(in srgb, var(--mawy-code-bg) 82%, transparent);
   color: var(--mawy-fg-subtle);
   font-size: 14px;
   opacity: 0;
+  backdrop-filter: blur(4px);
   cursor: pointer;
   transition: opacity var(--mawy-duration) var(--mawy-easing);
 }
