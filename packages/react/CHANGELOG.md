@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.7.0 (2026-09-17)
+
 ### Added
 
 - **`MawyCodeGroup`, the one drawing this library ships for a directive.** The parser reads the shape and stops there, so a name is the application's to choose — but one directive turns up in every set of documentation and the drawing for it is the same everywhere: one piece of code written several ways, with a tab per language. Register it under whatever name your documents use, `code-group` or `lang` or `tabs`, and a group of blocks is drawn as tabs named by the language each fence was written with. `{tabs=Browser,Flutter}` names them instead where a fence's language is not the word a reader should see, and a group holding one block takes its name from the title the line wrote. One tab is in the tab order, the arrows move between them and `Home` and `End` go to the ends, which is what the tab pattern asks for; only the chosen block is in the page, so a find on the page finds what a reader can see.
