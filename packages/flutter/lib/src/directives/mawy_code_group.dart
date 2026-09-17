@@ -25,6 +25,7 @@
 library;
 
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/internal/inside_box.dart';
 import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
@@ -150,7 +151,11 @@ class _MawyCodeGroupState extends State<MawyCodeGroup> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           ColoredBox(
-            color: widget.tokens.codeBackground,
+            // A shade off the code under it, so the row of names reads as the
+            // chrome it is rather than as the first line of the block.
+            color:
+                Color.lerp(widget.tokens.codeBackground, widget.tokens.border, 0.28) ??
+                widget.tokens.codeBackground,
             child: MawyRovingRow(
               roving: _roving,
               child: SingleChildScrollView(
@@ -172,12 +177,21 @@ class _MawyCodeGroupState extends State<MawyCodeGroup> {
             ),
           ),
           // Prose in a group is a paragraph in a box and wants the padding a box
-          // gives its words; a code block brings its own and needs none.
-          for (final Widget block in panels[chosen])
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: panels[chosen].length > 1 ? 14 : 0),
-              child: block,
+          // gives its words; a code block brings its own and needs none. And
+          // everything in here is told that the box is already drawn, so a
+          // block inside stops drawing one of its own. See [MawyInsideBox].
+          MawyInsideBox(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (final Widget block in panels[chosen])
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: panels[chosen].length > 1 ? 14 : 0),
+                    child: block,
+                  ),
+              ],
             ),
+          ),
         ],
       ),
     );

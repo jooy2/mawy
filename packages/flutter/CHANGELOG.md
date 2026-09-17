@@ -24,6 +24,8 @@
 
 ### Changed
 
+- **A code group is one surface rather than a box with a box in it.** The block inside kept the edge, the rounded corners and the language label it has when it stands on its own, so a group came out as a box in a box with four slivers of the screen showing through at the inner corners, and the tab over the block said the language a second time. A block is told that the box is already drawn now — `MawyInsideBox`, which is what the React package says with a selector — and draws neither. The row of names is a shade off the code under it, so it reads as the chrome it is rather than as the first line of the block.
+
 - **A rule is drawn down the gap between the line numbers and the source.** Grey numbers against the same background as the text beside them read as one column with a wide space in it, and there was nothing on the screen to say the numbers are not part of the document. The line is `MawyTokens.border`, the same one that goes around the editor, and it is drawn over the field's padding rather than inside it, so it is the height of the field the way the React package's is. `gutterWidthFor` is where both the column and the rule get the column's width, so the two cannot disagree about where the gap is.
 
 - **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `const [1, 2, 3, 4, 5, 6]` now. An application whose screens only go so deep passes the levels it wants, as it always could.

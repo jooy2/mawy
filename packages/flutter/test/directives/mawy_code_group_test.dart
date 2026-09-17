@@ -105,6 +105,31 @@ void main() {
       expect(find.textContaining('And more.'), findsOneWidget);
     });
 
+    /// A block inside a group draws neither an edge of its own nor the name of
+    /// its language: the group's box is there, and the tab over it says the
+    /// language. Two borders one inside the other is a box in a box.
+    testWidgets('leaves the block inside it without a box of its own', (WidgetTester tester) async {
+      await tester.pumpWidget(host(_viewer(document)));
+      await tester.pumpAndSettle();
+
+      final Finder boxed = find.descendant(
+        of: find.byType(MawyCodeGroup),
+        // The block's own box: the one filled with the code colour. The
+        // group's own edge and the line under a chosen tab are not it.
+        matching: find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is Container &&
+              widget.decoration is BoxDecoration &&
+              (widget.decoration! as BoxDecoration).color == MawyTokens.light.codeBackground &&
+              (widget.decoration! as BoxDecoration).border != null,
+        ),
+      );
+
+      expect(boxed, findsNothing);
+      // And the language is the tab's to say, not the block's.
+      expect(find.text('JS'), findsNothing);
+    });
+
     testWidgets('draws nothing for a group with nothing in it', (WidgetTester tester) async {
       await tester.pumpWidget(host(_viewer('::: code-group\n:::')));
       await tester.pumpAndSettle();

@@ -20,6 +20,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/src/internal/copying.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/inside_box.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/find.dart';
 import 'package:mawy/src/markdown/url.dart';
@@ -1049,7 +1050,12 @@ class _CodeBlockState extends State<_CodeBlock> with MawyCopying<_CodeBlock> {
     final MawyRenderContext context = widget.context;
     final MawyTokens tokens = context.tokens;
     final double em = _em(context);
-    final String? lang = widget.block.lang;
+    // Inside something that already draws a box — a code group — the block
+    // draws neither an edge of its own nor the name of its language, because
+    // the box is there and the tab over it says the language. See
+    // [MawyInsideBox].
+    final bool inside = MawyInsideBox.of(buildContext);
+    final String? lang = inside ? null : widget.block.lang;
 
     return Stack(
       children: <Widget>[
@@ -1057,8 +1063,8 @@ class _CodeBlockState extends State<_CodeBlock> with MawyCopying<_CodeBlock> {
           width: double.infinity,
           decoration: BoxDecoration(
             color: tokens.codeBackground,
-            borderRadius: BorderRadius.circular(MawyRadius.medium),
-            border: Border.all(color: tokens.border),
+            borderRadius: inside ? BorderRadius.zero : BorderRadius.circular(MawyRadius.medium),
+            border: inside ? null : Border.all(color: tokens.border),
           ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
