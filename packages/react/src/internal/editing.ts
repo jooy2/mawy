@@ -792,6 +792,96 @@ function unfenced(value: string, caret: number): MawyEdit {
   return { value: after.value, caret: after.start };
 }
 
+/** The run of fence characters a line opens a fenced block with. */
+const FENCE_OPEN = /^[ \t>]*(`{3,}|~{3,})/;
+
+/**
+ * A line that is a run of fence characters and nothing else, which is what
+ * closes a fence.
+ *
+ * Whatever carries the line is stepped over, and so is any indentation, rather
+ * than the three spaces a closing fence is allowed: a line indented further is
+ * not a fence, so reading one as a fence only ever writes a longer fence around
+ * code that did not need it, and reading a fence as words loses the code under
+ * it. A block nested deep enough to be indented that far is the case that costs.
+ */
+const FENCE_RUN = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
+
+/**
+ * The block a caret is in kept fenced, when what went into it holds a fence.
+ *
+ * Everything in a code block is the characters it is, so three backticks typed
+ * into one are three characters somebody wants in their code. To the parser the
+ * same three close the block, and everything under them stopped being code — a
+ * document again, halfway down what was being written.
+ *
+ * So the fences grow instead: a block holding a run of three is written with
+ * four, which is what the notation has for exactly this, and what every file
+ * that shows Markdown inside Markdown is written with. The caret moves with
+ * them, since the opening fence is in front of everything the block holds.
+ *
+ * The edit is left alone wherever it did not turn out to be an edit inside one
+ * block's characters — a `Backspace` at the start that took the fences off, or
+ * anything else that moved the opening line.
+ */
+export function fenceKept(was: string, at: number, edit: MawyEdit): MawyEdit {
+  const code = fencedAt(was, at);
+  const head = code ? was.indexOf('\n', code.range.start) : -1;
+
+  if (!code || head === -1) {
+    return edit;
+  }
+
+  const line = was.slice(code.range.start, head);
+  const open = FENCE_OPEN.exec(line);
+
+  if (!open || edit.value.slice(code.range.start, head) !== line) {
+    return edit;
+  }
+
+  const marker = open[1];
+  const delta = edit.value.length - was.length;
+  const to = code.content.end + delta;
+
+  if (to < code.content.start) {
+    return edit;
+  }
+
+  let longest = 0;
+
+  for (const inside of edit.value.slice(code.content.start, to).split('\n')) {
+    const run = FENCE_RUN.exec(inside);
+
+    if (run && run[1][0] === marker[0] && run[1].length >= marker.length) {
+      longest = Math.max(longest, run[1].length);
+    }
+  }
+
+  if (!longest) {
+    return edit;
+  }
+
+  const grown = marker[0].repeat(longest + 1 - marker.length);
+  // The closing fence, which is the block's last line where it has one: a block
+  // the document ends inside has none to grow. Written first, so that the
+  // opening fence's own place is still where it was.
+  const end = code.range.end + delta;
+  const from = edit.value.lastIndexOf('\n', end - 1) + 1;
+  const closing = FENCE_RUN.exec(edit.value.slice(from, end));
+  const shut = closing
+    ? from + edit.value.slice(from, end).indexOf(closing[1]) + closing[1].length
+    : -1;
+  const value =
+    shut === -1 ? edit.value : edit.value.slice(0, shut) + grown + edit.value.slice(shut);
+  const opened = code.range.start + line.indexOf(marker) + marker.length;
+
+  return {
+    ...edit,
+    value: value.slice(0, opened) + grown + value.slice(opened),
+    caret: edit.caret + grown.length
+  };
+}
+
 /** A quotation carries its own marker down the way a list carries a bullet. */
 const QUOTED = /^((?:[ \t]*>[ \t]?)+)(.*)$/;
 
@@ -1793,12 +1883,12 @@ export function editForText(
   const place = inward ? { ...found, start: inward.start, end: inward.start } : found;
 
   if (place.start !== place.end) {
-    return typedOver(value, place.start, place.end, text);
+    return fenceKept(value, place.start, typedOver(value, place.start, place.end, text));
   }
 
   const opened = openedAt(root, place.node, value, place.start, options);
 
-  return splice(opened.value, opened.at, opened.at, text);
+  return fenceKept(value, place.start, splice(opened.value, opened.at, opened.at, text));
 }
 
 /**
@@ -1836,6 +1926,24 @@ export function editFor(
   drag: MawyDrag = { taken: null },
   held: readonly MawyCommand[] = [],
   nested: number | null = null
+): MawyEdit | null {
+  const caret = placeOf(root, current, aim)?.start ?? null;
+  const edit = editMade(event, root, current, aim, options, drag, held, nested);
+
+  // Whatever the browser asked for, the block the caret is in is still a block
+  // afterwards. See `fenceKept`.
+  return edit && caret !== null ? fenceKept(current, caret, edit) : edit;
+}
+
+function editMade(
+  event: InputEvent,
+  root: HTMLElement,
+  current: string,
+  aim: MawyAim | null,
+  options: MarkdownOptions,
+  drag: MawyDrag,
+  held: readonly MawyCommand[],
+  nested: number | null
 ): MawyEdit | null {
   const found = placeOf(root, current, aim);
   // Whatever a drag left waiting is for the drop that follows it immediately,

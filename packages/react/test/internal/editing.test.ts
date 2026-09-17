@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { blankParagraphs, heldText, marksAt, wrapRange } from '../../src/internal/editing.js';
+import {
+  blankParagraphs,
+  fenceKept,
+  heldText,
+  marksAt,
+  wrapRange
+} from '../../src/internal/editing.js';
 import type { MawyCommand } from '../../src/internal/commands.js';
 import { parseMarkdown } from '../../src/internal/markdown/parse.js';
 
@@ -146,5 +152,38 @@ describe('a wrap over a selection made on the drawn document', () => {
   it('leaves a selection with nothing in it, and one that cuts through nothing', () => {
     expect(over('one «two» three')).toBe('one «two» three');
     expect(over('one [link](u) «two»')).toBe('one [link](u) «two»');
+  });
+});
+
+/**
+ * A fence put inside a code block, which closes it unless the block's own
+ * fences grow. See `fenceKept`.
+ */
+describe('a code block a fence went into', () => {
+  /** What an edit inside the block at `at` comes out as, written `value|caret`. */
+  const kept = (was: string, at: number, value: string, caret: number) => {
+    const out = fenceKept(was, at, { value, caret });
+
+    return `${out.value}|${out.caret}`;
+  };
+
+  it('grows both fences past the longest run inside the block', () => {
+    expect(kept('```\ncode\n```', 8, '```\ncode\n```\n```', 12)).toBe('````\ncode\n```\n````|13');
+    // Four inside wants five around it, and the caret moves by as much as the
+    // opening fence grew.
+    expect(kept('```\nc\n```', 5, '```\nc\n````\n```', 10)).toBe('`````\nc\n````\n`````|12');
+  });
+
+  it('leaves a run too short to close the block it is in', () => {
+    expect(kept('````\ncode\n````', 9, '````\ncode\n```\n````', 13)).toBe(
+      '````\ncode\n```\n````|13'
+    );
+    // And a tilde run in a block backticks fenced, which closes nothing.
+    expect(kept('```\ncode\n```', 8, '```\ncode\n~~~\n```', 13)).toBe('```\ncode\n~~~\n```|13');
+  });
+
+  it('leaves an edit that is not inside a code block at all', () => {
+    expect(kept('One.', 4, 'One.```', 7)).toBe('One.```|7');
+    expect(kept('```\ncode\n```', 8, 'x', 1)).toBe('x|1');
   });
 });

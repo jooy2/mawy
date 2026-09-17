@@ -3417,6 +3417,22 @@ describe('the document surface', () => {
     );
   });
 
+  it('grows the fences around a code block a fence was typed into', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor style={WIDE} defaultValue={'```\ncode\n```'} mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'code', 4);
+    // A fence typed into a code block is three characters somebody wants in
+    // their code, and to the parser it is the end of the block.
+    await userEvent.keyboard('{Enter}```');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('````\ncode\n```\n````'));
+    expect(bodyOf(screen).querySelectorAll('pre')).toHaveLength(1);
+    expect(bodyOf(screen).querySelector('code')?.textContent).toBe('code\n```');
+  });
+
   it('takes a code block off with Backspace at its start', async () => {
     for (const [source, typed] of [
       ['One.\n\n```\n\n```', 'One.\n\nx'],
