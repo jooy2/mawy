@@ -876,7 +876,15 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
   // paragraph, not wrap it.
   const text = `\n${marker}\n${marker}`;
 
-  return { value: value.slice(0, caret) + text + value.slice(caret), caret: caret + text.length };
+  return {
+    value: value.slice(0, caret) + text + value.slice(caret),
+    caret: caret + text.length,
+    // The line it opens is a `>` with nothing after it, which the parser reads
+    // as blank and gives no block of its own. So the caret is left where the
+    // page draws nothing, and the drawn surface is asked for the room to put
+    // it in. See `withRoom`.
+    betweenBlocks: true
+  };
 }
 
 /**

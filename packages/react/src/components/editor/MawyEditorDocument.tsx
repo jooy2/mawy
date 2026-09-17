@@ -15,7 +15,13 @@ import type {
 } from '../../types.js';
 import { crowdedBy, indent, type MawyCommand, type MawyCrowding } from '../../internal/commands.js';
 import type { MawyStrings } from '../../internal/i18n.js';
-import type { MdBlock, MdList, MdNode, MdRange } from '../../internal/markdown/ast.js';
+import type {
+  MdBlock,
+  MdBlockquote,
+  MdList,
+  MdNode,
+  MdRange
+} from '../../internal/markdown/ast.js';
 import { useHighlighter } from '../../internal/highlighter.js';
 import { LIVE } from '../../internal/markdown/live.js';
 import { parseMarkdown } from '../../internal/markdown/parse.js';
@@ -2079,6 +2085,11 @@ function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBloc
     !holding.children.some(holds(room))
       ? holding
       : null;
+  /** The quotation the caret was left on a line of that draws nothing. */
+  const quoted =
+    room !== null && !blanks.includes(room) && holding?.type === 'blockquote'
+      ? withinQuote(holding, room)
+      : null;
 
   if (room !== null && !blanks.includes(room) && !holding) {
     // In place of a blank line's paragraph on the same line: a caret left after
@@ -2090,7 +2101,7 @@ function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBloc
     blanks.sort((one, other) => one - other);
   }
 
-  if (!blanks.length && !parting) {
+  if (!blanks.length && !parting && !quoted) {
     return blocks.length ? blocks : [empty(0)];
   }
 
@@ -2105,6 +2116,8 @@ function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBloc
 
     if (block === parting) {
       out.push(...parted(parting, room as number, value));
+    } else if (quoted && block === holding) {
+      out.push(quoted);
     } else {
       out.push(block);
     }
@@ -2122,6 +2135,38 @@ const holds =
   (at: number) =>
   (node: { range: MdRange }): boolean =>
     node.range.start <= at && at <= node.range.end;
+
+/**
+ * A quotation with the caret's paragraph drawn among its own blocks, or `null`
+ * where the quotation has a block of its own there already.
+ *
+ * `Enter` at the end of a quoted paragraph ends that paragraph and opens
+ * another, and the line it opens is a `>` with nothing after it — a line the
+ * parser reads as blank and gives no block for. So the caret was left where
+ * the page draws nothing: it stayed at the end of the line above, the key
+ * looked as though it had done nothing at all, and the letter typed next went
+ * to the new line all the same.
+ */
+function withinQuote(block: MdBlockquote, at: number): MdBlock | null {
+  const held = block.children.find(holds(at));
+
+  if (held) {
+    // A quotation inside a quotation is the only one of these that can hold
+    // the caret's line; anything else there is a block with somewhere to be.
+    const deeper = held.type === 'blockquote' ? withinQuote(held, at) : null;
+
+    return deeper
+      ? { ...block, children: block.children.map((child) => (child === held ? deeper : child)) }
+      : null;
+  }
+
+  const index = block.children.findIndex((child) => at < child.range.start);
+  const children = [...block.children];
+
+  children.splice(index === -1 ? children.length : index, 0, empty(at));
+
+  return { ...block, children };
+}
 
 /**
  * A list drawn as the two lists and the paragraph between them that the blank

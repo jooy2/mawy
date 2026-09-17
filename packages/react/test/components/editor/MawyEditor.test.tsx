@@ -3661,6 +3661,40 @@ describe('the document surface', () => {
     expect(coded).toHaveBeenLastCalledWith('```ts\nconst\n a = 1;\n```');
   });
 
+  /**
+   * And the caret goes on the line it opened. That line is a `>` with nothing
+   * after it, which the parser reads as blank and gives no block for, so the
+   * caret stayed at the end of the line above and the key looked as though it
+   * had done nothing — while the letter typed next went to the new line all
+   * the same. See `withinQuote`.
+   */
+  it('puts the caret on the line Enter opens in a quotation', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'> one\n> two'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'one\ntwo', 7);
+    await userEvent.keyboard('{Enter}');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n> '));
+
+    const room = await vi.waitFor(() => {
+      const last = [...body.querySelectorAll('blockquote > p')].at(-1) as HTMLElement;
+
+      expect(last.textContent).toBe('');
+
+      return last;
+    });
+
+    expect(room.contains(document.getSelection()?.anchorNode ?? null)).toBe(true);
+
+    // And what is typed lands on it rather than on the line above.
+    await userEvent.keyboard('three');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n> three'));
+  });
+
   it('types into words an underline is drawn around', async () => {
     const onChange = vi.fn();
     const screen = await render(
