@@ -14,6 +14,8 @@
 
 ### Changed
 
+- **The veil a dragged file arrives under is translucent, and fades in.** It was opaque and it appeared in one frame, so a file dragged over the editor replaced the document with a panel — and the pointer is already moving at that moment, which read as the page having been swapped out from under the drag rather than as somewhere to let go. It is drawn in `--mawy-chrome`, the colour everything else laid over the document is drawn in, with the accent mixed into it, and it grows the last of the way in over the length of `--mawy-duration` and a half. The document showing through is the part that matters: it says the file is being dropped onto _this_. `prefers-reduced-motion` turns the arrival off, as it does everywhere else here.
+
 - **The toolbar's heading menu offers all six levels.** It offered heading 1, 2 and 3 and body text, so heading 4 to 6 were levels a document could hold and the editor could not write — `Mod`+`4` to `Mod`+`6` did nothing either, since the keys reach only what the menu offers. `headingLevels` defaults to `[1, 2, 3, 4, 5, 6]` now. An application whose pages only go so deep passes the levels it wants, as it always could.
 
 ### Fixed

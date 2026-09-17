@@ -1047,6 +1047,15 @@
   color: var(--mawy-caution);
 }
 
+/* What a dragged file arrives under.
+ *
+ * Translucent, and it fades in rather than landing. The pointer is already
+ * moving when this is drawn, so a panel that covers the document in one frame
+ * reads as the page having been swapped out from under the drag — and the
+ * document showing through is what says the file is being dropped onto *this*
+ * rather than into somewhere new. `--mawy-chrome` is the surface colour that
+ * already carries the alpha everything laid over the document is drawn in, so
+ * the veil is that with the accent mixed into it. */
 .mawy-root .mawy-drop-veil {
   position: absolute;
   inset: 8px;
@@ -1055,11 +1064,29 @@
   place-items: center;
   border: 2px dashed var(--mawy-accent);
   border-radius: var(--mawy-radius-lg);
-  background: color-mix(in srgb, var(--mawy-bg) 80%, var(--mawy-accent));
+  background: color-mix(in srgb, var(--mawy-chrome) 86%, var(--mawy-accent));
   color: var(--mawy-accent);
   font-size: 15px;
   font-weight: 600;
   pointer-events: none;
+  animation: mawy-drop-veil-in calc(var(--mawy-duration) * 1.5) var(--mawy-easing);
+}
+
+/* It grows the last of the way in rather than the first, which is what makes it
+ * read as being laid over the document rather than as arriving from behind it.
+ * The element is only in the tree while a file is over the surface, so there is
+ * no leaving to animate: the drag is either on the document or it is not. */
+@keyframes mawy-drop-veil-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mawy-root .mawy-drop-veil {
+    animation: none;
+  }
 }
 
 /* ---------------------------------------------------------------------------
