@@ -26,6 +26,8 @@
 
 ### Changed
 
+- **The language a code block was written in is drawn beside its copy button.** It used to sit across the top of the block, with a strip of padding held open for it whether or not anybody was looking — and inside something that already says which language it is, a tab named `JavaScript` over a block labelled `JAVASCRIPT`, it said the same word twice. It is there to be read when it is looked for, so it arrives with the pointer the way the button next to it does, and the block is as tall as the code in it again.
+
 - **The formatted mode is called WYSIWYG.** `Formatted` said what the surface does and not what it is, and every editor that has one of these calls it by the name its readers already know. `MawyStrings.modeWysiwyg` is `WYSIWYG` in English and `위지윅` in Korean, which is also what the mode is called in the API — an application with its own word for it passes one, as it always could.
 
 - **A rule is drawn down the gap between the line numbers and the source.** Grey numbers against the same background as the text beside them read as one column with a wide space in it, and there was nothing on the page to say the numbers are not part of the document. The line is `--mawy-border`, the same one that goes around the editor, and it is the height of the surface rather than of the text — it stays where it is while the document scrolls under it, which is what a gutter's line does. It is on the surface rather than on the numbers because a number is a grid cell per line and the chunks nobody is looking at have none, so a border on those cells would be a rule that stopped wherever the file was not being read.

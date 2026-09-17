@@ -1698,23 +1698,40 @@
   font-size: inherit;
 }
 
-/* The language, as a label rather than as a chip: it is there to be read when
- * it is looked for, and to be invisible the rest of the time. */
+/*
+ * The language, beside the copy button and drawn on the same terms.
+ *
+ * It used to sit across the top of the block, with a strip of padding held
+ * open for it whether or not a reader was looking — and a block inside
+ * something that already says which language it is, a tab named `JavaScript`
+ * over a block labelled `JAVASCRIPT`, said the same word twice. It is there to
+ * be read when it is looked for, so it arrives with the pointer, the way the
+ * button next to it does.
+ */
 .mawy-root .mawy-md-pre[data-mawy-lang]::after {
   content: attr(data-mawy-lang);
   position: absolute;
-  top: 0.65em;
-  inset-inline-start: 1.05em;
+  top: 12px;
+  inset-inline-end: 40px;
   color: var(--mawy-fg-subtle);
   font-family: var(--mawy-font-mono);
   font-size: 0.7em;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  opacity: 0;
   pointer-events: none;
+  transition: opacity var(--mawy-duration) var(--mawy-easing);
 }
 
-.mawy-root .mawy-md-pre[data-mawy-lang] pre {
-  padding-top: 2.1em;
+.mawy-root .mawy-md-pre[data-mawy-lang]:hover::after,
+.mawy-root .mawy-md-pre[data-mawy-lang]:focus-within::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mawy-root .mawy-md-pre[data-mawy-lang]::after {
+    transition: none;
+  }
 }
 
 .mawy-root .mawy-code-copy {
