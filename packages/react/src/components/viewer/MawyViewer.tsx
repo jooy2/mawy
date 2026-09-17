@@ -427,6 +427,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const breaks = parse?.breaks ?? false;
   const definitionLists = parse?.definitionLists ?? true;
   const headingIds = parse?.headingIds ?? true;
+  const frontmatter = parse?.frontmatter ?? true;
 
   const controlled = value !== undefined;
   /**
@@ -517,8 +518,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
    * ------------------------------------------------------------------ */
 
   const document_ = React.useMemo(
-    () => parseMarkdown(text, { gfm, breaks, definitionLists, headingIds }),
-    [text, gfm, breaks, definitionLists, headingIds]
+    () => parseMarkdown(text, { gfm, breaks, definitionLists, headingIds, frontmatter }),
+    [text, gfm, breaks, definitionLists, headingIds, frontmatter]
   );
   const highlighter = useHighlighter(highlight, document_);
   const footnotes = React.useMemo(

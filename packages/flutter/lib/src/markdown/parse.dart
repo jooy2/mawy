@@ -20,6 +20,7 @@ class MawyParseOptions {
     this.breaks = false,
     this.definitionLists = true,
     this.headingIds = true,
+    this.frontmatter = true,
   });
 
   /// GitHub Flavored Markdown: tables, task lists, `~~strikethrough~~`, alerts,
@@ -50,16 +51,26 @@ class MawyParseOptions {
   /// it off for a document that has to mean exactly what it would mean there.
   final bool headingIds;
 
+  /// Whether a run fenced by `---` at the very top of the document is read as
+  /// the metadata it is, and kept out of what the document says.
+  ///
+  /// On. The notation carries a title, a date and whatever else beside a
+  /// document rather than in it, and a reader is shown none of it — drawn as
+  /// Markdown it is a rule with a heading underlined by another. Turn it off
+  /// for a document whose `---` at the top is a rule and means to be one.
+  final bool frontmatter;
+
   @override
   bool operator ==(Object other) =>
       other is MawyParseOptions &&
       other.gfm == gfm &&
       other.breaks == breaks &&
       other.definitionLists == definitionLists &&
-      other.headingIds == headingIds;
+      other.headingIds == headingIds &&
+      other.frontmatter == frontmatter;
 
   @override
-  int get hashCode => Object.hash(gfm, breaks, definitionLists, headingIds);
+  int get hashCode => Object.hash(gfm, breaks, definitionLists, headingIds, frontmatter);
 }
 
 /* -------------------------------------------------------------------------
@@ -417,6 +428,35 @@ void _collectFootnotes(
   }
 }
 
+/// The opening fence, which is the whole of the first line and nothing else.
+final RegExp _matterOpen = RegExp(r'^---[ \t]*$');
+
+/// And the closing one, which YAML writes either way.
+final RegExp _matterClose = RegExp(r'^(?:---|\.\.\.)[ \t]*$');
+
+/// The run of metadata at the top of the document, as how many lines it takes
+/// and where it was written, or `null` where the document opens with anything
+/// else.
+///
+/// The fence has to be the first line, and the run has to be closed. `---` on
+/// its own at the top of a document is a rule and stays one, and so is a `---`
+/// with a heading underlined by another further down — which is the ambiguity
+/// this notation has everywhere it is read, and every reader of it answers the
+/// same way.
+({int count, int start, int end})? _matterIn(List<Line> lines) {
+  if (lines.isEmpty || !_matterOpen.hasMatch(lines[0].text)) {
+    return null;
+  }
+
+  for (int at = 1; at < lines.length; at += 1) {
+    if (_matterClose.hasMatch(lines[at].text)) {
+      return (count: at + 1, start: lines[0].start, end: lines[at].start + lines[at].text.length);
+    }
+  }
+
+  return null;
+}
+
 /// Reads [source] as Markdown.
 MdDocument parseMarkdown(String source, [MawyParseOptions options = const MawyParseOptions()]) {
   final Map<String, MdDefinition> definitions = <String, MdDefinition>{};
@@ -424,8 +464,11 @@ MdDocument parseMarkdown(String source, [MawyParseOptions options = const MawyPa
   final List<PendingInline> pending = <PendingInline>[];
   final _Reading reading = _read(source);
 
+  final ({int count, int start, int end})? matter = options.frontmatter
+      ? _matterIn(reading.lines)
+      : null;
   final List<MdBlock> children = parseBlocks(
-    reading.lines,
+    matter == null ? reading.lines : reading.lines.sublist(matter.count),
     BlockContext(
       gfm: options.gfm,
       definitionLists: options.definitionLists,
@@ -465,5 +508,12 @@ MdDocument parseMarkdown(String source, [MawyParseOptions options = const MawyPa
 
   _collectOutline(children, <String, int>{}, outline);
 
-  return MdDocument(root: root, outline: outline, footnotes: used);
+  return MdDocument(
+    root: root,
+    outline: outline,
+    footnotes: used,
+    frontmatter: matter == null
+        ? null
+        : MdRange(_documentOffset(reading, matter.start), _documentOffset(reading, matter.end)),
+  );
 }

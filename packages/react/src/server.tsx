@@ -282,7 +282,8 @@ export function MawyDocument({
     gfm: parse?.gfm ?? true,
     breaks: parse?.breaks ?? false,
     definitionLists: parse?.definitionLists ?? true,
-    headingIds: parse?.headingIds ?? true
+    headingIds: parse?.headingIds ?? true,
+    frontmatter: parse?.frontmatter ?? true
   });
 
   const context = {

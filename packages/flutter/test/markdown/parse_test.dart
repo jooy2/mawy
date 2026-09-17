@@ -530,4 +530,43 @@ void main() {
       );
     });
   });
+
+  group('frontmatter', () {
+    test('keeps the metadata at the top of a document out of what it says', () {
+      final MdDocument document = parseMarkdown('---\ntitle: Hi\ntags: [a, b]\n---\n\n# Body');
+
+      expect(document.root.children.length, 1);
+      expect(document.root.children.first, isA<MdHeading>());
+      expect(document.frontmatter?.start, 0);
+      expect(document.frontmatter?.end, 30);
+    });
+
+    test('closes on the other fence YAML writes', () {
+      final MdDocument document = parseMarkdown('---\ntitle: Hi\n...\n\n# Body');
+
+      expect(document.root.children.length, 1);
+      expect(document.root.children.first, isA<MdHeading>());
+    });
+
+    test('leaves a rule that is a rule', () {
+      // No closing fence, so the `---` is the rule it has always been.
+      final MdDocument rule = parseMarkdown('---\n\n# Just a rule above');
+
+      expect(rule.root.children.first, isA<MdThematicBreak>());
+      expect(rule.frontmatter, isNull);
+
+      // And a fence that is not the first line is not the top of the document.
+      expect(parseMarkdown('Text\n\n---\nnot: matter\n---').frontmatter, isNull);
+    });
+
+    test('reads the run as Markdown again when it is told to', () {
+      final MdDocument document = parseMarkdown(
+        '---\ntitle: Hi\n---\n\n# Body',
+        const MawyParseOptions(frontmatter: false),
+      );
+
+      expect(document.root.children.first, isA<MdThematicBreak>());
+      expect(document.frontmatter, isNull);
+    });
+  });
 }

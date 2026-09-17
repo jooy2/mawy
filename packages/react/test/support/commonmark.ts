@@ -134,7 +134,11 @@ export function writeHtml(source: string): string {
   const document = parseMarkdown(source, {
     gfm: false,
     definitionLists: false,
-    headingIds: false
+    headingIds: false,
+    // Another of the things this parser reads that the specification does not:
+    // a `---` at the top of an example is the rule the specification says it
+    // is, and the examples that open with one are examples about rules.
+    frontmatter: false
   });
   const out = new Out();
 

@@ -344,6 +344,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     const breaks = parse?.breaks ?? false;
     const definitionLists = parse?.definitionLists ?? true;
     const headingIds = parse?.headingIds ?? true;
+    const frontmatter = parse?.frontmatter ?? true;
 
     /**
      * What the listeners below read, kept somewhere they can read it later.
@@ -360,8 +361,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
      * keystroke cannot arrive between the tree being changed and this.
      */
     const options = React.useMemo(
-      () => ({ gfm, breaks, definitionLists, headingIds }),
-      [gfm, breaks, definitionLists, headingIds]
+      () => ({ gfm, breaks, definitionLists, headingIds, frontmatter }),
+      [gfm, breaks, definitionLists, headingIds, frontmatter]
     );
     const latest = React.useRef({
       value,

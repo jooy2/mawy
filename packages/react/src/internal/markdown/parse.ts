@@ -58,6 +58,12 @@ export interface MarkdownOptions {
    * @default true
    */
   headingIds?: boolean;
+  /**
+   * Whether a run fenced by `---` at the very top of the document is read as
+   * the metadata it is, and kept out of what the document says.
+   * @default true
+   */
+  frontmatter?: boolean;
 }
 
 /* -------------------------------------------------------------------------
@@ -356,18 +362,50 @@ function collectFootnotes(
   }
 }
 
+/** The opening fence, which is the whole of the first line and nothing else. */
+const MATTER_OPEN = /^---[ \t]*$/;
+/** And the closing one, which YAML writes either way. */
+const MATTER_CLOSE = /^(?:---|\.\.\.)[ \t]*$/;
+
+/**
+ * The run of metadata at the top of the document, as how many lines it takes
+ * and where it was written, or `null` where the document opens with anything
+ * else.
+ *
+ * The fence has to be the first line, and the run has to be closed. `---` on
+ * its own at the top of a document is a rule and stays one, and so is a `---`
+ * with a heading underlined by another further down — which is the ambiguity
+ * this notation has everywhere it is read, and every reader of it answers the
+ * same way.
+ */
+function matterIn(lines: readonly Line[]): { count: number; start: number; end: number } | null {
+  if (!lines.length || !MATTER_OPEN.test(lines[0].text)) {
+    return null;
+  }
+
+  for (let at = 1; at < lines.length; at += 1) {
+    if (MATTER_CLOSE.test(lines[at].text)) {
+      return { count: at + 1, start: lines[0].start, end: lines[at].start + lines[at].text.length };
+    }
+  }
+
+  return null;
+}
+
 export function parseMarkdown(source: string, options: MarkdownOptions = {}): MdDocument {
   const gfm = options.gfm ?? true;
   const breaks = options.breaks ?? false;
   const definitionLists = options.definitionLists ?? true;
   const headingIds = options.headingIds ?? true;
+  const frontmatter = options.frontmatter ?? true;
 
   const definitions = new Map<string, MdDefinition>();
   const footnotes = new Map<string, MdFootnoteDefinition>();
   const pending: PendingInline[] = [];
   const reading = read(source);
 
-  const children = parseBlocks(reading.lines, {
+  const matter = frontmatter ? matterIn(reading.lines) : null;
+  const children = parseBlocks(matter ? reading.lines.slice(matter.count) : reading.lines, {
     gfm,
     definitionLists,
     headingIds,
@@ -411,5 +449,15 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
 
   collectOutline(children, new Map(), outline);
 
-  return { root, outline, footnotes: used };
+  return {
+    root,
+    outline,
+    footnotes: used,
+    frontmatter: matter
+      ? {
+          start: documentOffset(reading, matter.start),
+          end: documentOffset(reading, matter.end)
+        }
+      : null
+  };
 }

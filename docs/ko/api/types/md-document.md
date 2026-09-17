@@ -14,6 +14,7 @@ interface MdDocument {
   root: MdRoot; // 블록들
   outline: MdOutlineEntry[]; // 모든 제목을 순서대로, 각각 고유한 슬러그와 함께
   footnotes: MdFootnoteDefinition[]; // 무언가 가리킨 각주만, 그 순서대로
+  frontmatter: MdRange | null; // 맨 위의 메타데이터가 쓰인 자리
 }
 ```
 
@@ -26,12 +27,15 @@ class MdDocument {
   final MdRoot root; // 블록들
   final List<MdOutlineEntry> outline; // 모든 제목을 순서대로, 각각 고유한 슬러그와 함께
   final List<MdFootnoteDefinition> footnotes; // 무언가 가리킨 각주만, 그 순서대로
+  final MdRange? frontmatter; // 맨 위의 메타데이터가 쓰인 자리
 }
 ```
 
 :::
 
 각주는 `root`에 들어 있지 않습니다. 각주는 저자가 편한 자리에 쓰고 독자는 맨 아래에서 읽는 것이라, 문서를 그리는 쪽이 본문 뒤에 그립니다.
+
+프런트매터도 마찬가지입니다. 문서가 말하는 것이 아니기 때문입니다. 범위만 실어 두었으니, 애플리케이션은 이미 가지고 있는 원문에서 제목이나 날짜를 읽어 가면 됩니다.
 
 ## 노드
 

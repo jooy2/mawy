@@ -1312,3 +1312,46 @@ describe('source positions', () => {
     expect(bare(root)).toEqual(bare(parseMarkdown(sample).root));
   });
 });
+
+describe('frontmatter', () => {
+  const at = (value: string, on = true) => parseMarkdown(value, { frontmatter: on });
+
+  it('keeps the metadata at the top of a document out of what it says', () => {
+    const document = at('---\ntitle: Hi\ntags: [a, b]\n---\n\n# Body');
+
+    expect(document.root.children.map((block) => block.type)).toEqual(['heading']);
+    expect(document.frontmatter).toEqual({ start: 0, end: 30 });
+    // And the application can read what it carries out of the source it has.
+    expect('---\ntitle: Hi\ntags: [a, b]\n---\n\n# Body'.slice(4, 26)).toBe(
+      'title: Hi\ntags: [a, b]'
+    );
+  });
+
+  it('closes on the other fence YAML writes', () => {
+    expect(at('---\ntitle: Hi\n...\n\n# Body').root.children.map((b) => b.type)).toEqual([
+      'heading'
+    ]);
+  });
+
+  it('leaves a rule that is a rule', () => {
+    // No closing fence, so the `---` is the rule it has always been.
+    const rule = at('---\n\n# Just a rule above');
+
+    expect(rule.root.children.map((block) => block.type)).toEqual(['thematicBreak', 'heading']);
+    expect(rule.frontmatter).toBe(null);
+
+    // And a fence that is not the first line is not the top of the document.
+    expect(at('Text\n\n---\nnot: matter\n---').frontmatter).toBe(null);
+  });
+
+  it('reads the run as Markdown again when it is told to', () => {
+    const document = at('---\ntitle: Hi\n---\n\n# Body', false);
+
+    expect(document.root.children.map((block) => block.type)).toEqual([
+      'thematicBreak',
+      'heading',
+      'heading'
+    ]);
+    expect(document.frontmatter).toBe(null);
+  });
+});

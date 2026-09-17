@@ -585,7 +585,12 @@ class MdOutlineEntry {
 /// A parsed document: the tree, its outline, and the footnotes under it.
 class MdDocument {
   /// Creates a parsed document.
-  const MdDocument({required this.root, required this.outline, required this.footnotes});
+  const MdDocument({
+    required this.root,
+    required this.outline,
+    required this.footnotes,
+    this.frontmatter,
+  });
 
   /// The blocks.
   final MdRoot root;
@@ -601,4 +606,14 @@ class MdDocument {
   /// after it. A footnote nobody referred to is not here, the same way a link
   /// reference definition nobody used is nowhere in the tree either.
   final List<MdFootnoteDefinition> footnotes;
+
+  /// Where the run of metadata at the top of the document was written, or
+  /// `null` where there was none.
+  ///
+  /// It is not in [root], because it is not something the document says: a
+  /// `---` fence at the very top is how every static site generator carries a
+  /// title, a date and whatever else beside a document rather than in it, and a
+  /// reader is shown none of it. The range is here so an application can read
+  /// what it carries out of the source it already has.
+  final MdRange? frontmatter;
 }

@@ -863,6 +863,18 @@ export interface MawyParseOptions {
    * @default true
    */
   headingIds?: boolean;
+  /**
+   * Whether a run fenced by `---` at the very top of the document is read as
+   * the metadata it is, and kept out of what the document says.
+   *
+   * On. The notation carries a title, a date and whatever else beside a
+   * document rather than in it, and a reader is shown none of it — drawn as
+   * Markdown it is a rule with a heading underlined by another, which is what
+   * it used to come out as. Turn it off for a document whose `---` at the top
+   * is a rule and means to be one.
+   * @default true
+   */
+  frontmatter?: boolean;
 }
 
 /**

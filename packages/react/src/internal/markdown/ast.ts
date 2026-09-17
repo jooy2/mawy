@@ -422,4 +422,15 @@ export interface MdDocument {
    * author rather than a part of what the document says.
    */
   footnotes: MdFootnoteDefinition[];
+  /**
+   * Where the run of metadata at the top of the document was written, or
+   * `null` where there was none.
+   *
+   * It is not in `root`, because it is not something the document says: a
+   * `---` fence at the very top is how every static site generator carries a
+   * title, a date and whatever else beside a document rather than in it, and a
+   * reader is shown none of it. The range is here so an application can read
+   * what it carries out of the source it already has.
+   */
+  frontmatter: MdRange | null;
 }

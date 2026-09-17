@@ -116,7 +116,7 @@ CommonMark, and GitHub's additions on top of it:
 ```tsx
 <MawyViewer
   value={document}
-  parse={{ gfm: true, breaks: false, definitionLists: true, headingIds: true }}
+  parse={{ gfm: true, breaks: false, definitionLists: true, headingIds: true, frontmatter: true }}
 />
 ```
 
@@ -132,6 +132,7 @@ MawyViewer(
     breaks: false,
     definitionLists: true,
     headingIds: true,
+    frontmatter: true,
   ),
 );
 ```
@@ -142,6 +143,7 @@ MawyViewer(
 - **`breaks`** (default `false`) — whether a single newline inside a paragraph is a line break. The CommonMark specification says it is not, while chat clients and issue trackers treat it as one. A reader who has never written Markdown expects the latter, so this is an option rather than a fixed behaviour.
 - **`definitionLists`** (default `true`) — whether `: ` under a line of text is a term and what it means. See below.
 - **`headingIds`** (default `true`) — whether a trailing `{#id}` on a heading is the name that heading is drawn under. See below.
+- **`frontmatter`** (default `true`) — whether a run fenced by `---` at the very top of the document is the metadata it looks like. See below.
 
 **A line of a table cell written as a list item is drawn as one.** A cell of a GitHub table holds no block, so `- dig<br>  - deeper<br>- [x] water` is words to every parser, this one included, and GitHub draws the dashes. This package draws each such line with the marker the list it reads as would have: a bullet for `-`, `*` or `+`, a checkbox for a task, the number for a numbered item, and each two spaces in front of the marker one step further in. The words are the same words either way; only the markers are drawn differently. A line that is a marker and nothing else, such as the `-` many tables put in an empty cell, stays a dash.
 
@@ -186,6 +188,25 @@ Mawy : This. : And the editor beside it.
 A term is a line of text, and what it means is a line opening with a colon **and a space**. Requiring the space is what keeps `:warning:` under a sentence from turning that sentence into a term. Several terms may share a meaning, several meanings may share a term, and a meaning may be a whole run of blocks if the lines after the first are indented. A blank line before a meaning spaces the whole list out, exactly as it does in a bullet list.
 
 Pass `definitionLists: false` in `parse` to turn it off, for a document that has to mean exactly what it would mean on GitHub.
+
+### Frontmatter
+
+A run fenced by `---` at the very top of a document is metadata rather than something the document says. It is how every static site generator carries a title, a date and whatever else beside a document, and a reader is shown none of it.
+
+```md
+---
+title: Reading a document
+date: 2026-09-18
+---
+
+# The body starts here
+```
+
+Drawn as Markdown that is a rule with a heading underlined by another, which is what it used to come out as. It is read as metadata now and kept out of the document, so the page opens with the body.
+
+The fence has to be the first line and the run has to be closed, by `---` or by `...`. A `---` at the top with nothing closing it is the rule it has always been, and so is one further down the page. Where the two readings collide — a `---`, a line of words, another `---` — this reads the metadata, which is what every reader of the notation does; pass `frontmatter: false` in `parse` for a document whose `---` at the top is a rule and means to be one.
+
+Nothing is thrown away. [`MdDocument`](../api/types/md-document) carries the range it was written at, so an application that wants the title reads it out of the source it already has.
 
 ### Heading anchors
 
