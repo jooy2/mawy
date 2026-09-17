@@ -1844,7 +1844,15 @@ class _IconButtonState extends State<_IconButton> {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: _hovered || widget.active ? tokens.backgroundRaised : null,
+              // At rest it stands on a plate of the code's own colour, because
+              // it sits over the block and a narrow one has a line of code
+              // running under the corner it is in. The React package blurs what
+              // is behind that plate, which a browser does for the price of a
+              // declaration; here it would be a `BackdropFilter`, and a layer
+              // per code block is what a long document on a phone cannot spend.
+              color: _hovered || widget.active
+                  ? tokens.backgroundRaised
+                  : tokens.codeBackground.withValues(alpha: 0.88),
               borderRadius: BorderRadius.circular(MawyRadius.small),
               border: Border.all(
                 color: _hovered || widget.active ? tokens.border : const Color(0x00000000),

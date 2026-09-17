@@ -24,6 +24,8 @@
 
 ### Changed
 
+- **The button that copies a code block stands on a plate.** It sits in a corner of the block with the code running under it, so a block narrow enough for a line to reach that corner had the icon and the code in one place. It is drawn on a plate of the code's own colour now. The React package blurs what is behind that plate, which a browser does for the price of a declaration; here it would be a `BackdropFilter`, and a layer per code block is what a long document on a phone cannot spend, so the colour carries it alone.
+
 - **A code group is one surface rather than a box with a box in it.** The block inside kept the edge, the rounded corners and the language label it has when it stands on its own, so a group came out as a box in a box with four slivers of the screen showing through at the inner corners, and the tab over the block said the language a second time. A block is told that the box is already drawn now — `MawyInsideBox`, which is what the React package says with a selector — and draws neither. The row of names is a shade off the code under it, so it reads as the chrome it is rather than as the first line of the block.
 
 - **A rule is drawn down the gap between the line numbers and the source.** Grey numbers against the same background as the text beside them read as one column with a wide space in it, and there was nothing on the screen to say the numbers are not part of the document. The line is `MawyTokens.border`, the same one that goes around the editor, and it is drawn over the field's padding rather than inside it, so it is the height of the field the way the React package's is. `gutterWidthFor` is where both the column and the rule get the column's width, so the two cannot disagree about where the gap is.
