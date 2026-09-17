@@ -1087,6 +1087,40 @@ describe('the toolbar and the keyboard', () => {
   });
 
   /**
+   * And the way back in. The paragraph the give-up leaves has nothing in it
+   * and no blank line of its own, so the one thing a delete there can mean is
+   * the list going back together — and without it the key was dead, which is
+   * what a reader who changed their mind found. See `betweenItems`.
+   */
+  it('takes the line a given-up bullet left back, with Backspace or with Delete', async () => {
+    for (const key of ['{Backspace}', '{Delete}'] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <div style={WIDE}>
+          <MawyEditor defaultValue={'- aa\n- bb\n- cc'} mode="wysiwyg" onChange={onChange} />
+        </div>
+      );
+      const body = bodyOf(screen);
+
+      put(body, 'bb', 2);
+      await userEvent.keyboard('{Enter}');
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- aa\n- bb\n- \n- cc'));
+      await userEvent.keyboard('{Enter}');
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- aa\n- bb\n\n- cc'));
+
+      await userEvent.keyboard(key);
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- aa\n- bb\n- cc'));
+
+      // And it is the one tight list it was, rather than the two it was drawn
+      // as while the caret was between them.
+      await vi.waitFor(() =>
+        expect([...body.children].map((block) => block.tagName)).toEqual(['UL'])
+      );
+      await screen.unmount();
+    }
+  });
+
+  /**
    * The same way out, taken from an item the previous `Enter` made, which is
    * how anybody reaches it: type a list, press `Enter` in the middle of it,
    * press it again on the item that opened.

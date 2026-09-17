@@ -579,12 +579,37 @@ function asideRule(value: string, rule: MdRange): MawyEdit {
   return { value: gone.value, caret: Math.max(0, gone.start - 1), betweenBlocks: true };
 }
 
+/**
+ * Whether the blank line at `at` is a list's own separator, with items either
+ * side of it.
+ *
+ * `Enter` on an empty item in the middle of a list gives the marker up and
+ * leaves that line behind. One blank line does not end a list, so what is left
+ * is one loose list with the caret between two of its items — drawn as the two
+ * lists and the empty paragraph the first letter typed will make. See
+ * `withRoom`.
+ *
+ * Taking the line away is what puts the list back the way it was, and it is
+ * the only thing a delete on that paragraph can mean: it has nothing in it and
+ * no blank line of its own to give up.
+ */
+function betweenItems(value: string, at: number, options: MarkdownOptions): boolean {
+  return parseMarkdown(value, options).root.children.some(
+    (block) =>
+      block.type === 'list' &&
+      block.range.start < at &&
+      at < block.range.end &&
+      !block.children.some((item) => item.range.start <= at && at <= item.range.end)
+  );
+}
+
 function deleteBefore(
   root: HTMLElement,
   value: string,
   node: Node,
   offset: number,
-  caret: number
+  caret: number,
+  options: MarkdownOptions
 ): MawyEdit | null {
   const drawn = sourceAt(root, node, offset, value);
 
@@ -642,7 +667,11 @@ function deleteBefore(
     // — the one line ending between it and the block above is the separator
     // those two blocks need — and taking that away joins them: a paragraph
     // over a divider is that paragraph underlined, which is a heading.
-    return lines(value, above.end, empty) > 1
+    //
+    // Between two items of one list, joining them is the whole point: the line
+    // is the list's own separator and the list goes back to what it was. See
+    // `betweenItems`.
+    return lines(value, above.end, empty) > 1 || betweenItems(value, empty, options)
       ? { value: value.slice(0, above.end) + value.slice(empty), caret: above.end }
       : null;
   }
@@ -690,7 +719,8 @@ function deleteAfter(
   value: string,
   node: Node,
   offset: number,
-  caret: number
+  caret: number,
+  options: MarkdownOptions
 ): MawyEdit | null {
   const atom = atomAt(root, node, offset, false);
 
@@ -716,7 +746,7 @@ function deleteAfter(
       return asideRule(value, below);
     }
 
-    return lines(value, empty, below.start) > 1
+    return lines(value, empty, below.start) > 1 || betweenItems(value, empty, options)
       ? { value: value.slice(0, empty) + value.slice(below.start), caret: empty }
       : null;
   }
@@ -1931,12 +1961,12 @@ export function editFor(
 
     case 'deleteContentBackward':
       return start === end
-        ? deleteBefore(root, value, range.startContainer, range.startOffset, start)
+        ? deleteBefore(root, value, range.startContainer, range.startOffset, start, options)
         : deleted(value, start, end);
 
     case 'deleteContentForward':
       return start === end
-        ? deleteAfter(root, value, range.startContainer, range.startOffset, start)
+        ? deleteAfter(root, value, range.startContainer, range.startOffset, start, options)
         : deleted(value, start, end);
 
     // The run is on the clipboard by the time this arrives — the browser puts
