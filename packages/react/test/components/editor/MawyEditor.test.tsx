@@ -1087,6 +1087,35 @@ describe('the toolbar and the keyboard', () => {
   });
 
   /**
+   * And the way out of it that is not a key at all. Nothing was typed on the
+   * line, so there is nothing to keep it for: a reader who changed their mind
+   * by moving the caret was left with the list drawn further apart than the
+   * one they had, and nothing on the page to say why.
+   */
+  it('takes the line a given-up bullet left back when the caret leaves it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <div style={WIDE}>
+        <MawyEditor defaultValue={'- aa\n- bb\n- cc'} mode="wysiwyg" onChange={onChange} />
+      </div>
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'bb', 2);
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- aa\n- bb\n- \n- cc'));
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- aa\n- bb\n\n- cc'));
+
+    await userEvent.keyboard('{ArrowUp}');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- aa\n- bb\n- cc'));
+    await vi.waitFor(() =>
+      expect([...body.children].map((block) => block.tagName)).toEqual(['UL'])
+    );
+  });
+
+  /**
    * And the way back in. The paragraph the give-up leaves has nothing in it
    * and no blank line of its own, so the one thing a delete there can mean is
    * the list going back together — and without it the key was dead, which is

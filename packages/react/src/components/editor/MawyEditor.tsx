@@ -51,6 +51,7 @@ import {
   type MawyTableCommand
 } from '../../internal/commands.js';
 import {
+  betweenItems,
   listKept,
   marksAt,
   nestingWaits,
@@ -900,11 +901,45 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   }, [showSource, readSelection]);
 
   /** What the caret is reported as while the drawn document has it. */
-  const readDrawnSelection = React.useCallback((next: { start: number; end: number }) => {
-    setSelection(next);
-    // The empty paragraph is only there while the caret is in it.
-    setRoom((was) => (was === null || (next.start === was && next.end === was) ? was : null));
-  }, []);
+  const readDrawnSelection = React.useCallback(
+    (next: { start: number; end: number }) => {
+      // A caret that leaves the paragraph it was given, with nothing typed on
+      // it, takes the blank line that paragraph was drawn on back out again —
+      // where that line is a list's own separator and nothing else.
+      //
+      // `Enter` on an empty item in the middle of a list gives the marker up
+      // and writes that line, and one blank line between two items is a loose
+      // list to CommonMark: every item a paragraph and further from the next.
+      // So a reader who changed their mind by moving the caret was left with a
+      // list drawn further apart than the one they had, and nothing on the
+      // page to say why. Nothing was typed on the line, so there is nothing to
+      // keep it for. See `betweenItems` and `withRoom`.
+      if (
+        room !== null &&
+        (next.start !== room || next.end !== room) &&
+        text[room - 1] === '\n' &&
+        text[room] === '\n' &&
+        betweenItems(text, room, options)
+      ) {
+        // Every place past the line moves back with it, the caret that has
+        // just been put down among them.
+        const back = (at: number) => (at >= room ? at - 1 : at);
+        const caret = { start: back(next.start), end: back(next.end) };
+
+        pending.current = [caret.start, caret.end];
+        setRoom(null);
+        setSelection(caret);
+        write(text.slice(0, room - 1) + text.slice(room));
+
+        return;
+      }
+
+      setSelection(next);
+      // The empty paragraph is only there while the caret is in it.
+      setRoom((was) => (was === null || (next.start === was && next.end === was) ? was : null));
+    },
+    [options, room, text, write]
+  );
 
   /**
    * An edit made in the drawn document: the Markdown changes, and where the

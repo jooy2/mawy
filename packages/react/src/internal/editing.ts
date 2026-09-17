@@ -593,7 +593,7 @@ function asideRule(value: string, rule: MdRange): MawyEdit {
  * the only thing a delete on that paragraph can mean: it has nothing in it and
  * no blank line of its own to give up.
  */
-function betweenItems(value: string, at: number, options: MarkdownOptions): boolean {
+export function betweenItems(value: string, at: number, options: MarkdownOptions): boolean {
   return parseMarkdown(value, options).root.children.some(
     (block) =>
       block.type === 'list' &&
