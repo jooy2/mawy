@@ -30,16 +30,26 @@ import 'package:mawy/src/internal/roving.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
 
-/// A line that opens or closes a fenced block: its marker, and its language.
-final RegExp _fence = RegExp(r'^[ \t]*(`{3,}|~{3,})[ \t]*([^\s`~]*)');
+/// A line that opens or closes a fenced block: its marker, its language, and
+/// whatever else it wrote after that.
+final RegExp _fence = RegExp(r'^[ \t]*(`{3,}|~{3,})[ \t]*([^\s`~]*)[ \t]*(.*)$');
 
-/// The language each block of [source] opened with, in order.
+/// The `[Some name]` a fence wrote after its language.
+final RegExp _fenceName = RegExp(r'\[([^\]]*)\]');
+
+/// What each block of [source] calls itself, in order.
+///
+/// Its `[Some name]` where it wrote one and its language otherwise. The name in
+/// brackets is what VitePress, Docusaurus and the rest read, so a document
+/// written for one of those arrives here with its tabs already named; it is
+/// nothing to the parser, which keeps it as the fence's `meta` and draws none
+/// of it.
 ///
 /// Read by walking rather than by matching every fence, because a closing fence
 /// is a fence too: matched all at once, a group of two blocks comes back with
-/// four languages and every other one empty. A block closes on the marker it
-/// opened with, at least as long and with nothing after it.
-List<String> _languagesIn(String source) {
+/// four names and every other one empty. A block closes on the marker it opened
+/// with, at least as long and with nothing after it.
+List<String> _namesIn(String source) {
   final List<String> out = <String>[];
   String? open;
 
@@ -55,7 +65,10 @@ List<String> _languagesIn(String source) {
 
     if (open == null) {
       open = marker;
-      out.add(language);
+
+      final String name = _fenceName.firstMatch(found.group(3)!)?.group(1)!.trim() ?? '';
+
+      out.add(name.isNotEmpty ? name : language);
     } else if (marker[0] == open[0] && marker.length >= open.length && language.isEmpty) {
       open = null;
     }
@@ -66,24 +79,24 @@ List<String> _languagesIn(String source) {
 
 /// What each tab is called.
 ///
-/// `{tabs=…}` first, because a fence says what colours the code rather than
-/// what to call it: a block written ```` ```sh ```` is a terminal to a reader
-/// and `sh` to a highlighter. Then the fence's own language, and then the
-/// block's number, so a group always has as many names as it has blocks.
+/// `{tabs=…}` first, because it is the group's own list and was written knowing
+/// what is in it. Then what the block called itself — its `[Some name]`, or the
+/// language it was fenced with — and then the block's number, so a group always
+/// has as many names as it has blocks.
 List<String> _namesFor(String source, Map<String, String> attributes, int count) {
   final List<String> given = (attributes['tabs'] ?? '')
       .split(',')
       .map((String name) => name.trim())
       .where((String name) => name.isNotEmpty)
       .toList();
-  final List<String> languages = _languagesIn(source);
+  final List<String> named = _namesIn(source);
 
   return List<String>.generate(count, (int at) {
     if (at < given.length) {
       return given[at];
     }
 
-    return at < languages.length && languages[at].isNotEmpty ? languages[at] : '${at + 1}';
+    return at < named.length && named[at].isNotEmpty ? named[at] : '${at + 1}';
   });
 }
 

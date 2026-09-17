@@ -350,7 +350,7 @@ sub(<int>[10, 1, 5]);
 :::
 ````
 
-A tab per block, named by the language the fence was written with. `{tabs=Browser,Flutter}` names them instead where a fence's language is not the word a reader should see — `sh` for a tab that means Terminal. A group holding one block takes its name from the title the line wrote, so `::: lang js` is a panel called `js` rather than a tab beside a label saying the same word twice.
+A tab per block, named by the language the fence was written with. A fence that wrote a `[Some name]` after its language is called that instead, which is how every tool that ships this block spells a tab's name, and `{tabs=Browser,Flutter}` on the group's own line names all of them at once — either way for a tab whose fence says `sh` and whose name should say Terminal. Where a document wrote both, the group's list is the one taken, because it was written knowing what is in the group. A group holding one block takes its name from the title the line wrote, so `::: lang js` is a panel called `js` rather than a tab beside a label saying the same word twice.
 
 One tab is in the tab order and the arrows move between them, `Home` and `End` to the ends, which is what the tab pattern asks for. Only the chosen block is in the page, so a find on the page finds what a reader can see.
 

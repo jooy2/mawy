@@ -87,6 +87,34 @@ describe('MawyCodeGroup', () => {
   });
 
   /**
+   * `[Some name]` after the language is how every tool that ships this block
+   * spells a tab's name, so a document written for one of those arrives here
+   * with its tabs already named.
+   */
+  it('takes the name a fence wrote in brackets after its language', async () => {
+    const screen = await draw(
+      GROUP.replace('```js', '```js [Browser]').replace('```dart', '```dart [Flutter]')
+    );
+
+    expect(
+      [...screen.container.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)
+    ).toEqual(['Browser', 'Flutter']);
+  });
+
+  it("lets the group's own list of names beat the ones the fences wrote", async () => {
+    const screen = await draw(
+      GROUP.replace('::: code-group', '::: code-group{tabs=One,Two}').replace(
+        '```js',
+        '```js [Browser]'
+      )
+    );
+
+    expect(
+      [...screen.container.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)
+    ).toEqual(['One', 'Two']);
+  });
+
+  /**
    * A group that named itself is one answer written out rather than a block
    * per tab: `::: lang js` is the JavaScript of something, prose and code
    * together, and a tab per paragraph in it is a row of numbers nobody wrote.

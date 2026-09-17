@@ -30,9 +30,11 @@
  * :::
  * ````
  *
- * A tab per block, named by the language the fence was written with, and
- * `{tabs=a,b}` names them instead where a fence's language is not the word a
- * reader should see — `sh` for a tab that means Terminal.
+ * A tab per block, named by the language the fence was written with. A fence
+ * that wrote a `[Some name]` after its language is called that instead, which
+ * is how every tool that ships this block spells a tab's name, and `{tabs=a,b}`
+ * on the group names all of them at once — either way for a tab whose fence
+ * says `sh` and whose name should say Terminal.
  *
  * The other shape a document writes is one language per group, which is what
  * `::: lang js` says — and there the group is one answer written out, prose and
@@ -44,18 +46,30 @@
 import * as React from 'react';
 import type { MawyDirectiveProps } from '../../types.js';
 
-/** A line that opens or closes a fenced block: its marker, and its language. */
-const FENCE = /^[ \t]*(`{3,}|~{3,})[ \t]*([^\s`~]*)/;
+/**
+ * A line that opens or closes a fenced block: its marker, its language, and
+ * whatever else it wrote after that.
+ */
+const FENCE = /^[ \t]*(`{3,}|~{3,})[ \t]*([^\s`~]*)[ \t]*(.*)$/;
+
+/** The `[Some name]` a fence wrote after its language. */
+const FENCE_NAME = /\[([^\]]*)\]/;
 
 /**
- * The language each block of the source opened with, in order.
+ * What each block of the source calls itself, in order.
+ *
+ * Its `[Some name]` where it wrote one and its language otherwise. The name in
+ * brackets is what VitePress, Docusaurus and the rest read, so a document
+ * written for one of those arrives here with its tabs already named; it is
+ * nothing to the parser, which keeps it as the fence's `meta` and draws none of
+ * it.
  *
  * Read by walking rather than by matching every fence, because a closing fence
  * is a fence too: matched all at once, a group of two blocks comes back with
- * four languages and every other one empty. A block closes on the marker it
- * opened with, at least as long and with nothing after it.
+ * four names and every other one empty. A block closes on the marker it opened
+ * with, at least as long and with nothing after it.
  */
-function languagesIn(source: string): string[] {
+function namesIn(source: string): string[] {
   const out: string[] = [];
   let open: string | null = null;
 
@@ -68,7 +82,7 @@ function languagesIn(source: string): string[] {
 
     if (open === null) {
       open = found[1];
-      out.push(found[2]);
+      out.push(FENCE_NAME.exec(found[3])?.[1].trim() || found[2]);
     } else if (found[1][0] === open[0] && found[1].length >= open.length && !found[2]) {
       open = null;
     }
@@ -80,10 +94,10 @@ function languagesIn(source: string): string[] {
 /**
  * What each tab is called.
  *
- * `{tabs=…}` first, because a fence says what colours the code rather than what
- * to call it: a block written ```` ```sh ```` is a terminal to a reader and `sh`
- * to a highlighter. Then the fence's own language, and then the block's number,
- * so a group always has as many names as it has blocks.
+ * `{tabs=…}` first, because it is the group's own list and was written knowing
+ * what is in it. Then what the block called itself — its `[Some name]`, or the
+ * language it was fenced with — and then the block's number, so a group always
+ * has as many names as it has blocks.
  */
 function namesFor(source: string, attributes: Readonly<Record<string, string>>, count: number) {
   const given = attributes.tabs
@@ -92,11 +106,11 @@ function namesFor(source: string, attributes: Readonly<Record<string, string>>, 
         .map((name) => name.trim())
         .filter(Boolean)
     : [];
-  const languages = languagesIn(source);
+  const named = namesIn(source);
 
   return Array.from(
     { length: count },
-    (unused, index) => given[index] || languages[index] || `${index + 1}`
+    (unused, index) => given[index] || named[index] || `${index + 1}`
   );
 }
 

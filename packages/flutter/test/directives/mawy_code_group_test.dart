@@ -75,6 +75,47 @@ void main() {
       expect(find.text('js'), findsNothing);
     });
 
+    /// `[Some name]` after the language is how every tool that ships this block
+    /// spells a tab's name, so a document written for one of those arrives here
+    /// with its tabs already named.
+    testWidgets('takes the name a fence wrote in brackets after its language', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          _viewer(
+            document
+                .replaceFirst('```js', '```js [Browser]')
+                .replaceFirst('```dart', '```dart [Flutter]'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Browser'), findsOneWidget);
+      expect(find.text('Flutter'), findsOneWidget);
+      expect(find.text('js'), findsNothing);
+    });
+
+    testWidgets("lets the group's own list of names beat the ones the fences wrote", (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          _viewer(
+            document
+                .replaceFirst('::: code-group', '::: code-group{tabs=One,Two}')
+                .replaceFirst('```js', '```js [Browser]'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('One'), findsOneWidget);
+      expect(find.text('Two'), findsOneWidget);
+      expect(find.text('Browser'), findsNothing);
+    });
+
     testWidgets('names a group of one by the title the line wrote', (WidgetTester tester) async {
       await tester.pumpWidget(host(_viewer('::: lang bash\n\n```bash\nnpm i mawy\n```\n\n:::')));
       await tester.pumpAndSettle();
