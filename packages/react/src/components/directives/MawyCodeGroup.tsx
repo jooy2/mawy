@@ -35,9 +35,10 @@
  * reader should see — `sh` for a tab that means Terminal.
  *
  * The other shape a document writes is one language per group, which is what
- * `::: lang js` says. A group holding one block takes its name from the
- * directive's own title rather than drawing that title beside a tab that
- * repeats it, so three of those in a row are three named panels.
+ * `::: lang js` says — and there the group is one answer written out, prose and
+ * code together, rather than a block per tab. So a title is what decides: a
+ * group that wrote one is one tab called that, holding everything in it, and a
+ * group that wrote none is a tab per block.
  */
 
 import * as React from 'react';
@@ -114,25 +115,26 @@ export function MawyCodeGroup({
   children,
   source
 }: MawyDirectiveProps): React.ReactElement | null {
-  const blocks = React.Children.toArray(children);
-  // A group of one is named by the title the directive wrote, where it wrote
-  // one: `::: lang js` is a block called `js`, and a tab beside a label that
-  // says the same word twice is a word too many.
-  const titled = blocks.length === 1 && label ? label : null;
-  const names = namesFor(source, attributes, blocks.length);
+  const inside = React.Children.toArray(children);
+  // A group that named itself is one answer written out — `::: lang js` is the
+  // JavaScript of it, prose and code together — so the whole of it is one tab
+  // under that name. A group that named nothing is a tab per block, which is
+  // what `::: code-group` around three fences means.
+  const panels = label ? [inside] : inside.map((block) => [block]);
+  const names = label ? [label] : namesFor(source, attributes, inside.length);
   const id = React.useId();
   const [at, setAt] = React.useState(0);
   const tabs = React.useRef<(HTMLButtonElement | null)[]>([]);
   // A group whose blocks changed under a chosen tab keeps a number it no longer
   // has, and a panel nobody can see.
-  const chosen = Math.min(at, Math.max(blocks.length - 1, 0));
+  const chosen = Math.min(at, Math.max(panels.length - 1, 0));
 
-  if (!blocks.length) {
+  if (!inside.length) {
     return null;
   }
 
   const move = (to: number) => {
-    const next = (to + blocks.length) % blocks.length;
+    const next = (to + panels.length) % panels.length;
 
     setAt(next);
     tabs.current[next]?.focus();
@@ -143,7 +145,7 @@ export function MawyCodeGroup({
       ArrowRight: chosen + 1,
       ArrowLeft: chosen - 1,
       Home: 0,
-      End: blocks.length - 1
+      End: panels.length - 1
     };
 
     if (!(event.key in step)) {
@@ -156,20 +158,11 @@ export function MawyCodeGroup({
 
   return (
     <div className="mawy-md-code-group">
-      {/* Named by the directive's own label where it wrote one. Nothing is made
-          up where it did not: the words would be this library's, and the one
-          place it keeps its own words is `MawyStrings`, which a directive a
-          document registered never sees. */}
-      <div
-        className="mawy-md-code-tabs"
-        role="tablist"
-        aria-labelledby={label && !titled ? `${id}-label` : undefined}
-      >
-        {label && !titled ? (
-          <span className="mawy-md-code-group-label" id={`${id}-label`}>
-            {label}
-          </span>
-        ) : null}
+      {/* Nothing is named in English where the document named nothing: the
+          words would be this library's, and the one place it keeps its own
+          words is `MawyStrings`, which a directive a document registered never
+          sees. */}
+      <div className="mawy-md-code-tabs" role="tablist">
         {names.map((name, index) => (
           <button
             key={index}
@@ -188,7 +181,7 @@ export function MawyCodeGroup({
             onClick={() => setAt(index)}
             onKeyDown={onKeyDown}
           >
-            {titled ?? name}
+            {name}
           </button>
         ))}
       </div>
@@ -198,7 +191,7 @@ export function MawyCodeGroup({
         className="mawy-md-code-panel"
         aria-labelledby={`${id}-tab-${chosen}`}
       >
-        {blocks[chosen]}
+        {panels[chosen]}
       </div>
     </div>
   );

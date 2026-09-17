@@ -25,7 +25,9 @@ const GROUP = [
 ].join('\n');
 
 const draw = (value: string) =>
-  render(<MawyViewer value={value} directives={{ 'code-group': MawyCodeGroup }} />);
+  render(
+    <MawyViewer value={value} directives={{ 'code-group': MawyCodeGroup, lang: MawyCodeGroup }} />
+  );
 
 describe('MawyCodeGroup', () => {
   it('draws a tab per block, named by the language the fence was written with', async () => {
@@ -82,6 +84,35 @@ describe('MawyCodeGroup', () => {
     expect(
       [...screen.container.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent)
     ).toEqual(['Browser', 'Flutter']);
+  });
+
+  /**
+   * A group that named itself is one answer written out rather than a block
+   * per tab: `::: lang js` is the JavaScript of something, prose and code
+   * together, and a tab per paragraph in it is a row of numbers nobody wrote.
+   */
+  it('makes a titled group one tab holding everything in it', async () => {
+    const screen = await draw(
+      [
+        '::: lang js',
+        '',
+        'Words about it.',
+        '',
+        '```javascript',
+        'const a = 1;',
+        '```',
+        '',
+        'And more words.',
+        '',
+        ':::'
+      ].join('\n')
+    );
+    const tabs = screen.container.querySelectorAll('[role="tab"]');
+
+    expect([...tabs].map((tab) => tab.textContent)).toEqual(['js']);
+    expect(screen.container.textContent).toContain('Words about it.');
+    expect(screen.container.textContent).toContain('const a = 1;');
+    expect(screen.container.textContent).toContain('And more words.');
   });
 
   it('draws nothing for a group with nothing in it', async () => {

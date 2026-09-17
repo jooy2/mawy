@@ -1351,11 +1351,29 @@
   color: var(--mawy-fg);
 }
 
-/* The block inside has the group's edge around it and needs none of its own. */
-.mawy-root .mawy-md-code-panel > pre {
+/*
+ * A block inside has the group's edge around it and needs none of its own: two
+ * borders one inside the other is a box in a box, and the margin between them
+ * is a strip of nothing.
+ */
+.mawy-root .mawy-md-code-panel > .mawy-md-pre {
   margin: 0;
   border: 0;
   border-radius: 0;
+}
+
+/* Prose in a group is a paragraph in a box, and wants the padding a box gives
+ * its words rather than the none a code block needs. */
+.mawy-root .mawy-md-code-panel > :not(.mawy-md-pre) {
+  margin: 0.85em 14px;
+}
+
+.mawy-root .mawy-md-code-panel > :not(.mawy-md-pre):first-child {
+  margin-top: 14px;
+}
+
+.mawy-root .mawy-md-code-panel > :not(.mawy-md-pre):last-child {
+  margin-bottom: 14px;
 }
 
 /* Headings ---------------------------------------------------------------- */
