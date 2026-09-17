@@ -739,6 +739,39 @@ void main() {
       expect(find.byType(MawySourceGutter), findsOneWidget);
     });
 
+    /// The rule down the gap, which is what says the numbers are not the
+    /// document. It is drawn over the field's padding rather than inside it,
+    /// so it is the height of the field the way the stylesheet's is.
+    testWidgets('rules the gap between the numbers and the text', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(defaultValue: 'One\nTwo', defaultMode: MawyEditorMode.plain),
+          size: const Size(600, 400),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Finder rule = find.descendant(
+        of: find.byType(MawySourceField),
+        matching: find.byWidgetPredicate(
+          (Widget widget) => widget is ColoredBox && widget.color == MawyTokens.light.border,
+        ),
+      );
+
+      expect(rule, findsOneWidget);
+
+      final RenderBox box = tester.renderObject(rule) as RenderBox;
+      final RenderBox gutter = tester.renderObject(find.byType(MawySourceGutter)) as RenderBox;
+
+      expect(box.size.width, 1);
+      // Halfway along the gap the row leaves between the two.
+      expect(
+        tester.getTopLeft(rule).dx - (tester.getTopRight(find.byType(MawySourceGutter)).dx),
+        closeTo(7, 0.5),
+      );
+      expect(box.size.height, greaterThan(gutter.size.height));
+    });
+
     testWidgets('draws no gutter when it was told not to', (WidgetTester tester) async {
       await tester.pumpWidget(
         host(

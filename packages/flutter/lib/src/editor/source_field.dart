@@ -1119,20 +1119,40 @@ class _MawySourceFieldState extends State<MawySourceField>
       );
     }
 
+    final TextStyle numbers = style.copyWith(color: tokens.foregroundSubtle);
+
     return Container(
       color: tokens.background,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: <Widget>[
-          MawySourceGutter(
-            editable: editableTextKey,
-            text: controller.text,
-            style: style.copyWith(color: tokens.foregroundSubtle),
-            scroller: widget.scrollController,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                MawySourceGutter(
+                  editable: editableTextKey,
+                  text: controller.text,
+                  style: numbers,
+                  scroller: widget.scrollController,
+                ),
+                const SizedBox(width: _gutterGap),
+                Expanded(child: field),
+              ],
+            ),
           ),
-          const SizedBox(width: _gutterGap),
-          Expanded(child: field),
+          // The rule down the gap, in the same colour as the line around the
+          // editor: grey numbers against the text's own background read as one
+          // column with a wide space in it, and this is what says the numbers
+          // are not part of the document. Over the padding rather than inside
+          // it, so it is the height of the field the way the stylesheet's is —
+          // which is why it is here and not a third child of the row.
+          PositionedDirectional(
+            start: 16 + gutterWidthFor(context, controller.text, numbers) + _gutterGap / 2,
+            top: 0,
+            bottom: 0,
+            child: SizedBox(width: 1, child: ColoredBox(color: tokens.border)),
+          ),
         ],
       ),
     );
@@ -1141,6 +1161,28 @@ class _MawySourceFieldState extends State<MawySourceField>
 
 /// The gap between the numbers and the text, which is `--mawy-src-gap`.
 const double _gutterGap = 14;
+
+/// How wide the column of numbers is for a document this long.
+///
+/// Monospace, so the column is exactly as wide as its widest number and
+/// nothing has to be measured twice — the arithmetic the stylesheet does with
+/// `ch`. Read by the column itself and by the rule drawn beside it, so the two
+/// cannot disagree about where the gap is.
+double gutterWidthFor(BuildContext context, String text, TextStyle style) {
+  final int digits = '${'\n'.allMatches(text).length + 1}'.length;
+  final TextPainter ruler = TextPainter(
+    text: TextSpan(text: '0' * digits, style: style),
+    textDirection: Directionality.of(context),
+  )..layout();
+  final double width = ruler.width;
+
+  // A `TextPainter` holds a laid-out paragraph, which is memory the engine gave
+  // it rather than memory Dart will collect. One made per build and left is one
+  // leaked per build.
+  ruler.dispose();
+
+  return width;
+}
 
 /// How long a document has to be before only part of it is coloured.
 ///
@@ -1214,23 +1256,8 @@ class MawySourceGutter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Monospace, so the column is exactly as wide as its widest number and
-    // nothing has to be measured twice — the arithmetic the stylesheet does
-    // with `ch`.
-    final int digits = '${'\n'.allMatches(text).length + 1}'.length;
-    final TextPainter ruler = TextPainter(
-      text: TextSpan(text: '0' * digits, style: style),
-      textDirection: Directionality.of(context),
-    )..layout();
-    final double width = ruler.width;
-
-    // A `TextPainter` holds a laid-out paragraph, which is memory the engine
-    // gave it rather than memory Dart will collect. One made per build and
-    // left is one leaked per build.
-    ruler.dispose();
-
     return SizedBox(
-      width: width,
+      width: gutterWidthFor(context, text, style),
       child: ClipRect(
         child: CustomPaint(
           painter: MawySourceNumbers(

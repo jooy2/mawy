@@ -2374,6 +2374,38 @@
   --mawy-src-indent: calc(var(--mawy-src-pad-x) + var(--mawy-gutter) + var(--mawy-src-gap));
 }
 
+/*
+ * The rule down the gap between the numbers and the text.
+ *
+ * Grey numbers against the same background as the text beside them read as one
+ * column with a wide space in it, and a line down the gap is what says the
+ * numbers are not part of the document. In `--mawy-border`, so it is the same
+ * line as the one around the editor.
+ *
+ * On the surface rather than on the numbers, because a number is a grid cell
+ * per line and the chunks nobody is looking at have none — a border on those
+ * cells would be a rule that stops wherever the file is not being read. This
+ * one is the height of the surface and stays where it is while the text
+ * scrolls under it, which is what a gutter's line does.
+ *
+ * The font is declared here so that the `ch` in `--mawy-gutter` is the
+ * monospace `ch` the grid column is sized in. A custom property resolves its
+ * units where it is used, and this element is not the one the source font is
+ * on.
+ */
+.mawy-root .mawy-source[data-mawy-line-numbers]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--mawy-src-pad-x) + var(--mawy-gutter) + var(--mawy-src-gap) / 2);
+  width: 1px;
+  background: var(--mawy-border);
+  font-family: var(--mawy-font-mono);
+  font-size: var(--mawy-src-size);
+  pointer-events: none;
+}
+
 /* Everything that decides where a character lands, said once for both layers. */
 .mawy-root .mawy-source-lines,
 .mawy-root .mawy-source-input {

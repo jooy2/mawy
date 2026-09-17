@@ -138,6 +138,32 @@ describe('the source surface', () => {
     expect(screen.container.querySelectorAll('.mawy-source-line')).toHaveLength(6);
   });
 
+  it('draws a rule down the gap between the numbers and the text, and none without them', async () => {
+    const screen = await render(<MawyEditor defaultValue={DOCUMENT} modes={['plain']} />);
+    const surface = screen.container.querySelector('.mawy-source') as HTMLElement;
+    const field = screen.container.querySelector('.mawy-source-input') as HTMLElement;
+    const rule = getComputedStyle(surface, '::before');
+    const gap = Number.parseFloat(getComputedStyle(surface).getPropertyValue('--mawy-src-gap'));
+
+    // Halfway along the gap, which means the `ch` the gutter is measured in
+    // has to be the monospace one the numbers are drawn in — the whole reason
+    // the rule declares a font of its own.
+    expect(Number.parseFloat(rule.left)).toBeCloseTo(
+      Number.parseFloat(getComputedStyle(field).paddingLeft) - gap / 2,
+      1
+    );
+    expect(rule.width).toBe('1px');
+
+    const bare = await render(
+      <MawyEditor defaultValue={DOCUMENT} modes={['plain']} lineNumbers={false} />
+    );
+
+    expect(
+      getComputedStyle(bare.container.querySelector('.mawy-source') as HTMLElement, '::before')
+        .content
+    ).toBe('none');
+  });
+
   it('wraps the copy underneath exactly as the textarea wraps', async () => {
     // The one thing that cannot be checked anywhere but in a browser, and the
     // one that makes the whole surface wrong when it is off by a line.
