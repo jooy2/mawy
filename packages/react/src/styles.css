@@ -1385,6 +1385,20 @@
   outline-offset: -2px;
 }
 
+/*
+ * And the group clips what the copy button says as well, so that goes beside
+ * the button rather than under it: a block one line tall had half the word
+ * outside the group at the bottom and the rest of it past the right-hand edge.
+ * Beside it there is nothing in the way, since a block inside a group does not
+ * draw its language.
+ */
+.mawy-root .mawy-md-code-panel .mawy-code-copy[data-mawy-tip]::after {
+  top: 50%;
+  left: auto;
+  inset-inline-end: calc(100% + 6px);
+  translate: 0 -50%;
+}
+
 /* Prose in a group is a paragraph in a box, and wants the padding a box gives
  * its words rather than the none a code block needs. */
 .mawy-root .mawy-md-code-panel > :not(.mawy-md-pre) {
