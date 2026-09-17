@@ -3696,6 +3696,45 @@ describe('the document surface', () => {
   });
 
   /**
+   * A footnote's later paragraphs are written indented under its first line,
+   * and `Enter` in one had no rule of its own: the press fell through to the
+   * one that ends a block, which wrote the blank lines a paragraph is made of
+   * at the end of the document and took the caret out of the note with them.
+   * So a note could be opened and never added to. See `continueNote`.
+   */
+  it('carries a footnote down rather than leaving it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'See[^a]\n\n[^a]: note'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'note', 4);
+    await userEvent.keyboard('{Enter}');
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('See[^a]\n\n[^a]: note\n\n    ')
+    );
+
+    // And the caret is drawn inside the note, on the paragraph the next letter
+    // will write, rather than under the document.
+    const room = await vi.waitFor(() => {
+      const last = [...body.querySelectorAll('.mawy-md-footnotes li > p')].at(-1) as HTMLElement;
+
+      expect(last.textContent).toBe('');
+
+      return last;
+    });
+
+    expect(room.contains(document.getSelection()?.anchorNode ?? null)).toBe(true);
+
+    await userEvent.keyboard('more');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('See[^a]\n\n[^a]: note\n\n    more')
+    );
+  });
+
+  /**
    * And the press after it still leaves the quotation. The paragraph a caret
    * is given on a quoted line is empty, and a press on an empty paragraph is
    * the one that writes nothing — but that rule is about the blank lines the

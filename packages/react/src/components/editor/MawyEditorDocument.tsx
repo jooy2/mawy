@@ -18,6 +18,7 @@ import type { MawyStrings } from '../../internal/i18n.js';
 import type {
   MdBlock,
   MdBlockquote,
+  MdFootnoteDefinition,
   MdList,
   MdNode,
   MdRange
@@ -33,6 +34,7 @@ import {
   type RenderContext
 } from '../../internal/markdown/render.js';
 import {
+  NOTE_INDENT,
   besideLink,
   blankParagraphs,
   blockAt,
@@ -397,9 +399,18 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     // The same highlighter the preview is given, asked for the same way: not
     // until the document has a fenced code block with a language on it.
     const highlighter = useHighlighter(highlight, document_);
+    /** The footnote the caret was left inside, which draws its room itself. */
+    const inNote = React.useMemo(
+      () => noteFor(document_.footnotes, room, value),
+      [document_, room, value]
+    );
     const blocks = React.useMemo(
-      () => withNesting(withRoom(document_.root.children, room, value), nested),
-      [document_, nested, room, value]
+      () =>
+        withNesting(
+          withRoom(document_.root.children, inNote ? null : room, value, document_.footnotes),
+          nested
+        ),
+      [document_, inNote, nested, room, value]
     );
     const footnotes = React.useMemo(
       () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
@@ -548,14 +559,18 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
      * every one of those was the whole document built again as elements. React
      * skips a subtree whose element it has already seen.
      */
+    const notes = React.useMemo(
+      () => withNoteRoom(document_.footnotes, inNote, room),
+      [document_, inNote, room]
+    );
     const content = React.useMemo(
       () => (
         <>
           {renderBlocks(blocks, context)}
-          {renderFootnotes(document_.footnotes, context)}
+          {renderFootnotes(notes, context)}
         </>
       ),
-      [blocks, document_, context]
+      [blocks, notes, context]
     );
 
     /**
@@ -2080,8 +2095,21 @@ function restore(host: Node, content: string): void {
  * is drawn with. Split, it is the document the first letter typed will make,
  * which is `- one`, a paragraph, `- two`.
  */
-function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBlock[] {
-  const blanks = blankParagraphs(value, blocks);
+function withRoom(
+  blocks: MdBlock[],
+  room: number | null,
+  value: string,
+  notes: readonly { range: MdRange }[] = []
+): MdBlock[] {
+  // The notes among them, because a footnote is written in the document like
+  // anything else and its lines are its own: a blank line inside one is the
+  // note's, the way a blank line inside a list is the list's. They are not in
+  // `root.children`, so without this every line of every note counted as a
+  // line outside every block.
+  const blanks = blankParagraphs(
+    value,
+    [...blocks, ...notes].sort((one, other) => one.range.start - other.range.start)
+  );
   const holding = room === null ? undefined : blocks.find(holds(room));
   /** The list the caret was left between two items of. */
   const parting =
@@ -2141,6 +2169,78 @@ const holds =
   (at: number) =>
   (node: { range: MdRange }): boolean =>
     node.range.start <= at && at <= node.range.end;
+
+/**
+ * The footnotes, with the caret's paragraph drawn inside whichever of them was
+ * left holding it.
+ *
+ * A note's later paragraphs are written indented under its first line, and
+ * `Enter` there leaves the caret on a line the parser reads as blank — which
+ * has no block of its own, and so nowhere on the page for a caret to be. The
+ * same room `withRoom` gives one between the document's blocks, given inside
+ * the note instead. See `continueNote`.
+ *
+ * Nothing to do where a block already drawn holds the caret, which is what the
+ * blocks above answer for: the room is in one place or the other, never both.
+ */
+function withNoteRoom(
+  notes: readonly MdFootnoteDefinition[],
+  held: MdFootnoteDefinition | null,
+  room: number | null
+): readonly MdFootnoteDefinition[] {
+  if (!held || room === null || held.children.some(holds(room))) {
+    return notes;
+  }
+
+  const index = held.children.findIndex((child) => room < child.range.start);
+  const children = [...held.children];
+
+  children.splice(index === -1 ? children.length : index, 0, empty(room));
+
+  // The note is drawn as reaching the room as well, because what the note says
+  // it covers is what a place on the page is looked for in: a note that ended
+  // at its last words was stepped over whole, and the paragraph inside it with
+  // it. See `drawnAt`.
+  return notes.map((note) =>
+    note === held
+      ? {
+          ...note,
+          range: { start: note.range.start, end: Math.max(note.range.end, room) },
+          children
+        }
+      : note
+  );
+}
+
+/**
+ * The footnote the caret's room belongs inside, or `null`.
+ *
+ * A note that has just been carried down ends where its last words end, so the
+ * line the caret was left on is past it: what says the line is still the
+ * note's is the indentation it opens with, and nothing but line endings
+ * between the two.
+ */
+function noteFor(
+  notes: readonly MdFootnoteDefinition[],
+  room: number | null,
+  value: string
+): MdFootnoteDefinition | null {
+  if (room === null) {
+    return null;
+  }
+
+  const line = value.lastIndexOf('\n', room - 1) + 1;
+
+  return (
+    notes.find(
+      (note) =>
+        holds(room)(note) ||
+        (note.range.end <= line &&
+          !value.slice(note.range.end, line).trim() &&
+          value.slice(line, room).startsWith(NOTE_INDENT))
+    ) ?? null
+  );
+}
 
 /**
  * A quotation with the caret's paragraph drawn among its own blocks, or `null`

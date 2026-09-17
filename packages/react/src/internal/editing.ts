@@ -887,6 +887,49 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
   };
 }
 
+/** A document with a footnote written in it somewhere, which is most of none. */
+const ANY_NOTE = /^\[\^[^\]]+\]:/m;
+
+/** How far a footnote's later paragraphs are indented, which is what GitHub reads. */
+export const NOTE_INDENT = '    ';
+
+/**
+ * A footnote carried down the way a list carries its bullet, or `null` where
+ * the caret is not in one.
+ *
+ * A footnote's later paragraphs are written indented under its first line, and
+ * `Enter` in one had no rule of its own: the press fell through to the one that
+ * ends a block, which wrote the blank lines a paragraph is made of at the end
+ * of the document and took the caret out of the note with them. So a note could
+ * be opened and never added to.
+ *
+ * The blank line and the indentation together are what keeps the next paragraph
+ * inside the note. The caret goes after the indentation, on a line the parser
+ * reads as blank, and the paragraph drawn for it is the one `withRoom` gives a
+ * caret with nowhere else to be.
+ */
+function continueNote(value: string, caret: number, options: MarkdownOptions): MawyEdit | null {
+  if (!ANY_NOTE.test(value)) {
+    return null;
+  }
+
+  const note = parseMarkdown(value, options).footnotes.find(
+    (each) => each.range.start <= caret && caret <= each.range.end
+  );
+
+  if (!note) {
+    return null;
+  }
+
+  const text = `\n\n${NOTE_INDENT}`;
+
+  return {
+    value: value.slice(0, caret) + text + value.slice(caret),
+    caret: caret + text.length,
+    betweenBlocks: true
+  };
+}
+
 /**
  * The document with a task's box ticked or unticked, from the place the task's
  * item starts, or its line of a table cell. `null` where there is no box.
@@ -1031,6 +1074,15 @@ function breakAt(
 
     if (quoted) {
       return settle(quoted, options);
+    }
+
+    // After the two containers written with a marker on every line, because a
+    // list or a quotation inside a note is that list's or that quotation's
+    // line first, and the note's only where neither answered.
+    const note = continueNote(value, start, options);
+
+    if (note) {
+      return settle(note, options);
     }
   }
 
