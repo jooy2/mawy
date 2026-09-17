@@ -1309,13 +1309,15 @@
   overflow: hidden;
 }
 
+/* A shade off the code under it, so the row of names reads as the chrome it is
+ * rather than as the first line of the block. */
 .mawy-root .mawy-md-code-tabs {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 0 6px;
   border-bottom: 1px solid var(--mawy-border);
-  background: var(--mawy-code-bg);
+  background: color-mix(in srgb, var(--mawy-code-bg) 72%, var(--mawy-border));
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1353,13 +1355,34 @@
 
 /*
  * A block inside has the group's edge around it and needs none of its own: two
- * borders one inside the other is a box in a box, and the margin between them
- * is a strip of nothing.
+ * borders one inside the other is a box in a box, and the rounded corners of
+ * the inner one leave four slivers of the page showing through.
  */
 .mawy-root .mawy-md-code-panel > .mawy-md-pre {
   margin: 0;
+}
+
+.mawy-root .mawy-md-code-panel .mawy-md-pre pre {
   border: 0;
   border-radius: 0;
+}
+
+/*
+ * And the tab over it already says which language it is, so the block does not
+ * say it again — which is also what was landing on top of the code itself in a
+ * group too narrow to hold both.
+ */
+.mawy-root .mawy-md-code-panel .mawy-md-pre[data-mawy-lang]::after {
+  content: none;
+}
+
+/*
+ * The ring a keyboard leaves on the block drawn just inside it. The group
+ * clips what overflows, so a ring drawn around the block came out as a line
+ * across the top of it and nothing else — the one edge that was not clipped.
+ */
+.mawy-root .mawy-md-code-panel .mawy-md-pre pre:focus-visible {
+  outline-offset: -2px;
 }
 
 /* Prose in a group is a paragraph in a box, and wants the padding a box gives

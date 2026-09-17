@@ -26,6 +26,8 @@
 
 ### Changed
 
+- **A code group is one surface rather than a box with a box in it.** The block inside kept the border and the rounded corners it has when it stands on its own, so four slivers of the page showed through at its corners; it fills the group's edges now. The row of names is a shade off the code under it, so it reads as the chrome it is rather than as the first line of the block. The language the block was written in is not drawn inside a group at all, because the tab over it already says so — and in a group too narrow to hold both it was landing on top of the code. And the ring a keyboard leaves on the block is drawn just inside it: the group clips what overflows, so a ring around the block came out as a line across the top of it and nothing else.
+
 - **The language a code block was written in is drawn beside its copy button.** It used to sit across the top of the block, with a strip of padding held open for it whether or not anybody was looking — and inside something that already says which language it is, a tab named `JavaScript` over a block labelled `JAVASCRIPT`, it said the same word twice. It is there to be read when it is looked for, so it arrives with the pointer the way the button next to it does, and the block is as tall as the code in it again.
 
 - **The formatted mode is called WYSIWYG.** `Formatted` said what the surface does and not what it is, and every editor that has one of these calls it by the name its readers already know. `MawyStrings.modeWysiwyg` is `WYSIWYG` in English and `위지윅` in Korean, which is also what the mode is called in the API — an application with its own word for it passes one, as it always could.
