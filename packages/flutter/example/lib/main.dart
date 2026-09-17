@@ -401,6 +401,12 @@ Map<String, MawyDirectiveBuilder> _directives(MawyTokens tokens) => <String, Maw
   ),
   'kbd': (BuildContext context, MawyDirective directive) =>
       _Kbd(tokens: tokens, label: directive.label),
+  // The one drawing the package ships, registered under the two names this
+  // gallery uses for it. The parser still does not know what either means.
+  'code-group': (BuildContext context, MawyDirective directive) =>
+      MawyCodeGroup(tokens: tokens, directive: directive),
+  'lang': (BuildContext context, MawyDirective directive) =>
+      MawyCodeGroup(tokens: tokens, directive: directive),
 };
 
 /// The house callout, which is the directive every document turns out to want.

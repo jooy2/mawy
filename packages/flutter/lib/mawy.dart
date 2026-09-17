@@ -24,6 +24,7 @@
 library;
 
 export 'src/code.dart';
+export 'src/directives/mawy_code_group.dart' show MawyCodeGroup;
 export 'src/editor/commands.dart'
     show EditState, MawyCommand, commandActive, continueList, indent, runCommand;
 export 'src/editor/mawy_editor.dart'

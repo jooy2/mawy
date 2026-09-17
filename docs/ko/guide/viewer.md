@@ -354,7 +354,17 @@ sub(<int>[10, 1, 5]);
 
 탭 순서에는 하나만 들어가고 그 안은 방향키로 옮겨 다닙니다. `Home`과 `End`는 양 끝입니다. 탭 패턴이 요구하는 모양입니다. 페이지에 들어 있는 것은 고른 블록 하나뿐이라, 페이지에서 찾기를 하면 독자가 볼 수 있는 것만 찾힙니다.
 
-React 컴포넌트이고, Flutter 쪽 짝은 아직 없습니다.
+두 패키지 모두 가지고 있고, 탭 이름을 붙이는 방식과 탭 사이를 오가는 키가 같습니다. Flutter 쪽은 빌더가 돌려주는 위젯입니다.
+
+```dart
+MawyViewer(
+  value: document,
+  directives: <String, MawyDirectiveBuilder>{
+    'code-group': (BuildContext context, MawyDirective directive) =>
+        MawyCodeGroup(tokens: tokens, directive: directive),
+  },
+);
+```
 
 ::: fw react
 

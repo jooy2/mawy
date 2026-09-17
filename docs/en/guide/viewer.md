@@ -354,7 +354,17 @@ A tab per block, named by the language the fence was written with. `{tabs=Browse
 
 One tab is in the tab order and the arrows move between them, `Home` and `End` to the ends, which is what the tab pattern asks for. Only the chosen block is in the page, so a find on the page finds what a reader can see.
 
-It is a React component and there is no Flutter half yet.
+Both packages have one, and the two name their tabs the same way and move between them with the same keys. The Flutter half is a widget the builder returns:
+
+```dart
+MawyViewer(
+  value: document,
+  directives: <String, MawyDirectiveBuilder>{
+    'code-group': (BuildContext context, MawyDirective directive) =>
+        MawyCodeGroup(tokens: tokens, directive: directive),
+  },
+);
+```
 
 ::: fw react
 
