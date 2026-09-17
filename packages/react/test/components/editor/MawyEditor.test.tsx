@@ -1087,6 +1087,47 @@ describe('the toolbar and the keyboard', () => {
   });
 
   /**
+   * The same way out, taken from an item the previous `Enter` made, which is
+   * how anybody reaches it: type a list, press `Enter` in the middle of it,
+   * press it again on the item that opened.
+   *
+   * One blank line does not end a list — `- one`, nothing, `- two` is one
+   * loose list to CommonMark — so the caret was left inside a block with
+   * nowhere in it to put it. It went to the end of the item above, the list
+   * opened up to the spacing a loose one is drawn with, and the next `Enter`
+   * did nothing, because the caret the editor was holding was not the caret
+   * that was on the page. See `withRoom`.
+   */
+  it('leaves the middle of a list on the second Enter, and draws the line it left', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <div style={WIDE}>
+        <MawyEditor defaultValue={'- one\n- two'} mode="wysiwyg" onChange={onChange} />
+      </div>
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'one', 3);
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- one\n- \n- two'));
+
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- one\n\n- two'));
+
+    // Drawn as the two lists and the paragraph between them that the first
+    // letter typed will make, with the caret on that paragraph.
+    await vi.waitFor(() =>
+      expect([...body.children].map((block) => block.tagName)).toEqual(['UL', 'P', 'UL'])
+    );
+    expect(body.children[1].contains(document.getSelection()?.anchorNode ?? null)).toBe(true);
+
+    // And the letter writes the blank line that parts it, which is the one
+    // thing the source surface writes there too.
+    await userEvent.keyboard('X');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- one\n\nX\n- two'));
+  });
+
+  /**
    * The way out of the middle of a list. `Enter` gives the marker up, and
    * between two items there is nowhere to put the blank line that would part
    * the caret from them, so the first letter typed there writes it. Both

@@ -739,7 +739,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
         if (pasted?.images.length) {
           const edit = pasted.markdown
-            ? editForText(element, now.value, pasted.markdown, aim.current)
+            ? editForText(element, now.value, pasted.markdown, aim.current, now.options)
             : null;
           const start = edit ? edit.caret - pasted.markdown.length : 0;
           const range = edit ? null : selected();
@@ -777,6 +777,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
               ? text.replace(/\r?\n/g, '<br>').replace(/(?<!\\)\|/g, '\\|')
               : text,
           aim.current,
+          now.options,
           now.nested
         );
 
@@ -1146,7 +1147,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         // a keystroke is. See `openedAt`.
         const opened = was.before
           ? { value, at: was.start }
-          : openedAt(element, was.host, value, was.start);
+          : openedAt(element, was.host, value, was.start, options);
         const shift = opened.at - was.start;
 
         // And under a list the way a keystroke is. See `listKept`.
@@ -2057,15 +2058,29 @@ function restore(host: Node, content: string): void {
  * that goes on under the item that was just given up — and one more is drawn
  * there, at the position the last edit left the caret, for as long as the caret
  * is in it.
+ *
+ * Between two items that blank line is the list's own, and the list is drawn
+ * as two with the paragraph between them. `Enter` on an empty item in the
+ * middle of a list writes exactly that blank line, and one blank line does not
+ * end a list: `- one`, nothing, `- two` is one loose list to CommonMark, so
+ * the caret was left inside a block that has nowhere to put it — it went to
+ * the end of the item above, and the list opened up to the spacing a loose one
+ * is drawn with. Split, it is the document the first letter typed will make,
+ * which is `- one`, a paragraph, `- two`.
  */
 function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBlock[] {
   const blanks = blankParagraphs(value, blocks);
-
-  if (
+  const holding = room === null ? undefined : blocks.find(holds(room));
+  /** The list the caret was left between two items of. */
+  const parting =
     room !== null &&
     !blanks.includes(room) &&
-    !blocks.some((block) => block.range.start <= room && room <= block.range.end)
-  ) {
+    holding?.type === 'list' &&
+    !holding.children.some(holds(room))
+      ? holding
+      : null;
+
+  if (room !== null && !blanks.includes(room) && !holding) {
     // In place of a blank line's paragraph on the same line: a caret left after
     // a list item's indentation is on a line that is blank to the parser, and
     // one paragraph is drawn for it rather than two.
@@ -2075,7 +2090,7 @@ function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBloc
     blanks.sort((one, other) => one - other);
   }
 
-  if (!blanks.length) {
+  if (!blanks.length && !parting) {
     return blocks.length ? blocks : [empty(0)];
   }
 
@@ -2088,7 +2103,11 @@ function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBloc
       next += 1;
     }
 
-    out.push(block);
+    if (block === parting) {
+      out.push(...parted(parting, room as number, value));
+    } else {
+      out.push(block);
+    }
   }
 
   for (; next < blanks.length; next += 1) {
@@ -2096,6 +2115,52 @@ function withRoom(blocks: MdBlock[], room: number | null, value: string): MdBloc
   }
 
   return out;
+}
+
+/** Whether a block or an item is the one this offset is in. */
+const holds =
+  (at: number) =>
+  (node: { range: MdRange }): boolean =>
+    node.range.start <= at && at <= node.range.end;
+
+/**
+ * A list drawn as the two lists and the paragraph between them that the blank
+ * line at `at` will part it into. See `withRoom`.
+ *
+ * Each half is loose only if its own span has a blank line left in it, rather
+ * than because the list it came from had the one being drawn on.
+ */
+function parted(list: MdList, at: number, value: string): MdBlock[] {
+  const above = list.children.filter((item) => item.range.end <= at);
+  const below = list.children.filter((item) => item.range.start >= at);
+
+  if (!above.length || !below.length) {
+    return [list];
+  }
+
+  const opens = below[0].range.start;
+  const closes = above[above.length - 1].range.end;
+
+  return [
+    {
+      ...list,
+      range: { start: list.range.start, end: closes },
+      loose: value.slice(list.range.start, closes).includes('\n\n'),
+      children: above
+    },
+    empty(at),
+    {
+      ...list,
+      range: { start: opens, end: list.range.end },
+      // The number the half actually opens with, which is what the parser will
+      // read off it once the paragraph between them is written.
+      start: list.ordered
+        ? Number.parseInt(value.slice(opens, below[0].range.end), 10) || list.start
+        : list.start,
+      loose: value.slice(opens, list.range.end).includes('\n\n'),
+      children: below
+    }
+  ];
 }
 
 function empty(at: number): MdBlock {

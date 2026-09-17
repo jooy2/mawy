@@ -363,7 +363,8 @@ export function openedAt(
   root: HTMLElement,
   node: Node,
   value: string,
-  at: number
+  at: number,
+  options: MarkdownOptions
 ): { value: string; at: number } {
   const lineStart = at > 0 ? value.lastIndexOf('\n', at - 1) + 1 : 0;
 
@@ -371,6 +372,19 @@ export function openedAt(
   // indentation — the caret was put there to write inside that container, and
   // what is written belongs on that line as it is.
   if (lineStart !== at || emptyAt(topOf(root, node)) === null) {
+    return { value, at };
+  }
+
+  // A blank line inside a list is that list's own separator, and the room
+  // drawn on it is the caret's way out of the middle of one. What the first
+  // letter typed there has to write as well is `keptList`, which both surfaces
+  // follow; opening the line here too would write a blank line the source
+  // surface does not, and the same keystroke would mean two things.
+  if (
+    parseMarkdown(value, options).root.children.some(
+      (block) => block.type === 'list' && block.range.start <= at && at <= block.range.end
+    )
+  ) {
     return { value, at };
   }
   const above =
@@ -982,7 +996,7 @@ function breakAt(
     }
   }
 
-  const opened = openedAt(root, node, value, start);
+  const opened = openedAt(root, node, value, start, options);
   const shift = opened.at - start;
 
   return settle(
@@ -1720,6 +1734,7 @@ export function editForText(
   current: string,
   text: string,
   aim: MawyAim | null,
+  options: MarkdownOptions,
   nested: number | null = null
 ): MawyEdit | null {
   const found = placeOf(root, current, aim);
@@ -1736,7 +1751,7 @@ export function editForText(
     return typedOver(value, place.start, place.end, text);
   }
 
-  const opened = openedAt(root, place.node, value, place.start);
+  const opened = openedAt(root, place.node, value, place.start, options);
 
   return splice(opened.value, opened.at, opened.at, text);
 }
@@ -1870,7 +1885,9 @@ export function editFor(
       // Into an empty paragraph with the blank lines that keep it one, where it
       // has not got them. See `openedAt`.
       const opened =
-        start === end ? openedAt(root, range.startContainer, value, start) : { value, at: start };
+        start === end
+          ? openedAt(root, range.startContainer, value, start, options)
+          : { value, at: start };
       const rule =
         start === end && tag !== 'PRE' && tag !== 'TD' && tag !== 'TH'
           ? ruleFor(opened.value, opened.at, event.data)
