@@ -17,7 +17,6 @@
  */
 
 import {
-  containerOf,
   continueList,
   fencedAt,
   hardBreak,
@@ -793,64 +792,6 @@ function unfenced(value: string, caret: number): MawyEdit {
   return { value: after.value, caret: after.start };
 }
 
-/** A line that closes a fence, once whatever holds the block is taken off it. */
-const CLOSING = /^(?:`{3,}|~{3,})[ \t]*$/;
-
-/**
- * `Enter` on the last line of a code block, when that line is empty: the way
- * out of the block.
- *
- * Everything in a code block is the characters it is, so `Enter` there is a
- * line ending, and a block with nothing after it had nowhere below it for a
- * caret to go — what was typed next went into the block for good. The rule is
- * the list's: `Enter` on an item still empty gives the item up, and `Enter` on
- * a last line still empty gives that line up and leaves the caret on a
- * paragraph under the block, inside whatever holds the block.
- *
- * Not on the only line of a block, which is an empty block somebody has just
- * made and is about to type into.
- */
-function leaveCode(
-  value: string,
-  start: number,
-  end: number,
-  options: MarkdownOptions
-): MawyEdit | null {
-  const code = start === end ? fencedAt(value, start) : null;
-
-  if (!code) {
-    return null;
-  }
-
-  const lineStart = start > 0 ? value.lastIndexOf('\n', start - 1) + 1 : 0;
-  const newline = value.indexOf('\n', start);
-
-  if (newline === -1 || lineStart <= code.content.start) {
-    return null;
-  }
-
-  const next = value.indexOf('\n', newline + 1);
-  const closing = value.slice(newline + 1, next === -1 ? value.length : next);
-  const { carry, mark } = containerOf(closing);
-
-  if (containerOf(value.slice(lineStart, newline)).mark.trim() || !CLOSING.test(mark)) {
-    return null;
-  }
-
-  const without = value.slice(0, lineStart - 1) + value.slice(newline);
-  const fenceEnd = lineStart + closing.length;
-  const text = `\n${carry.trimEnd()}\n${carry}`;
-
-  return settle(
-    {
-      value: without.slice(0, fenceEnd) + text + without.slice(fenceEnd),
-      caret: fenceEnd + text.length,
-      betweenBlocks: true
-    },
-    options
-  );
-}
-
 /** A quotation carries its own marker down the way a list carries a bullet. */
 const QUOTED = /^((?:[ \t]*>[ \t]?)+)(.*)$/;
 
@@ -1044,8 +985,15 @@ function breakAt(
     return cellBreak(value, start, end);
   }
 
+  // Everything in a code block is the characters it is, so `Enter` is a line
+  // ending and never a way out: a block is left by `ArrowDown` past its last
+  // line, which opens a paragraph under it where the block ends the document.
+  // See `opened` in `MawyEditorDocument`. Leaving on a second `Enter` was the
+  // list's rule read across — an empty last line given up the way an empty item
+  // gives up its marker — and a code block is where that rule does not hold:
+  // two blank lines in the middle of one are two blank lines somebody typed.
   if (tag === 'PRE') {
-    return leaveCode(value, start, end, options) ?? splice(value, start, end, '\n');
+    return splice(value, start, end, '\n');
   }
 
   if (start === end) {

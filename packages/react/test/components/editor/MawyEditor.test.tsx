@@ -3392,7 +3392,7 @@ describe('the document surface', () => {
     expect(bodyOf(screen).querySelector('pre')?.hasAttribute('tabindex')).toBe(false);
   });
 
-  it('leaves a code block by Enter on its last line, when that line is empty', async () => {
+  it('keeps every Enter inside a code block, and leaves it by ArrowDown', async () => {
     const onChange = vi.fn();
     const screen = await render(
       <MawyEditor style={WIDE} defaultValue="One." mode="wysiwyg" onChange={onChange} />
@@ -3401,15 +3401,20 @@ describe('the document surface', () => {
     put(bodyOf(screen), 'One.', 4);
     await userEvent.keyboard('{Enter}');
     await userEvent.click(page.getByRole('button', { name: 'Code block' }));
-    await userEvent.keyboard('code{Enter}');
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One.\n\n```\ncode\n\n```'));
+    // Two in a row is two blank lines in the code, not a way out of it.
+    await userEvent.keyboard('code{Enter}{Enter}x');
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('One.\n\n```\ncode\n\nx\n```')
+    );
+    expect(bodyOf(screen).querySelector('code')?.textContent).toBe('code\n\nx');
 
-    await userEvent.keyboard('{Enter}x');
+    // Down past the last line is the way out, and it opens the paragraph a
+    // block at the end of the document has nowhere else to put.
+    await userEvent.keyboard('{ArrowDown}y');
 
     await vi.waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith('One.\n\n```\ncode\n```\n\nx')
+      expect(onChange).toHaveBeenLastCalledWith('One.\n\n```\ncode\n\nx\n```\n\ny')
     );
-    expect(bodyOf(screen).querySelector('code')?.textContent).toBe('code');
   });
 
   it('takes a code block off with Backspace at its start', async () => {
