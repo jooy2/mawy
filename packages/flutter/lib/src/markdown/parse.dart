@@ -32,10 +32,11 @@ class MawyParseOptions {
   /// Whether a line opening with `: ` under a line of text is a definition
   /// list.
   ///
-  /// On, and it is the one thing Mawy reads that GitHub does not — the syntax
-  /// is PHP Markdown Extra's and it is the one everybody who writes these uses.
-  /// Turn it off for a document that has to mean exactly what it would mean
-  /// there.
+  /// On, and one of the two things Mawy reads that GitHub does not — the other
+  /// is a heading's own `{#id}`, which has no option because a document that
+  /// wrote one wrote it to be linked to. The syntax is PHP Markdown Extra's and
+  /// it is the one everybody who writes these uses. Turn it off for a document
+  /// that has to mean exactly what it would mean there.
   final bool definitionLists;
 
   @override
@@ -278,6 +279,9 @@ final RegExp _space = RegExp(r'\s');
 /// `#getting-started` is linking to whatever GitHub would have called that
 /// heading. Letters and numbers in any script survive, everything else goes,
 /// and spaces become hyphens.
+///
+/// This is what a heading is called when it did not say. One that ended in
+/// `{#id}` is called that instead, and never comes through here.
 String slugify(String text) {
   return text
       .trim()
@@ -295,7 +299,16 @@ void _collectOutline(List<MdBlock> blocks, Map<String, int> taken, List<MdOutlin
     if (block is MdHeading) {
       final String text = toPlainText(block.children);
       final String slugged = slugify(text);
-      final String base = slugged.isEmpty ? 'section' : slugged;
+      // A heading that wrote its own `{#id}` is called that. It still goes
+      // through the counting below: two elements with one `id` is a link that
+      // lands on whichever the browser met first, and an author who wrote the
+      // same anchor twice has that problem whether the name came out of the
+      // words or out of the braces.
+      final String base = block.id.isNotEmpty
+          ? block.id
+          : slugged.isEmpty
+          ? 'section'
+          : slugged;
       final int seen = taken[base] ?? 0;
 
       taken[base] = seen + 1;

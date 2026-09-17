@@ -1,6 +1,7 @@
 [
  "# Title\n\nA paragraph with **strong**, *em*, `code` and [a link](/u).",
  "Setext\n======\n\nUnder\n-----",
+ "## Overview {#what-to-try}\n\nAnchored {#by-hand}\n--------\n\n### Escaped \\{#not-an-id}\n\n### Attributes {.warning}\n\n### Closed {#closed} ###\n\n### {#only}\n\n## Overview {#what-to-try}",
  "- one\n- two\n  - nested\n\n1. first\n2. second",
  "- [x] done\n- [ ] not",
  "> quoted\n> more\n\n> [!NOTE]\n> An alert.",

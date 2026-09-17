@@ -81,6 +81,14 @@ const THEMATIC = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 const QUOTE = /^ {0,3}>/;
 const QUOTE_PREFIX = /^ {0,3}> ?/;
 const SETEXT = /^ {0,3}(=+|-+)[ \t]*$/;
+/**
+ * The anchor a heading may end with, and what it may be spelled with.
+ *
+ * The same characters a directive's `{#id}` takes, because it is the same
+ * notation and one answer to "what is an id" is better than two. See
+ * `headingId`.
+ */
+const HEADING_ID = /(?:^|[ \t])\{#([^\s"'`=<>{}]+)\}$/;
 const BULLET = /^( {0,3})([-+*])([ \t]+|$)/;
 const ORDERED = /^( {0,3})(\d{1,9})([.)])([ \t]+|$)/;
 const ALERT = /^\[!(note|tip|important|warning|caution)\][ \t]*$/i;
@@ -203,6 +211,49 @@ function atxAt(line: string): { depth: number; text: string; at: number } | null
     text: closed.trim(),
     at: line.length - body.length + (closed.length - closed.trimStart().length)
   };
+}
+
+/**
+ * A heading's own anchor, taken off the end of the words it was written with.
+ *
+ * `## Overview {#what-to-try}` is the heading "Overview" under the name the
+ * author chose, which is how Pandoc, kramdown and every site generator that
+ * reads one spell it. GitHub does not read it and draws the braces, so this is
+ * one of the two places a document means slightly more here than it does there.
+ * It is worth the difference: an anchor is written by hand *because* something
+ * already links to it, and drawing the braces loses the link and puts the
+ * markup in the reader's face at the same time.
+ *
+ * Only a lone `{#id}` is taken. `{.warning}` and `{key=value}` are attributes a
+ * directive reads and mean nothing on a heading, so they stay the characters
+ * they were written with rather than quietly going missing.
+ *
+ * Both heading syntaxes come through here, since the text is assembled by the
+ * time either of them has one and the underlined form is as much a heading as
+ * the hashed one.
+ */
+function headingId(text: Sourced): { text: Sourced; id: string } {
+  const match = HEADING_ID.exec(text.text);
+
+  if (!match) {
+    return { text, id: '' };
+  }
+
+  // `\{#id}` is a heading that says `{#id}`. The escape is still a backslash
+  // here — taking one off is the inline pass's job — so a brace with an odd
+  // number of them in front of it is one the author wrote out.
+  const brace = match.index + match[0].indexOf('{');
+  let backslashes = 0;
+
+  while (text.text[brace - backslashes - 1] === '\\') {
+    backslashes += 1;
+  }
+
+  if (backslashes % 2 === 1) {
+    return { text, id: '' };
+  }
+
+  return { text: trim(slice(text, 0, match.index)), id: match[1] };
 }
 
 /* -------------------------------------------------------------------------
@@ -755,10 +806,19 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
     const atx = atxAt(line.text);
 
     if (atx) {
+      const head = headingId(fromText(atx.text, line.start + atx.at));
+
       blocks.push(
         withInline<MdHeading>(
-          { type: 'heading', range: across(at, at), depth: atx.depth, children: [], slug: '' },
-          fromText(atx.text, line.start + atx.at)
+          {
+            type: 'heading',
+            range: across(at, at),
+            depth: atx.depth,
+            children: [],
+            id: head.id,
+            slug: ''
+          },
+          head.text
         )
       );
       at += 1;
@@ -1347,6 +1407,8 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
           continue;
         }
 
+        const head = headingId(text);
+
         blocks.push(
           withInline<MdHeading>(
             {
@@ -1357,9 +1419,10 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
               range: { start: rangeOf(text, 0, 0).start, end: lineEnd(underline) },
               depth: setext[1][0] === '=' ? 1 : 2,
               children: [],
+              id: head.id,
               slug: ''
             },
-            text
+            head.text
           )
         );
 

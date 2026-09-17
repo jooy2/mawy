@@ -120,13 +120,20 @@ class MdRoot extends MdNode {
 /// A heading, written with hashes or with an underline.
 class MdHeading extends MdBlock {
   /// Creates a heading of [depth], covering [range].
-  MdHeading(super.range, {required this.depth, required this.children});
+  MdHeading(super.range, {required this.depth, required this.children, this.id = ''});
 
   /// 1 through 6.
   final int depth;
 
   /// What the heading says.
   final List<MdInline> children;
+
+  /// The anchor the heading asked for with a trailing `{#id}`, empty where it
+  /// wrote none.
+  ///
+  /// What the heading said rather than what it was given: [slug] is the name
+  /// the drawn heading actually carries.
+  final String id;
 
   /// The `id` the renderer gives it, and the outline links to.
   ///

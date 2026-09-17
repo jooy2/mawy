@@ -60,6 +60,12 @@
   "omits": ["https://example.com/guide"]
  },
  {
+  "why": "A heading that wrote its own anchor is its words, and the braces that named the anchor are markup.",
+  "markdown": "## Overview {#what-to-try}\n\nAnchored {#by-hand}\n--------\n\n### Escaped \\{#not-an-id}",
+  "says": ["Overview", "Anchored", "Escaped {#not-an-id}"],
+  "omits": ["{#what-to-try}", "{#by-hand}"]
+ },
+ {
   "why": "A thematic break draws no characters of its own, and the blocks either side keep theirs.",
   "markdown": "Above.\n\n---\n\nBelow.",
   "says": ["Above.", "Below."],

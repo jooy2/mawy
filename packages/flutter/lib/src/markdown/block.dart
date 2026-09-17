@@ -76,6 +76,13 @@ final RegExp _thematic = RegExp(r'^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:
 final RegExp _quote = RegExp(r'^ {0,3}>');
 final RegExp _quotePrefix = RegExp(r'^ {0,3}> ?');
 final RegExp _setext = RegExp(r'^ {0,3}(=+|-+)[ \t]*$');
+
+/// The anchor a heading may end with, and what it may be spelled with.
+///
+/// The same characters a directive's `{#id}` takes, because it is the same
+/// notation and one answer to "what is an id" is better than two. See
+/// [_headingId].
+final RegExp _headingIdPattern = RegExp(r'''(?:^|[ \t])\{#([^\s"'`=<>{}]+)\}$''');
 final RegExp _bullet = RegExp(r'^( {0,3})([-+*])([ \t]+|$)');
 final RegExp _ordered = RegExp(r'^( {0,3})(\d{1,9})([.)])([ \t]+|$)');
 final RegExp _alert = RegExp(
@@ -220,6 +227,55 @@ _Atx? _atxAt(String line) {
   final String closed = body.replaceAll(_closingHashes, '');
 
   return _Atx(match.group(1)!.length, closed.trim(), line.length - body.length + _leading(closed));
+}
+
+/// A heading's text with its trailing `{#id}` taken off, and that id.
+class _Head {
+  const _Head(this.text, this.id);
+
+  final Sourced text;
+  final String id;
+}
+
+/// A heading's own anchor, taken off the end of the words it was written with.
+///
+/// `## Overview {#what-to-try}` is the heading "Overview" under the name the
+/// author chose, which is how Pandoc, kramdown and every site generator that
+/// reads one spell it. GitHub does not read it and draws the braces, so this is
+/// one of the two places a document means slightly more here than it does
+/// there. It is worth the difference: an anchor is written by hand *because*
+/// something already links to it, and drawing the braces loses the link and
+/// puts the markup in the reader's face at the same time.
+///
+/// Only a lone `{#id}` is taken. `{.warning}` and `{key=value}` are attributes
+/// a directive reads and mean nothing on a heading, so they stay the characters
+/// they were written with rather than quietly going missing.
+///
+/// Both heading syntaxes come through here, since the text is assembled by the
+/// time either of them has one and the underlined form is as much a heading as
+/// the hashed one.
+_Head _headingId(Sourced text) {
+  final RegExpMatch? match = _headingIdPattern.firstMatch(text.text);
+
+  if (match == null) {
+    return _Head(text, '');
+  }
+
+  // `\{#id}` is a heading that says `{#id}`. The escape is still a backslash
+  // here — taking one off is the inline pass's job — so a brace with an odd
+  // number of them in front of it is one the author wrote out.
+  final int brace = match.start + match.group(0)!.indexOf('{');
+  int backslashes = 0;
+
+  while (brace - backslashes - 1 >= 0 && text.text[brace - backslashes - 1] == r'\') {
+    backslashes += 1;
+  }
+
+  if (backslashes.isOdd) {
+    return _Head(text, '');
+  }
+
+  return _Head(trim(slice(text, 0, match.start)), match.group(1)!);
 }
 
 /* -------------------------------------------------------------------------
@@ -794,12 +850,10 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
     final _Atx? atx = _atxAt(line.text);
 
     if (atx != null) {
+      final _Head head = _headingId(fromText(atx.text, line.start + atx.at));
+
       blocks.add(
-        MdHeading(
-          across(at, at),
-          depth: atx.depth,
-          children: later(fromText(atx.text, line.start + atx.at)),
-        ),
+        MdHeading(across(at, at), depth: atx.depth, children: later(head.text), id: head.id),
       );
       at += 1;
       continue;
@@ -1387,6 +1441,8 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
           continue;
         }
 
+        final _Head head = _headingId(text);
+
         blocks.add(
           MdHeading(
             // Both lines: the underline is as much the heading as the words
@@ -1394,7 +1450,8 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
             // whatever the heading is replaced by.
             MdRange(rangeOf(text, 0, 0).start, lineEnd(underline)),
             depth: setext.group(1)![0] == '=' ? 1 : 2,
-            children: later(text),
+            children: later(head.text),
+            id: head.id,
           ),
         );
 

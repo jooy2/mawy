@@ -194,6 +194,57 @@ void main() {
         '한국어',
       ]);
     });
+
+    test('calls a heading what its own `{#id}` called it, under either syntax', () {
+      final MdDocument document = parseMarkdown(
+        '## Overview {#what-to-try}\n\nAnchored {#by-hand}\n---',
+      );
+
+      expect(document.outline.map((MdOutlineEntry entry) => entry.slug).toList(), <String>[
+        'what-to-try',
+        'by-hand',
+      ]);
+      expect(document.outline.map((MdOutlineEntry entry) => entry.text).toList(), <String>[
+        'Overview',
+        'Anchored',
+      ]);
+    });
+
+    test('leaves braces that are not an anchor where the author wrote them', () {
+      // A directive's other attributes mean nothing on a heading, an anchor in
+      // the middle of a sentence is a sentence, and an escaped brace is a brace.
+      final MdDocument document = parseMarkdown('## A {.warning}\n## B {#one} c\n## C \\{#two}');
+
+      expect(document.outline.map((MdOutlineEntry entry) => entry.text).toList(), <String>[
+        'A {.warning}',
+        'B {#one} c',
+        'C {#two}',
+      ]);
+      expect(document.outline.map((MdOutlineEntry entry) => entry.slug).toList(), <String>[
+        'a-warning',
+        'b-one-c',
+        'c-two',
+      ]);
+    });
+
+    test('counts a repeated anchor the way it counts a repeated heading', () {
+      final MdDocument document = parseMarkdown('# A {#same}\n# B {#same}');
+
+      expect(document.outline.map((MdOutlineEntry entry) => entry.slug).toList(), <String>[
+        'same',
+        'same-1',
+      ]);
+    });
+
+    test('keeps the heading as wide as the line the anchor was written on', () {
+      // The braces are the heading's characters even though nothing draws them,
+      // the way the closing hashes of `## Two ##` are. Anything replacing the
+      // heading has to replace the anchor with it.
+      const String source = '## Overview {#what-to-try}';
+      final MdBlock heading = parseMarkdown(source).root.children.first;
+
+      expect(source.substring(heading.range.start, heading.range.end), source);
+    });
   });
 
   /// Link reference definitions, which are taken off the front of a paragraph.

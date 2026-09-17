@@ -107,7 +107,7 @@ CommonMark, and GitHub's additions on top of it:
 | **Inline** | emphasis, strong, `code`, links, images, autolinks, hard line breaks, character references, backslash escapes |
 | **GitHub** | tables with per-column alignment, task lists, `~~strikethrough~~`, bare URLs and e-mail addresses, footnotes, and the five [alert](https://docs.github.com/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts) kinds |
 | **References** | `[label]: url "title"` definitions, resolved wherever in the file they are written |
-| **And one more** | definition lists, which GitHub does not read |
+| **And two more** | definition lists, and a heading's own `{#id}`, neither of which GitHub reads |
 
 `parse` is where the options live:
 
@@ -166,7 +166,7 @@ A note may be a whole run of blocks, such as a second paragraph, a list or a cod
 
 ### Definition lists
 
-This is the one syntax here that GitHub does not read. It follows [PHP Markdown Extra](https://michelf.ca/projects/php-markdown/extra/#def-list):
+One of the two syntaxes here that GitHub does not read. It follows [PHP Markdown Extra](https://michelf.ca/projects/php-markdown/extra/#def-list):
 
 ```md
 Markdown : A way of writing that reads as what it says.
@@ -177,6 +177,22 @@ Mawy : This. : And the editor beside it.
 A term is a line of text, and what it means is a line opening with a colon **and a space**. Requiring the space is what keeps `:warning:` under a sentence from turning that sentence into a term. Several terms may share a meaning, several meanings may share a term, and a meaning may be a whole run of blocks if the lines after the first are indented. A blank line before a meaning spaces the whole list out, exactly as it does in a bullet list.
 
 Pass `definitionLists: false` in `parse` to turn it off, for a document that has to mean exactly what it would mean on GitHub.
+
+### Heading anchors
+
+A heading's `id` is its own words, in the spelling GitHub uses, so a link written by hand against `#getting-started` lands where it would there. A heading that wants a different name says so at the end of the line:
+
+```md
+## What to try first {#what-to-try}
+```
+
+That is drawn as the words alone, under `id="what-to-try"`, and the outline links to the same name. The braces are markup and nothing draws them, the same way nothing draws the closing hashes of `## A heading ##`. Both heading syntaxes read one, the underlined form included.
+
+This is the other syntax GitHub does not read, and it draws the braces instead. The difference is worth it: an anchor is written by hand _because_ something already links to it, and a heading whose words change later keeps the name those links use.
+
+What is not an anchor stays the characters it was written with. `{.warning}` and `{key=value}` are a [directive](#directives)'s attributes and mean nothing on a heading. `## A {#b} c` is a heading about `{#b}`. And `\{#id}` is there for a heading that has to say the braces.
+
+Two headings asking for the same anchor are told apart the way two headings with the same words are: the second is `id-1`. [`slugify`](../api/functions/slugify) is what a heading is called when it does not ask.
 
 ## Colouring a code block
 

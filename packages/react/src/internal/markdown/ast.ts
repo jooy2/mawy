@@ -53,6 +53,12 @@ export interface MdHeading {
   depth: number;
   children: MdInline[];
   /**
+   * The anchor the heading asked for with a trailing `{#id}`, empty where it
+   * wrote none. It is what the heading said rather than what it was given:
+   * `slug` is the name the element actually carries.
+   */
+  id: string;
+  /**
    * The slug the renderer gives the element as its `id`, and the outline links
    * to. Assigned after parsing, because uniqueness is a property of the whole
    * document rather than of one heading.

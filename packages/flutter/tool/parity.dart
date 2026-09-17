@@ -58,6 +58,7 @@ Object? clean(Object? node) {
     if (node is MdHeading) {
       put('children', clean(node.children));
       put('depth', node.depth);
+      put('id', node.id);
       put('r', <int>[node.range.start, node.range.end]);
       put('slug', node.slug);
       put('type', 'heading');

@@ -909,6 +909,32 @@ describe('the outline', () => {
       'Listed'
     ]);
   });
+
+  it('calls a heading what its own `{#id}` called it, under either syntax', () => {
+    const { outline } = parseMarkdown('## Overview {#what-to-try}\n\nAnchored {#by-hand}\n---');
+
+    expect(bare(outline)).toEqual([
+      { depth: 2, slug: 'what-to-try', text: 'Overview' },
+      { depth: 2, slug: 'by-hand', text: 'Anchored' }
+    ]);
+  });
+
+  it('leaves braces that are not an anchor where the author wrote them', () => {
+    // A directive's other attributes mean nothing on a heading, an anchor in
+    // the middle of a sentence is a sentence, and an escaped brace is a brace.
+    expect(bare(parseMarkdown('## A {.warning}\n## B {#one} c\n## C \\{#two}').outline)).toEqual([
+      { depth: 2, slug: 'a-warning', text: 'A {.warning}' },
+      { depth: 2, slug: 'b-one-c', text: 'B {#one} c' },
+      { depth: 2, slug: 'c-two', text: 'C {#two}' }
+    ]);
+  });
+
+  it('counts a repeated anchor the way it counts a repeated heading', () => {
+    expect(parseMarkdown('# A {#same}\n# B {#same}').outline.map((entry) => entry.slug)).toEqual([
+      'same',
+      'same-1'
+    ]);
+  });
 });
 
 /**
@@ -1100,6 +1126,15 @@ describe('source positions', () => {
     const { outline } = parseMarkdown(source);
 
     expect(outline.map((entry) => at(source, entry))).toEqual(['# One', '## Two']);
+  });
+
+  it('keeps a heading that named its own anchor as wide as the line it was written on', () => {
+    // The braces are the heading's characters even though nothing draws them,
+    // the way the closing hashes of `## Two ##` are. Anything replacing the
+    // heading has to replace the anchor with it.
+    const source = '## Overview {#what-to-try}';
+
+    expect(at(source, first(source))).toBe(source);
   });
 
   it('holds a text node to the characters it was written with', () => {

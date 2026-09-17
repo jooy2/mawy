@@ -41,10 +41,11 @@ export interface MarkdownOptions {
   /**
    * Whether a line opening with `: ` under a line of text is a definition list.
    *
-   * On, and it is the one thing Mawy reads that GitHub does not — the syntax is
-   * PHP Markdown Extra's and it is the one everybody who writes these uses.
-   * Turn it off for a document that has to mean exactly what it would mean
-   * there.
+   * On, and one of the two things Mawy reads that GitHub does not — the other
+   * is a heading's own `{#id}`, which has no option because a document that
+   * wrote one wrote it to be linked to. The syntax is PHP Markdown Extra's and
+   * it is the one everybody who writes these uses. Turn it off for a document
+   * that has to mean exactly what it would mean there.
    * @default true
    */
   definitionLists?: boolean;
@@ -212,6 +213,9 @@ function relocate(node: MdNode, reading: Reading): void {
  * `#getting-started` is linking to whatever GitHub would have called that
  * heading. Letters and numbers in any script survive, everything else goes, and
  * spaces become hyphens.
+ *
+ * This is what a heading is called when it did not say. One that ended in
+ * `{#id}` is called that instead, and never comes through here.
  */
 export function slugify(text: string): string {
   return (
@@ -236,7 +240,12 @@ function collectOutline(
     switch (block.type) {
       case 'heading': {
         const text = toPlainText(block.children);
-        const base = slugify(text) || 'section';
+        // A heading that wrote its own `{#id}` is called that. It still goes
+        // through the counting below: two elements with one `id` is a link
+        // that lands on whichever the browser met first, and an author who
+        // wrote the same anchor twice has that problem whether the name came
+        // out of the words or out of the braces.
+        const base = block.id || slugify(text) || 'section';
         const seen = taken.get(base) ?? 0;
 
         taken.set(base, seen + 1);
