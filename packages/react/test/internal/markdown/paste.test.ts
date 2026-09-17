@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   markdownFromHtml,
   markupHasContent,
-  pasteFromHtml
+  pasteFromHtml,
+  wrappedPlainText
 } from '../../../src/internal/markdown/paste.js';
 import { PIXEL_DATA, PIXEL_HEX, rtfPicture, wordHtml, wordRtf } from '../../support/word.js';
 
@@ -228,5 +229,38 @@ describe('pictures read out of the RTF beside the markup', () => {
     expect(pasteFromHtml(wordHtml(LOCAL), '{\\rtf1 {\\pict\\pngblip\\bin4 abcd}}').images).toEqual(
       []
     );
+  });
+});
+
+/**
+ * A browser given a `text/plain` file draws it inside one `<pre>` and puts that
+ * on the clipboard as its HTML. Read as the preformatted block it looks like, a
+ * Markdown file copied out of one arrives inside a fence, headings and all.
+ */
+describe('a document a browser was showing as plain text', () => {
+  const file = '# Title\n\nSome **words**.\n\n- one\n- two\n';
+  const wrapper = `<pre style="word-wrap: break-word; white-space: pre-wrap;">${file}</pre>`;
+
+  it('is the text it showed rather than a fence around it', () => {
+    expect(wrappedPlainText(wrapper, file)).toBe(true);
+    // Which is what the reading would otherwise have made of it.
+    expect(markdownFromHtml(wrapper)).toBe(`\`\`\`\n${file.trim()}\n\`\`\``);
+  });
+
+  it('is not a code block somebody copied off a page', () => {
+    const code = '<pre><code class="language-js">const a = 1;</code></pre>';
+
+    // A `<code>` inside, and a class from whatever coloured it: markup a page
+    // wrote rather than a wrapper a browser did.
+    expect(wrappedPlainText(code, 'const a = 1;')).toBe(false);
+    expect(wrappedPlainText('<pre class="hl">const a = 1;</pre>', 'const a = 1;')).toBe(false);
+    // And a block that came with the rest of a page around it.
+    expect(wrappedPlainText(`<p>Before.</p>${wrapper}`, file)).toBe(false);
+  });
+
+  it('says nothing about markup whose text is not what the clipboard carried', () => {
+    expect(wrappedPlainText(wrapper, 'something else')).toBe(false);
+    expect(wrappedPlainText(wrapper, '')).toBe(false);
+    expect(wrappedPlainText('', file)).toBe(false);
   });
 });

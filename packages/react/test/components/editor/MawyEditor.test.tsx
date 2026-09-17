@@ -108,6 +108,22 @@ const keys = (element: HTMLElement, key: string, shift = false) =>
  * the event an empty transfer of its own, so the clipboard goes on afterwards
  * as an own property, which shadows the getter in every browser.
  */
+/**
+ * The caret at the start of an empty document, where there is no run of text to
+ * put it in: the paragraph the surface draws for a caret with nowhere else to
+ * be is an element with nothing inside it.
+ */
+function caretIn(root: HTMLElement): void {
+  const range = document.createRange();
+  const selection = document.getSelection() as Selection;
+
+  root.focus();
+  range.selectNodeContents(root.firstElementChild ?? root);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 function clipboardEvent(clipboard: DataTransfer): ClipboardEvent {
   const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
 
@@ -4924,6 +4940,46 @@ describe('tables', () => {
       )
     );
     expect(bodyOf(screen).querySelectorAll('td, th')).toHaveLength(2);
+  });
+
+  /**
+   * A browser given a `text/plain` file draws it inside one `<pre>` and puts
+   * that on the clipboard as its HTML, so a Markdown file copied out of one
+   * arrived as a fence around the whole document — every heading and every
+   * list inside it, and none of them anything any more. See `wrappedPlainText`.
+   */
+  it('pastes a document a browser was showing as plain text as the text it showed', async () => {
+    const onChange = vi.fn();
+    const screen = await render(<MawyEditor mode="wysiwyg" onChange={onChange} />);
+    const file = '# Title\n\nSome **words**.\n\n- one\n- two';
+    const clipboard = new DataTransfer();
+
+    clipboard.setData('text/plain', file);
+    clipboard.setData(
+      'text/html',
+      `<pre style="word-wrap: break-word; white-space: pre-wrap;">${file}</pre>`
+    );
+    caretIn(bodyOf(screen));
+    bodyOf(screen).dispatchEvent(clipboardEvent(clipboard));
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(file));
+    // Which is a heading and a list rather than four lines inside a fence.
+    await vi.waitFor(() =>
+      expect([...bodyOf(screen).children].map((block) => block.tagName)).toEqual(['H1', 'P', 'UL'])
+    );
+  });
+
+  it('keeps a code block copied off a page as the code block it is', async () => {
+    const onChange = vi.fn();
+    const screen = await render(<MawyEditor mode="wysiwyg" onChange={onChange} />);
+    const clipboard = new DataTransfer();
+
+    clipboard.setData('text/plain', 'const a = 1;');
+    clipboard.setData('text/html', '<pre><code class="language-js">const a = 1;</code></pre>');
+    caretIn(bodyOf(screen));
+    bodyOf(screen).dispatchEvent(clipboardEvent(clipboard));
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('```js\nconst a = 1;\n```'));
   });
 
   it('keeps a table the same shape while its cells are typed into', async () => {

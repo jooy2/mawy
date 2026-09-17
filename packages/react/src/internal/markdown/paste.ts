@@ -425,6 +425,40 @@ export function markdownFromHtml(html: string): string {
 }
 
 /**
+ * Whether this markup is a browser's wrapper around a document it was shown as
+ * plain text, rather than a code block somebody copied off a page.
+ *
+ * A browser given a `text/plain` file draws it inside one `<pre>` and puts that
+ * on the clipboard as its HTML. A `<pre>` is preformatted and a fenced block is
+ * what it means, so a Markdown file copied out of one arrived as a fence around
+ * the whole document — every heading and every list inside it, and none of them
+ * anything any more.
+ *
+ * The wrapper has nothing in it but the text of the file. A code block on a
+ * page is written `<pre><code>`, with whatever coloured it leaving classes
+ * behind, and it is one thing among the others that were copied with it. So:
+ * the body is that `<pre>` and nothing else, the `<pre>` holds no element and
+ * no class of its own, and what is in it is the whole of what the clipboard
+ * carried as text.
+ */
+export function wrappedPlainText(html: string, plain: string): boolean {
+  if (typeof DOMParser === 'undefined' || !html.trim() || !plain.trim()) {
+    return false;
+  }
+
+  const body = new DOMParser().parseFromString(html, 'text/html').body;
+  const only = body.children.length === 1 ? body.children[0] : null;
+
+  return (
+    only?.tagName === 'PRE' &&
+    only.children.length === 0 &&
+    !only.className &&
+    (only.textContent ?? '').trim() === plain.trim() &&
+    (body.textContent ?? '').trim() === plain.trim()
+  );
+}
+
+/**
  * The pictures of the RTF, for the `<img>` elements of the markup, where every
  * `<img>` has one.
  *

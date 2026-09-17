@@ -31,7 +31,7 @@ import {
 } from './commands.js';
 import type { MdNode, MdRange } from './markdown/ast.js';
 import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
-import { markdownFromHtml } from './markdown/paste.js';
+import { markdownFromHtml, wrappedPlainText } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
 import { ruleFor } from './rules.js';
 
@@ -1799,6 +1799,11 @@ function widened(value: string, start: number, end: number): { start: number; en
  * Inside a code block it is the plain text and nothing else: everything in
  * there is the characters it is, and a pasted heading is a line beginning with
  * a hash rather than a heading.
+ *
+ * And a document a browser was showing as plain text is the text it showed.
+ * See `wrappedPlainText`: the markup on the clipboard is then one `<pre>` the
+ * browser wrote around the file, and reading it as the preformatted block it
+ * looks like put a Markdown file inside a fence, every heading in it included.
  */
 export function markdownFor(
   clipboard: { getData(kind: string): string } | null,
@@ -1810,7 +1815,9 @@ export function markdownFor(
     return plain;
   }
 
-  return markdownFromHtml(clipboard.getData('text/html')) || plain;
+  const html = clipboard.getData('text/html');
+
+  return wrappedPlainText(html, plain) ? plain : markdownFromHtml(html) || plain;
 }
 
 /**
