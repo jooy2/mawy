@@ -2,7 +2,7 @@ name: mawy
 description: >-
   A Markdown editor and viewer that draw the document rather than a string of
   HTML — their own CommonMark and GFM parser, typography the reader controls.
-version: 1.6.0
+version: 1.7.0
 repository: https://github.com/jooy2/mawy
 homepage: https://mawy.cdget.com
 issue_tracker: https://github.com/jooy2/mawy/issues
