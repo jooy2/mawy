@@ -3368,17 +3368,18 @@ describe('the document surface', () => {
     const box = body.getBoundingClientRect();
 
     // The space between two paragraphs is their own margins, and a caret there
-    // has the end of one and the start of the other to go to. Which of the two
-    // the browser picks is the browser's, and both are somewhere to type: only
-    // a gap with nothing to type into either side of it gets a paragraph.
+    // has both of them to go to. Only a gap with nothing to type into either
+    // side of it gets a paragraph of its own.
     await userEvent.click(page.elementLocator(body), {
       position: { x: 40, y: (one.bottom + other.top) / 2 - box.top }
     });
     await userEvent.keyboard('X');
 
-    await vi.waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith(expect.stringMatching(/^(aX\n\nb|a\n\nXb)$/))
-    );
+    // Which end of which paragraph the browser picks is the browser's own, and
+    // every one of them is somewhere to type: what is checked is that the
+    // letter joined one of the two. Taking it back out leaves the document
+    // that was already there, so no blank line was written for it.
+    await vi.waitFor(() => expect(onChange.mock.lastCall?.[0].replace('X', '')).toBe('a\n\nb'));
     expect(body.querySelectorAll('p')).toHaveLength(2);
   });
 
