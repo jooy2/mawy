@@ -62,7 +62,9 @@ class MawyViewerToolbar extends StatefulWidget {
     required this.copyState,
     required this.onCopy,
     required this.finding,
+    required this.raw,
     this.onFind,
+    this.onRawToggle,
     this.frame = MawyFrame.box,
     this.placement = MawyToolbarPlacement.top,
     super.key,
@@ -103,6 +105,12 @@ class MawyViewerToolbar extends StatefulWidget {
 
   /// Whether the find bar is open.
   final bool finding;
+
+  /// Whether the document is being shown as the Markdown it was written in.
+  final bool raw;
+
+  /// What turns that on and off, or `null` where it cannot be.
+  final VoidCallback? onRawToggle;
 
   /// Opens it. Absent where there is nothing to search; the button goes quiet.
   final VoidCallback? onFind;
@@ -360,6 +368,7 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           label: widget.strings.outline,
           tokens: widget.tokens,
           focusNode: node,
+          enabled: !widget.raw,
           pressed: widget.outlineOpen,
           onPressed: widget.onOutlineToggle,
         );
@@ -370,9 +379,20 @@ class _MawyViewerToolbarState extends State<MawyViewerToolbar> {
           label: widget.strings.find,
           tokens: widget.tokens,
           focusNode: node,
-          enabled: widget.onFind != null,
+          enabled: widget.onFind != null && !widget.raw,
           pressed: widget.finding,
           onPressed: widget.onFind ?? () {},
+        );
+
+      case MawyViewerToolbarItem.raw:
+        return MawyToolbarButton(
+          icon: LucideIcons.code,
+          label: widget.strings.source,
+          tokens: widget.tokens,
+          focusNode: node,
+          enabled: widget.onRawToggle != null,
+          pressed: widget.raw,
+          onPressed: widget.onRawToggle ?? () {},
         );
 
       case MawyViewerToolbarItem.copy:

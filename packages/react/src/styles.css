@@ -1273,6 +1273,25 @@
   letter-spacing: inherit;
 }
 
+/*
+ * The document shown as the Markdown it was written in.
+ *
+ * The same element the drawn document uses, so the measure, the type, the
+ * colours and the padding the toolbar sets are the ones it already had — what
+ * changes is the characters in it rather than anything about them. Only the
+ * whitespace has to be told to stay, because the source says what it says with
+ * line endings and runs of spaces that HTML would otherwise fold away.
+ *
+ * Wrapped rather than scrolled sideways: a reader looking at the source of a
+ * paragraph wants to read the paragraph, and a line of it is as long as the
+ * author's editor happened to be wide.
+ */
+.mawy-root .mawy-raw {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  tab-size: 2;
+}
+
 /* Headings ---------------------------------------------------------------- */
 
 .mawy-root .mawy-md-heading {

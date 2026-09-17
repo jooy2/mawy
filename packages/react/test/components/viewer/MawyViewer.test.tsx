@@ -92,6 +92,40 @@ describe('the document', () => {
     expect(heading.id).toBe('second');
   });
 
+  /**
+   * The one question a drawn document cannot answer is how something was
+   * written, so the toolbar has a button that shows the Markdown instead —
+   * the same pane, with the characters of the source in it, and everything
+   * the toolbar says about type still saying it.
+   */
+  it('shows the document as the Markdown it was written in, and back again', async () => {
+    const screen = await render(<MawyViewer value={SAMPLE} toolbar={['raw', 'outline', 'find']} />);
+    const button = screen.getByRole('button', { name: 'Markdown source' });
+
+    await expect.element(button).toHaveAttribute('aria-pressed', 'false');
+    await button.click();
+    await expect.element(button).toHaveAttribute('aria-pressed', 'true');
+
+    const pane = screen.container.querySelector('.mawy-md') as HTMLElement;
+
+    expect(pane.classList.contains('mawy-raw')).toBe(true);
+    expect(pane.textContent).toBe(SAMPLE);
+    // Nothing is drawn from the document while it is the source: no heading to
+    // point an outline at, and no run of text for the find bar to mark.
+    expect(screen.container.querySelectorAll('.mawy-md-heading')).toHaveLength(0);
+
+    // Which is why the two controls that read the drawn document say so.
+    await expect.element(screen.getByRole('button', { name: 'Contents' })).toBeDisabled();
+    await expect.element(screen.getByRole('button', { name: 'Find' })).toBeDisabled();
+
+    await button.click();
+
+    await expect.element(button).toHaveAttribute('aria-pressed', 'false');
+    await expect
+      .element(screen.getByRole('heading', { name: 'Title', level: 1 }))
+      .toBeInTheDocument();
+  });
+
   it('gives every heading a mark that links to it, and moves it under a prefix', async () => {
     const screen = await render(<MawyViewer value={SAMPLE} />);
     const anchor = screen.container.querySelector('h2 .mawy-md-anchor') as HTMLAnchorElement;
@@ -748,7 +782,7 @@ describe('the toolbar', () => {
     const all = await render(<MawyViewer value={SAMPLE} />);
 
     await expect.element(all.getByRole('toolbar')).toBeInTheDocument();
-    expect(all.container.querySelectorAll('.mawy-toolbar-controls .mawy-button')).toHaveLength(10);
+    expect(all.container.querySelectorAll('.mawy-toolbar-controls .mawy-button')).toHaveLength(11);
 
     const none = await render(<MawyViewer value={SAMPLE} toolbar={false} />);
 

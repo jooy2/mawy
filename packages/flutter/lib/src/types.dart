@@ -223,6 +223,9 @@ enum MawyViewerToolbarItem {
   /// The find bar.
   find,
 
+  /// The document shown as the Markdown it was written in.
+  raw,
+
   /// The document's source, to the clipboard.
   copy,
 

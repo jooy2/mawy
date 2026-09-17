@@ -479,6 +479,16 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
   const [outlineOpen, setOutlineOpen] = React.useState(false);
   /**
+   * Whether the document is shown as the Markdown it was written in.
+   *
+   * Not a second document and not a second set of settings: the same pane,
+   * with the characters of the source in it rather than what they mean, and
+   * everything the toolbar says about type still saying it. What a reader
+   * reaches for it for is the one question a drawn document cannot answer,
+   * which is how something was written.
+   */
+  const [raw, setRaw] = React.useState(false);
+  /**
    * The find bar, which is closed until somebody asks for it.
    *
    * A viewer is a page of ordinary elements and the browser's own find does
@@ -1012,6 +1022,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
         onOutlineToggle={() => setOutlineOpen((was) => !was)}
         onFind={hasDocument ? openFind : undefined}
         finding={finding}
+        raw={raw}
+        onRawToggle={() => setRaw((was) => !was)}
         onOpenFile={takesFile ? () => picker.current?.click() : undefined}
         onCopy={() => copy(text)}
         copyState={copyState}
@@ -1085,7 +1097,13 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
         <div className="mawy-viewer-pane">
           {inside && toolbarPlacement === 'top' ? chrome : null}
           <div className="mawy-viewer-scroll" ref={scroller} tabIndex={-1} onClick={followAnchor}>
-            {hasDocument ? (
+            {hasDocument && raw ? (
+              // The measure, the type and the colours are the document's, so
+              // the same element carries them; only what is inside it changes.
+              <article className="mawy-md mawy-raw" aria-label={fileName ?? strings.document}>
+                {text}
+              </article>
+            ) : hasDocument ? (
               <article className="mawy-md" aria-label={fileName ?? strings.document}>
                 {content}
               </article>

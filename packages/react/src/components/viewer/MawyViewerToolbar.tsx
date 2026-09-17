@@ -21,6 +21,7 @@ import {
   DarkIcon,
   DocumentIcon,
   FindIcon,
+  CodeIcon,
   FontFamilyIcon,
   FontSizeIcon,
   LetterSpacingIcon,
@@ -103,6 +104,9 @@ export interface MawyViewerToolbarProps {
   /** Absent where nothing can be searched; the button goes quiet. */
   onFind?: () => void;
   finding: boolean;
+  /** Whether the document is being shown as the Markdown it was written in. */
+  raw: boolean;
+  onRawToggle?: () => void;
   /** Absent when a file opened here would go nowhere; the button goes quiet. */
   onOpenFile?: () => void;
   onCopy: () => void;
@@ -144,6 +148,8 @@ export function MawyViewerToolbar({
   onOutlineToggle,
   onFind,
   finding,
+  raw,
+  onRawToggle,
   onOpenFile,
   onCopy,
   copyState,
@@ -308,7 +314,7 @@ export function MawyViewerToolbar({
             icon={<OutlineIcon className="mawy-icon" aria-hidden="true" />}
             pressed={outlineOpen}
             aria-pressed={outlineOpen}
-            disabled={!hasDocument}
+            disabled={!hasDocument || raw}
             data-mawy-toolbar-item=""
             onClick={onOutlineToggle}
             {...itemProps(order[key])}
@@ -323,9 +329,24 @@ export function MawyViewerToolbar({
             icon={<FindIcon className="mawy-icon" aria-hidden="true" />}
             pressed={finding}
             aria-pressed={finding}
-            disabled={!onFind || !hasDocument}
+            disabled={!onFind || !hasDocument || raw}
             data-mawy-toolbar-item=""
             onClick={onFind}
+            {...itemProps(order[key])}
+          />
+        );
+
+      case 'raw':
+        return (
+          <IconButton
+            key={key}
+            label={strings.source}
+            icon={<CodeIcon className="mawy-icon" aria-hidden="true" />}
+            pressed={raw}
+            aria-pressed={raw}
+            disabled={!onRawToggle || !hasDocument}
+            data-mawy-toolbar-item=""
+            onClick={onRawToggle}
             {...itemProps(order[key])}
           />
         );
@@ -405,6 +426,7 @@ export const DEFAULT_TOOLBAR: readonly MawyViewerToolbarItem[] = [
   'outline',
   'find',
   'separator',
+  'raw',
   'copy',
   'open'
 ];

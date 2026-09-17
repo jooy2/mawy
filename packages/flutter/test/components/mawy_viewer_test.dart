@@ -2119,6 +2119,46 @@ void main() {
       expect(asked, <String>['./near.png']);
     });
   });
+
+  group('the source', () {
+    /// The one question a drawn document cannot answer is how something was
+    /// written, so the toolbar has a button that shows the Markdown instead —
+    /// the same pane, with the characters of the source in it, and everything
+    /// the toolbar says about type still saying it.
+    testWidgets('shows the document as the Markdown it was written in', (
+      WidgetTester tester,
+    ) async {
+      const String source = '# Title\n\nWords with **strong** in them.';
+
+      await tester.pumpWidget(
+        host(
+          const MawyViewer(
+            value: source,
+            toolbar: <MawyViewerToolbarItem>[
+              MawyViewerToolbarItem.raw,
+              MawyViewerToolbarItem.outline,
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(source), findsNothing);
+
+      await tester.tap(find.byIcon(LucideIcons.code));
+      await tester.pumpAndSettle();
+
+      // The characters of the source, and none of what they mean.
+      expect(find.text(source), findsOneWidget);
+      expect(find.text('Title'), findsNothing);
+
+      await tester.tap(find.byIcon(LucideIcons.code));
+      await tester.pumpAndSettle();
+
+      expect(find.text(source), findsNothing);
+      expect(find.text('Title'), findsOneWidget);
+    });
+  });
 }
 
 /// The block at [index], which is only on the tree while it is near the view.

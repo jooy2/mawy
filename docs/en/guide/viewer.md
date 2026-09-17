@@ -499,6 +499,7 @@ MawyViewer(
 | `'colorScheme'`   | light, dark, or whatever the system says                          |
 | `'outline'`       | opens the headings panel                                          |
 | `'find'`          | a bar that searches the drawn document                            |
+| `'raw'`           | shows the document as the Markdown it was written in              |
 | `'copy'`          | the Markdown source, to the clipboard                             |
 | `'open'`          | the file picker                                                   |
 | `'separator'`     | a hairline, for grouping a long list                              |
@@ -508,6 +509,8 @@ MawyViewer(
 Here they are the values of `MawyViewerToolbarItem`, so the second row is `MawyViewerToolbarItem.fontSize`. The list is the same except for `open`, because this package does not open files.
 
 :::
+
+**`raw` shows the document as the Markdown it was written in.** The one question a drawn document cannot answer is how something was written, so the button hands the reader the source: the same pane, with the characters of it in place of what they mean, and the typeface, the size, the line height, the letter spacing, the measure and the palette the toolbar set still set. `outline` and `find` read a drawn document, so both are off while it is on; `copy` is not, because it takes the Markdown either way.
 
 <Fw react="toolbar={false}" flutter="toolbar: const []" code /> is the whole of it gone — no text size, no palette, no outline, no find bar, no copy button, and nothing at all above the document.
 

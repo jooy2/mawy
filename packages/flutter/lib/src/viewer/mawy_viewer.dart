@@ -57,6 +57,8 @@ const List<MawyViewerToolbarItem> kMawyViewerToolbar = <MawyViewerToolbarItem>[
   MawyViewerToolbarItem.colorScheme,
   MawyViewerToolbarItem.outline,
   MawyViewerToolbarItem.find,
+  MawyViewerToolbarItem.separator,
+  MawyViewerToolbarItem.raw,
   MawyViewerToolbarItem.copy,
 ];
 
@@ -398,6 +400,15 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   /// desktop or the web, so a reader who has just been given a find button on
   /// the editor and goes looking for the same one here has nowhere else to go.
   bool _finding = false;
+
+  /// Whether the document is shown as the Markdown it was written in.
+  ///
+  /// Not a second document and not a second set of settings: the same pane,
+  /// with the characters of the source in it rather than what they mean, and
+  /// everything the toolbar says about type still saying it. What a reader
+  /// reaches for it for is the one question a drawn document cannot answer,
+  /// which is how something was written.
+  bool _raw = false;
   String _query = '';
   bool _matchCase = false;
   int _at = 0;
@@ -1112,6 +1123,8 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
           },
           finding: _finding,
           onFind: document.root.children.isEmpty ? null : _openFind,
+          raw: _raw,
+          onRawToggle: () => setState(() => _raw = !_raw),
           copyState: copyState,
           onCopy: () => copy(widget.value),
         ),
@@ -1276,7 +1289,15 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
                                   slivers: <Widget>[
                                     SliverPadding(
                                       padding: lead + EdgeInsets.symmetric(horizontal: side),
-                                      sliver: drawn.length < kMawyViewerLazyFrom
+                                      sliver: _raw
+                                          // The measure, the type and the
+                                          // colours are the document's, so
+                                          // the same box carries them and
+                                          // only what is in it changes.
+                                          ? SliverToBoxAdapter(
+                                              child: Text(widget.value, style: body),
+                                            )
+                                          : drawn.length < kMawyViewerLazyFrom
                                           // One box holding all of it, so
                                           // every block is built and a
                                           // selection can take the whole

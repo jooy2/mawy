@@ -892,6 +892,7 @@ export type MawyViewerToolbarItem =
   | 'colorScheme'
   | 'outline'
   | 'find'
+  | 'raw'
   | 'copy'
   | 'open'
   | 'separator';
