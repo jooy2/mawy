@@ -213,7 +213,11 @@ function escapedLine(
 
   const pattern = [...line]
     .map((character) => {
-      const literal = character.replace(/[\\^$.*+?()[\]{}|/-]/g, '\\$&');
+      // Only what has a meaning of its own outside a character class. A `-`
+      // must not be on the list: it means nothing out here, and `\\-` is an
+      // invalid escape to a pattern built with `u` rather than the hyphen it
+      // was meant to be.
+      const literal = character.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
 
       return ESCAPABLE.test(character) ? `\\\\?${literal}` : literal;
     })

@@ -89,6 +89,18 @@ describe('a run of text', () => {
     expect(answer).toBeLessThanOrEqual(source.length);
   });
 
+  it('is found in a line holding both a backslash escape and a hyphen', async () => {
+    // The pattern this is found with is built with `u`, to which `\\-` is an
+    // invalid escape rather than a hyphen. Nothing may put one in it.
+    const source = 'Five \\* six - seven';
+    const screen = await render(<MawyViewer value={source} />);
+    const words = 'Five * six - seven';
+
+    expect(at(screen.container, source, words, words.indexOf('seven'))).toBe(
+      source.indexOf('seven')
+    );
+  });
+
   it('is found across a backslash escape, either side of the backslash', async () => {
     // `\*` is drawn as `*`, so the words are not the characters they were
     // written with. Each side of the backslash is found where it was written.
