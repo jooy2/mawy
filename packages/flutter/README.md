@@ -59,6 +59,17 @@ That gives you a finished reader: the rendered document, and a toolbar for the t
 | `onLinkTap`                                               | What a tapped link does. Nothing at all without it                                    |
 | `directives`                                              | What draws the constructs this package does not know about, by name                   |
 
+A document that is one item of a list — a message in a conversation, a card, an entry in a feed — is `MawyDocument` instead. The same drawing with no surface around it: no toolbar, no scroll view of its own, exactly as tall as the document, with the scrolling left to the list it is in.
+
+```dart
+ListView(
+  children: <Widget>[
+    for (final Message message in messages)
+      MawyDocument(value: message.body, padding: EdgeInsets.zero),
+  ],
+)
+```
+
 ## Writing a document
 
 ```dart

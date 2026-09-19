@@ -25,9 +25,10 @@ Both components accept and forward every prop of `<div>` apart from `children` a
 | --- | --- |
 | [`MawyViewer`](./mawy-viewer) | A Markdown document, rendered and not editable. A toolbar for the typeface, the text size, the theme and the rest comes with it, and none of it changes the document. |
 | [`MawyEditor`](./mawy-editor) | A Markdown editor with the viewer beside it: the coloured source, a live preview, a formatting toolbar and a status bar. |
+| [`MawyDocument`](./mawy-document) | The same document with no viewer around it: no toolbar and no scroll view of its own, for a place that does the scrolling for it. |
 
-Both are built on `package:flutter/widgets.dart` alone, with no Material and no Cupertino, so a document sits inside a `MaterialApp`, a `CupertinoApp` or a bare `WidgetsApp` without pulling in a second design system.
+All three are built on `package:flutter/widgets.dart` alone, with no Material and no Cupertino, so a document sits inside a `MaterialApp`, a `CupertinoApp` or a bare `WidgetsApp` without pulling in a second design system.
 
-[`MawyDocument`](./mawy-document), which draws a document on a server, is the React package's and has no counterpart here.
+`MawyDocument` is the React package's name too, for the same thing reached from the other side: there a page that ships no JavaScript, here a widget that scrolls nothing.
 
 :::

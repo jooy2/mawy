@@ -23,10 +23,11 @@ Everything here exists and runs in whichever package the switch above the menu i
 
 ::: fw flutter
 
-| Page                                     | What it is                                      |
-| ---------------------------------------- | ----------------------------------------------- |
-| [`MawyViewer`](./components/mawy-viewer) | A Markdown document, rendered and not editable. |
-| [`MawyEditor`](./components/mawy-editor) | A Markdown editor with the viewer beside it.    |
+| Page                                         | What it is                                      |
+| -------------------------------------------- | ----------------------------------------------- |
+| [`MawyViewer`](./components/mawy-viewer)     | A Markdown document, rendered and not editable. |
+| [`MawyEditor`](./components/mawy-editor)     | A Markdown editor with the viewer beside it.    |
+| [`MawyDocument`](./components/mawy-document) | The same document with no viewer around it.     |
 
 :::
 

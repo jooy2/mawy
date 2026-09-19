@@ -175,6 +175,8 @@ Nothing here: this package does not open files, and `value` above says why.
 | `scrollController` | `ScrollController?` | one of its own | The document's scroller, so an application can drive it or watch it. |
 | `anchors` | [`MawyViewerAnchors?`](../types/viewer-anchors) | — | Where each top-level block of the document ends up, filled in as it draws — for anything lining a second view up with this one. |
 
+The viewer scrolls, which is why it takes the height it is given rather than the height of the document. Where there is no height to give it — a document that is one item of a list, a message in a conversation, a card in a column — [`MawyDocument`](./mawy-document) is the one to draw, and the list does the scrolling.
+
 :::
 
 ::: fw react
