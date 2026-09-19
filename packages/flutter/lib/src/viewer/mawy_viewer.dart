@@ -15,9 +15,12 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mawy/src/internal/body_style.dart';
 import 'package:mawy/src/internal/copying.dart';
+import 'package:mawy/src/internal/directive_table.dart';
 import 'package:mawy/src/internal/find_bar.dart';
 import 'package:mawy/src/internal/i18n.dart';
+import 'package:mawy/src/internal/linking.dart';
 import 'package:mawy/src/internal/overlay.dart';
 import 'package:mawy/src/internal/wheel.dart';
 import 'package:mawy/src/markdown/ast.dart';
@@ -314,7 +317,8 @@ class MawyViewer extends StatefulWidget {
   State<MawyViewer> createState() => _MawyViewerState();
 }
 
-class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
+class _MawyViewerState extends State<MawyViewer>
+    with MawyCopying<MawyViewer>, MawyLinking<MawyViewer> {
   late MawyTypography _held = widget.defaultTypography;
   late final ScrollController _scroller = widget.scrollController ?? ScrollController();
   final Map<String, GlobalKey> _headings = <String, GlobalKey>{};
@@ -345,19 +349,6 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   String? _active;
   String? _chosen;
 
-  /// Where a press started, and whether the link under it has been followed.
-  ///
-  /// A link inside the document is a span with a tap recognizer on it, and on a
-  /// desktop that recognizer loses: the selection around it watches the mouse
-  /// for a drag and takes the gesture before a tap can be declared. So the
-  /// press is read here as well, by a `Listener`, which is not in the gesture
-  /// arena and cannot lose it. The recognizer stays because it is what makes a
-  /// link a tappable thing to a screen reader, and what answers on a touch
-  /// screen — whichever of the two gets there first follows the link, and the
-  /// other stands down.
-  Offset? _pressed;
-  bool _followed = false;
-
   /// Where the focus is while a selection is being made in the document.
   ///
   /// A [SelectableRegion] takes the focus when a drag starts in it, and a node
@@ -379,15 +370,6 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   /// as far as the section and this gets them to the right note inside it.
   final Map<String, GlobalKey> _footnoteKeys = <String, GlobalKey>{};
 
-  /// The tap recognizers the links in the document needed, last time it was
-  /// drawn. Thrown away and made again on every build, because a recognizer
-  /// that outlives the span it was made for is a leak.
-  /// The tap recognizers the links in the document are using, by where each
-  /// link starts. See `MawyRenderContext.recognizerFor`.
-  final Map<Object, TapGestureRecognizer> _recognizers = <Object, TapGestureRecognizer>{};
-
-  /// Which of them this build asked for, so the rest can be let go afterwards.
-  final Set<Object> _wanted = <Object>{};
   bool _outlineOpen = false;
 
   /* ---------------------------------------------------------------------
@@ -484,7 +466,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       _read();
     }
 
-    if (!_sameTable(_directives, widget.directives)) {
+    if (!sameDirectiveTable(_directives, widget.directives)) {
       _directives = widget.directives;
       _drawn = null;
     }
@@ -497,34 +479,11 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
   /// is not a new answer. Compared by what is in it, and kept otherwise.
   late Map<String, MawyDirectiveBuilder>? _directives = widget.directives;
 
-  static bool _sameTable(
-    Map<String, MawyDirectiveBuilder>? a,
-    Map<String, MawyDirectiveBuilder>? b,
-  ) {
-    if (identical(a, b)) {
-      return true;
-    }
-
-    if (a == null || b == null || a.length != b.length) {
-      return false;
-    }
-
-    for (final MapEntry<String, MawyDirectiveBuilder> each in a.entries) {
-      if (b[each.key] != each.value) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
   @override
   void dispose() {
     _scroller.removeListener(_measureActive);
 
-    for (final GestureRecognizer recognizer in _recognizers.values) {
-      recognizer.dispose();
-    }
+    disposeRecognizers();
 
     for (final FocusNode anchor in _anchors.values) {
       anchor.dispose();
@@ -579,23 +538,6 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     MawyColorScheme.system => MediaQuery.platformBrightnessOf(context),
   };
 
-  /// The recognizer for the link starting at [key], made once and kept.
-  ///
-  /// A new one per link per build was a recognizer allocated for every link on
-  /// the page every time the pointer moved over a code block, and the old ones
-  /// were disposed at the top of the build that replaced them — while the
-  /// spans holding them were still on the tree. What listens for the tap
-  /// changes between builds and the recognizer does not, so only [onTap] is
-  /// written again.
-  TapGestureRecognizer _recognizerFor(Object key, VoidCallback onTap) {
-    final TapGestureRecognizer held = _recognizers.putIfAbsent(key, TapGestureRecognizer.new);
-
-    held.onTap = onTap;
-    _wanted.add(key);
-
-    return held;
-  }
-
   /// The document as widgets, kept until something it is drawn from changes.
   ///
   /// A viewer rebuilds for a great many reasons that are not the document: the
@@ -616,7 +558,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       return _drawn!;
     }
 
-    _wanted.clear();
+    countRecognizers();
     _drawnFrom = from;
 
     final List<Widget> blocks = _withAnchors(document, render);
@@ -627,45 +569,9 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       if (footnotes != null)
         MawyMeasured(offsets: _offsets, index: blocks.length, child: footnotes),
     ];
-    _sweepRecognizers();
+    sweepRecognizers();
 
     return _drawn!;
-  }
-
-  /// Whether a sweep is already booked for the end of this frame.
-  bool _sweeping = false;
-
-  /// Books the letting-go for after the frame.
-  ///
-  /// Twice not here. The document body is rendered further down this same
-  /// build, so what this build wants is not known yet — and the spans holding
-  /// what it does not want are on the tree until this build has replaced them,
-  /// which is the same reason the anchors are dropped a frame late.
-  void _sweepRecognizers() {
-    if (_sweeping) {
-      return;
-    }
-
-    _sweeping = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
-      _sweeping = false;
-
-      if (_recognizers.length == _wanted.length) {
-        return;
-      }
-
-      final List<TapGestureRecognizer> stale = <TapGestureRecognizer>[
-        for (final MapEntry<Object, TapGestureRecognizer> each in _recognizers.entries)
-          if (!_wanted.contains(each.key)) each.value,
-      ];
-
-      _recognizers.removeWhere((Object key, TapGestureRecognizer _) => !_wanted.contains(key));
-
-      for (final TapGestureRecognizer recognizer in stale) {
-        recognizer.dispose();
-      }
-    });
   }
 
   /// Throws away the anchors the document that just went had.
@@ -889,62 +795,9 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     }
   }
 
-  /// The link a place on the screen belongs to, if it belongs to one.
-  ///
-  /// A paragraph puts the span under the pointer into the hit-test path itself
-  /// — that is how a tap ever reaches a span's recognizer — so this is the same
-  /// answer the arena would have used, read from the same place and without
-  /// having to win anything to get it.
-  TapGestureRecognizer? _linkAt(Offset global) {
-    final RenderObject? document = context.findRenderObject();
-
-    if (document is! RenderBox || !document.attached) {
-      return null;
-    }
-
-    final BoxHitTestResult hit = BoxHitTestResult();
-
-    document.hitTest(hit, position: document.globalToLocal(global));
-
-    for (final HitTestEntry<HitTestTarget> entry in hit.path) {
-      final HitTestTarget target = entry.target;
-
-      if (target is TextSpan && target.recognizer is TapGestureRecognizer) {
-        return target.recognizer! as TapGestureRecognizer;
-      }
-    }
-
-    return null;
-  }
-
-  /// A press that went down and came up on the same link follows it.
-  ///
-  /// In a microtask, because the gesture arena is swept as soon as this event
-  /// has finished being dispatched: a frame later is too late to feel like a
-  /// tap, and now is too early to know whether the recognizer won.
-  void _release(PointerUpEvent event) {
-    final Offset? from = _pressed;
-
-    _pressed = null;
-
-    if (from == null || (event.position - from).distance > 4) {
-      _followed = false;
-
-      return;
-    }
-
-    scheduleMicrotask(() {
-      if (!_followed && mounted) {
-        _linkAt(event.position)?.onTap?.call();
-      }
-
-      _followed = false;
-    });
-  }
-
   /// What the document's links are handed, so one is never followed twice.
   void _tapLink(String url, String? title) {
-    _followed = true;
+    followedLink();
     widget.onLinkTap?.call(url, title);
   }
 
@@ -1021,20 +874,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
     /// The one being stepped through, kept inside a count that may have shrunk.
     final int current = found.total == 0 ? -1 : _at.clamp(0, found.total - 1);
 
-    final TextStyle body = TextStyle(
-      color: tokens.foreground,
-      fontFamily: type.fontFamilyName,
-      fontFamilyFallback: type.fontFamilyName != null
-          ? null
-          : switch (type.fontFamily) {
-              MawyFontFamily.sans => const <String>['Pretendard', 'Noto Sans KR'],
-              MawyFontFamily.serif => const <String>['Georgia', 'Noto Serif KR'],
-              MawyFontFamily.mono => const <String>['Menlo', 'Consolas', 'Roboto Mono'],
-            },
-      fontSize: type.fontSize,
-      height: type.lineHeight,
-      letterSpacing: type.letterSpacing * type.fontSize,
-    );
+    final TextStyle body = mawyBodyStyle(tokens, type);
 
     final MawyRenderContext render = MawyRenderContext(
       tokens: tokens,
@@ -1055,7 +895,7 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
       // Unconditional, where the link half of it once turned on whether the
       // application wanted links followed: the two halves of a footnote are
       // this viewer's own and are followed whatever the application asked for.
-      recognizerFor: _recognizerFor,
+      recognizerFor: recognizerFor,
       found: found,
       currentMatch: current,
       onFootnoteTap: (String label) => unawaited(_toFootnote(label)),
@@ -1205,10 +1045,9 @@ class _MawyViewerState extends State<MawyViewer> with MawyCopying<MawyViewer> {
                   // entry they pressed stops being the answer.
                   onPointerDown: (PointerDownEvent event) {
                     _chosen = null;
-                    _pressed = event.position;
-                    _followed = false;
+                    pressedLink(event);
                   },
-                  onPointerUp: _release,
+                  onPointerUp: releasedLink,
                   onPointerSignal: (PointerSignalEvent _) => _chosen = null,
                   child: Shortcuts(
                     // What copies a selection. A browser does this without
