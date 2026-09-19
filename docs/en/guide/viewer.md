@@ -531,6 +531,8 @@ MawyViewer(value: comment.body, links: MawyLinkPolicy.text, images: MawyImagePol
 
 A footnote's number and the way back from a note are this library's own and stay, and the find bar searches only what is drawn. See [link and image policy](../api/types/drawing-policy) for what each value draws.
 
+**A document a model wrote is a document from somewhere else.** Whatever prompt produced it, the words in it came from whatever that model read, so an answer takes the policies a comment takes, and for the same reason. [Drawing what an agent wrote](#drawing-what-an-agent-wrote) below is that case in full.
+
 ::: fw flutter
 
 **Raw HTML is shown as the characters it was written with, and there is no option to change that.** Flutter has no HTML to draw it as, which is why the Flutter package has no `html` prop. The one exception is a bare `<br>` inside a table cell, which is drawn as a line break because a cell has no other way to hold one. The rest of this section applies to the React package only.
@@ -562,6 +564,75 @@ So the browser's first paint matches the server's output, and the elements arriv
 `'raw'` removes nothing and checks nothing. A `<script>` in the document runs, an `onerror` on an image runs, and an `<iframe>` loads, all of it in the page's own origin, with the page's own cookies and whatever the signed-in reader can reach. **Anybody who can put characters into the document can do anything the application can do**: read the session, call the API as that reader, and rewrite the page.
 
 Set it only where the document is the application's own, or has already been made safe by something upstream that the application trusts. A report about rendering untrusted Markdown with it set is [out of scope](https://github.com/jooy2/mawy/blob/main/SECURITY.md) as a vulnerability, because that is the documented meaning of the value. Use `'sanitize'` for a document that came from somewhere else.
+
+:::
+
+## Drawing what an agent wrote
+
+A model answers in Markdown, and the application has to draw the answer. [A2UI](https://a2ui.org) is the case this section is written for, because it puts in a schema what everything else leaves to the application, but the shape is the same wherever the text came from.
+
+**There is no catalog here to install.** An A2UI [catalog](https://a2ui.org/concepts/catalogs/) is the list of components an agent may ask for, and it belongs to the application: a JSON Schema the client provides, validates every message against, and writes out of its own design system, which is why the project recommends writing one rather than adapting somebody else's. So there is nothing for this library to publish in its place. What it has is what stands behind one entry of that list. The [basic catalog](https://a2ui.org/specification/v0.9.1-basic-catalog-implementation-guide/)'s `Text` is simple Markdown with no HTML, no pictures and no links, since anything richer is meant to be a component of its own, and the guide asks a client to draw it with a Markdown parser where there is one and to fall back to the characters where there is not.
+
+So `Text` is the document with nothing around it:
+
+::: fw react
+
+```tsx
+import { MawyViewer } from 'mawy-react';
+
+export function Text({ text }: { text: string }) {
+  return <MawyViewer value={text} toolbar={false} frame="floating" links="text" images="hide" />;
+}
+```
+
+:::
+
+::: fw flutter
+
+```dart
+Widget text(String text) => MawyDocument(
+  value: text,
+  padding: EdgeInsets.zero,
+  links: MawyLinkPolicy.text,
+  images: MawyImagePolicy.hide,
+);
+```
+
+:::
+
+::: fw react
+
+`floating` with the toolbar off leaves the document and nothing around it, which is what a component drawn inside somebody else's layout has to be. The type size and the palette belong to the surface holding the messages rather than to a bar over each one.
+
+:::
+
+::: fw flutter
+
+[`MawyDocument`](../api/components/mawy-document) rather than the viewer, because a message in a list is not a surface. It is the same drawing, exactly as tall as the document, with the scrolling left to the list — where [`MawyViewer`](../api/components/mawy-viewer) is a scroll view of its own, and a scrollable inside a scrollable has no height to be given, so it throws during layout rather than drawing something short. The type size and the palette come from the widget that holds the messages, and there is no bar over each one to change them from.
+
+:::
+
+`links` and `images` are set to what the catalog said that component carries, which is neither. An agent writes one anyway sooner or later, and `text` keeps the words in the sentence while giving the reader nowhere to go. A picture is the sharper case: drawn, it is fetched from whatever address the message named, and that is a request the application makes on a model's word. Leaving both at `show` is a choice an application can make, rather than a default to inherit.
+
+::: fw react
+
+`html` stays at `escape`. Markup in the answer is drawn as the characters it was written with, which is the same answer the catalog gives by keeping HTML out of `Text`, and [Safety](#safety) has the reason: the markup in a model's answer came from whatever that model read. `sanitize` is for a document the application already trusts.
+
+:::
+
+::: fw flutter
+
+There is nothing to decide about HTML. This package draws raw HTML as the characters it was written with whatever the document says, which is already what the catalog asks of a `Text`.
+
+:::
+
+**A half-written document is drawn as what it currently is.** An answer arrives a piece at a time, and every piece is a whole document to the parser: a fence with nothing closing it is a code block, a `**` with nothing after it is two asterisks, and a table row short of its cells is a table. So the value can be handed over on every update, with nothing to buffer and no point at which the text has to be waited for.
+
+**The same message is drawn the same on both platforms.** An answer that is a table on the web and three lines of pipes in the app is the failure this library exists to not have, and what removes it is the [one parser both packages run](getting-started), diffed tree for tree on every change.
+
+::: fw react
+
+Two more props earn their place on a surface like this. A `Text` inside a card, or under a heading the application wrote, wants [`headingBase`](#heading-levels), so the document's `#` carries on the outline of the page rather than starting a second one. A surface holding several messages, each with headings of its own, wants an `anchorPrefix` for each: two answers that both say "Summary" give one `id` to two headings otherwise. This library makes up no prefix, because which documents share a page is something only the application knows.
 
 :::
 
