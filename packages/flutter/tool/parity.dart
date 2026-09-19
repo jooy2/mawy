@@ -249,6 +249,23 @@ List<String> corpus() {
   return docs;
 }
 
+/// The corpus again, read with the two options that are off by default.
+///
+/// Neither one changes a block, so the trees above say nothing about either:
+/// the typographer rewrites the characters inside a text node and the widened
+/// linkifier turns some of them into a link. Both are exactly the kind of thing
+/// that drifts unnoticed, so the corpus is parsed a second time with both on.
+List<Object?> _typed() {
+  return corpus().map((String source) {
+    final MdDocument d = parseMarkdown(
+      source,
+      const MawyParseOptions(typographer: true, autolinkSchemes: true),
+    );
+
+    return clean(d.root.children);
+  }).toList();
+}
+
 void main() {
   final List<Object?> out = <Object?>[];
 
@@ -274,6 +291,7 @@ void main() {
   stdout.write(
     const JsonEncoder.withIndent(' ').convert(<String, Object?>{
       'trees': out,
+      'typed': _typed(),
       'highlights': _highlights(),
       'source': _source(),
       'edits': _edits(),

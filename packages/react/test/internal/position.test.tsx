@@ -101,6 +101,61 @@ describe('a run of text', () => {
     );
   });
 
+  it('is found either side of a mark the typographer drew', async () => {
+    // `--`, `...` and `(c)` are each drawn as one character, so the words are
+    // not the characters they were written with. Either side of each mark is
+    // found where it was written.
+    const source = 'Five -- six ... seven (c) eight';
+    const screen = await render(<MawyViewer value={source} parse={{ typographer: true }} />);
+    const words = 'Five \u2013 six \u2026 seven \u00a9 eight';
+
+    expect(at(screen.container, source, words, 0)).toBe(0);
+    expect(at(screen.container, source, words, words.indexOf('\u2013'))).toBe(source.indexOf('--'));
+    expect(at(screen.container, source, words, words.indexOf(' six'))).toBe(source.indexOf(' six'));
+    expect(at(screen.container, source, words, words.indexOf('\u2026'))).toBe(
+      source.indexOf('...')
+    );
+    expect(at(screen.container, source, words, words.indexOf(' seven'))).toBe(
+      source.indexOf(' seven')
+    );
+    expect(at(screen.container, source, words, words.indexOf('\u00a9'))).toBe(
+      source.indexOf('(c)')
+    );
+    expect(at(screen.container, source, words, words.indexOf(' eight'))).toBe(
+      source.indexOf(' eight')
+    );
+    expect(at(screen.container, source, words, words.length)).toBe(source.length);
+
+    const text = screen.container.querySelector('p')!.firstChild as Text;
+
+    expect(domAt(screen.container, source.indexOf(' seven'), source)).toEqual({
+      node: text,
+      offset: words.indexOf(' seven')
+    });
+  });
+
+  it('is found exactly across a quotation, which is one character for one', async () => {
+    const source = `He said "hello" and it's fine`;
+    const screen = await render(<MawyViewer value={source} parse={{ typographer: true }} />);
+    const words = 'He said \u201chello\u201d and it\u2019s fine';
+
+    // Nothing got longer or shorter, so every offset is its own.
+    for (const offset of [0, 8, 9, 14, 21, words.length]) {
+      expect(at(screen.container, source, words, offset)).toBe(offset);
+    }
+  });
+
+  it('falls back to counting where a mark says nothing about what it replaced', async () => {
+    // `?????` and `????` are both drawn `???`, so there is no way back from the
+    // page to the file. The answer stays inside the run it belongs to.
+    const source = 'Really????? yes';
+    const screen = await render(<MawyViewer value={source} parse={{ typographer: true }} />);
+    const answer = at(screen.container, source, 'Really??? yes', 13);
+
+    expect(answer).toBeGreaterThanOrEqual(0);
+    expect(answer).toBeLessThanOrEqual(source.length);
+  });
+
   it('is found across a backslash escape, either side of the backslash', async () => {
     // `\*` is drawn as `*`, so the words are not the characters they were
     // written with. Each side of the backslash is found where it was written.

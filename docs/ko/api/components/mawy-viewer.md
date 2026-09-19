@@ -62,7 +62,7 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 
 | 프롭 | 타입 | 기본값 | 하는 일 |
 | --- | --- | --- | --- |
-| `parse` | [`MawyParseOptions`](../types/parse-options) | `{ gfm: true, breaks: false, definitionLists: true, headingIds: true }` | 마크다운을 어떻게 읽을지. |
+| `parse` | [`MawyParseOptions`](../types/parse-options) | `{ gfm: true, breaks: false, definitionLists: true, headingIds: true, frontmatter: true, typographer: false, autolinkSchemes: false }` | 마크다운을 어떻게 읽을지. |
 | `html` | [`MawyHtmlPolicy`](../types/html-policy) | `'escape'` | 문서 안에 쓰인 날 HTML을 어떻게 할지. |
 | `linkTarget` | [`MawyLinkTarget`](../types/link-target) | `'blank'` | 문서가 쓴 링크가 어디에서 열릴지. |
 | `linkRel` | [`MawyLinkRel`](../types/link-target#mawylinkrel) | — | 그 링크가 가는 곳에 대해 무엇을 밝힐지. 이미 밝힌 것에 더합니다. |

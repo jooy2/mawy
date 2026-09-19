@@ -28,6 +28,9 @@ class InlineOptions {
   const InlineOptions({
     required this.gfm,
     required this.breaks,
+    required this.typographer,
+    required this.autolinkSchemes,
+    required this.quotes,
     required this.definitions,
     required this.footnotes,
   });
@@ -37,6 +40,17 @@ class InlineOptions {
 
   /// Whether a single newline inside a paragraph is a line break.
   final bool breaks;
+
+  /// Whether quotation marks are turned round, and `--`, `...` and `(c)` drawn
+  /// as the marks they stand in for.
+  final bool typographer;
+
+  /// Whether a bare address carrying any scheme the link policy trusts becomes
+  /// a link, on top of the web addresses GFM reads.
+  final bool autolinkSchemes;
+
+  /// The four marks a quotation is drawn with.
+  final MawyQuotes quotes;
 
   /// The document's link reference definitions, already collected.
   final Map<String, MdDefinition> definitions;
@@ -775,17 +789,47 @@ final RegExp _inlineHtml = RegExp(
  * Bare URLs
  * ---------------------------------------------------------------------- */
 
-/// A bare URL or an address, written with no markup around it.
+/// A host with a dot in it, which is what tells an address from a word.
+///
+/// `example.com` and `a.b.co.uk` are addresses and `localhost` is not, which is
+/// also what keeps `//server/share` — a path on a Windows network — from being
+/// read as an address that left its scheme to the page.
+const String _host =
+    r'[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?)+';
+
+/// An e-mail address, written with no markup around it.
 ///
 /// The local part is held to sixty-four characters, which is the limit RFC 5321
 /// puts on it. Without a bound the `+` reads to the end of the paragraph looking
 /// for an `@`, gives the last character back, looks again, and does that from
 /// every position it could start at — so a run of letters with no space in it,
 /// a base64 blob among them, cost the square of its own length.
-final RegExp _literal = RegExp(
-  r'(?:https?://|www\.)[^\s<]+|[A-Za-z\d._%+-]{1,64}@[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]*[A-Za-z\d])?)+',
+const String _email = r'[A-Za-z\d._%+-]{1,64}@' + _host;
+
+/// A bare URL or an address, in the three shapes GFM reads.
+final RegExp _literal = RegExp(r'(?:https?://|www\.)[^\s<]+|' + _email);
+
+/// The same, widened to every other scheme and to an address that left its
+/// scheme to the page.
+///
+/// Which schemes is not decided here: the run only has to *look* like an
+/// address with a scheme on it, and [safeUrl] then refuses every scheme the
+/// library will not follow. So this and the allowlist cannot disagree about
+/// what `ftp://` is, and a `TODO:x` in a sentence is read, refused and drawn as
+/// the words it is.
+///
+/// The web addresses come first on purpose. `www.example.com:8080/x` has a
+/// colon in it and would otherwise be read as a scheme of `www.example.com`,
+/// which is no scheme at all, and a host GFM already reads would stop being a
+/// link the moment this option was turned on.
+final RegExp _wideLiteral = RegExp(
+  r'(?:https?://|www\.)[^\s<]+|[A-Za-z][A-Za-z\d+.-]{1,31}:[^\s<]+|//' +
+      _host +
+      r'[^\s<]*|' +
+      _email,
 );
-final RegExp _schemed = RegExp(r'^(?:https?://|www\.)', caseSensitive: false);
+final RegExp _scheme = RegExp(r'^[A-Za-z][A-Za-z\d+.-]{1,31}:');
+final RegExp _www = RegExp(r'^www\.', caseSensitive: false);
 final RegExp _trailingEntity = RegExp(r'&[A-Za-z\d]+;$');
 
 /// Only after whitespace or one of the few marks a URL is written next to.
@@ -831,6 +875,25 @@ String _trimLiteral(String match) {
   return entity == null ? trimmed : trimmed.substring(0, entity.start);
 }
 
+/// Where a bare address points, or `null` where the link policy will not follow
+/// it there.
+///
+/// Four shapes reach here and each says its destination a different way. A
+/// `www.` host is an address missing its scheme, one starting `//` is missing
+/// only that and the page supplies it, anything carrying a scheme already says
+/// where it goes, and what is left is an e-mail address.
+String? _addressUrl(String text) {
+  if (_www.hasMatch(text)) {
+    return safeUrl('http://$text');
+  }
+
+  if (text.startsWith('//') || _scheme.hasMatch(text)) {
+    return safeUrl(text);
+  }
+
+  return safeUrl('mailto:$text');
+}
+
 /// A text node split around the bare URLs and e-mail addresses inside it.
 ///
 /// The pieces get their offsets by counting from the node's own start, which is
@@ -839,7 +902,7 @@ String _trimLiteral(String match) {
 /// in. Nothing is left to say where those went, so the count is held inside the
 /// node's range instead: a piece may then be a character or two out, and is
 /// still in order and still inside the node it came from.
-List<MdInline> _linkifyText(MdText node) {
+List<MdInline> _linkifyText(MdText node, RegExp pattern) {
   final String value = node.value;
   int offset(int index) {
     final int at = node.range.start + index;
@@ -852,7 +915,7 @@ List<MdInline> _linkifyText(MdText node) {
   int search = 0;
 
   while (search <= value.length) {
-    final RegExpMatch? match = _literal.firstMatch(value.substring(search));
+    final RegExpMatch? match = pattern.firstMatch(value.substring(search));
 
     if (match == null) {
       break;
@@ -873,10 +936,7 @@ List<MdInline> _linkifyText(MdText node) {
       continue;
     }
 
-    final bool email = !_schemed.hasMatch(text);
-    final String? url = safeUrl(
-      email ? 'mailto:$text' : (text.startsWith('www.') ? 'http://$text' : text),
-    );
+    final String? url = _addressUrl(text);
 
     if (url == null) {
       continue;
@@ -901,27 +961,27 @@ List<MdInline> _linkifyText(MdText node) {
 }
 
 /// The same, over a finished tree — but never inside a link, which has one.
-List<MdInline> _linkify(List<MdInline> nodes) {
+List<MdInline> _linkify(List<MdInline> nodes, RegExp pattern) {
   final List<MdInline> out = <MdInline>[];
 
   for (final MdInline node in nodes) {
     if (node is MdText) {
-      out.addAll(_linkifyText(node));
+      out.addAll(_linkifyText(node, pattern));
       continue;
     }
 
     if (node is MdEmphasis) {
-      out.add(MdEmphasis(node.range, _linkify(node.children)));
+      out.add(MdEmphasis(node.range, _linkify(node.children, pattern)));
       continue;
     }
 
     if (node is MdStrong) {
-      out.add(MdStrong(node.range, _linkify(node.children)));
+      out.add(MdStrong(node.range, _linkify(node.children, pattern)));
       continue;
     }
 
     if (node is MdDelete) {
-      out.add(MdDelete(node.range, _linkify(node.children)));
+      out.add(MdDelete(node.range, _linkify(node.children, pattern)));
       continue;
     }
 
@@ -932,11 +992,554 @@ List<MdInline> _linkify(List<MdInline> nodes) {
 }
 
 /* -------------------------------------------------------------------------
+ * Typography
+ * ---------------------------------------------------------------------- */
+
+/// The four marks a quotation is drawn with.
+///
+/// English and Korean write one the same way, so the default covers both
+/// languages this library's interface speaks — and the document is not the
+/// interface, which is why it is an option at all. German writes „a“ and
+/// French «a», and a reader of one of those meets the wrong mark otherwise.
+///
+/// Every field keeps its default when it is left out, so
+/// `MawyQuotes(doubleOpen: '„', doubleClose: '“')` is the whole of what a German
+/// document needs.
+class MawyQuotes {
+  /// Creates a set of quotation marks, taking the English ones for anything
+  /// left out.
+  const MawyQuotes({
+    this.doubleOpen = '“',
+    this.doubleClose = '”',
+    this.singleOpen = '‘',
+    this.singleClose = '’',
+  });
+
+  /// What opens a quotation.
+  final String doubleOpen;
+
+  /// And what closes it.
+  final String doubleClose;
+
+  /// What opens a quotation inside one.
+  final String singleOpen;
+
+  /// And what closes that.
+  final String singleClose;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MawyQuotes &&
+      other.doubleOpen == doubleOpen &&
+      other.doubleClose == doubleClose &&
+      other.singleOpen == singleOpen &&
+      other.singleClose == singleClose;
+
+  @override
+  int get hashCode => Object.hash(doubleOpen, doubleClose, singleOpen, singleClose);
+}
+
+/// The apostrophe, which is not one of the four.
+///
+/// It is the same character as English's closing single quote and is not the
+/// same *mark*: `dogs’ bones` wants this whatever a document's quotations are
+/// drawn with, and a German document that set its single marks to ‚‘ would
+/// otherwise come out as `dogs‘ bones`.
+const String _apostrophe = '’';
+
+/// `(c)`, `(tm)` and `(r)`, which are typed for marks a keyboard has no key for.
+final RegExp _mark = RegExp(r'\((?:c|tm|r)\)', caseSensitive: false);
+final RegExp _marks = RegExp(r'\((c|tm|r)\)', caseSensitive: false);
+const Map<String, String> _marked = <String, String>{'c': '©', 'r': '®', 'tm': '™'};
+
+/// Anything the substitutions below could touch.
+///
+/// A paragraph has none of it far more often than it has some, and the eight
+/// passes underneath are eight walks of the string. This is one.
+final RegExp _rare = RegExp(r'\+-|\.\.|\?{4}|!{4}|,,|--');
+
+final RegExp _dots = RegExp(r'\.{2,}');
+final RegExp _afterMark = RegExp('([?!])…');
+final RegExp _manyMarks = RegExp(r'([?!]){4,}');
+final RegExp _commas = RegExp(r',{2,}');
+final RegExp _emDash = RegExp(r'(^|[^-])---(?=[^-]|$)', multiLine: true);
+final RegExp _enDashApart = RegExp(r'(^|\s)--(?=\s|$)', multiLine: true);
+final RegExp _enDashTight = RegExp(r'(^|[^-\s])--(?=[^-\s]|$)', multiLine: true);
+
+/// Both quotation marks, which the pairing below reads a run for.
+final RegExp _quotes = RegExp('[\'"]');
+
+/// A single digit, for the one rule that asks whether a mark follows a number.
+final RegExp _digit = RegExp(r'\d');
+
+/// How many quotation marks may be left open in one run before it is given up
+/// on.
+///
+/// A bound rather than a rule: a paragraph written with a thousand unclosed
+/// quotation marks is not prose, and the pairing is what would go on holding
+/// all of them. Everything paired before the bound is reached is still drawn
+/// paired.
+const int _openers = 1000;
+
+/// The substitutions, in the order they have to be made.
+///
+/// The order is the whole of it. An ellipsis is made before `?...` is put back
+/// as `?..`, so that the three dots are one character by the time the question
+/// mark is looked at; and three hyphens are taken before two, so that `---` is
+/// an em dash rather than an en dash with a hyphen left over.
+///
+/// The list is markdown-it's, character for character, and that is deliberate:
+/// these are conventions rather than decisions, and a document written against
+/// the reader most of the internet uses has to come out of this one the same
+/// way. `..` becoming an ellipsis and `????` collapsing to three are both on
+/// it, and both look like too much until a document written elsewhere arrives.
+String _substituted(String value) {
+  final String marked = _mark.hasMatch(value)
+      ? value.replaceAllMapped(_marks, (Match match) => _marked[match.group(1)!.toLowerCase()]!)
+      : value;
+
+  if (!_rare.hasMatch(marked)) {
+    return marked;
+  }
+
+  return marked
+      .replaceAll('+-', '±')
+      .replaceAll(_dots, '…')
+      .replaceAllMapped(_afterMark, (Match match) => '${match.group(1)}..')
+      .replaceAllMapped(_manyMarks, (Match match) => match.group(1)! * 3)
+      .replaceAll(_commas, ',')
+      .replaceAllMapped(_emDash, (Match match) => '${match.group(1)}—')
+      // Two hyphens twice, because "between two spaces" and "between two
+      // characters that are neither" are the two ways a dash is written and
+      // one pass cannot be both.
+      .replaceAllMapped(_enDashApart, (Match match) => '${match.group(1)}–')
+      .replaceAllMapped(_enDashTight, (Match match) => '${match.group(1)}–');
+}
+
+/// The same, with every bare address in the run left as it was written.
+///
+/// `http://a.co/a--b` is one address and `http://a.co/a–b` is another, and a
+/// dash drawn into the middle of one is a link to a page that is not there. So
+/// an address is never prose here — and whether it is going to be *drawn* as a
+/// link does not come into it, since a reader copies the characters either way
+/// and [InlineOptions.autolinkSchemes] would otherwise decide what a dash
+/// means.
+///
+/// What counts as one is the destination rather than the shape. A run has to be
+/// somewhere the link policy would follow, so `ftp://x.io/a--b` is an address
+/// with the option off as much as on, while `re:invent...` and `TODO:fix...`
+/// are the prose they look like — nothing on the allowlist is called `re` or
+/// `TODO`, and a sentence should not lose its ellipsis to a colon.
+String _typeset(String value) {
+  final StringBuffer out = StringBuffer();
+  int last = 0;
+  int search = 0;
+
+  while (search <= value.length) {
+    final RegExpMatch? match = _wideLiteral.firstMatch(value.substring(search));
+
+    if (match == null) {
+      break;
+    }
+
+    final int at = search + match.start;
+    final String whole = match.group(0)!;
+
+    search = at + whole.length;
+
+    final String text = _trimLiteral(whole);
+
+    if (text.isEmpty || _addressUrl(text) == null) {
+      continue;
+    }
+
+    out.write(_substituted(value.substring(last, at)));
+    out.write(text);
+    last = at + text.length;
+    search = last;
+  }
+
+  if (last == 0) {
+    return _substituted(value);
+  }
+
+  out.write(_substituted(value.substring(last)));
+
+  return out.toString();
+}
+
+/// One place in the run, as the quotation marks are read.
+///
+/// A quotation mark is decided by what sits either side of it, and what sits
+/// beside it is often in another node: the `"` in `**a** "b"` has the `a` of a
+/// strong behind it. So the tree is flattened to this list first, and the
+/// characters around a mark are then the ones next to it in the document rather
+/// than the ones next to it in its own node.
+class _Spot {
+  _Spot({required this.node, required this.text, required this.depth, required this.stop});
+
+  /// The node to rewrite, or `null` for one that is only read for context.
+  final MdText? node;
+
+  String text;
+
+  /// How deep in the run it sits. A quotation may not be opened inside emphasis
+  /// and closed outside it, the same way emphasis may not, so the pairing below
+  /// only pairs marks that came from the same depth.
+  final int depth;
+
+  /// A hard break, which neither side reads across.
+  final bool stop;
+}
+
+/// The run flattened, in the order a reader meets it.
+///
+/// [written] holds the start of every text node the document wrote as a
+/// backslash escape. An author who typed `\\-\\-` meant two hyphens and an escape
+/// is how Markdown says so, so those nodes go in as something to read and never
+/// as something to rewrite — which is also why [_merge] was told to leave them
+/// beside their neighbours rather than joining them in.
+void _spotsIn(List<MdInline> nodes, int depth, Set<int> written, List<_Spot> into) {
+  for (final MdInline node in nodes) {
+    if (node is MdText) {
+      into.add(
+        _Spot(
+          node: written.contains(node.range.start) ? null : node,
+          text: node.value,
+          depth: depth,
+          stop: false,
+        ),
+      );
+      continue;
+    }
+
+    // Read and never written: what a code span or a piece of markup says is the
+    // characters the author typed, and this pass does not touch those. They
+    // still sit next to a quotation mark and still decide which way it faces.
+    if (node is MdInlineCode) {
+      into.add(_Spot(node: null, text: node.value, depth: depth, stop: false));
+      continue;
+    }
+
+    if (node is MdInlineHtml) {
+      into.add(_Spot(node: null, text: node.value, depth: depth, stop: false));
+      continue;
+    }
+
+    if (node is MdImage) {
+      into.add(_Spot(node: null, text: node.alt, depth: depth, stop: false));
+      continue;
+    }
+
+    if (node is MdBreak) {
+      into.add(_Spot(node: null, text: '', depth: depth, stop: true));
+      continue;
+    }
+
+    if (node is MdEmphasis) {
+      _spotsIn(node.children, depth + 1, written, into);
+      continue;
+    }
+
+    if (node is MdStrong) {
+      _spotsIn(node.children, depth + 1, written, into);
+      continue;
+    }
+
+    if (node is MdDelete) {
+      _spotsIn(node.children, depth + 1, written, into);
+      continue;
+    }
+
+    if (node is MdLink) {
+      _spotsIn(node.children, depth + 1, written, into);
+      continue;
+    }
+
+    if (node is MdTextDirective) {
+      _spotsIn(node.children, depth + 1, written, into);
+      continue;
+    }
+  }
+}
+
+/// The character in front of a position, or a space where the run begins.
+String _before(List<_Spot> spots, int index, int at) {
+  if (at > 0) {
+    return spots[index].text[at - 1];
+  }
+
+  for (int each = index - 1; each >= 0; each -= 1) {
+    if (spots[each].stop) {
+      break;
+    }
+
+    final String text = spots[each].text;
+
+    if (text.isNotEmpty) {
+      return text[text.length - 1];
+    }
+  }
+
+  return ' ';
+}
+
+/// And the one after it, or a space where the run ends.
+String _after(List<_Spot> spots, int index, int at) {
+  final String text = spots[index].text;
+
+  if (at < text.length) {
+    return text[at];
+  }
+
+  for (int each = index + 1; each < spots.length; each += 1) {
+    if (spots[each].stop) {
+      break;
+    }
+
+    final String next = spots[each].text;
+
+    if (next.isNotEmpty) {
+      return next[0];
+    }
+  }
+
+  return ' ';
+}
+
+/// A quotation mark that opened and is waiting for the one that closes it.
+class _QuoteOpener {
+  _QuoteOpener({
+    required this.spot,
+    required this.at,
+    required this.single,
+    required this.depth,
+    required this.under,
+  });
+
+  final int spot;
+  final int at;
+  final bool single;
+  final int depth;
+
+  /// The opener of the same kind underneath this one, so the heads unwind.
+  final int under;
+}
+
+/// What to put where, once the mark that decides it has been read.
+class _Change {
+  _Change(this.at, this.character);
+
+  final int at;
+  final String character;
+}
+
+/// Every quotation mark in the run turned round the way it faces, and every
+/// apostrophe drawn as one.
+///
+/// Which way a mark faces is not a property of the mark. `'` is an apostrophe
+/// in `it's`, an opening mark in `'tis a pity` and a closing one in `dogs'
+/// bones`, and the three are told apart by what is on either side: a mark may
+/// open when something other than a space follows it, and may close when
+/// something other than a space precedes it. A mark that could do both is
+/// decided by the punctuation around it, and one that could do neither is an
+/// apostrophe.
+///
+/// The marks that do open are kept on a stack until one closes them, so that
+/// `"a 'b' c"` comes out nested rather than crossed. A mark nothing closes is
+/// left exactly as the author typed it, which is what makes `5" 6"` still say
+/// inches.
+void _quoted(List<_Spot> spots, MawyQuotes quotes) {
+  final List<_QuoteOpener> stack = <_QuoteOpener>[];
+  final Map<int, List<_Change>> changes = <int, List<_Change>>{};
+  int headSingle = -1;
+  int headDouble = -1;
+
+  void unwind(int to) {
+    while (stack.length > to) {
+      final _QuoteOpener opener = stack.removeLast();
+
+      if (opener.single) {
+        headSingle = opener.under;
+      } else {
+        headDouble = opener.under;
+      }
+    }
+  }
+
+  void change(int spot, int at, String character) {
+    changes.putIfAbsent(spot, () => <_Change>[]).add(_Change(at, character));
+  }
+
+  bool full = false;
+
+  for (int index = 0; index < spots.length && !full; index += 1) {
+    final _Spot spot = spots[index];
+    int above = stack.length - 1;
+
+    // Anything opened deeper than here can no longer be closed, because the
+    // node it was opened in has been left.
+    while (above >= 0 && stack[above].depth > spot.depth) {
+      above -= 1;
+    }
+
+    unwind(above + 1);
+
+    if (spot.node == null) {
+      continue;
+    }
+
+    final String text = spot.text;
+
+    for (final RegExpMatch match in _quotes.allMatches(text)) {
+      final int at = match.start;
+      final bool single = match.group(0) == "'";
+      final String last = _before(spots, index, at);
+      final String next = _after(spots, index, at + 1);
+      final bool lastSpace = _whitespace.hasMatch(last);
+      final bool nextSpace = _whitespace.hasMatch(next);
+      final bool lastMark = _punctuation.hasMatch(last);
+      final bool nextMark = _punctuation.hasMatch(next);
+
+      bool canOpen = true;
+      bool canClose = true;
+
+      if (nextSpace) {
+        canOpen = false;
+      } else if (nextMark && !(lastSpace || lastMark)) {
+        canOpen = false;
+      }
+
+      if (lastSpace) {
+        canClose = false;
+      } else if (lastMark && !(nextSpace || nextMark)) {
+        canClose = false;
+      }
+
+      // `5" 6"` is five feet six, and neither mark is a quotation.
+      if (!single && next == '"' && _digit.hasMatch(last)) {
+        canOpen = false;
+        canClose = false;
+      }
+
+      if (canOpen && canClose) {
+        canOpen = lastMark;
+        canClose = nextMark;
+      }
+
+      if (!canOpen && !canClose) {
+        if (single) {
+          change(index, at, _apostrophe);
+        }
+
+        continue;
+      }
+
+      if (canClose) {
+        final int which = single ? headSingle : headDouble;
+
+        if (which >= 0 && stack[which].depth == spot.depth) {
+          final _QuoteOpener opener = stack[which];
+
+          change(index, at, single ? quotes.singleClose : quotes.doubleClose);
+          change(opener.spot, opener.at, single ? quotes.singleOpen : quotes.doubleOpen);
+          unwind(which);
+          continue;
+        }
+      }
+
+      if (canOpen) {
+        if (stack.length >= _openers) {
+          full = true;
+          break;
+        }
+
+        stack.add(
+          _QuoteOpener(
+            spot: index,
+            at: at,
+            single: single,
+            depth: spot.depth,
+            under: single ? headSingle : headDouble,
+          ),
+        );
+
+        if (single) {
+          headSingle = stack.length - 1;
+        } else {
+          headDouble = stack.length - 1;
+        }
+
+        continue;
+      }
+
+      // Not an opener and nothing to close: a single mark here is an apostrophe
+      // after all, as in `dogs' bones`.
+      if (single) {
+        change(index, at, _apostrophe);
+      }
+    }
+  }
+
+  // Written back at the end rather than as they are found, because an opening
+  // mark is only known to be one once the mark that closes it has been read,
+  // and by then the run has been walked past the node it sits in.
+  changes.forEach((int index, List<_Change> list) {
+    final MdText node = spots[index].node!;
+    final List<_Change> sorted = list.toList()
+      ..sort((_Change one, _Change other) => one.at.compareTo(other.at));
+    final StringBuffer out = StringBuffer();
+    int from = 0;
+
+    for (final _Change each in sorted) {
+      out.write(node.value.substring(from, each.at));
+      out.write(each.character);
+      from = each.at + 1;
+    }
+
+    out.write(node.value.substring(from));
+    node.value = out.toString();
+  });
+}
+
+/// The typographer, over one run of inline content.
+///
+/// Two passes and the order matters: the substitutions first, because they
+/// change how long a text node is and the quotation marks are found by
+/// position; then the marks, which need the run flattened and so cannot be done
+/// a node at a time.
+///
+/// The nodes are rewritten where they stand. They were built a moment ago by
+/// [parseInline] and nothing else has seen them yet.
+void _typography(List<MdInline> nodes, Set<int> written, MawyQuotes quotes) {
+  final List<_Spot> spots = <_Spot>[];
+
+  _spotsIn(nodes, 0, written, spots);
+
+  for (final _Spot spot in spots) {
+    final MdText? node = spot.node;
+
+    if (node != null) {
+      node.value = _typeset(node.value);
+      spot.text = node.value;
+    }
+  }
+
+  _quoted(spots, quotes);
+}
+
+/* -------------------------------------------------------------------------
  * Tidying
  * ---------------------------------------------------------------------- */
 
 /// Adjacent text nodes joined, empty ones dropped.
-List<MdInline> _merge(List<MdInline> nodes) {
+/// `apart` names the text nodes to leave where they are, by the offset each
+/// starts at: a character the document wrote as a backslash escape is its own
+/// node, and the typographer has to still be able to tell it from the
+/// characters around it. It is null every other time this runs, including the
+/// run after the typographer has finished, which is what puts those nodes back
+/// with their neighbours.
+List<MdInline> _merge(List<MdInline> nodes, [Set<int>? apart]) {
   final List<MdInline> out = <MdInline>[];
   // The run of text being joined, if the last node out was one. A buffer
   // rather than the node's own string, because a Dart string is immutable and
@@ -962,6 +1565,12 @@ List<MdInline> _merge(List<MdInline> nodes) {
         continue;
       }
 
+      if (apart != null &&
+          (apart.contains(node.range.start) ||
+              (joining != null && apart.contains(joining!.range.start)))) {
+        settle();
+      }
+
       if (joining != null) {
         joined!.write(node.value);
         joining!.range = MdRange(joining!.range.start, node.range.end);
@@ -977,23 +1586,28 @@ List<MdInline> _merge(List<MdInline> nodes) {
     settle();
 
     if (node is MdEmphasis) {
-      out.add(MdEmphasis(node.range, _merge(node.children)));
+      out.add(MdEmphasis(node.range, _merge(node.children, apart)));
       continue;
     }
 
     if (node is MdStrong) {
-      out.add(MdStrong(node.range, _merge(node.children)));
+      out.add(MdStrong(node.range, _merge(node.children, apart)));
       continue;
     }
 
     if (node is MdDelete) {
-      out.add(MdDelete(node.range, _merge(node.children)));
+      out.add(MdDelete(node.range, _merge(node.children, apart)));
       continue;
     }
 
     if (node is MdLink) {
       out.add(
-        MdLink(node.range, url: node.url, title: node.title, children: _merge(node.children)),
+        MdLink(
+          node.range,
+          url: node.url,
+          title: node.title,
+          children: _merge(node.children, apart),
+        ),
       );
       continue;
     }
@@ -1053,6 +1667,9 @@ final RegExp _trailingSpace = RegExp(r'[ \t]+$');
 List<MdInline> parseInline(Sourced raw, InlineOptions options) {
   final String source = raw.text;
   final _State state = _State();
+
+  /// Where each character the document wrote as a backslash escape ended up.
+  final Set<int> escaped = <int>{};
   final _Reach reach = _Reach();
   final _Chain chunks = state.chunks;
   final List<_Chunk?> delimiters = state.delimiters;
@@ -1131,8 +1748,16 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
       }
 
       if (next.isNotEmpty && _isEscapableCode(next.codeUnitAt(0))) {
+        final _Chunk chunk = _textChunk(next, span(at, at + 2));
+
         flush();
-        _append(chunks, _textChunk(next, span(at, at + 2)));
+        _append(chunks, chunk);
+
+        // Only the typographer asks, and only it pays for the answer.
+        if (options.typographer) {
+          escaped.add(chunk.node.range.start);
+        }
+
         at += 2;
         continue;
       }
@@ -1492,7 +2117,18 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
     read.add(each.node);
   }
 
-  final List<MdInline> nodes = _merge(read);
+  // The escapes are held apart for the typographer and joined back in after it,
+  // so the tree it leaves is the tree every other option would have left.
+  List<MdInline> nodes = _merge(read, options.typographer ? escaped : null);
 
-  return options.gfm ? _merge(_linkify(nodes)) : nodes;
+  // Before the linkifier rather than after it, so that an address is still the
+  // characters it was written with when the linkifier reads one.
+  if (options.typographer) {
+    _typography(nodes, escaped, options.quotes);
+    nodes = _merge(nodes);
+  }
+
+  return options.gfm
+      ? _merge(_linkify(nodes, options.autolinkSchemes ? _wideLiteral : _literal))
+      : nodes;
 }

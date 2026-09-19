@@ -133,6 +133,18 @@ const trees = corpus().map((source) => {
 });
 
 /**
+ * The corpus again, read with the two options that are off by default.
+ *
+ * Neither one changes a block, so the trees above say nothing about either: the
+ * typographer rewrites the characters inside a text node and the widened
+ * linkifier turns some of them into a link. Both are exactly the kind of thing
+ * that drifts unnoticed, so the corpus is parsed a second time with both on.
+ */
+const typed = corpus().map((source) =>
+  clean(parseMarkdown(source, { typographer: true, autolinkSchemes: true }).root.children)
+);
+
+/**
  * The highlighter's half of the same question.
  *
  * `src/highlight.ts` and `lib/src/highlight.dart` are one grammar written
@@ -416,5 +428,9 @@ const found = corpus().map((document) => {
 });
 
 process.stdout.write(
-  JSON.stringify({ trees, highlights, source, edits, searches, counts, scrolls, found }, null, 1)
+  JSON.stringify(
+    { trees, typed, highlights, source, edits, searches, counts, scrolls, found },
+    null,
+    1
+  )
 );

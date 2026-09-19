@@ -875,6 +875,62 @@ export interface MawyParseOptions {
    * @default true
    */
   frontmatter?: boolean;
+  /**
+   * Whether quotation marks are turned round, and `--`, `...` and `(c)` drawn
+   * as the marks they stand in for.
+   *
+   * Off, because it rewrites characters the author typed: a document that means
+   * to say `(c)` says `(c)` everywhere else it is read. On, `"a"` is drawn
+   * `“a”`, `--` an en dash, `---` an em dash and `...` an ellipsis. A bare
+   * address is left exactly as written either way.
+   * @default false
+   */
+  typographer?: boolean;
+  /**
+   * Whether a bare address carrying any scheme the link policy trusts —
+   * `ftp://`, `matrix:`, `//host/path` — becomes a link, on top of the `http`,
+   * `https`, `www.` and e-mail addresses GFM already reads.
+   *
+   * Off, because GFM stops at the web addresses, and a run that is a link here
+   * and words on GitHub is a document that means two things.
+   * @default false
+   */
+  autolinkSchemes?: boolean;
+  /**
+   * The four marks a quotation is drawn with, for a document whose language
+   * does not write one the way English does.
+   *
+   * Nothing without `typographer`, which is what draws them.
+   */
+  typographerQuotes?: MawyQuotes;
+}
+
+/**
+ * The four marks a quotation is drawn with.
+ *
+ * English and Korean write one the same way, so the default covers both
+ * languages this library's interface speaks — and the document is not the
+ * interface, which is why it is an option at all. German writes „a“ and French
+ * «a», and a reader of one of those meets the wrong mark otherwise.
+ *
+ * Every field is optional and keeps its default when left out, so
+ * `{ doubleOpen: '„', doubleClose: '“' }` is the whole of what a German
+ * document needs.
+ *
+ * The apostrophe in `dogs’ bones` is not one of the four and does not move. It
+ * is the same character as English's closing single mark and not the same
+ * mark, and a document that set its single marks to ‚‘ would otherwise write
+ * `dogs‘ bones`.
+ */
+export interface MawyQuotes {
+  /** @default '“' */
+  doubleOpen?: string;
+  /** @default '”' */
+  doubleClose?: string;
+  /** @default '‘' */
+  singleOpen?: string;
+  /** @default '’' */
+  singleClose?: string;
 }
 
 /**

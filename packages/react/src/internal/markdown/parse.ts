@@ -18,7 +18,8 @@ import type {
   MdRoot
 } from './ast.js';
 import { parseBlocks, type PendingInline } from './block.js';
-import { parseInline, toPlainText } from './inline.js';
+import { DEFAULT_QUOTES, parseInline, toPlainText } from './inline.js';
+import type { MawyQuotes } from '../../types.js';
 import type { Line } from './source.js';
 
 export interface MarkdownOptions {
@@ -64,6 +65,37 @@ export interface MarkdownOptions {
    * @default true
    */
   frontmatter?: boolean;
+  /**
+   * Whether quotation marks are turned round, and `--`, `...` and `(c)` drawn
+   * as the marks they stand in for.
+   *
+   * Off, because it rewrites characters the author typed. A document that means
+   * to say `(c)` says `(c)` everywhere else it is read, and a reader who turns
+   * this on is saying they would rather have the marks.
+   * @default false
+   */
+  typographer?: boolean;
+  /**
+   * Whether a bare address carrying any scheme the link policy trusts —
+   * `ftp://`, `matrix:`, `//host/path` — becomes a link, on top of the `http`,
+   * `https`, `www.` and e-mail addresses GFM already reads.
+   *
+   * Off, because GFM stops at the web addresses and a document that becomes a
+   * link here and stays words on GitHub is a document that means two things.
+   * @default false
+   */
+  autolinkSchemes?: boolean;
+  /**
+   * The four marks a quotation is drawn with, for a document whose language
+   * does not write one the way English does.
+   *
+   * Nothing without `typographer`, which is what draws them. Anything left out
+   * keeps its default, so `{ doubleOpen: '„', doubleClose: '“' }` is enough for a
+   * German document. The apostrophe in `dogs’ bones` is not one of the four and
+   * does not move.
+   * @default { doubleOpen: '“', doubleClose: '”', singleOpen: '‘', singleClose: '’' }
+   */
+  typographerQuotes?: MawyQuotes;
 }
 
 /* -------------------------------------------------------------------------
@@ -398,6 +430,9 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
   const definitionLists = options.definitionLists ?? true;
   const headingIds = options.headingIds ?? true;
   const frontmatter = options.frontmatter ?? true;
+  const typographer = options.typographer ?? false;
+  const autolinkSchemes = options.autolinkSchemes ?? false;
+  const quotes = { ...DEFAULT_QUOTES, ...options.typographerQuotes };
 
   const definitions = new Map<string, MdDefinition>();
   const footnotes = new Map<string, MdFootnoteDefinition>();
@@ -421,7 +456,15 @@ export function parseMarkdown(source: string, options: MarkdownOptions = {}): Md
     // the stack as an argument, and a paragraph of a quarter of a megabyte is
     // a hundred and twenty thousand of them — past what an engine will take,
     // and the answer was a thrown `RangeError` rather than a document.
-    for (const node of parseInline(raw, { gfm, breaks, definitions, footnotes: labels })) {
+    for (const node of parseInline(raw, {
+      gfm,
+      breaks,
+      typographer,
+      autolinkSchemes,
+      quotes,
+      definitions,
+      footnotes: labels
+    })) {
       target.push(node);
     }
   }

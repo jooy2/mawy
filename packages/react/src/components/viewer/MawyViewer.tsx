@@ -107,7 +107,8 @@ export interface MawyViewerProps extends Omit<
 
   /**
    * How the Markdown is read.
-   * @default `{ gfm: true, breaks: false, definitionLists: true, headingIds: true }`
+   * @default `{ gfm: true, breaks: false, definitionLists: true, headingIds: true,
+   * frontmatter: true, typographer: false, autolinkSchemes: false }`
    */
   parse?: MawyParseOptions;
 
@@ -428,6 +429,9 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const definitionLists = parse?.definitionLists ?? true;
   const headingIds = parse?.headingIds ?? true;
   const frontmatter = parse?.frontmatter ?? true;
+  const typographer = parse?.typographer ?? false;
+  const autolinkSchemes = parse?.autolinkSchemes ?? false;
+  const typographerQuotes = parse?.typographerQuotes;
 
   const controlled = value !== undefined;
   /**
@@ -528,8 +532,28 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
    * ------------------------------------------------------------------ */
 
   const document_ = React.useMemo(
-    () => parseMarkdown(text, { gfm, breaks, definitionLists, headingIds, frontmatter }),
-    [text, gfm, breaks, definitionLists, headingIds, frontmatter]
+    () =>
+      parseMarkdown(text, {
+        gfm,
+        breaks,
+        definitionLists,
+        headingIds,
+        frontmatter,
+        typographer,
+        autolinkSchemes,
+        typographerQuotes
+      }),
+    [
+      text,
+      gfm,
+      breaks,
+      definitionLists,
+      headingIds,
+      frontmatter,
+      typographer,
+      autolinkSchemes,
+      typographerQuotes
+    ]
   );
   const highlighter = useHighlighter(highlight, document_);
   const footnotes = React.useMemo(

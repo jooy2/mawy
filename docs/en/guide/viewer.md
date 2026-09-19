@@ -116,7 +116,15 @@ CommonMark, and GitHub's additions on top of it:
 ```tsx
 <MawyViewer
   value={document}
-  parse={{ gfm: true, breaks: false, definitionLists: true, headingIds: true, frontmatter: true }}
+  parse={{
+    gfm: true,
+    breaks: false,
+    definitionLists: true,
+    headingIds: true,
+    frontmatter: true,
+    typographer: false,
+    autolinkSchemes: false
+  }}
 />
 ```
 
@@ -133,6 +141,8 @@ MawyViewer(
     definitionLists: true,
     headingIds: true,
     frontmatter: true,
+    typographer: false,
+    autolinkSchemes: false,
   ),
 );
 ```
@@ -144,6 +154,9 @@ MawyViewer(
 - **`definitionLists`** (default `true`) — whether `: ` under a line of text is a term and what it means. See below.
 - **`headingIds`** (default `true`) — whether a trailing `{#id}` on a heading is the name that heading is drawn under. See below.
 - **`frontmatter`** (default `true`) — whether a run fenced by `---` at the very top of the document is the metadata it looks like. See below.
+- **`typographer`** (default `false`) — whether quotation marks are turned round and `--`, `...` and `(c)` drawn as the marks they stand in for. See below.
+- **`autolinkSchemes`** (default `false`) — whether a bare `ftp://`, `matrix:` or `//host/path` becomes a link, on top of the web addresses GFM reads. See below.
+- **`typographerQuotes`** — the four marks a quotation is drawn with, for a language that does not write one the way English does. See [`MawyQuotes`](../api/types/quotes).
 
 **A line of a table cell written as a list item is drawn as one.** A cell of a GitHub table holds no block, so `- dig<br>  - deeper<br>- [x] water` is words to every parser, this one included, and GitHub draws the dashes. This package draws each such line with the marker the list it reads as would have: a bullet for `-`, `*` or `+`, a checkbox for a task, the number for a numbered item, and each two spaces in front of the marker one step further in. The words are the same words either way; only the markers are drawn differently. A line that is a marker and nothing else, such as the `-` many tables put in an empty cell, stays a dash.
 
@@ -212,9 +225,58 @@ Nothing is thrown away. [`MdDocument`](../api/types/md-document) carries the ran
 
 A heading's `id` is its own words, in the spelling GitHub uses, so a link written by hand against `#getting-started` lands where it would there. A heading that wants a different name says so at the end of the line:
 
+````md
+### Typography
+
+Off by default, and the one option here that rewrites characters the author typed. On, a quotation mark is turned round the way it faces and the marks a keyboard has no key for are drawn:
+
+| Written            | Drawn       |
+| ------------------ | ----------- |
+| `"a"` `'a'`        | `“a”` `‘a’` |
+| `it's`             | `it’s`      |
+| `--` `---`         | `–` `—`     |
+| `...`              | `…`         |
+| `(c)` `(r)` `(tm)` | `©` `®` `™` |
+| `+-`               | `±`         |
+| `????` `!!!!`      | `???` `!!!` |
+| `,,`               | `,`         |
+
+The list is [markdown-it](https://github.com/markdown-it/markdown-it)'s, character for character. These are conventions rather than decisions, and a document written against the reader most of the internet uses has to come out of this one the same way — which is also why `..` is an ellipsis and a run of four marks collapses to three.
+
+Which way a quotation mark faces is decided by what sits either side of it, so `it's`, `'tis a pity` and `dogs' bones` come out as an apostrophe, an opening mark and a closing one. A mark nothing closes is left exactly as it was typed, which is what keeps `5" 6"` saying feet and inches. The marks are the same in both locales.
+
+Nothing a machine reads is touched. A code span, a code block, a link's target and title, and a picture's description are all left as written, and so is a bare address — whether or not it is drawn as a link, since `http://a.co/a--b` is one address and `http://a.co/a–b` is another and a reader copies the characters either way.
+
+**A character the document escaped is left as it was escaped.** `\"a\"` keeps its quotation marks, `a\-\-b` its two hyphens, `\(c\)` its parentheses. An escape is how Markdown says "this character, literally", and that is an instruction rather than a typo.
+
+Pass `typographerQuotes` in `parse` for a document whose language does not write a quotation the way English does — `„a“` in German, `«a»` in French. See [`MawyQuotes`](../api/types/quotes).
+
+::: fw react
+
+On the `wysiwyg` surface the caret is placed exactly, the way it is in a line with a backslash escape in it: the marks are read back out of the page to find the line in the source, so a caret either side of a dash lands either side of the two hyphens it was written as. The two rules that collapse a run — `????` to three marks and `,,` to one — are the exception, since a drawn `???` says nothing about how many were written. A line with one of those in it falls back to counting, which is what a line with a character reference in it already does.
+
+:::
+
+### Bare addresses
+
+An address written with no markup around it becomes a link. GFM reads three shapes and so does this: `https://example.com`, `www.example.com`, and an e-mail address. Everything else is words.
+
+`autolinkSchemes: true` in `parse` widens that to every scheme the viewer would follow anyway:
+
 ```md
-## What to try first {#what-to-try}
+ftp://example.com/pub/file matrix:r/room:example.com tel:+15550100 //example.com/path
 ```
+````
+
+Which schemes is not a second list to keep. The run only has to look like an address, and the [scheme allowlist](#safety) then refuses everything the viewer will not follow — so `javascript:alert(1)` and `data:text/html,x` stay words with the option on, exactly as they do with it off.
+
+A colon in a sentence is not a scheme. `TODO:fix`, `note: see below` and `ratio 3:2` are refused because nothing on the allowlist is called `TODO`, `note` or `3`, and `C:\Users` is refused because a scheme is at least two characters long. An address starting `//` leaves its scheme to the page and needs a dot in its host, which is what keeps a network path like `//server/share` and a stray `//comment` from becoming links.
+
+It is off by default because GFM stops at the web addresses. A run that is a link here and words on GitHub is a document that means two things, which is the failure this library exists to prevent.
+
+## What to try first {#what-to-try}
+
+````
 
 That is drawn as the words alone, under `id="what-to-try"`, and the outline links to the same name. The braces are markup and nothing draws them, the same way nothing draws the closing hashes of `## A heading ##`. Both heading syntaxes read one, the underlined form included.
 
@@ -234,7 +296,7 @@ Nothing is coloured by default, and that is deliberate. A highlighter is the lar
 
 ```dart
 MawyViewer(value: document, highlight: mawyHighlighter);
-```
+````
 
 `mawyHighlighter` is the React package's highlighter in Dart. `lib/src/highlight.dart` matches `src/highlight.ts` rule for rule, and `tool/parity.dart` diffs every token the two produce over a piece of every language either of them supports. So a code block coloured in a browser is coloured the same way in an app, the same guarantee the parser gives.
 

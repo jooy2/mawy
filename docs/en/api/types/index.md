@@ -36,6 +36,7 @@ Exported from `package:mawy/mawy.dart`, which is this package's entire public su
 | Page | What it covers |
 | --- | --- |
 | [`MawyParseOptions`](./parse-options) | How the Markdown itself is read. |
+| [`MawyQuotes`](./quotes) | The four marks a quotation is drawn with, where the typographer is on. |
 | [`MdDocument`](./md-document) | A parsed document, and every node under it. |
 | [`MawyUrlResolver`](./url-resolver) | Where a relative URL in the document points. |
 | [Link and image policy](./drawing-policy) | How a link and a picture are drawn, for a page that does not want them followed or fetched. |

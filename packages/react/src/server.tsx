@@ -283,7 +283,10 @@ export function MawyDocument({
     breaks: parse?.breaks ?? false,
     definitionLists: parse?.definitionLists ?? true,
     headingIds: parse?.headingIds ?? true,
-    frontmatter: parse?.frontmatter ?? true
+    frontmatter: parse?.frontmatter ?? true,
+    typographer: parse?.typographer ?? false,
+    autolinkSchemes: parse?.autolinkSchemes ?? false,
+    typographerQuotes: parse?.typographerQuotes
   });
 
   const context = {

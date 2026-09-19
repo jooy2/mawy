@@ -165,7 +165,7 @@ function linesOf(
     const found = text.indexOf(sought, cursor);
     const escaped =
       found === -1 || found + line.length > range.end
-        ? escapedLine(text, sought, cursor, range.end)
+        ? writtenLine(text, sought, cursor, range.end)
         : null;
 
     if (escaped) {
@@ -192,11 +192,68 @@ function linesOf(
 const ESCAPABLE = /[!-/:-@[-`{-~]/;
 
 /**
- * A line drawn from characters with backslash escapes among them, found in the
- * document at or after `cursor` and ending by `limit`, as the rows either side
- * of each backslash. `null` where it is not there that way either.
+ * A run of characters, safe to put in a pattern.
+ *
+ * Only what has a meaning of its own outside a character class. A `-` must not
+ * be on the list: it means nothing out here, and `\\-` is an invalid escape to a
+ * pattern built with `u` rather than the hyphen it was meant to be — so a line
+ * holding both a backslash escape and a hyphen threw instead of being found.
  */
-function escapedLine(
+function quoted(text: string): string {
+  return text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+}
+
+/**
+ * What a character on the page could have been written as, where the answer is
+ * anything other than itself.
+ *
+ * The typographer draws a mark the author had no key for, so a line with one in
+ * it is not the characters it was written with and the plain search for it
+ * finds nothing. This is the way back: each of these may also match the run
+ * that stands in for it, and the walk below then knows the run was longer than
+ * what it drew and cuts a row either side of it. Without it a caret anywhere
+ * after the first dash in a line would be placed by counting from the start of
+ * the run, which is a character or two out for every mark before it.
+ *
+ * The quotation marks are one for one and need no row of their own; they are
+ * here for the pattern alone, and every mark `MawyQuotes` could be set to is on
+ * the list rather than only the two English ones. What is *not* here is the
+ * typographer's two collapsing rules — `????` to three and `,,` to one — since
+ * a drawn `???` says nothing about how many were written. A line with one of
+ * those in it is found by neither search and falls back to counting, the way a
+ * line with a character reference in it already does.
+ */
+const WRITTEN_AS = new Map<string, string[]>([
+  ['\u2014', ['---']],
+  ['\u2013', ['--']],
+  // Longest first: the walk takes the first form that fits, and `...` has to be
+  // tried before the `..` inside it.
+  ['\u2026', ['...', '..']],
+  ['\u00a9', ['(c)', '(C)']],
+  ['\u00ae', ['(r)', '(R)']],
+  ['\u2122', ['(tm)', '(TM)']],
+  ['\u00b1', ['+-']],
+  ['\u201c', ['"']],
+  ['\u201d', ['"']],
+  ['\u201e', ['"']],
+  ['\u201f', ['"']],
+  ['\u00ab', ['"']],
+  ['\u00bb', ['"']],
+  ['\u2018', ["'"]],
+  ['\u2019', ["'"]],
+  ['\u201a', ["'"]],
+  ['\u201b', ["'"]],
+  ['\u2039', ["'"]],
+  ['\u203a', ["'"]]
+]);
+
+/**
+ * A line the document wrote differently from the way it is drawn — with
+ * backslash escapes in it, or with marks the typographer put there — found at
+ * or after `cursor` and ending by `limit`, as the rows either side of each
+ * place the two disagree. `null` where it is not there that way either.
+ */
+function writtenLine(
   text: string,
   line: string,
   cursor: number,
@@ -207,17 +264,16 @@ function escapedLine(
   // search to the end of it.
   const within = text.slice(cursor, limit);
 
-  if (!line || !within.includes('\\')) {
+  if (!line || (!within.includes('\\') && ![...line].some((each) => WRITTEN_AS.has(each)))) {
     return null;
   }
 
   const pattern = [...line]
     .map((character) => {
-      // Only what has a meaning of its own outside a character class. A `-`
-      // must not be on the list: it means nothing out here, and `\\-` is an
-      // invalid escape to a pattern built with `u` rather than the hyphen it
-      // was meant to be.
-      const literal = character.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+      const forms = WRITTEN_AS.get(character);
+      const literal = forms
+        ? `(?:${[character, ...forms].map(quoted).join('|')})`
+        : quoted(character);
 
       return ESCAPABLE.test(character) ? `\\\\?${literal}` : literal;
     })
@@ -246,6 +302,22 @@ function escapedLine(
       pieces.push(piece);
       source += 1;
       piece = { at: drawn, from: start + source, length: 0 };
+    }
+
+    // A mark the typographer drew, standing for a run longer than itself. The
+    // character is left out of both rows on purpose: a caret can be in front of
+    // the run or after it and there is nowhere inside it to be.
+    const form = WRITTEN_AS.get(line[drawn])?.find(
+      (each) => each.length > 1 && written.startsWith(each, source)
+    );
+
+    if (form) {
+      pieces.push(piece);
+      source += form.length;
+      drawn += 1;
+      piece = { at: drawn, from: start + source, length: 0 };
+
+      continue;
     }
 
     piece.length += 1;

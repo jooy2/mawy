@@ -36,6 +36,7 @@ order: 2
 | 페이지 | 다루는 것 |
 | --- | --- |
 | [`MawyParseOptions`](./parse-options) | 마크다운 자체를 어떻게 읽을지. |
+| [`MawyQuotes`](./quotes) | 활자 옵션을 켰을 때 따옴표를 그릴 네 기호. |
 | [`MdDocument`](./md-document) | 파싱한 문서와 그 아래 모든 노드. |
 | [`MawyUrlResolver`](./url-resolver) | 문서의 상대 URL이 어디를 가리키는지. |
 | [링크와 이미지 그리기](./drawing-policy) | 링크를 따라가거나 그림을 내려받게 두지 않을 때 둘을 어떻게 그릴지. |

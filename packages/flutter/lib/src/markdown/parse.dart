@@ -21,6 +21,9 @@ class MawyParseOptions {
     this.definitionLists = true,
     this.headingIds = true,
     this.frontmatter = true,
+    this.typographer = false,
+    this.autolinkSchemes = false,
+    this.typographerQuotes = const MawyQuotes(),
   });
 
   /// GitHub Flavored Markdown: tables, task lists, `~~strikethrough~~`, alerts,
@@ -60,6 +63,29 @@ class MawyParseOptions {
   /// for a document whose `---` at the top is a rule and means to be one.
   final bool frontmatter;
 
+  /// Whether quotation marks are turned round, and `--`, `...` and `(c)` drawn
+  /// as the marks they stand in for.
+  ///
+  /// Off, because it rewrites characters the author typed: a document that
+  /// means to say `(c)` says `(c)` everywhere else it is read. On, `"a"` is
+  /// drawn `“a”`, `--` an en dash, `---` an em dash and `...` an ellipsis. A
+  /// bare address is left exactly as written either way.
+  final bool typographer;
+
+  /// Whether a bare address carrying any scheme the link policy trusts —
+  /// `ftp://`, `matrix:`, `//host/path` — becomes a link, on top of the `http`,
+  /// `https`, `www.` and e-mail addresses GFM already reads.
+  ///
+  /// Off, because GFM stops at the web addresses, and a run that is a link here
+  /// and words on GitHub is a document that means two things.
+  final bool autolinkSchemes;
+
+  /// The four marks a quotation is drawn with, for a document whose language
+  /// does not write one the way English does.
+  ///
+  /// Nothing without [typographer], which is what draws them.
+  final MawyQuotes typographerQuotes;
+
   @override
   bool operator ==(Object other) =>
       other is MawyParseOptions &&
@@ -67,10 +93,22 @@ class MawyParseOptions {
       other.breaks == breaks &&
       other.definitionLists == definitionLists &&
       other.headingIds == headingIds &&
-      other.frontmatter == frontmatter;
+      other.frontmatter == frontmatter &&
+      other.typographer == typographer &&
+      other.autolinkSchemes == autolinkSchemes &&
+      other.typographerQuotes == typographerQuotes;
 
   @override
-  int get hashCode => Object.hash(gfm, breaks, definitionLists, headingIds, frontmatter);
+  int get hashCode => Object.hash(
+    gfm,
+    breaks,
+    definitionLists,
+    headingIds,
+    frontmatter,
+    typographer,
+    autolinkSchemes,
+    typographerQuotes,
+  );
 }
 
 /* -------------------------------------------------------------------------
@@ -483,6 +521,9 @@ MdDocument parseMarkdown(String source, [MawyParseOptions options = const MawyPa
   final InlineOptions inline = InlineOptions(
     gfm: options.gfm,
     breaks: options.breaks,
+    typographer: options.typographer,
+    autolinkSchemes: options.autolinkSchemes,
+    quotes: options.typographerQuotes,
     definitions: definitions,
     footnotes: labels,
   );
