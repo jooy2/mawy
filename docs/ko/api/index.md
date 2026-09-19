@@ -23,10 +23,11 @@ order: 2
 
 ::: fw flutter
 
-| 페이지                                   | 무엇인지                                     |
-| ---------------------------------------- | -------------------------------------------- |
-| [`MawyViewer`](./components/mawy-viewer) | 마크다운 문서를 그리고, 편집하지는 않습니다. |
-| [`MawyEditor`](./components/mawy-editor) | 뷰어를 옆에 둔 마크다운 에디터입니다.        |
+| 페이지                                       | 무엇인지                                     |
+| -------------------------------------------- | -------------------------------------------- |
+| [`MawyViewer`](./components/mawy-viewer)     | 마크다운 문서를 그리고, 편집하지는 않습니다. |
+| [`MawyEditor`](./components/mawy-editor)     | 뷰어를 옆에 둔 마크다운 에디터입니다.        |
+| [`MawyDocument`](./components/mawy-document) | 뷰어를 두르지 않은 같은 문서입니다.          |
 
 :::
 

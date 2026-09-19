@@ -34,7 +34,7 @@ Drop it into a code editor, a documentation page, a note-taking screen or an AI 
 | [`packages/react`](packages/react)     | [npm: `mawy-react`](https://www.npmjs.com/package/mawy-react) | React 18 or 19, Node.js 20.19 or later | Viewer and editor | [README](packages/react/README.md)   |
 | [`packages/flutter`](packages/flutter) | [pub.dev: `mawy`](https://pub.dev/packages/mawy)              | Flutter 3.32 or later, Dart 3.8        | Viewer and editor | [README](packages/flutter/README.md) |
 
-Both packages ship the parser, `MawyViewer` and `MawyEditor` under the same names. The one surface only React has is `wysiwyg`, which edits the drawn document in place; [the editor guide](https://mawy.cdget.com/guide/editor) says why Flutter has the other three and not that one.
+Both packages ship the parser, `MawyViewer`, `MawyEditor` and `MawyDocument` under the same names, with `MawyDocument` reached from opposite sides: a page that ships no JavaScript in React, a widget that scrolls nothing in Flutter, and the document with no viewer around it in both. The one surface only React has is `wysiwyg`, which edits the drawn document in place; [the editor guide](https://mawy.cdget.com/guide/editor) says why Flutter has the other three and not that one.
 
 The exported names are under semantic versioning, so one that goes away or changes shape waits for a major version. Each language's package **versions independently and keeps its own changelog** beside its own manifest: [`packages/react/CHANGELOG.md`](packages/react/CHANGELOG.md) and [`packages/flutter/CHANGELOG.md`](packages/flutter/CHANGELOG.md). A release on one side is not a release on the other, so the numbers will not always agree.
 

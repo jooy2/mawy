@@ -175,6 +175,8 @@ React 패키지에서는 선택인 `value`가 여기서는 필수이고, 파일 
 | `scrollController` | `ScrollController?` | 자기 것 하나 | 문서의 스크롤러. 애플리케이션이 몰거나 지켜볼 수 있습니다. |
 | `anchors` | [`MawyViewerAnchors?`](../types/viewer-anchors) | — | 문서의 최상위 블록이 각각 어디에 놓였는지. 그리면서 채웁니다. 다른 뷰를 이 문서에 맞춰 세우는 것들을 위한 것입니다. |
 
+뷰어는 스스로 스크롤하므로, 문서의 높이가 아니라 받은 높이를 씁니다. 줄 높이가 없는 자리, 곧 목록의 한 항목으로 놓이는 문서나 대화 속 메시지, 세로로 쌓인 카드에는 [`MawyDocument`](./mawy-document)를 그리고 스크롤은 목록이 맡습니다.
+
 :::
 
 ::: fw react

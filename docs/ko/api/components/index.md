@@ -25,9 +25,10 @@ order: 1
 | --- | --- |
 | [`MawyViewer`](./mawy-viewer) | 마크다운 문서를 그리고, 편집하지는 않습니다. 서체와 글자 크기, 테마를 비롯한 툴바가 함께 오고, 그중 무엇도 문서를 바꾸지 않습니다. |
 | [`MawyEditor`](./mawy-editor) | 뷰어를 옆에 둔 마크다운 에디터입니다. 색이 입혀진 원문, 실시간 미리보기, 서식 툴바, 상태 표시줄. |
+| [`MawyDocument`](./mawy-document) | 뷰어를 두르지 않은 같은 문서입니다. 툴바도 자기 스크롤 뷰도 없고, 스크롤은 문서를 담은 쪽이 맡습니다. |
 
-둘 다 `package:flutter/widgets.dart`만으로 만들었습니다. Material도 Cupertino도 쓰지 않으므로, `MaterialApp` 안이든 `CupertinoApp` 안이든 맨 `WidgetsApp` 안이든 두 번째 디자인 시스템을 데려오지 않고 그대로 앉습니다.
+셋 다 `package:flutter/widgets.dart`만으로 만들었습니다. Material도 Cupertino도 쓰지 않으므로, `MaterialApp` 안이든 `CupertinoApp` 안이든 맨 `WidgetsApp` 안이든 두 번째 디자인 시스템을 데려오지 않고 그대로 앉습니다.
 
-문서를 서버에서 그리는 [`MawyDocument`](./mawy-document)는 React 패키지의 것이고 여기에는 대응하는 것이 없습니다.
+`MawyDocument`는 React 패키지에도 있는 이름이고, 같은 것에 반대쪽에서 닿았습니다. 그쪽은 자바스크립트를 싣지 않는 페이지, 이쪽은 아무것도 스크롤하지 않는 위젯입니다.
 
 :::
