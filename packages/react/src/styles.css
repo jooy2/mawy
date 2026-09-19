@@ -341,8 +341,17 @@
  * button reached past it — cut off by whatever box the editor sits in, which on
  * a page that clips its content is most of the word. The first two of the first
  * group hang from their own start. Logical sides rather than physical ones, so
- * a bar in a right-to-left page hangs each from the edge it is actually near. */
+ * a bar in a right-to-left page hangs each from the edge it is actually near.
+ *
+ * Each of the two written twice, because a control carries its tip either way:
+ * a plain button is the child of the group and says `data-mawy-tip` itself,
+ * while one that opens a menu or a palette is a wrapper with the button inside
+ * it. Said only as a descendant, this reached the wrapped ones and left every
+ * plain button at the end of a bar with its name centred under it and hanging
+ * off the edge — which is most of the toolbar. */
+.mawy-root .mawy-toolbar-controls > *:last-child[data-mawy-tip]::after,
 .mawy-root .mawy-toolbar-controls > *:last-child [data-mawy-tip]::after,
+.mawy-root .mawy-toolbar-group > *:nth-last-child(-n + 2)[data-mawy-tip]::after,
 .mawy-root .mawy-toolbar-group > *:nth-last-child(-n + 2) [data-mawy-tip]::after {
   left: auto;
   right: auto;

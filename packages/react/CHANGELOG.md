@@ -14,6 +14,8 @@
 
 ### Fixed
 
+- **The name of a control at the end of a toolbar was drawn half outside it.** A tip is centred under the button it names, and the stylesheet hangs the ones near an end from that end instead so they stay inside whatever box the surface sits in. It said so only as a descendant — `> *:last-child [data-mawy-tip]` — and a plain button _is_ the child of its group and carries the attribute itself, so the rule reached the handful of controls that open a menu or a palette and left every other one centred. On a page that clips its content, which the documentation's own demos do, that was most of the word cut off: the viewer's `open` is the last control on the bar and read `Open a fil`. Both rules are two selectors each now, one for a tip on the control and one for a tip inside it. The Flutter package measures its tip against the overlay it is drawn in and never had this.
+
 - **A line holding both a backslash escape and a hyphen threw instead of being found.** The pattern that finds such a line is built with `u`, to which `\-` is an invalid escape rather than a hyphen, so `Five \* six - seven` raised a `SyntaxError` out of the click that asked where the caret went. Nothing puts a `-` in that pattern any more. It is older than the typographer and had nothing to do with it.
 
 ## 1.7.0 (2026-09-17)
