@@ -244,3 +244,4 @@ The types are also available from `mawy-react/types`, so an application can name
 - [**The viewer**](./viewer) — rendering a document without editing it.
 - [**The editor**](./editor) — the source, the preview and switching between them, plus the drawn document edited in place in React.
 - [**API**](../api/) — every component, type and function, one page each.
+- [**Comparison**](../comparison) — what this library does differently from the other Markdown editors, and what it does not do at all.

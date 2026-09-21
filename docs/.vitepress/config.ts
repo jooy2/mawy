@@ -270,10 +270,16 @@ function llmsTxt(): string {
     ''
   ];
 
-  for (const [name, folder] of [
-    ['Guide', `${defaultLocale}/guide`],
-    ['API', `${defaultLocale}/api`]
-  ]) {
+  // A section is a folder, or a list of them with a page named on its own where
+  // that page is the whole of what it is about — the comparison is one page and
+  // a folder holding it would be a folder of one.
+  const sections: [string, string[]][] = [
+    ['Guide', [`${defaultLocale}/guide`]],
+    ['API', [`${defaultLocale}/api`]],
+    ['Comparison and migration', [`${defaultLocale}/comparison.md`, `${defaultLocale}/migrate`]]
+  ];
+
+  for (const [name, sources] of sections) {
     lines.push(`## ${name}`, '');
 
     // In the order the sidebar puts them in, which is the order somebody
@@ -286,8 +292,10 @@ function llmsTxt(): string {
     // name of the group rather than as one page inside it.
     const rank = (filePath: string) =>
       filePath.endsWith('/index.md') ? -1 : Number(frontmatterOf(filePath, 'order') ?? 9);
-    const pages = pagesUnder(folder).sort(
-      (a, b) => dirname(a).localeCompare(dirname(b)) || rank(a) - rank(b) || a.localeCompare(b)
+    const pages = sources.flatMap((source) =>
+      (source.endsWith('.md') ? [source] : pagesUnder(source)).sort(
+        (a, b) => dirname(a).localeCompare(dirname(b)) || rank(a) - rank(b) || a.localeCompare(b)
+      )
     );
 
     for (const filePath of pages) {
@@ -706,12 +714,21 @@ const startsWith = (prefix: string) => (item: GeneratedSidebarItem) =>
  * here that is not reading: a reader working through the guide should not find
  * it between two pages of prose, and a reader who has finished should find it
  * at the top of what is left.
+ *
+ * The comparison and the migration pages follow it, in that order, because that
+ * is the order somebody arrives in them: what this library does differently
+ * first, then how to leave the editor they already have. Both are named here
+ * rather than swept up by "anything that is not the guide or the API", so that
+ * the order of the group is written down instead of following from the folder
+ * tree, which sorts `comparison` under `migrate` and has no way to say why.
  */
 function arrangeSidebar<T extends GeneratedSidebarItem>(items: T[], lang: string): T[] {
   const labels = groupLabels[lang] ?? groupLabels[defaultLocale];
 
   const guide = items.find(startsWith('guide/'));
   const api = items.find(startsWith('api/'));
+  const comparison = items.find(startsWith('comparison'));
+  const migrate = items.find(startsWith('migrate/'));
   const changelog = items.find(startsWith('changelog'));
   const playground = guide?.items?.find((item) => item.link === 'guide/playground');
 
@@ -741,9 +758,16 @@ function arrangeSidebar<T extends GeneratedSidebarItem>(items: T[], lang: string
     }
   }
 
-  const loose = [playground, changelog].filter(Boolean) as T[];
+  // A group of pages rather than a page, so it takes the same "Overview" row
+  // the API groups do: its index names every editor there is a page for, and a
+  // heading nobody can click is a page nobody finds.
+  if (migrate?.items?.length) {
+    liftIndexLink(migrate, labels.overview);
+  }
+
+  const loose = [playground, comparison, migrate, changelog].filter(Boolean) as T[];
   const more = loose.length ? ({ text: labels.more, items: loose } as unknown as T) : undefined;
-  const moved = new Set([guide, api, changelog].filter(Boolean));
+  const moved = new Set([guide, api, comparison, migrate, changelog].filter(Boolean));
 
   return [
     ...([guide, api, more].filter(Boolean) as T[]),
