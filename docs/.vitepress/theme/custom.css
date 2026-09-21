@@ -307,3 +307,42 @@
 .mawy-root .mawy-demo-callout > :last-child {
   margin-bottom: 0;
 }
+
+/* ---------------------------------------------------------------------------
+ * The comparison tables' marks
+ *
+ * A matrix is read by scanning a column rather than by reading it, and in the
+ * page's own text colour every cell of it is the same grey — so the glyph is
+ * the only thing telling a tick from a cross, one cell at a time. Colour is
+ * what makes the shape of a column visible at a glance.
+ *
+ * VitePress's own success and danger colours rather than the library's palette,
+ * for the reason the framework switch uses them: this is the site's chrome and
+ * not something the library ships. Both are picked by that theme to be read as
+ * text, and both are redeclared for the dark theme.
+ *
+ * The span is written by `markCells` in `config.ts`, which also gives it the
+ * word it stands for. Nothing here carries meaning a reader who cannot see the
+ * colour would be missing.
+ * ------------------------------------------------------------------------- */
+
+.vp-doc .mawy-mark {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vp-doc .mawy-mark-yes {
+  color: var(--vp-c-green-1);
+}
+
+.vp-doc .mawy-mark-no {
+  color: var(--vp-c-red-1);
+}
+
+/* Neither of the two, and drawn as neither: a row that does not apply is not a
+   thing the package is missing. */
+.vp-doc .mawy-mark-na {
+  color: var(--vp-c-text-3);
+  font-weight: 400;
+}

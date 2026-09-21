@@ -420,6 +420,81 @@ function transformHead({ pageData, siteData, title, description }: TransformCont
   return head;
 }
 
+/** A rule that runs over the whole token stream once the document is parsed. */
+type CoreRule = Parameters<MarkdownRenderer['core']['ruler']['push']>[1];
+
+/**
+ * The three things a cell of a comparison table may say on its own, and the
+ * word each one stands for in either locale.
+ *
+ * `—` is here with the other two because a dash left as text reads as a dash,
+ * and what the row means by it is that it does not apply to that package.
+ */
+const CELL_MARKS: Record<string, { kind: string; en: string; ko: string }> = {
+  '✓': { kind: 'yes', en: 'Yes', ko: '있음' },
+  '✕': { kind: 'no', en: 'No', ko: '없음' },
+  '—': { kind: 'na', en: 'Not applicable', ko: '해당 없음' }
+};
+
+/**
+ * A mark standing on its own, drawn as a mark: a table cell that says nothing
+ * else, and a mark written as code in a sentence, which is how the legend above
+ * such a table names the three.
+ *
+ * The comparison page is four matrices of `✓` and `✕`, and in the page's own
+ * text colour the two are the same grey until a reader looks at the glyph
+ * itself. Colour is what makes a matrix scannable, and `custom.css` gives it
+ * one — but a colour is not a fact, so the mark also carries the word it stands
+ * for, which is what a screen reader says in place of "check mark".
+ *
+ * Done here rather than by writing the markup into the Markdown. The four
+ * tables are a hundred and sixty-odd cells, and a table nobody can read in the
+ * source is a table nobody will keep true.
+ */
+const markCells: CoreRule = (state) => {
+  const lang = (state.env?.relativePath as string | undefined)?.split('/')[0];
+
+  const spanFor = (content: string) => {
+    const mark = CELL_MARKS[content];
+
+    if (!mark) {
+      return undefined;
+    }
+
+    const label = lang === 'ko' ? mark.ko : mark.en;
+
+    return `<span class="mawy-mark mawy-mark-${mark.kind}" role="img" aria-label="${label}">${content}</span>`;
+  };
+
+  for (let index = 0; index < state.tokens.length; index += 1) {
+    const token = state.tokens[index];
+
+    if (token.type !== 'inline') {
+      continue;
+    }
+
+    const cell = state.tokens[index - 1]?.type === 'td_open';
+    const whole = cell ? spanFor(token.content.trim()) : undefined;
+
+    if (whole) {
+      const html = new state.Token('html_inline', '', 0);
+
+      html.content = whole;
+      token.children = [html];
+      continue;
+    }
+
+    for (const child of token.children ?? []) {
+      const span = child.type === 'code_inline' ? spanFor(child.content.trim()) : undefined;
+
+      if (span) {
+        child.type = 'html_inline';
+        child.content = span;
+      }
+    }
+  }
+};
+
 // Ref: https://vitepress.dev/reference/site-config
 const vitePressConfig: UserConfig = {
   title: 'Mawy',
@@ -503,6 +578,8 @@ const vitePressConfig: UserConfig = {
           return `<div class="mawy-fw" data-fw="${wanted.join(' ')}">\n`;
         }
       });
+
+      md.core.ruler.push('mawy-mark', markCells);
     }
   },
   /* -------------------------------------------------------------------------
