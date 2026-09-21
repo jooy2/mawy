@@ -27,6 +27,65 @@ The count is what each package declares rather than what ends up installed — `
 
 Toast UI Editor is the odd entry: its repository is archived and its last release, 3.2.2, is from February 2023. It is here anyway, because an editor with nothing upstream left is the one an application has a reason to move off, and this one is still downloaded hundreds of thousands of times a month. What it does is not wrong for having stopped moving.
 
+## At a glance
+
+`✓` is what the package ships, `✕` is what it does not, and `—` is a row that does not apply to it. Where a word says it better than a mark, there is a word. Every row is the package as it installs: a plugin somebody else wrote is not a tick, and neither is a recipe in a README.
+
+**Tiptap and BlockNote are not in these four tables.** They are toolkits rather than editors, so most of these rows would answer "with the right extension", and a tick would claim something the package does not. The `mawy-react` column is the React package; where the Flutter package differs, [getting started](./guide/getting-started) and [the editor](./guide/editor) say so.
+
+### Surfaces
+
+|                                     | Mawy | Toast UI | MDXEditor | Milkdown | react-md-editor |
+| ----------------------------------- | :--: | :------: | :-------: | :------: | :-------------: |
+| Editing the drawn document          |  ✓   |    ✓     |     ✓     |    ✓     |        ✕        |
+| Editing the Markdown source         |  ✓   |    ✓     |     ✓     |    ✕     |        ✓        |
+| Both at once, side by side          |  ✓   |    ✓     |     ✕     |    ✕     |        ✓        |
+| Switching surfaces converts nothing |  ✓   |    ✕     |     ✕     |    —     |        ✓        |
+| A read-only viewer of its own       |  ✓   |    ✓     |     ✕     |    ✕     |        ✓        |
+| A published page with no JavaScript |  ✓   |    ✕     |     ✕     |    ✕     |        ✕        |
+
+### The syntax it reads
+
+|                                      | Mawy | Toast UI | MDXEditor | Milkdown | react-md-editor |
+| ------------------------------------ | :--: | :------: | :-------: | :------: | :-------------: |
+| Tables                               |  ✓   |    ✓     |     ✓     |    ✓     |        ✓        |
+| Task lists                           |  ✓   |    ✓     |     ✓     |    ✓     |        ✓        |
+| Strikethrough                        |  ✓   |    ✓     |     ✓     |    ✓     |        ✓        |
+| Footnotes                            |  ✓   |    ✕     |     ✕     |    ✓     |        ✓        |
+| GitHub alerts, `> [!NOTE]`           |  ✓   |    ✕     |     ✕     |    ✕     |        ✓        |
+| Definition lists                     |  ✓   |    ✕     |     ✕     |    ✕     |        ✕        |
+| Frontmatter kept out of the document |  ✓   |    ✓     |     ✓     |    ✕     |        ✕        |
+| Directives, `:::name[label]`         |  ✓   |    ✕     |     ✓     |    ✕     |        ✕        |
+| A heading's own `{#id}`              |  ✓   |    ✕     |     ✕     |    ✕     |        ✕        |
+| Mathematics                          |  ✕   |    ✕     |     ✕     |    ✓     |        ✕        |
+| MDX and JSX                          |  ✕   |    ✕     |     ✓     |    ✕     |        ✕        |
+| A code highlighter in the package    |  ✓   |  Plugin  |     ✓     |  Plugin  |        ✓        |
+
+### Editing
+
+|                                | Mawy | Toast UI | MDXEditor | Milkdown | react-md-editor |
+| ------------------------------ | :--: | :------: | :-------: | :------: | :-------------: |
+| A toolbar                      |  ✓   |    ✓     |     ✓     |    ✓     |        ✓        |
+| A slash menu                   |  ✕   |    ✕     |     ✕     |    ✓     |        ✕        |
+| A handle to drag a block by    |  ✕   |    ✕     |     ✕     |    ✓     |        ✕        |
+| A hook for an uploaded image   |  ✓   |    ✓     |     ✓     |    ✓     |        ✕        |
+| Finding text inside the editor |  ✓   |    ✕     |     ✓     |    ✕     |        ✕        |
+| Opening and saving a file      |  ✓   |    ✕     |     ✕     |    ✕     |        ✕        |
+| Counting words and characters  |  ✓   |    ✕     |     ✕     |    ✕     |    Callback     |
+| Collaborative editing          |  ✕   |    ✕     |     ✕     |    ✓     |        ✕        |
+
+### Around the document
+
+|                                   | Mawy | Toast UI  | MDXEditor | Milkdown  | react-md-editor |
+| --------------------------------- | :--: | :-------: | :-------: | :-------: | :-------------: |
+| An outline of the document        |  ✓   |     ✕     |     ✕     |     ✕     |        ✕        |
+| The reader setting the type       |  ✓   |     ✕     |     ✕     |     ✕     |        ✕        |
+| A dark theme in the package       |  ✓   |     ✓     |     ✓     |     ✓     |        ✓        |
+| The interface in another language | Two  |  Twenty   | Function  | Per label |     Chinese     |
+| Raw HTML refused by default       |  ✓   | Sanitised |     ✕     |     ✕     |        ✕        |
+| A package for Flutter             |  ✓   |     ✕     |     ✕     |     ✕     |        ✕        |
+| Declared dependencies             |  1   |     8     |    57     |    21     |        4        |
+
 ## Where the document lives
 
 This is the one difference the rest follow from.
