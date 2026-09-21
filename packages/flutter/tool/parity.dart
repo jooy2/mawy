@@ -12,7 +12,7 @@
 /// wrote and a far better test than anything invented for one.
 ///
 /// ```bash
-/// cd packages/react && node scripts/parity.mjs > /tmp/react.json
+/// cd packages/react && npm run parity > /tmp/react.json
 /// cd ../flutter && dart run tool/parity.dart > /tmp/flutter.json
 /// diff /tmp/react.json /tmp/flutter.json
 /// ```

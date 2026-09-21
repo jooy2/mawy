@@ -35,7 +35,7 @@ This is the invariant everything else hangs off. These files are the same file t
 Same function names, same rules, same order. **Changing one means changing the other in the same commit.** The check is two programs that print their trees as JSON and a diff between them:
 
 ```bash
-cd packages/react && node scripts/parity.mjs > /tmp/react.json
+cd packages/react && npm run parity > /tmp/react.json
 ```
 
 ```bash

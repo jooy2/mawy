@@ -17,7 +17,7 @@
  * The highlighter is diffed alongside it, over `tool/code.json`, for exactly
  * the same reason: it is also one grammar written twice.
  *
- *     cd packages/react && node scripts/parity.mjs > /tmp/react.json
+ *     cd packages/react && npm run parity > /tmp/react.json
  *     cd ../flutter && dart run tool/parity.dart > /tmp/flutter.json
  *     diff /tmp/react.json /tmp/flutter.json
  */
