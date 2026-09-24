@@ -690,6 +690,17 @@ describe('inline structure', () => {
     ]);
   });
 
+  /**
+   * The table is an object, and a name read through its prototype drew
+   * `function Object() { [native code] }` where the document said
+   * `&constructor;`. The Flutter package's table is a map and never did.
+   */
+  it("leaves a name the table has not got as it was written, the prototype's included", () => {
+    expect(bare(inline(first('&constructor; &toString; &valueOf; &amp;')))).toEqual([
+      { type: 'text', value: '&constructor; &toString; &valueOf; &' }
+    ]);
+  });
+
   it('reads a backslash escape, and a hard break', () => {
     expect(bare(inline(first('\\*not emphasis\\*')))).toEqual([
       { type: 'text', value: '*not emphasis*' }

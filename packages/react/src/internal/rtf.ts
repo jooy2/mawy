@@ -105,7 +105,9 @@ export function picturesInRtf(rtf: string): (string | null)[] {
           group.fallback = true;
         }
       } else if (group.picture) {
-        if (word in FORMATS) {
+        // An own property rather than `in`, which reads the prototype as well
+        // and took `\constructor` for a format.
+        if (Object.hasOwn(FORMATS, word)) {
           group.picture.type = FORMATS[word];
         } else if (OTHER_FORMATS.has(word.replace(/\d+$/, ''))) {
           group.picture.type = null;

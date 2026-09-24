@@ -1,12 +1,12 @@
 {
   "note": "gzip bytes of a real esbuild bundle of dist/, React external and lucide-react bundled. Regenerate with `npm run size -- --update`.",
   "scenarios": {
-    "MawyViewer": 34436,
-    "MawyEditor": 81351,
-    "Both": 81359,
+    "MawyViewer": 34449,
+    "MawyEditor": 81355,
+    "Both": 81367,
     "The highlighter": 2876,
-    "The parser alone": 12794,
-    "A server document": 23646,
+    "The parser alone": 12806,
+    "A server document": 23655,
     "styles.css": 7819
   }
 }

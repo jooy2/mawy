@@ -239,7 +239,10 @@ export function decodeEntities(text: string): string {
       return fromCodePoint(Number.parseInt(dec, 10));
     }
 
-    return NAMED[name] ?? match;
+    // An own property rather than a lookup, which reads the prototype as well:
+    // `&constructor;` is a name nobody put in the table, and read through the
+    // prototype it drew `function Object() { [native code] }` on the page.
+    return Object.hasOwn(NAMED, name) ? NAMED[name] : match;
   });
 }
 

@@ -229,6 +229,11 @@ describe('pictures read out of the RTF beside the markup', () => {
     expect(pasteFromHtml(wordHtml(LOCAL), '{\\rtf1 {\\pict\\pngblip\\bin4 abcd}}').images).toEqual(
       []
     );
+    // A word the table was asked for through its prototype, which took it
+    // for a format.
+    expect(
+      pasteFromHtml(wordHtml(LOCAL), `{\\rtf1 ${rtfPicture('constructor', PIXEL_HEX)}}`).images
+    ).toEqual([]);
   });
 });
 

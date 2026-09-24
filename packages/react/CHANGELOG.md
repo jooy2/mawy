@@ -24,6 +24,8 @@
 
 - **An uploaded picture whose address had `&amp;` in it was fetched from somewhere else.** A URL an upload answered with was written into the document as it was, and the parser reads a character reference in a destination, so an address carrying `&amp;`, `&copy;` or `&#65;` as characters of its own came back with an `&`, a `©` or an `A` in their place. The picture drawn was not the one uploaded. Each run shaped like a reference now has its `&` written as `&amp;`, which reads back as the characters it was; an `&` that begins nothing, as in `?a=1&b=2`, is still written as itself. The bar beside a picture writes its address the same way, since it writes the whole picture again when only the description changed. A reference rather than a backslash, because this parser reads a destination's escapes before its references and would still find one behind `\&amp;`.
 
+- **`&constructor;` was drawn as `function Object() { [native code] }`.** The table of character references is an object, and a name was looked up in it through its prototype as well, so `&constructor;`, `&toString;` and `&valueOf;` in a document drew the source of a built-in function where the words should have been. A name the table has not got is left as it was written, as it always was for any other name and as it always was in the Flutter package, whose table is a map. A picture pasted from a word processor had the same lookup in the list of formats RTF names a picture with, and a `\constructor` inside one was taken for a format.
+
 ## 1.7.0 (2026-09-17)
 
 ### Added
