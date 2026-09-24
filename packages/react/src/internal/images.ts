@@ -14,9 +14,8 @@
  */
 
 import type { MawyImageSource } from '../types.js';
-import { escapeReferences } from './markdown/entities.js';
 import { markupHasContent } from './markdown/paste.js';
-import { dataImageBytes } from './markdown/url.js';
+import { dataImageBytes, writtenDestination } from './markdown/url.js';
 
 /** The image files on a transfer, in the order it lists them. */
 export function imageFilesIn(transfer: DataTransfer | null): File[] {
@@ -73,23 +72,6 @@ function escapeAlt(text: string): string {
   return text.replace(/\s+/g, ' ').replace(/[\\[\]|]/g, '\\$&');
 }
 
-/**
- * A destination, written so that it is the destination.
- *
- * A URL with a space or a bracket in it ends the link early where it stands,
- * so it goes inside angle brackets — which is the form Markdown has for exactly
- * this, and which then has two characters of its own to escape. A character
- * reference is read in either form, so a run in the URL that looks like one is
- * written so that it is not.
- */
-function destination(url: string): string {
-  const escaped = /[\s()]/.test(url)
-    ? `<${url.replace(/[\\<>]/g, '\\$&')}>`
-    : url.replace(/[\\]/g, '\\$&');
-
-  return escapeReferences(escaped);
-}
-
 /** The Markdown for an image, from whatever the upload answered with. */
 export function markdownForImage(source: MawyImageSource, file: File): string {
   const image = typeof source === 'string' ? { url: source } : source;
@@ -98,5 +80,5 @@ export function markdownForImage(source: MawyImageSource, file: File): string {
     ? ` "${image.title.replace(/\s+/g, ' ').replace(/["\\|]/g, '\\$&')}"`
     : '';
 
-  return `![${alt}](${destination(image.url)}${title})`;
+  return `![${alt}](${writtenDestination(image.url)}${title})`;
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseMarkdown } from '../../../src/internal/markdown/parse.js';
 import {
   markdownFromHtml,
   markupHasContent,
@@ -48,6 +49,25 @@ describe('HTML, read back as Markdown', () => {
   it('reads an image, and keeps the alt text of one it may not load', () => {
     expect(markdownFromHtml('<p><img src="/i.png" alt="a cat"></p>')).toBe('![a cat](/i.png)');
     expect(markdownFromHtml('<p><img src="javascript:x" alt="a cat"></p>')).toBe('a cat');
+  });
+
+  /**
+   * A page's `href` and `src` are addresses the browser has already read, so a
+   * space, a parenthesis or a run that looks like a reference in one is part of
+   * the address. Written as they came, `(b` ended the link where it stood and
+   * `&amp;` came back as `&`.
+   */
+  it('writes an address from the page so that it is read back as that address', () => {
+    for (const [html, url] of [
+      ['<a href="https://x.io/wiki/A_(b">a</a>', 'https://x.io/wiki/A_(b'],
+      ['<a href="/a b.html">a</a>', '/a b.html'],
+      ['<a href="/a?b=1&amp;amp;c=2">a</a>', '/a?b=1&amp;c=2'],
+      ['<img src="/a\\*b.png" alt="a">', '/a\\*b.png']
+    ]) {
+      const paragraph = parseMarkdown(markdownFromHtml(`<p>${html}</p>`)).root.children[0];
+
+      expect(paragraph.type === 'paragraph' && paragraph.children[0], html).toMatchObject({ url });
+    }
   });
 
   it('reads lists, with an ordered one starting where it says', () => {

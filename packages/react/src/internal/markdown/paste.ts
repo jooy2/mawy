@@ -19,7 +19,7 @@
  */
 
 import { picturesInRtf } from '../rtf.js';
-import { dataImageBytes, safeImageUrl, safeUrl } from './url.js';
+import { dataImageBytes, safeImageUrl, safeUrl, writtenDestination } from './url.js';
 
 /**
  * How a piece of markup is being read.
@@ -226,7 +226,7 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
 
         // A link nobody may follow is the words it was written with. That is
         // the same answer the parser gives a `javascript:` link in Markdown.
-        out += url && label.trim() ? `[${label}](${url})` : label;
+        out += url && label.trim() ? `[${label}](${writtenDestination(url)})` : label;
         break;
       }
 
@@ -243,7 +243,7 @@ function inlineOf(nodes: Iterable<Node>, reading: Reading): string {
           break;
         }
 
-        out += url ? `![${alt}](${url})` : reading.alts ? alt : '';
+        out += url ? `![${alt}](${writtenDestination(url)})` : reading.alts ? alt : '';
         break;
       }
 

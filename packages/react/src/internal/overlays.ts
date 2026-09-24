@@ -17,8 +17,8 @@
 import { removeBlock } from './commands.js';
 import type { MawyEdit } from './editing.js';
 import type { MdAlertKind, MdNode, MdRange } from './markdown/ast.js';
-import { escapeReferences } from './markdown/entities.js';
 import { toPlainText } from './markdown/inline.js';
+import { writtenDestination } from './markdown/url.js';
 
 /** Something on the drawn document one of the bars is for, where the caret is. */
 export type MawyBlockTarget =
@@ -100,19 +100,11 @@ export function targetAt(
 }
 
 /**
- * An address as a destination is written: in angle brackets where it has a
- * space or a parenthesis in it, which would otherwise end it, and with the
- * characters no destination can hold escaped. A run that looks like a
- * character reference is written so that it is not, or a picture whose
- * description was changed here would be written back with the `&amp;` in its
- * address read as `&`.
+ * An address typed into a field, as a destination: without the spaces either
+ * side of it, and otherwise as `writtenDestination` writes any address.
  */
 function destination(url: string): string {
-  const clean = escapeReferences(
-    url.trim().replace(/[<>\n]/g, (character) => encodeURIComponent(character))
-  );
-
-  return /[\s()]/.test(clean) ? `<${clean}>` : clean;
+  return writtenDestination(url.trim());
 }
 
 function titled(title: string | null): string {

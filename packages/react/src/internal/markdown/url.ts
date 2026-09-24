@@ -8,6 +8,8 @@
  * always.
  */
 
+import { escapeReferences } from './entities.js';
+
 /**
  * The schemes a document may name.
  *
@@ -174,4 +176,31 @@ export function dataImageBytes(
   } catch {
     return null;
   }
+}
+
+/**
+ * An address, written as a destination that is read back as the address it
+ * was.
+ *
+ * Inside angle brackets where it has a space, a parenthesis or an angle
+ * bracket in it, which would otherwise end it or be read as the start of that
+ * form, with the backslash and the two brackets escaped in there; anywhere
+ * else a backslash is escaped, since one in front of punctuation is read as an
+ * escape. A line ending fits in neither form and is written percent-encoded.
+ * A run that looks like a character reference is written so that it is not
+ * one; see `escapeReferences`.
+ *
+ * The one writer for an address the editor was handed rather than one it read
+ * — an upload's answer, a field in the bar beside a link or a picture, a
+ * pasted page's `href` and `src` — so that each is read back the same way. The
+ * React package's alone, since the Flutter package is handed Markdown rather
+ * than addresses.
+ */
+export function writtenDestination(url: string): string {
+  const flat = url.replace(/[\r\n]/g, (ending) => encodeURIComponent(ending));
+  const written = /[\s()<>]/.test(flat)
+    ? `<${flat.replace(/[\\<>]/g, '\\$&')}>`
+    : flat.replace(/\\/g, '\\\\');
+
+  return escapeReferences(written);
 }

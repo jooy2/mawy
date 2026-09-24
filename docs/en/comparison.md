@@ -159,7 +159,7 @@ That matters when the same documents are read in a web application and in a phon
 | What you import         | Gzipped |
 | ----------------------- | ------- |
 | `MawyViewer`            | 33.6 kB |
-| `MawyEditor`            | 79.4 kB |
+| `MawyEditor`            | 79.5 kB |
 | `mawy-react/markdown`   | 12.5 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
 | `mawy-react/styles.css` | 7.6 kB  |

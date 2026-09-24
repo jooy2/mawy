@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { dataImageBytes, isRelativeUrl } from '../../../src/internal/markdown/url.js';
+import { imageUrls } from '../../../src/internal/markdown/images.js';
+import { parseMarkdown } from '../../../src/internal/markdown/parse.js';
+import {
+  dataImageBytes,
+  isRelativeUrl,
+  writtenDestination
+} from '../../../src/internal/markdown/url.js';
 
 /**
  * Which addresses a document writes that mean nothing on their own.
@@ -67,5 +73,49 @@ describe('the bytes a `data:` picture carries', () => {
     expect(dataImageBytes('data:image/svg+xml;utf8')).toBe(null);
     expect(dataImageBytes('data:image/png;base64,%%%')).toBe(null);
     expect(dataImageBytes('data:text/html,<b>x</b>')).toBe(null);
+  });
+});
+
+/**
+ * An address the editor was handed, written into a document.
+ *
+ * What matters is what the parser reads back: an address that comes back as a
+ * different one is a picture fetched from somewhere else or a link that goes
+ * somewhere else, with nothing on the page to say so.
+ */
+describe('writing an address as a destination', () => {
+  it('leaves an address with nothing in it to misread as it is', () => {
+    expect(writtenDestination('https://example.com/a.png?b=1&c=2')).toBe(
+      'https://example.com/a.png?b=1&c=2'
+    );
+  });
+
+  it('puts one with a space, a parenthesis or an angle bracket inside angle brackets', () => {
+    expect(writtenDestination('/a b.png')).toBe('</a b.png>');
+    expect(writtenDestination('/wiki/A_(b')).toBe('</wiki/A_(b>');
+    expect(writtenDestination('<a>.png')).toBe('<\\<a\\>.png>');
+  });
+
+  it('escapes a backslash, a line ending and a run that looks like a reference', () => {
+    expect(writtenDestination('/a\\*b.png')).toBe('/a\\\\*b.png');
+    expect(writtenDestination('/a\nb.png')).toBe('/a%0Ab.png');
+    expect(writtenDestination('/a?b=1&amp;c=2')).toBe('/a?b=1&amp;amp;c=2');
+  });
+
+  it('is read back as the address it was', () => {
+    for (const url of [
+      'https://example.com/a.png?b=1&c=2',
+      '/a b.png',
+      '/wiki/A_(b',
+      '/wiki/A_(b)',
+      '<a>.png',
+      '/a\\*b.png',
+      '/a b\\<c.png',
+      '/a?b=1&amp;c=2',
+      '/a&copy;b&#65;c&nope;.png',
+      '/a b&amp;c.png'
+    ]) {
+      expect(imageUrls(parseMarkdown(`![a](${writtenDestination(url)})`)), url).toEqual([url]);
+    }
   });
 });

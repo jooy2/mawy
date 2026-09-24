@@ -26,6 +26,8 @@
 
 - **`&constructor;` was drawn as `function Object() { [native code] }`.** The table of character references is an object, and a name was looked up in it through its prototype as well, so `&constructor;`, `&toString;` and `&valueOf;` in a document drew the source of a built-in function where the words should have been. A name the table has not got is left as it was written, as it always was for any other name and as it always was in the Flutter package, whose table is a map. A picture pasted from a word processor had the same lookup in the list of formats RTF names a picture with, and a `\constructor` inside one was taken for a format.
 
+- **A pasted link whose address had a space or a parenthesis in it was not a link.** The `href` and `src` of a pasted page were written into the document as the browser read them, so `https://example.com/wiki/A_(b` ended the link at the parenthesis and left the rest as words, an address with a space in it was never a link at all, and a run like `&amp;` came back as `&`. The bar beside a link or a picture wrote its address a third way, which kept an angle bracket as `%3C` and lost a backslash typed in front of punctuation. The paste, the upload and the bar now write an address with one function: inside angle brackets where it holds a space, a parenthesis or an angle bracket, with a backslash escaped wherever it is, a line ending percent-encoded and a reference-shaped run written so that it is not one — so each is read back as the address it was.
+
 ## 1.7.0 (2026-09-17)
 
 ### Added

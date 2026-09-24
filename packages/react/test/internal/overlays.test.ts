@@ -95,6 +95,19 @@ describe('what a bar writes', () => {
     ).toBe('![c](</&amp;copy; 1.png?a=1&b=2>)^');
   });
 
+  it('writes a backslash and an angle bracket typed into the address as they were typed', () => {
+    const edit = inserted(
+      '',
+      { start: 0, end: 0 },
+      { url: ' a\\*b<c>.png ', text: 'c', image: true }
+    );
+
+    expect(shown(edit)).toBe('![c](<a\\\\*b\\<c\\>.png>)^');
+    expect(targetAt(parseMarkdown(edit.value).root.children, 1, 1, edit.value)).toMatchObject({
+      url: 'a\\*b<c>.png'
+    });
+  });
+
   it('keeps the formatting of words left alone, and writes changed words plain', () => {
     const { value, caret } = at('See [the **office**^](https://a.org).');
     const link = targetAt(parseMarkdown(value).root.children, caret, caret, value);
