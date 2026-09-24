@@ -75,6 +75,8 @@ export interface BlockToolsProps {
   onCancel: () => void;
   /** Bumped to put the focus in the bar's first field. */
   focusRequest: number;
+  /** Whether a picture's bar shows its address. See `MawyEditor.imageAddress`. */
+  imageAddress: boolean;
 }
 
 /**
@@ -246,27 +248,32 @@ function Fields({
   value,
   onEdit,
   onCancel,
-  focusRequest
+  focusRequest,
+  imageAddress
 }: BlockToolsProps & {
   target: Exclude<MawyBlockTarget, { kind: 'code' | 'alert' }> | MawyInsertTarget;
 }) {
   const image = target.kind === 'image' || (target.kind === 'insert' && target.image);
+  // A new picture is asked for its address whatever the application says,
+  // since there is nothing to write without one.
+  const addressed = target.kind !== 'image' || imageAddress;
   const url0 = target.kind === 'insert' ? 'https://' : target.url;
   const text0 = target.kind === 'image' ? target.alt : target.text;
   const [url, setUrl] = React.useState(url0);
   const [text, setText] = React.useState(text0);
   const address = React.useRef<HTMLInputElement>(null);
+  const words = React.useRef<HTMLInputElement>(null);
   const done = React.useRef(false);
 
   // A new one is asked for its address first, with the caret after the
-  // `https://` it starts with.
+  // `https://` it starts with. A picture whose address is not shown is asked
+  // for its description instead.
   React.useEffect(() => {
-    if (target.kind === 'insert' || focusRequest > 0) {
-      address.current?.focus();
-      address.current?.setSelectionRange(
-        address.current.value.length,
-        address.current.value.length
-      );
+    const field = address.current ?? words.current;
+
+    if (field && (target.kind === 'insert' || focusRequest > 0)) {
+      field.focus();
+      field.setSelectionRange(field.value.length, field.value.length);
     }
   }, [focusRequest, target.kind]);
 
@@ -358,25 +365,30 @@ function Fields({
         is on the page.
       */}
       <div className="mawy-block-fields">
-        <label className="mawy-block-label" htmlFor={`${ids}address`}>
-          {image ? strings.imageAddress : strings.linkAddress}
-        </label>
-        <input
-          ref={address}
-          id={`${ids}address`}
-          className="mawy-block-field"
-          type="url"
-          placeholder="https://"
-          value={url}
-          spellCheck={false}
-          onChange={(event) => setUrl(event.target.value)}
-          onKeyDown={keys}
-          onBlur={left}
-        />
+        {addressed ? (
+          <>
+            <label className="mawy-block-label" htmlFor={`${ids}address`}>
+              {image ? strings.imageAddress : strings.linkAddress}
+            </label>
+            <input
+              ref={address}
+              id={`${ids}address`}
+              className="mawy-block-field"
+              type="url"
+              placeholder="https://"
+              value={url}
+              spellCheck={false}
+              onChange={(event) => setUrl(event.target.value)}
+              onKeyDown={keys}
+              onBlur={left}
+            />
+          </>
+        ) : null}
         <label className="mawy-block-label" htmlFor={`${ids}text`}>
           {image ? strings.imageDescription : strings.linkText}
         </label>
         <input
+          ref={words}
           id={`${ids}text`}
           className="mawy-block-field"
           type="text"

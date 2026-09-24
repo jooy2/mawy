@@ -129,6 +129,7 @@ A list rather than a `true`, for the same reason the viewer's `toolbar` is one.
 | --- | --- | --- | --- |
 | `onUploadImage` | [`MawyImageUpload`](../types/image) | — | Where a dropped, pasted or chosen picture goes, and what URL to write for it. |
 | `onUploadingChange` | `(count: number) => void` | — | How many images are still on their way into the document, whenever that changes. |
+| `imageAddress` | `boolean` | `true` | Whether the bar beside a picture on the drawn document shows its address. |
 
 With it, the toolbar's `image` button is a menu that also uploads a picture chosen from the device, and `Mod`+`Shift`+`U` opens the same picker. Without it a dropped file does nothing, because storing a picture is not a decision a text editor makes on its own. An image already on the web, pasted as part of a page, still arrives as the URL it already had. See [images](../../guide/editor#images).
 

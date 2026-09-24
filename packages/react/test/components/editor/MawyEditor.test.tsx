@@ -2449,6 +2449,55 @@ describe('the document surface', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Before  after.'));
   });
 
+  /**
+   * An application whose addresses are a storage path or a signed URL keeps
+   * them off the bar. What is left is still the whole of what the bar does to a
+   * picture that is there, and a new one is still asked where it is.
+   */
+  it("keeps a picture's address off its bar when told to, and asks a new one for it", async () => {
+    const onChange = vi.fn();
+    const picture =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+    const screen = await render(
+      <div style={WIDE}>
+        <MawyEditor
+          defaultValue={`Before ![a hill](${picture}) after.`}
+          mode="wysiwyg"
+          imageAddress={false}
+          onChange={onChange}
+          style={{ height: 400 }}
+        />
+      </div>
+    );
+
+    bodyOf(screen).focus();
+    bodyOf(screen)
+      .querySelector('img')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    const description = page.getByRole('textbox', { name: 'Image description' });
+
+    await vi.waitFor(() => expect(description.element()).toHaveValue('a hill'));
+    expect(screen.container.querySelector('.mawy-block-tools')?.textContent).not.toContain(
+      'Image address'
+    );
+    expect(screen.container.querySelector('.mawy-block-tools input[type="url"]')).toBeNull();
+
+    // The toolbar's image button, in a picture, is the way into its bar; with
+    // no address to go to, it goes to the description.
+    await screen.getByRole('button', { name: 'Image' }).click();
+    await vi.waitFor(() => expect(document.activeElement).toBe(description.element()));
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete the image' }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Before  after.'));
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(bodyOf(screen)));
+    await screen.getByRole('button', { name: 'Image' }).click();
+    await vi.waitFor(() =>
+      expect(page.getByRole('textbox', { name: 'Image address' }).element()).toHaveValue('https://')
+    );
+  });
+
   it('asks for a new link from a bar, and writes it once it has an address', async () => {
     const onChange = vi.fn();
     const screen = await render(

@@ -370,6 +370,25 @@ export interface MawyEditorProps extends Omit<
   onUploadingChange?: (count: number) => void;
 
   /**
+   * Whether the bar beside a picture on the drawn document shows its address.
+   *
+   * On, because a picture whose address cannot be seen is a picture whose
+   * address cannot be corrected. Off for an application whose addresses are
+   * its own business — a storage path, or a signed URL an upload answered with
+   * — and the bar keeps the description and the button that deletes the
+   * picture. It keeps the address out of the editor's interface and nowhere
+   * else: the source and split surfaces are the Markdown and show it, which
+   * `modes` can leave out, and a browser tells anybody who asks where a
+   * picture came from.
+   *
+   * The bar a new picture is written from asks for its address either way,
+   * since that is the writer's to type.
+   *
+   * @default true
+   */
+  imageAddress?: boolean;
+
+  /**
    * Where a saved document goes, when the application would rather say.
    *
    * Without it, `save` hands the text to the browser as a download. With it,
@@ -605,6 +624,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     status = true,
     onUploadImage,
     onUploadingChange,
+    imageAddress = true,
     parse,
     html = 'escape',
     linkTarget = 'blank',
@@ -2017,6 +2037,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         onEdit={blockEdit}
         onCancel={cancelInsert}
         focusRequest={focusRequest}
+        imageAddress={imageAddress}
       />
     ) : null;
 
