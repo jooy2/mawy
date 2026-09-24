@@ -257,9 +257,12 @@ export function decodeEntities(text: string): string {
  * a reference too many reads back the same, and one too few does not. An `&`
  * that begins no reference, as in `?a=1&b=2`, is written as itself.
  *
- * A reference rather than a backslash, which the specification reads the same
- * way, because this parser reads a destination's escapes before its references
- * and would find one behind `\&amp;` all the same.
+ * A reference rather than a backslash, because readers disagree about a
+ * backslash in front of a reference in a destination and the specification
+ * has no example to settle it. This parser reads the escape first and cmark,
+ * which GitHub draws with, reads the reference first, and both come to `&` for
+ * `\&amp;`; markdown-it reads the two at once and comes to `&amp;`. Every one
+ * of them reads `&amp;amp;` as `&amp;`.
  *
  * The React package's alone, since nothing in the Flutter package writes an
  * address it was handed.
