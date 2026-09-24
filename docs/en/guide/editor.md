@@ -455,6 +455,32 @@ The picture goes where the caret is when `insert` is called, which after a slow 
 
 :::
 
+**Nothing is called when a picture is taken out of the document.** A picture leaving the document is not a file being given up: undo puts it back, a cut picture is pasted somewhere else, and the same address copied into a second document is the same file in two places. An application that stores its pictures finds the ones nothing needs with [`imageUrls`](../api/functions/image-urls), which lists every address a document draws a picture from. Compare that with what was stored, across every saved document:
+
+::: fw react
+
+```ts
+import { imageUrls, parseMarkdown } from 'mawy-react/markdown';
+
+const used = new Set(saved.flatMap((each) => imageUrls(parseMarkdown(each))));
+const unused = stored.filter((url) => !used.has(url));
+```
+
+:::
+
+::: fw flutter
+
+```dart
+final Set<String> used = <String>{
+  for (final String each in saved) ...imageUrls(parseMarkdown(each)),
+};
+final List<String> unused = stored.where((String url) => !used.contains(url)).toList();
+```
+
+:::
+
+Wait a while before deleting what nothing points at. The editor's undo can still put a picture back after a save, and a picture uploaded into a document nobody has saved yet is in no saved document at all.
+
 ## Colour in the preview
 
 `highlight` is passed straight through to the viewer inside the preview, so a `split` or `preview` surface colours its code the way [the viewer does](./viewer#colouring-a-code-block), and the drawn document colours the code blocks it draws with the same highlighter. The lazy form works here too, and is the one to use:

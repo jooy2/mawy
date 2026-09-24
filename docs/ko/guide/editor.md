@@ -455,6 +455,32 @@ Future<void> addPicture() async {
 
 :::
 
+**문서에서 그림이 빠져도 아무것도 부르지 않습니다.** 그림이 문서에서 빠졌다고 파일이 필요 없어진 것은 아닙니다. 실행 취소하면 그림이 돌아오고, 잘라 낸 그림은 다른 곳에 붙여 넣으며, 같은 주소를 다른 문서에 복사하면 한 파일을 두 문서가 씁니다. 그림을 저장해 두는 애플리케이션은 문서가 그림을 가져오는 주소를 모두 돌려주는 [`imageUrls`](../api/functions/image-urls)로 더는 쓰이지 않는 파일을 찾습니다. 저장한 파일과, 저장된 모든 문서의 결과를 비교하면 됩니다.
+
+::: fw react
+
+```ts
+import { imageUrls, parseMarkdown } from 'mawy-react/markdown';
+
+const used = new Set(saved.flatMap((each) => imageUrls(parseMarkdown(each))));
+const unused = stored.filter((url) => !used.has(url));
+```
+
+:::
+
+::: fw flutter
+
+```dart
+final Set<String> used = <String>{
+  for (final String each in saved) ...imageUrls(parseMarkdown(each)),
+};
+final List<String> unused = stored.where((String url) => !used.contains(url)).toList();
+```
+
+:::
+
+아무도 가리키지 않는 파일은 얼마간 두었다가 지우세요. 저장한 뒤에도 에디터의 실행 취소로 그림이 돌아올 수 있고, 아직 한 번도 저장하지 않은 문서에 올린 그림은 저장된 어느 문서에도 없습니다.
+
 ## 미리보기의 코드 색
 
 `highlight`는 미리보기 안의 뷰어로 그대로 전달됩니다. `split`과 `preview` 화면은 [뷰어와 같은 방식](./viewer#코드-블록에-색-입히기)으로 코드에 색을 입히고, 그려진 문서도 같은 하이라이터로 코드 블록에 색을 입힙니다. 필요할 때 불러오는 지연 로딩 형태도 그대로 쓸 수 있고, 그 편을 권합니다.

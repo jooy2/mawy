@@ -42,6 +42,7 @@ export 'src/editor/search.dart'
 export 'src/highlight.dart' show kMawyHighlightLanguages, mawyHighlighter;
 export 'src/internal/i18n.dart' show MawyStrings;
 export 'src/markdown/ast.dart';
+export 'src/markdown/images.dart' show imageUrls;
 export 'src/markdown/inline.dart' show MawyQuotes;
 export 'src/markdown/parse.dart' show MawyParseOptions, parseMarkdown, slugify;
 export 'src/theme/tokens.dart';

@@ -31,6 +31,7 @@ import 'package:mawy/src/highlight.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/find.dart';
 import 'package:mawy/src/markdown/highlight.dart';
+import 'package:mawy/src/markdown/images.dart';
 import 'package:mawy/src/markdown/parse.dart';
 
 /// A directive's attributes with their keys in one order.
@@ -285,6 +286,7 @@ void main() {
           )
           .toList(),
       'footnotes': clean(d.footnotes),
+      'images': imageUrls(d),
     });
   }
 

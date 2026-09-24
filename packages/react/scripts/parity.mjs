@@ -25,6 +25,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseMarkdown } from '../src/internal/markdown/parse.ts';
+import { imageUrls } from '../src/internal/markdown/images.ts';
 import { mawyHighlighter } from '../src/highlight.ts';
 import { highlightMarkdown } from '../src/internal/markdown/highlight.ts';
 import {
@@ -128,7 +129,8 @@ const trees = corpus().map((source) => {
   return {
     blocks: clean(document.root.children),
     outline: clean(document.outline),
-    footnotes: clean(document.footnotes)
+    footnotes: clean(document.footnotes),
+    images: imageUrls(document)
   };
 });
 

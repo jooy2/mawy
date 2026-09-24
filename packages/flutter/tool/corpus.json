@@ -61,5 +61,6 @@
  "see http://a.co/a--b here and <http://a.co/a--b> and `a--b` and ![a--b](/i.png)\n\n[a--b](/u--v \"t--u\") and a--b: http://x.co/y...z",
  "ftp://x.io/f and //a.co/x and matrix:r/x and tel:+15550100 and mailto:a@b.com\n\n//server/share and //comment and TODO:fix and note: see below and a:b and ratio 3:2\n\njavascript:alert(1) and vbscript:x and data:text/html,x\n\nwww.example.com:8080/x and C:\\Users\\x and ftp:",
  "re:invent... was fun and TODO:fix... this, but ftp://x.io/a--b is an address\n\n\"a\" in re:invent and 5\" in TODO:x",
- "Escaped: \\\"a\\\" and a\\-\\-b and a\\.\\.\\.b and it\\'s and \\(c\\)\n\nMixed: a\\-\\-b beside a--b, and Caf&eacute; -- best"
+ "Escaped: \\\"a\\\" and a\\-\\-b and a\\.\\.\\.b and it\\'s and \\(c\\)\n\nMixed: a\\-\\-b beside a--b, and Caf&eacute; -- best",
+ "![a](/a.png) and ![b](</b c.png> \"T\") and ![ref][pic] and [![linked](/linked.png)](/href) and ![again](/a.png) and ![empty]().\n\n<p><img src=\"/block.png\" alt=\"x\"><IMG SRC='/upper.png'></p>\n\nInline <img src=/bare.png> and <img alt=x src=\"/q&amp;s.png\" src=\"/second.png\"> and <image src=\"/image.png\"> and <imgs src=\"/no.png\"> and <!-- <img src=\"/comment.png\"> -->.\n\n| cell |\n| --- |\n| ![cell](/cell.png) |\n\n:::note[![label](/label.png)]\n![inside](/inside.png)\n:::\n\nNoted[^1] and `![code](/code.png)`.\n\n[^1]: ![foot](/foot.png)\n\n[^2]: ![unused](/unused.png)\n\n[pic]: /ref%20d.png"
 ]

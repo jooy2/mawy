@@ -132,11 +132,13 @@ A list rather than a `true`, for the same reason the viewer's `toolbar` is one.
 
 With it, the toolbar's `image` button is a menu that also uploads a picture chosen from the device, and `Mod`+`Shift`+`U` opens the same picker. Without it a dropped file does nothing, because storing a picture is not a decision a text editor makes on its own. An image already on the web, pasted as part of a page, still arrives as the URL it already had. See [images](../../guide/editor#images).
 
+Nothing is called when a picture is taken out of the document, because undo can put it back. [`imageUrls`](../functions/image-urls) lists the pictures a saved document points at instead, and its page says why.
+
 :::
 
 ::: fw flutter
 
-There is no image upload here. The editor writes the Markdown an application hands it a URL for, and choosing a file is a plugin's job rather than a widget's.
+There is no image upload here. The editor writes the Markdown an application hands it a URL for, and choosing a file is a plugin's job rather than a widget's. [`imageUrls`](../functions/image-urls) lists the pictures a saved document points at, for an application finding the files it stored that nothing needs any more.
 
 :::
 

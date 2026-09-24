@@ -1,6 +1,6 @@
 ---
 title: mawyHighlighter
-order: 3
+order: 4
 ---
 
 # `mawyHighlighter`
