@@ -14,6 +14,7 @@
  */
 
 import type { MawyImageSource } from '../types.js';
+import { escapeReferences } from './markdown/entities.js';
 import { markupHasContent } from './markdown/paste.js';
 import { dataImageBytes } from './markdown/url.js';
 
@@ -77,10 +78,16 @@ function escapeAlt(text: string): string {
  *
  * A URL with a space or a bracket in it ends the link early where it stands,
  * so it goes inside angle brackets — which is the form Markdown has for exactly
- * this, and which then has two characters of its own to escape.
+ * this, and which then has two characters of its own to escape. A character
+ * reference is read in either form, so a run in the URL that looks like one is
+ * written so that it is not.
  */
 function destination(url: string): string {
-  return /[\s()]/.test(url) ? `<${url.replace(/[\\<>]/g, '\\$&')}>` : url.replace(/[\\]/g, '\\$&');
+  const escaped = /[\s()]/.test(url)
+    ? `<${url.replace(/[\\<>]/g, '\\$&')}>`
+    : url.replace(/[\\]/g, '\\$&');
+
+  return escapeReferences(escaped);
 }
 
 /** The Markdown for an image, from whatever the upload answered with. */

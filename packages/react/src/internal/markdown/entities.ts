@@ -242,3 +242,25 @@ export function decodeEntities(text: string): string {
     return NAMED[name] ?? match;
   });
 }
+
+/**
+ * The other direction, for text about to be written into a document: every run
+ * shaped like a reference, with its `&` written as `&amp;` so that it is read
+ * back as the characters it was written with.
+ *
+ * An address an upload answered with can carry `&amp;` as five characters of
+ * its own, and written as it was, the parser read an `&` and the picture was
+ * fetched from somewhere else. Whether the table knows the name is not asked:
+ * a reference too many reads back the same, and one too few does not. An `&`
+ * that begins no reference, as in `?a=1&b=2`, is written as itself.
+ *
+ * A reference rather than a backslash, which the specification reads the same
+ * way, because this parser reads a destination's escapes before its references
+ * and would find one behind `\&amp;` all the same.
+ *
+ * The React package's alone, since nothing in the Flutter package writes an
+ * address it was handed.
+ */
+export function escapeReferences(text: string): string {
+  return text.replace(REFERENCE, (reference) => `&amp;${reference.slice(1)}`);
+}

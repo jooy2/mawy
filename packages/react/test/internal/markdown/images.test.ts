@@ -86,6 +86,9 @@ describe('the pictures a document points at', () => {
       'https://cdn.example.com/a (1).png',
       'https://cdn.example.com/a b.png',
       'https://cdn.example.com/a\\b<c>.png',
+      'https://cdn.example.com/a?b=1&amp;c=2',
+      'https://cdn.example.com/a&copy;b&#65;c&nope;.png',
+      'https://cdn.example.com/a b\\&amp;.png',
       '/relative/a.png'
     ]) {
       expect(urls(`Before ${markdownForImage(url, file)} after.`), url).toEqual([url]);

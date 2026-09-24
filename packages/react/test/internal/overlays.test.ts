@@ -71,6 +71,30 @@ describe('what a bar writes', () => {
     expect(shown(inlineRemoved(value, image!.range))).toBe('A ^ here.');
   });
 
+  /**
+   * An address with `&amp;` in it as characters of its own, which is how the
+   * upload writes one. The bar is handed the address as it was read and writes
+   * the whole picture again, so a reference in it has to come back out as one.
+   */
+  it('keeps an address with a reference in it when the description changes', () => {
+    const { value, caret } = at('A ![a hill](/a?b=1&amp;amp;c=2)^ here.');
+    const image = targetAt(parseMarkdown(value).root.children, caret, caret, value);
+
+    expect(image).toMatchObject({ url: '/a?b=1&amp;c=2' });
+
+    const edit = imageWritten(value, image as never, { url: '/a?b=1&amp;c=2', alt: 'a big hill' });
+
+    expect(shown(edit)).toBe('A ![a big hill](/a?b=1&amp;amp;c=2)^ here.');
+    expect(targetAt(parseMarkdown(edit.value).root.children, 3, 3, edit.value)).toMatchObject({
+      url: '/a?b=1&amp;c=2'
+    });
+    expect(
+      shown(
+        inserted('', { start: 0, end: 0 }, { url: '/&copy; 1.png?a=1&b=2', text: 'c', image: true })
+      )
+    ).toBe('![c](</&amp;copy; 1.png?a=1&b=2>)^');
+  });
+
   it('keeps the formatting of words left alone, and writes changed words plain', () => {
     const { value, caret } = at('See [the **office**^](https://a.org).');
     const link = targetAt(parseMarkdown(value).root.children, caret, caret, value);

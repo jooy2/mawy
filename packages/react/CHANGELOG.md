@@ -22,6 +22,8 @@
 
 - **A line holding both a backslash escape and a hyphen threw instead of being found.** The pattern that finds such a line is built with `u`, to which `\-` is an invalid escape rather than a hyphen, so `Five \* six - seven` raised a `SyntaxError` out of the click that asked where the caret went. Nothing puts a `-` in that pattern any more. It is older than the typographer and had nothing to do with it.
 
+- **An uploaded picture whose address had `&amp;` in it was fetched from somewhere else.** A URL an upload answered with was written into the document as it was, and the parser reads a character reference in a destination, so an address carrying `&amp;`, `&copy;` or `&#65;` as characters of its own came back with an `&`, a `©` or an `A` in their place. The picture drawn was not the one uploaded. Each run shaped like a reference now has its `&` written as `&amp;`, which reads back as the characters it was; an `&` that begins nothing, as in `?a=1&b=2`, is still written as itself. The bar beside a picture writes its address the same way, since it writes the whole picture again when only the description changed. A reference rather than a backslash, because this parser reads a destination's escapes before its references and would still find one behind `\&amp;`.
+
 ## 1.7.0 (2026-09-17)
 
 ### Added

@@ -105,6 +105,13 @@ describe('the Markdown an upload turns into', () => {
     expect(markdownForImage('/i/a b.png', file('a.png'))).toBe('![a](</i/a b.png>)');
   });
 
+  it('writes a run in the URL that looks like a character reference so that it is not one', () => {
+    expect(markdownForImage('/a?b=1&amp;c=2', file('a.png'))).toBe('![a](/a?b=1&amp;amp;c=2)');
+    expect(markdownForImage('/a b&#65;.png', file('a.png'))).toBe('![a](</a b&amp;#65;.png>)');
+    // An `&` that begins nothing is written as itself.
+    expect(markdownForImage('/a?b=1&c=2', file('a.png'))).toBe('![a](/a?b=1&c=2)');
+  });
+
   it('escapes what would otherwise end the description or the title early', () => {
     expect(markdownForImage('/a.png', file('a [1].png'))).toBe('![a \\[1\\]](/a.png)');
     expect(markdownForImage({ url: '/a.png', title: 'a "b"' }, file('a.png'))).toBe(
