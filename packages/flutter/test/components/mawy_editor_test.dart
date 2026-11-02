@@ -1176,6 +1176,48 @@ void main() {
     });
   });
 
+  group('a long document', () {
+    final String long = 'word ' * 5000;
+
+    Future<void> type(WidgetTester tester, String text) async {
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('counts once the typing stops', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: long, defaultMode: MawyEditorMode.plain)),
+      );
+      await tester.showKeyboard(find.byType(EditableText));
+      await type(tester, '$long more');
+
+      expect(documentText(tester), contains('5000 words'));
+
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(documentText(tester), contains('5001 words'));
+    });
+
+    testWidgets('draws the preview once the typing stops', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: long, defaultMode: MawyEditorMode.split)),
+      );
+      await tester.showKeyboard(find.byType(EditableText));
+      await type(tester, '$long more');
+
+      expect(tester.widget<MawyViewer>(find.byType(MawyViewer)).value, long);
+
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(tester.widget<MawyViewer>(find.byType(MawyViewer)).value, '$long more');
+    });
+  });
+
   group('the status bar', () {
     testWidgets('counts the document', (WidgetTester tester) async {
       await tester.pumpWidget(

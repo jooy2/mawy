@@ -501,6 +501,16 @@ class _MawyEditorState extends State<MawyEditor> {
   Widget? _preview;
   Object? _previewFrom;
 
+  /// The text the preview draws, which on a long document is a moment behind
+  /// the text being typed.
+  ///
+  /// A key waits for nothing but the source this way. Drawing the preview in the
+  /// same frame as the key was half of the wait for one, for a pane nobody is
+  /// typing in. It catches up as soon as the typing stops, and a short document
+  /// never falls behind at all.
+  late String _previewed = _value;
+  Timer? _previewTimer;
+
   /// What the pane beside the source is, this build.
   ///
   /// A document with nothing in it draws nothing, and a pane drawing nothing
@@ -508,13 +518,14 @@ class _MawyEditorState extends State<MawyEditor> {
   /// would. Where the application knows how to open one, this is the way in —
   /// the React package's empty state, in the pane the document will appear in.
   Widget _previewOf(MawyTokens tokens, MawyStrings strings) {
-    final bool empty = _value.trim().isEmpty && widget.onOpen != null && !widget.readOnly;
+    final String drawn = _current == MawyEditorMode.split ? _previewed : _value;
+    final bool empty = drawn.trim().isEmpty && widget.onOpen != null && !widget.readOnly;
     // Everything either branch draws from. Anything left out of this is
     // something the preview would go stale about, so it is written out in full
     // rather than narrowed to what seems likely to change.
     final Object from = (
       empty,
-      _value,
+      drawn,
       tokens,
       strings,
       widget.parse,
@@ -540,7 +551,7 @@ class _MawyEditorState extends State<MawyEditor> {
     _preview = empty
         ? _Empty(tokens: tokens, strings: strings, onOpen: widget.onOpen!)
         : MawyViewer(
-            value: _value,
+            value: drawn,
             parse: widget.parse,
             colorScheme: _scheme,
             tokens: widget.tokens,
@@ -623,6 +634,7 @@ class _MawyEditorState extends State<MawyEditor> {
     _focus.dispose();
     _history.removeListener(_historyMoved);
     _history.dispose();
+    _previewTimer?.cancel();
     _noticeTimer?.cancel();
     _sourceScroll.removeListener(_syncScroll);
     _sourceScroll.dispose();
@@ -648,6 +660,16 @@ class _MawyEditorState extends State<MawyEditor> {
       widget.onChange?.call(_controller.text);
     }
 
+    if (_controller.text != _previewed) {
+      _previewTimer?.cancel();
+
+      if (_controller.text.length < _longFrom) {
+        _previewed = _controller.text;
+      } else {
+        _previewTimer = Timer(_settles, _previewCaughtUp);
+      }
+    }
+
     // The document moved under both panes, so what was measured is wrong and
     // the preview has to catch up without waiting for somebody to scroll.
     _places = null;
@@ -656,6 +678,16 @@ class _MawyEditorState extends State<MawyEditor> {
     // The status bar and the toolbar's pressed states both read the selection,
     // so a caret that only moved is still a rebuild.
     setState(() {});
+  }
+
+  void _previewCaughtUp() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _previewed = _controller.text);
+    _places = null;
+    _afterLayout(_syncScroll);
   }
 
   /// Lets a handle go, where it is still this editor's. A handle passed on to
@@ -1346,6 +1378,16 @@ class _MawyEditorState extends State<MawyEditor> {
 /// next one being typed. A keystroke refused again says it again, from the
 /// start, because somebody pressing the key twice meant it twice.
 const Duration kMawyNoticeTime = Duration(milliseconds: 1800);
+
+/// How long a document is before a key stops waiting for what can wait.
+///
+/// Past this the preview and the counts along the bottom follow once the typing
+/// stops rather than at every key, and they are the two things in the editor
+/// that read the whole document for somebody who is not looking at them.
+const int _longFrom = 20000;
+
+/// How long the typing has to stop for.
+const Duration _settles = Duration(milliseconds: 150);
 
 /// The source, with the word a refused keystroke left drawn under the caret.
 ///
@@ -2328,9 +2370,11 @@ class _StatusState extends State<_Status> {
   ///
   /// A count reads the whole document, and the words are a regular expression,
   /// which is interpreted rather than compiled on a phone. So a caret that moved
-  /// counts nothing: that was nine tenths of what a move cost on an iPhone.
+  /// counts nothing: that was nine tenths of what a move cost on an iPhone. On a
+  /// long document a key counts nothing either, until the typing stops.
   ({int lines, int words, int characters, int bytes})? _counts;
   String? _counted;
+  Timer? _waiting;
 
   void _count(String text) {
     final List<MawyEditorStatusItem> items = widget.items;
@@ -2356,9 +2400,27 @@ class _StatusState extends State<_Status> {
 
     final String text = widget.state.value;
 
-    if (!identical(widget.items, oldWidget.items) || text != _counted) {
+    if (!identical(widget.items, oldWidget.items)) {
       _count(text);
+    } else if (text != _counted) {
+      _waiting?.cancel();
+
+      if (text.length < _longFrom) {
+        _count(text);
+      } else {
+        _waiting = Timer(_settles, () {
+          if (mounted) {
+            setState(() => _count(widget.state.value));
+          }
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _waiting?.cancel();
+    super.dispose();
   }
 
   static String _size(int bytes) {

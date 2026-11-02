@@ -26,6 +26,8 @@
 
 ### Changed
 
+- **On a long document the preview and the counts follow once the typing stops.** Past twenty thousand characters neither is worked out at every key, because a key was waiting for two things nobody looks at while typing. Below that nothing has changed.
+
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.
 
 - **`Enter` on a quoted line carries `> ` down**, the way a list item carries its bullet, and on an empty quoted line takes it away with a blank line under the quotation. It was a bare line ending. A `>` inside a code block is a character and nothing is carried, unless the block is inside the quotation. A list inside a quotation goes on as a list. The React package's source surface does the same.

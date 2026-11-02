@@ -95,6 +95,8 @@ Two things come from the platform rather than this package, and both live in Cup
 
 A document past about six hundred lines is coloured where it can be seen and handed over as plain characters everywhere else. The field lays the whole document out either way. A single layer cannot avoid that, and it is also what keeps the caret, the selection and every measurement exactly what they were. What is saved is reading every line on every keystroke. The window is worked out after a frame rather than during one, so a scroll fast enough to outrun it shows plain text in the right place until the next frame.
 
+Past about twenty thousand characters a key stops waiting for what can wait. The preview and the counts along the bottom follow once the typing stops rather than at every key, because they are the two things here that read the whole document for somebody who is not looking at them. Below that length neither ever falls behind.
+
 :::
 
 The syntax colouring uses the token names of Mawy's parser, but not the parser itself. A line being typed is half-written most of the time, and a highlighter that waited for `**bold` to close before reacting would flicker on every keystroke. So it reads a line at a time, approximately, and leaves an unfinished marker alone.
