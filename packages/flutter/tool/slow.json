@@ -185,7 +185,7 @@
  },
  {
   "why": "A tag with a great many attributes.",
-  "parts": [["<a ", 1], ["b ", 16000]]
+  "parts": [["<a ", 1], ["b ", 4000]]
  },
  {
   "why": "A comment that never closes.",

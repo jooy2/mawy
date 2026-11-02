@@ -510,8 +510,14 @@ function alignmentsOf(line: Line): MdAlign[] {
 // Sticky rather than anchored, so that taking the second definition off is a
 // match starting where the first one ended rather than a copy of the rest of
 // the paragraph made to put a start in front of.
+//
+// The label and the titles are a run of plain characters and then escapes, each
+// with a run after it, rather than a choice of one or the other at every
+// character. Both say the same thing, but the choice is somewhere to go back to
+// for every character read, and on a long enough one that runs WebKit's compiled
+// expressions out of room. A label left empty by that is refused below.
 const DEFINITION =
-  /[ ]{0,3}\[((?:[^[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)/y;
+  /[ ]{0,3}\[([^[\]\\]*(?:\\.[^[\]\\]*)*)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*'|\([^)\\]*(?:\\.[^)\\]*)*\)))?[ \t]*(?:\n|$)/y;
 
 /**
  * Definitions taken off the front of a paragraph, and whatever is left of it.

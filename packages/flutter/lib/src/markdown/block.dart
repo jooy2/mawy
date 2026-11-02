@@ -551,8 +551,13 @@ List<MdAlign?> _alignmentsOf(Line line) {
 // Matched as a prefix from where the last one ended rather than anchored, so
 // that taking the second definition off is not a copy of the rest of the
 // paragraph made to put a start in front of.
+//
+// The label and the titles are a run of plain characters and then escapes, each
+// with a run after it, rather than a choice of one or the other at every
+// character, which is the same expression as the React package's and for its
+// reason. A label left empty by that is refused below.
 final RegExp _definition = RegExp(
-  r''' {0,3}\[((?:[^\[\]\\]|\\.)+)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?[ \t]*(?:\n|$)''',
+  r''' {0,3}\[([^\[\]\\]*(?:\\.[^\[\]\\]*)*)\]:[ \t]*\n?[ \t]*(<[^<>\n]*>|[^\s<][^\s]*)(?:[ \t\n]+("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*'|\([^)\\]*(?:\\.[^)\\]*)*\)))?[ \t]*(?:\n|$)''',
 );
 
 /// Definitions taken off the front of a paragraph, and whatever is left of it.
