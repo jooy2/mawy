@@ -126,6 +126,16 @@ class _MawyFindBarState extends State<MawyFindBar> {
 
     _query.addListener(() => widget.onQueryChange(_query.text));
     _replacement.addListener(() => widget.onReplacementChange?.call(_replacement.text));
+
+    // Asked for rather than left to `autofocus`, which only takes where nothing
+    // else in the scope has the focus. The field the bar was opened from nearly
+    // always does, so on a phone the keyboard stayed where it was and the query
+    // went into the document.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _queryFocus.requestFocus();
+      }
+    });
   }
 
   @override

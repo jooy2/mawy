@@ -470,6 +470,16 @@ void main() {
   });
 
   group('finding', () {
+    testWidgets('takes the focus from the source when it opens', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: document, defaultMode: MawyEditorMode.plain)),
+      );
+      await tester.showKeyboard(find.byType(EditableText));
+      await press(tester, 'Find');
+
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'MawyFind query');
+    });
+
     testWidgets('opens from the toolbar, counts what it found, and steps through', (
       WidgetTester tester,
     ) async {
