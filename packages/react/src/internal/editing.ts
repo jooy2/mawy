@@ -92,6 +92,8 @@ export interface MawyEdit {
    * place, until there is something in it.
    */
   betweenBlocks?: boolean;
+  /** Formatting the caret goes on holding after this edit. See `heldText`. */
+  holds?: readonly MawyCommand[];
 }
 
 /**
@@ -134,6 +136,9 @@ const LABEL = '.mawy-md-directive-label';
  * alert's first line from reaching into it for a character to take.
  */
 const INERT = '.mawy-md-html, .mawy-md-alert-label';
+
+/** What is drawn as the characters it was written with, one for one. */
+const WRITTEN_OUT = '.mawy-md-html-source, .mawy-md-directive-source, .mawy-md-source';
 
 /**
  * Blocks nothing joins across: the edge of one is not a character.
@@ -1768,17 +1773,22 @@ function markedAt(nodes: readonly MdNode[], at: number, found: MdNode[]): MdNode
  * in it, because what is typed there is bold. After the closing marker it is
  * not, which is where `ArrowRight` takes a caret. See `MawyEditorDocument`.
  */
-function runsAt(
-  value: string,
-  offset: number
-): { command: MawyCommand; range: MdRange; start: number; end: number; marker: string }[] {
-  const out: {
-    command: MawyCommand;
-    range: MdRange;
-    start: number;
-    end: number;
-    marker: string;
-  }[] = [];
+function runsAt(value: string, offset: number): MawyRun[] {
+  return runsAround(value, offset).filter((run) => run.start <= offset && offset <= run.end);
+}
+
+/** A run of formatting, as `runsAt` answers with it. */
+interface MawyRun {
+  command: MawyCommand;
+  range: MdRange;
+  start: number;
+  end: number;
+  marker: string;
+}
+
+/** The runs of formatting whose markers reach a place, whether or not it is among their words. */
+function runsAround(value: string, offset: number): MawyRun[] {
+  const out: MawyRun[] = [];
   const document = parseMarkdown(value);
 
   const walk = (nodes: readonly MdNode[]) => {
@@ -1805,17 +1815,14 @@ function runsAt(
         }
 
         const start = node.range.start + width;
-        const end = node.range.end - width;
 
-        if (start <= offset && offset <= end) {
-          out.push({
-            command,
-            range: node.range,
-            start,
-            end,
-            marker: value.slice(node.range.start, start)
-          });
-        }
+        out.push({
+          command,
+          range: node.range,
+          start,
+          end: node.range.end - width,
+          marker: value.slice(node.range.start, start)
+        });
       }
 
       if ('children' in node) {
@@ -1868,6 +1875,20 @@ export function heldText(
   }
 
   const runs = runsAt(value, at);
+
+  // A space with no words yet to go around. Written with markers it is
+  // `** **`, which is neither bold nor anything else, so it goes in as itself
+  // and the caret goes on holding what it was holding.
+  if (!text.trim() && !runs.some((run) => commands.includes(run.command))) {
+    return { ...splice(value, at, at, text), holds: commands };
+  }
+
+  const joined = joinedRun(value, at, text, commands);
+
+  if (joined) {
+    return joined;
+  }
+
   let point = at;
   let before = '';
   let after = '';
@@ -1913,6 +1934,68 @@ export function heldText(
   return {
     value: value.slice(0, point) + before + text + after + value.slice(point),
     caret: point + before.length + text.length
+  };
+}
+
+/** The formatting a space at the end of its words cannot stay inside. See `spaceOut`. */
+const FLANKED: ReadonlySet<MawyCommand> = new Set<MawyCommand>(['bold', 'italic', 'strikethrough']);
+
+/**
+ * A space typed at the end of a bold run's words, written after the run.
+ *
+ * `**word **` is not bold: a closing marker has to come straight after a
+ * character that is not a space. So between the space and the next letter the
+ * run came undone and was drawn as its markers, and the next letter put it back,
+ * which flashed `**` on the page at every word. Written after the closing marker
+ * the run stays what it is, and the caret holds the formatting so that the next
+ * letter goes on inside the run. See `joinedRun`.
+ */
+function spaceOut(value: string, at: number): MawyEdit | null {
+  if (!/[*_~]/.test(value)) {
+    return null;
+  }
+
+  const runs = runsAt(value, at).filter((run) => run.end === at && FLANKED.has(run.command));
+
+  if (!runs.length) {
+    return null;
+  }
+
+  const point = Math.max(...runs.map((run) => run.range.end));
+
+  return { ...splice(value, point, point, ' '), holds: runs.map((run) => run.command) };
+}
+
+/**
+ * Words typed after the space `spaceOut` wrote, written inside the run the space
+ * came out of so that it is one run rather than two side by side. `null` where
+ * the caret is not after that space, or holds something the run is not.
+ */
+function joinedRun(
+  value: string,
+  at: number,
+  text: string,
+  commands: readonly MawyCommand[]
+): MawyEdit | null {
+  let point = at;
+
+  while (value[point - 1] === ' ') {
+    point -= 1;
+  }
+
+  const ending =
+    point < at ? runsAround(value, point).filter((run) => run.range.end === point) : [];
+
+  if (!ending.length || !commands.every((each) => ending.some((run) => run.command === each))) {
+    return null;
+  }
+
+  const words = Math.max(...ending.map((run) => run.end));
+  const written = value.slice(point, at) + text;
+
+  return {
+    value: value.slice(0, words) + written + value.slice(words, point) + value.slice(at),
+    caret: words + written.length
   };
 }
 
@@ -2437,6 +2520,60 @@ export function blankAbove(root: HTMLElement, node: Node, offset: number): boole
 }
 
 /**
+ * Whether a space typed at a place would be drawn.
+ *
+ * Inside a code block and in markup written out as its characters every
+ * character is drawn. Anywhere else a space is drawn once there is something in
+ * front of it on its line: what opens a line is the block's markers, and a table
+ * cell's words are set off from its pipe by a space already.
+ */
+function spaceDrawn(value: string, at: number, block: HTMLElement | null): boolean {
+  if (!block || block.tagName === 'PRE' || block.matches(WRITTEN_OUT)) {
+    return true;
+  }
+
+  const line = value.slice(startOfLine(value, at), at);
+
+  return /^T[DH]$/.test(block.tagName)
+    ? !/\|[ \t]*$/.test(line)
+    : !OPENING.test(line) && !NOTE_OPENING.test(line);
+}
+
+/** What a footnote's first line opens with, which draws its number somewhere else. */
+const NOTE_OPENING = /^\[\^[^\]\n]+\]:[ \t]*$/;
+
+/**
+ * A space typed in front of spaces the page does not draw, where a line ends.
+ *
+ * `crowdedBy` reads the file, and the file has a space there that nobody can
+ * see: the caret at the end of a line goes in front of a space written at the
+ * end of it, because in front of it is all the page has. So a space typed at
+ * the end of what looks like a line with no space on it was refused for being
+ * the second. The caret steps past the one that is there, which is what typing
+ * it would have looked like.
+ *
+ * The two spaces of a hard break are the line's way of ending, and stepping in
+ * among them would leave one, which is not a break. There a space is written,
+ * so what is typed next is in front of the break rather than taking it apart.
+ *
+ * `null` where the space after the caret is one the page draws, and the refusal
+ * is right: there is a space in the way and the reader can see it.
+ */
+export function overSpaces(value: string, at: number): MawyEdit | null {
+  let to = at;
+
+  while (value[to] === ' ') {
+    to += 1;
+  }
+
+  if (to === at || value[at - 1] === ' ' || (to < value.length && value[to] !== '\n')) {
+    return null;
+  }
+
+  return to - at > 1 && value[to] === '\n' ? splice(value, at, at, ' ') : { value, caret: at + 1 };
+}
+
+/**
  * What an input event does to the document, or `null` for "not this one yet".
  *
  * `null` is refused rather than allowed: the event has already been prevented
@@ -2548,6 +2685,13 @@ function editMade(
       const beside =
         start === end ? besideLink(root, range.startContainer, range.startOffset, start) : null;
 
+      // A space in front of everything a line draws, which the parser throws
+      // away. It was written all the same, drawn nowhere, and with the caret not
+      // moving; a few more made the paragraph a block of code. See `spaceDrawn`.
+      if (event.data === ' ' && start === end && !spaceDrawn(value, beside ?? start, block)) {
+        return null;
+      }
+
       if (beside !== null) {
         return (
           heldText(value, beside, event.data, held) ?? splice(value, beside, beside, event.data)
@@ -2561,6 +2705,13 @@ function editMade(
 
       if (formatted) {
         return formatted;
+      }
+
+      const spaced = event.data === ' ' && start === end && tag !== 'PRE';
+      const outside = spaced ? spaceOut(value, start) : null;
+
+      if (outside) {
+        return outside;
       }
 
       // Into an empty paragraph with the blank lines that keep it one, where it

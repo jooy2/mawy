@@ -49,6 +49,7 @@ import {
   listKept,
   markdownFor,
   openedAt,
+  overSpaces,
   reachedBlock,
   toggledTask,
   typedOver,
@@ -724,13 +725,16 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
               ? crowdedBy({ value: edit.value, caret: edit.caret })
               : null;
 
-        if (crowding) {
+        // Crowded by a space nobody can see. See `overSpaces`.
+        const over = crowding === 'space' ? overSpaces(now.value, edit.caret - 1) : null;
+
+        if (crowding && !over) {
           now.onCrowded(crowding);
 
           return;
         }
 
-        now.onEdit(edit);
+        now.onEdit(over ?? edit);
       };
 
       /**

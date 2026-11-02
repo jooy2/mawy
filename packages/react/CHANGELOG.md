@@ -30,6 +30,10 @@
 
 - **`Backspace` and `Delete` cut an emoji in half.** A key took one UTF-16 unit, which left a lone surrogate in the document. Both take the character a reader sees, a family of joined emoji included.
 
+- **A space was refused beside nothing anybody could see.** A caret at the end of a line goes in front of a space written at the end of it, so the next space was the second in a row with no space on the page. It steps past that space now. In front of the words of a line a space is not written at all, because the parser throws it away and a few of them made the paragraph a code block; indenting a list item is `Tab`, and a fence is how to write code.
+
+- **A space at the end of a bold run drew its markers.** `**word **` is not bold, so the run came undone until the next letter. The space goes after the closing marker, and the next letter goes on inside the run. A space typed first with bold held goes in as itself rather than as `** **`.
+
 - **Letters typed in front of a task's box went after its words.** A caret in front of the box was read as the end of the item.
 
 - **`Backspace` and `Delete` did nothing at the edge of markup written out as its characters.**

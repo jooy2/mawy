@@ -1000,6 +1000,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // that closes on the keystroke that was being typed into it.
       setSelection({ start: edit.caret, end: edit.caret });
 
+      if (edit.holds) {
+        setHolding({ value: edit.value, at: edit.caret, commands: edit.holds });
+      }
+
       // A caret moved onto a paragraph nothing has been written for yet is not
       // a change to the document, and an application told about one would save
       // a document nobody touched. The rule `run` follows, for the same reason.

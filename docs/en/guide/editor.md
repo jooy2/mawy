@@ -212,6 +212,8 @@ Two line endings in a row are the blank line two blocks are separated by, so tha
 
 Only a keystroke is refused. A document pasted in, opened from a file or handed to the editor by the application keeps every space and every blank line it came with, because a document arriving is not somebody typing. And a hard line break has a key of its own: `Shift`+`Enter` writes the two spaces it is made of, on both surfaces.
 
+**On the formatted document, a space nobody can see does not count.** A space at the end of a line is drawn nowhere once the caret has left it, so a space typed in front of one steps past it rather than being refused for a second one nobody can find. A space at the very start of a line is thrown away by the parser, so it is not written at all. Indenting a list item is `Tab`, and the fence is how to write code. At the end of bold, italic or strikethrough the space goes after the closing marker, because `**word **` is not bold, and the next letter goes on inside the run.
+
 ## Formatting
 
 Every button on the toolbar runs a command that also has a keyboard shortcut. No command is reachable only from the toolbar, because that would make the editor unusable without a pointer.

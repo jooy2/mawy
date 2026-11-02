@@ -91,6 +91,74 @@ function press(picture: HTMLElement): void {
 /** Lets the selection the editor reads catch up with one set from outside. */
 const settled = () => new Promise((resolve) => setTimeout(resolve, 30));
 
+describe('a space', () => {
+  it('steps past one the page does not draw at the end of a line', async () => {
+    const { body, writes, said } = await editing('first\n\nhello ');
+
+    put(body, 'hello', 5);
+    await settled();
+    await userEvent.keyboard(' x');
+
+    await writes('first\n\nhello x');
+    expect(said()).toBeUndefined();
+  });
+
+  it('is written in front of the two a hard break ends a line with', async () => {
+    const { body, writes } = await editing('one  \ntwo');
+
+    put(body, 'one', 3);
+    await settled();
+    await userEvent.keyboard(' x');
+
+    await writes('one x  \ntwo');
+  });
+
+  it('is left out of the front of a line, where nothing would draw it', async () => {
+    for (const [value, words] of [
+      ['words', 'words'],
+      ['# words', 'words'],
+      ['- words', 'words'],
+      ['> words', 'words']
+    ]) {
+      const { body, screen, onChange, said } = await editing(value);
+
+      put(body, words, 0);
+      await settled();
+      await userEvent.keyboard(' ');
+      await settled();
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(said()).toBeUndefined();
+      await screen.unmount();
+    }
+  });
+
+  it('goes after a bold run ended by it, so the run is never drawn undone', async () => {
+    const { body, writes } = await editing('**hello**');
+
+    put(body, 'hello', 5);
+    await settled();
+    await userEvent.keyboard(' ');
+    await writes('**hello** ');
+
+    expect(body.querySelector('strong')?.textContent).toBe('hello');
+    expect(body.textContent).not.toContain('*');
+
+    await userEvent.keyboard('world');
+    await writes('**hello world**');
+  });
+
+  it('goes in as itself in front of held formatting', async () => {
+    const { body, writes } = await editing('x');
+
+    put(body, 'x', 1);
+    await settled();
+    await userEvent.keyboard('{Control>}b{/Control} bold');
+
+    await writes('x **bold**');
+  });
+});
+
 describe('Enter', () => {
   it('breaks once in front of a space, with no paragraph drawn between', async () => {
     const { body, writes } = await editing('hello world');
