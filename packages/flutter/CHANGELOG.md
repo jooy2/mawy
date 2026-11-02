@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.9.0 (2026-11-02)
+
 ### Fixed
 
 - **`Enter` in front of a list item's words gave its marker up.** `continueList` read the line up to the caret and nothing after it, so `- |one` was taken for an empty item and lost its bullet. The item goes down whole now, and the same is true of the React package.
