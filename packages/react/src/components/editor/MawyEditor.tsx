@@ -3038,6 +3038,14 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * The two panes, scrolling together
    * ------------------------------------------------------------------ */
 
+  /**
+   * The text the preview draws, which may be a key behind the text being typed.
+   *
+   * A key waits for nothing but the source this way. Drawing the preview in the
+   * same breath as the key cost half of the time between them on a long
+   * document, for a pane nobody is typing in.
+   */
+  const previewed = React.useDeferredValue(text);
   const queued = React.useRef(0);
   const anchors = React.useRef<{
     places: MawyScrollAnchor[];
@@ -3076,7 +3084,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         anchors.current.preview !== to.scrollHeight
       ) {
         anchors.current = {
-          places: measureAnchors(from, to, text),
+          places: measureAnchors(from, to, previewed),
           source: from.scrollHeight,
           preview: to.scrollHeight
         };
@@ -3096,7 +3104,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // of a scroll is an animation that never arrives.
       to.scrollTo({ top: Math.max(0, Math.min(travel, wanted)), behavior: 'instant' });
     });
-  }, [current, text]);
+  }, [current, previewed]);
 
   React.useEffect(() => () => cancelAnimationFrame(queued.current), []);
 
@@ -3581,7 +3589,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         {showPreview ? (
           <div className="mawy-editor-pane mawy-editor-preview" ref={preview}>
             <MawyViewer
-              value={text}
+              value={previewed}
               toolbar={false}
               // The drop is the editor's, whichever pane it lands in — one
               // answer for the whole component rather than two that have to

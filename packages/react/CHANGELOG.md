@@ -76,6 +76,8 @@
 
 ### Changed
 
+- **The `split` preview can be a key behind the source.** A key no longer waits for the preview to be drawn, which was half of the wait on a long document: a key at 300 kB went from 372 ms to 40 ms. It catches up in the time it takes to draw, and it is level with the source as soon as you stop.
+
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.
 
 - **`Tab` in a code block on the `wysiwyg` surface indents**, as it does on the source. `Escape` then `Tab` is still the way out.
