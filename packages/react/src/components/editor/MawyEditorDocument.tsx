@@ -56,7 +56,7 @@ import {
 import { fileFromDataUrl, pastedImagesIn } from '../../internal/images.js';
 import { pasteFromHtml } from '../../internal/markdown/paste.js';
 import { targetAt, type MawyBlockTarget } from '../../internal/overlays.js';
-import { caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
+import { caretBox, caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
 
 export interface MawyEditorDocumentProps {
   value: string;
@@ -1782,37 +1782,6 @@ function lastBlock(element: HTMLElement): Element | null {
   }
 
   return last;
-}
-
-/**
- * Where a caret is drawn, or the box of what it is beside where it is on an
- * element between two things and has no box of its own.
- */
-function caretBox(selection: Selection): DOMRect | null {
-  if (!selection.rangeCount) {
-    return null;
-  }
-
-  const range = selection.getRangeAt(0);
-  const own = range.getClientRects()[0];
-
-  if (own) {
-    return own;
-  }
-
-  const node = range.startContainer;
-  const beside = node.childNodes[range.startOffset] ?? node.childNodes[range.startOffset - 1];
-  const holder = beside ?? node;
-
-  if (holder.nodeType === 1) {
-    return (holder as Element).getBoundingClientRect();
-  }
-
-  const around = node.ownerDocument?.createRange();
-
-  around?.selectNodeContents(holder);
-
-  return around?.getClientRects()[0] ?? null;
 }
 
 /**

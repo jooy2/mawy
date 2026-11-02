@@ -57,6 +57,28 @@ function put(root: HTMLElement, saying: string, offset: number): void {
 /** Lets the selection the editor reads catch up with one set from outside. */
 const settled = () => new Promise((resolve) => setTimeout(resolve, 30));
 
+describe('Enter', () => {
+  it('keeps the caret on screen at the bottom of the pane', async () => {
+    const words = Array.from({ length: 30 }, (_, index) => `Paragraph ${index}.`).join('\n\n');
+    const { body, screen } = await editing(words, { height: 300 });
+    const pane = screen.container.querySelector('.mawy-document') as HTMLElement;
+
+    put(body, 'Paragraph 29.', 13);
+    pane.scrollTop = pane.scrollHeight;
+    await settled();
+
+    for (let press = 0; press < 6; press += 1) {
+      await userEvent.keyboard('{Enter}x');
+    }
+
+    await vi.waitFor(() => {
+      const caret = document.getSelection()?.getRangeAt(0).getClientRects()[0];
+
+      expect(caret?.bottom).toBeLessThanOrEqual(pane.getBoundingClientRect().bottom);
+    });
+  });
+});
+
 describe('a character', () => {
   it('lands where the caret is after a character reference', async () => {
     const { body, writes } = await editing('a &amp; b &copy; c');

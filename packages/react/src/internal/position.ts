@@ -489,6 +489,95 @@ function atom(element: Element): boolean {
   return /^(?:BR|IMG)$/.test(element.tagName) || element.hasAttribute('data-mawy-atom');
 }
 
+/**
+ * Where a caret is drawn, or the box of what it is beside where it is on an
+ * element between two things and has no box of its own.
+ */
+export function caretBox(selection: Selection): DOMRect | null {
+  if (!selection.rangeCount) {
+    return null;
+  }
+
+  const range = selection.getRangeAt(0);
+  const own = range.getClientRects()[0];
+
+  if (own) {
+    return own;
+  }
+
+  const node = range.startContainer;
+  const beside = node.childNodes[range.startOffset] ?? node.childNodes[range.startOffset - 1];
+  const holder = beside ?? node;
+
+  if (holder.nodeType === 1) {
+    return (holder as Element).getBoundingClientRect();
+  }
+
+  const around = node.ownerDocument?.createRange();
+
+  around?.selectNodeContents(holder);
+
+  return around?.getClientRects()[0] ?? null;
+}
+
+/** How much of the page is kept between a caret and the edge of what shows it. */
+const CARET_ROOM = 24;
+
+/** How far to scroll a span of the page so a box is inside it, with some room. */
+function scrolledBy(box: DOMRect, top: number, bottom: number): number {
+  const room = Math.min(CARET_ROOM, (bottom - top) / 4);
+
+  return box.bottom + room > bottom
+    ? box.bottom + room - bottom
+    : box.top - room < top
+      ? box.top - room - top
+      : 0;
+}
+
+/**
+ * The caret kept on screen after an edit put it back.
+ *
+ * A browser follows its own caret and has no reason to follow one put there by
+ * a script, and every edit on the drawn document is one of those. So `Enter` at
+ * the bottom of the pane left the caret under the edge of it, with nothing
+ * moving, until a key the browser did answer asked for the caret to be shown —
+ * and a caret that far out of view is brought back to the middle of the pane,
+ * which reads as the caret jumping.
+ *
+ * The nearest box that scrolls and then the page, by as little as gets the
+ * caret in. Instant, because a pane animating towards a caret that has already
+ * moved on is a pane that never arrives.
+ */
+export function caretIntoView(element: HTMLElement, selection: Selection): void {
+  const owner = element.ownerDocument;
+  const view = owner.defaultView;
+
+  for (let box = element.parentElement; box && view; box = box.parentElement) {
+    if (/auto|scroll/.test(view.getComputedStyle(box).overflowY)) {
+      const caret = caretBox(selection);
+      const edges = box.getBoundingClientRect();
+      const top = caret && box.scrollHeight > box.clientHeight ? edges.top : null;
+
+      if (caret && top !== null) {
+        const by = scrolledBy(caret, top, top + box.clientHeight);
+
+        if (by) {
+          box.scrollBy({ top: by, behavior: 'instant' });
+        }
+      }
+
+      break;
+    }
+  }
+
+  const caret = caretBox(selection);
+  const by = caret && view ? scrolledBy(caret, 0, view.innerHeight) : 0;
+
+  if (by) {
+    view?.scrollBy({ top: by, behavior: 'instant' });
+  }
+}
+
 /** The character a point on the page is over, in whichever way the browser has. */
 export function caretFromPoint(x: number, y: number): { node: Node; offset: number } | null {
   const owner = document as Document & {

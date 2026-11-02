@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- **The caret left the pane at the bottom of a document, and then jumped to the middle of it.** A browser follows its own caret and has no reason to follow one put there by a script, which is every caret on the `wysiwyg` surface, so `Enter` on the last line left it under the edge of the pane with nothing moving. The next key the browser did answer brought it back to the middle. The pane now scrolls by as little as keeps the caret in view, after every edit.
+
 - **Text after a character reference went in the wrong place.** Every place after `&amp;` or `&copy;` in a paragraph was counted short, so a letter typed there landed inside the next reference, turned it into words, and sent the caret to the start of the block. References are found a character at a time now, and one key takes a whole one out.
 
 ## 1.8.0 (2026-09-24)

@@ -101,7 +101,13 @@ interface MawyUpload extends MawyPlace {
   waiting: string | null;
 }
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
-import { caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
+import {
+  caretFromPoint,
+  caretIntoView,
+  domAt,
+  rangeOf,
+  sourceAt
+} from '../../internal/position.js';
 import { caretRect, rowHeight } from '../../internal/source.js';
 import { TableTools } from '../../internal/table.js';
 import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../internal/scroll.js';
@@ -1128,6 +1134,10 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       range.setEnd(tail.node, tail.offset);
       selection_?.removeAllRanges();
       selection_?.addRange(range);
+
+      if (selection_) {
+        caretIntoView(element, selection_);
+      }
 
       // Whether the page could put the caret where the edit asked. When it
       // could not, where it was asked for is kept, or the next thing typed
