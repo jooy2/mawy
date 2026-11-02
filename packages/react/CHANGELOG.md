@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.9.0 (2026-11-02)
+
 ### Fixed
 
 - **The caret left the pane at the bottom of a document, and then jumped to the middle of it.** A browser follows its own caret and has no reason to follow one put there by a script, which is every caret on the `wysiwyg` surface, so `Enter` on the last line left it under the edge of the pane with nothing moving. The next key the browser did answer brought it back to the middle. The pane now scrolls by as little as keeps the caret in view, after every edit.
