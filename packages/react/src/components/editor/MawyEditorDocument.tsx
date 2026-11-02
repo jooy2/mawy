@@ -342,6 +342,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
        */
       beside: number | null;
     } | null>(null);
+    /**
+     * Which way the last key meant to take the caret, until a press takes over.
+     * A press has answers of its own for the places between blocks. See `opened`.
+     */
+    const arrowed = React.useRef<'forwards' | 'backwards' | null>(null);
     /** Bumped to throw the drawing away and make it again from the document. */
     const [generation, setGeneration] = React.useState(0);
     const gfm = parse?.gfm ?? true;
@@ -974,6 +979,23 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         }
 
         const now = latest.current;
+
+        // Put somewhere a caret has nothing to do. See `strayCaret`.
+        if (arrowed.current && selection.isCollapsed && !now.readOnly) {
+          const place = strayCaret(
+            element,
+            range.startContainer,
+            range.startOffset,
+            arrowed.current === 'forwards'
+          );
+
+          if (place) {
+            selection.collapse(place.node, place.offset);
+
+            return;
+          }
+        }
+
         const start = documentAt(
           element,
           range.startContainer,
@@ -1461,6 +1483,13 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       const element = root.current;
       const picture = event.target as Element;
 
+      // The number of a footnote is drawn with no editing inside it, and a link
+      // in a part of the page that is not being edited is a link. Pressed while
+      // writing it is a place to put the caret beside rather than a way off it.
+      if (picture.closest?.('.mawy-md-footnote-ref')) {
+        event.preventDefault();
+      }
+
       if (
         !element ||
         readOnly ||
@@ -1856,11 +1885,41 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           aria-multiline="true"
           aria-label={label}
           onKeyDown={(event) => {
+            arrowed.current = /^(?:ArrowUp|ArrowLeft|Home|PageUp)$/.test(event.key)
+              ? 'backwards'
+              : /^(?:ArrowDown|ArrowRight|End|PageDown)$/.test(event.key)
+                ? 'forwards'
+                : arrowed.current;
             navigate(event);
             onKeyDown(event);
           }}
-          onMouseDown={pressCell}
-          onClick={pressImage}
+          onMouseDown={(event) => {
+            arrowed.current = null;
+            pressCell(event);
+          }}
+          onClick={(event) => {
+            const element = root.current;
+            const selection = element?.ownerDocument.getSelection();
+
+            pressImage(event);
+
+            // A press on a divider leaves the caret beside it on the document
+            // itself. The gap between two blocks has an answer of its own. See
+            // `strayCaret` and `openedInside`.
+            if (
+              element &&
+              selection?.isCollapsed &&
+              selection.anchorNode &&
+              event.target !== element &&
+              !readOnly
+            ) {
+              const place = strayCaret(element, selection.anchorNode, selection.anchorOffset, true);
+
+              if (place) {
+                put(element, place);
+              }
+            }
+          }}
           data-mawy-picture-selected={pictureSelected ? '' : undefined}
           style={{ '--mawy-placeholder': JSON.stringify(placeholder ?? '') } as React.CSSProperties}
         >
@@ -1889,6 +1948,68 @@ function selectedPicture(element: HTMLElement): Element | null {
       : null;
 
   return child?.nodeName === 'IMG' ? (child as Element) : null;
+}
+
+/**
+ * Where a caret the keyboard left on a thing with nothing to type into goes
+ * instead, or `null` for a caret with somewhere to be.
+ *
+ * A browser's arrows stop on a divider, and on the box a wide table scrolls
+ * inside, either side of the table. Nothing is written from there — a keystroke
+ * has no block to be in, so it is refused — and the caret looks as though it is
+ * on the line it came from, so every letter typed vanished. And `Cmd`+`Down`
+ * under a table ended there too.
+ *
+ * Stepped over, the way the caret meant to go, to the first run of words or the
+ * first block with nothing in it to take a caret. Where there is none that way
+ * the document ends in the thing, and it goes back the other way, to the last
+ * place before it.
+ */
+function strayCaret(
+  element: HTMLElement,
+  node: Node,
+  offset: number,
+  forwards: boolean
+): { node: Node; offset: number } | null {
+  const host = node.nodeType === 1 ? (node as Element) : node.parentElement;
+
+  if (blockAt(element, node) || host?.closest('.mawy-md-html, .mawy-md-alert-label')) {
+    return null;
+  }
+
+  const deepest = (from: Node): Node => {
+    let at = from;
+
+    while (at.lastChild) {
+      at = at.lastChild;
+    }
+
+    return at;
+  };
+  const search = (ahead: boolean) => {
+    const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_ALL);
+    const child = node.childNodes[ahead ? offset : offset - 1];
+    const step = () => (ahead ? walker.nextNode() : walker.previousNode());
+    const first = child ? (ahead ? child : deepest(child)) : null;
+
+    walker.currentNode = first ?? (ahead ? deepest(node) : node);
+
+    for (let at: Node | null = first ?? step(); at; at = step()) {
+      const block = blockAt(element, at);
+
+      if (block && at.nodeType === 3 && (at as Text).data.trim()) {
+        return { node: at, offset: ahead ? 0 : (at as Text).data.length };
+      }
+
+      if (block && at === block && !block.textContent) {
+        return { node: at, offset: ahead ? 0 : at.childNodes.length };
+      }
+    }
+
+    return null;
+  };
+
+  return search(forwards) ?? search(!forwards);
 }
 
 /** The formatting a caret can be at the edge of, drawn as an element of its own. */

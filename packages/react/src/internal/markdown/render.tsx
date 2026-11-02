@@ -828,7 +828,15 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
         }
 
         return (
-          <sup key={index} className="mawy-md-footnote-ref" {...origin(node, context)}>
+          <sup
+            key={index}
+            className="mawy-md-footnote-ref"
+            // One thing on the surface a document is written on: the number is
+            // this library's and the document says `[^label]`, so a letter typed
+            // in among it went into the label and took the note away.
+            {...(context.editing ? { contentEditable: false, 'data-mawy-atom': '' } : {})}
+            {...origin(node, context)}
+          >
             <a
               href={`#${footnoteId(context, footnote.slug)}`}
               id={referenceId(context, footnote.slug, node.index)}

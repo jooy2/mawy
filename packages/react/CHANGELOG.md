@@ -40,7 +40,11 @@
 
 - **A marker typed in front of a heading's words stayed in its words.** `# ` in front of a `##` heading was a heading saying `# Title`, so a level could only be changed from the toolbar. A marker typed there now takes the heading's place, and one typed on an empty list item takes that item's, rather than opening a list inside it.
 
+- **The caret stopped on a divider and on the box a table scrolls in, where nothing could be typed.** The arrows and a press on a divider step on to the next place a caret can be, and every letter typed from one of those was lost before.
+
 - **Letters typed in front of a task's box went after its words.** A caret in front of the box was read as the end of the item.
+
+- **The number of a footnote could be typed into.** A letter went into the label and took the note away. It is one thing now on the `wysiwyg` surface, taken out whole by one key, and pressing it does not follow it.
 
 - **`Backspace` and `Delete` did nothing at the edge of markup written out as its characters.**
 

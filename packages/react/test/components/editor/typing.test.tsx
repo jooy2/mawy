@@ -420,6 +420,19 @@ describe('a picture', () => {
 });
 
 describe('a place the arrows stop', () => {
+  it('moves on from a divider, so what is typed next is typed somewhere', async () => {
+    const { body, writes } = await editing('up\n\n---\n\ndown');
+
+    put(body, 'up', 2);
+    await settled();
+    await userEvent.keyboard('{ArrowRight}');
+    await settled();
+    await userEvent.keyboard('x');
+
+    await vi.waitFor(() => expect(body.textContent).toContain('x'));
+    await writes('up\n\n---\n\nxdown');
+  });
+
   it('takes a divider away from the start of the words under it', async () => {
     const { body, writes } = await editing('up\n\n---\n\ndown');
 
@@ -438,6 +451,16 @@ describe('a place the arrows stop', () => {
     await userEvent.keyboard('x');
 
     await writes('- [ ] xtodo');
+  });
+
+  it('keeps the number of a footnote out of the way of what is typed', async () => {
+    const { body, writes } = await editing('a[^1]\n\n[^1]: note');
+
+    put(body, 'a', 1);
+    await settled();
+    await userEvent.keyboard('{Delete}');
+
+    await writes('a\n\n[^1]: note');
   });
 });
 
