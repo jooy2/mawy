@@ -38,7 +38,7 @@ import type {
 } from './ast.js';
 import { readDirectiveHead, type DirectiveHead } from './directive.js';
 import { decodeEntities } from './entities.js';
-import { normalizeLabel, unescaped } from './inline.js';
+import { labelFits, normalizeLabel, unescaped } from './inline.js';
 import {
   advance,
   append,
@@ -497,10 +497,11 @@ function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): S
   ) {
     const label = normalizeLabel(match[1]);
 
-    // A label of nothing but whitespace is not a label, and the line it is
-    // written on is not a definition: it stays the paragraph it was. Taking it
-    // off and dropping it on the floor would lose the line.
-    if (!label) {
+    // A label of nothing but whitespace is not a label, and nor is one longer
+    // than CommonMark allows, and the line it is written on is not a definition:
+    // it stays the paragraph it was. Taking it off and dropping it on the floor
+    // would lose the line.
+    if (!label || !labelFits(match[1], 0, match[1].length)) {
       break;
     }
 
@@ -520,6 +521,17 @@ function takeDefinitions(paragraph: Sourced, into: Map<string, MdDefinition>): S
   }
 
   return taken === 0 ? paragraph : slice(paragraph, taken, paragraph.text.length);
+}
+
+/**
+ * The opening of a footnote on this line, if its label is one a reference could
+ * name. A definition nothing can reach would be drawn nowhere, which is the
+ * words lost, so a label past the limit leaves the line as the words it is.
+ */
+function footnoteOn(text: string): RegExpExecArray | null {
+  const found = FOOTNOTE.exec(text);
+
+  return found && labelFits(found[1], 0, found[1].length) ? found : null;
 }
 
 /* -------------------------------------------------------------------------
@@ -576,7 +588,7 @@ function takeIndented(
       blankInside ||
       interrupts(next.text) ||
       DESCRIBES.test(next.text) ||
-      FOOTNOTE.test(next.text)
+      footnoteOn(next.text)
     ) {
       break;
     }
@@ -732,7 +744,7 @@ function opened(state: Opened, text: string): Opened {
   }
 
   // A container of its own, and the end of what this can say about the lines.
-  if (QUOTE.test(text) || markerAt(text) || FOOTNOTE.test(text) || DESCRIBES.test(text)) {
+  if (QUOTE.test(text) || markerAt(text) || footnoteOn(text) || DESCRIBES.test(text)) {
     return { what: 'unknown', fence: null };
   }
 
@@ -1253,7 +1265,7 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
     }
 
     /* A footnote, which is written here and read at the bottom. */
-    const footnote = FOOTNOTE.exec(line.text);
+    const footnote = footnoteOn(line.text);
 
     if (footnote) {
       const opened = at;

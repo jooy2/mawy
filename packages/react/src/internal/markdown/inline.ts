@@ -535,7 +535,10 @@ function readInlineDestination(source: string, start: number, reach: Reach): Des
     at += 1;
 
     while (at < source.length && source[at] !== '>') {
-      if (source[at] === '\n') {
+      // A line ending has no place in here and nor does a `<` that is not
+      // escaped, which is also what stops a run of `[a](<` reading to the end
+      // of the text from every one of them.
+      if (source[at] === '\n' || source[at] === '<') {
         return null;
       }
 
@@ -607,6 +610,11 @@ function readInlineDestination(source: string, start: number, reach: Reach): Des
     title = '';
 
     while (at < source.length && source[at] !== closing) {
+      // The same for a title in brackets, which cannot hold a bracket unescaped.
+      if (quote === '(' && source[at] === '(') {
+        return null;
+      }
+
       if (source[at] === '\\' && isEscapableCode(codeAt(source, at + 1))) {
         at += 1;
       }
@@ -662,16 +670,47 @@ export function normalizeLabel(label: string): string {
   return label.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+/**
+ * The most a link label may hold, in characters, which is CommonMark's number.
+ *
+ * The limit is there for the reader rather than the author. Without it every
+ * `]` in `[[[[a]]]]` folds everything back to its opener to find out whether
+ * that is a label, so a run of brackets costs the square of its length: 128
+ * kilobytes of them took three seconds here and two and a half minutes in the
+ * Dart parser, which copies each stretch first.
+ */
+const LABEL_LIMIT = 999;
+
+/**
+ * Whether the text between two offsets is short enough to be a label.
+ *
+ * Asked before anything is cut out of the source, because a stretch that does
+ * not fit is the case that has to cost nothing. A character is a code point and
+ * an offset is a code unit, so only a stretch between the two lengths needs
+ * counting, and that stretch is short.
+ */
+export function labelFits(source: string, start: number, end: number): boolean {
+  const length = end - start;
+
+  if (length <= LABEL_LIMIT) {
+    return true;
+  }
+
+  return length <= LABEL_LIMIT * 2 && [...source.slice(start, end)].length <= LABEL_LIMIT;
+}
+
 /** `[label]` immediately after a closed `]`, for a full reference link. */
 function readReferenceLabel(source: string, start: number): { label: string; end: number } | null {
   if (source[start] !== '[') {
     return null;
   }
 
+  // Past this no `]` could close a label that fits, so none is looked for.
+  const limit = Math.min(source.length, start + LABEL_LIMIT * 2 + 2);
   let at = start + 1;
   let label = '';
 
-  while (at < source.length) {
+  while (at < limit) {
     const character = source[at];
 
     if (character === '\\' && isEscapableCode(codeAt(source, at + 1))) {
@@ -685,7 +724,7 @@ function readReferenceLabel(source: string, start: number): { label: string; end
     }
 
     if (character === ']') {
-      return { label, end: at + 1 };
+      return labelFits(source, start + 1, at) ? { label, end: at + 1 } : null;
     }
 
     label += character;
@@ -1538,6 +1577,8 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
   let pending = '';
   let pendingAt = 0;
   let at = 0;
+  /** The next `]` from the last footnote looked for, which later ones share. */
+  let noteClose = 0;
 
   /** Characters that are going to be a text node, once something ends it. */
   const hold = (text: string, from: number) => {
@@ -1746,16 +1787,22 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
 
     /* A footnote, which is a label that points at a block written elsewhere. */
     if (character === '[' && source[at + 1] === '^') {
-      const close = source.indexOf(']', at + 2);
-      const label = close === -1 ? '' : normalizeLabel(source.slice(at + 2, close));
+      if (noteClose !== -1 && noteClose < at + 2) {
+        noteClose = source.indexOf(']', at + 2);
+      }
+
+      const label =
+        noteClose !== -1 && labelFits(source, at + 2, noteClose)
+          ? normalizeLabel(source.slice(at + 2, noteClose))
+          : '';
 
       if (label && options.footnotes.has(label)) {
         flush();
         append(
           chunks,
-          nodeChunk({ type: 'footnoteReference', range: span(at, close + 1), label, index: 0 })
+          nodeChunk({ type: 'footnoteReference', range: span(at, noteClose + 1), label, index: 0 })
         );
-        at = close + 1;
+        at = noteClose + 1;
         continue;
       }
     }
@@ -1795,7 +1842,9 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
         continue;
       }
 
-      const labelText = source.slice(opener.textStart, at);
+      const labelText = labelFits(source, opener.textStart, at)
+        ? source.slice(opener.textStart, at)
+        : '';
       let destination: Destination | null = null;
       let end = at + 1;
 

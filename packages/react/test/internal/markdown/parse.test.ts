@@ -1391,6 +1391,50 @@ describe('frontmatter', () => {
   });
 });
 
+describe('what a link cannot hold', () => {
+  const links = (source: string) =>
+    inline(first(source)).filter((node) => node.type === 'link') as Extract<
+      MdInline,
+      { type: 'link' }
+    >[];
+  const label = (length: number, character = 'a') => character.repeat(length);
+
+  it('reads a label of 999 characters and not one of 1000, which is the limit', () => {
+    expect(links(`[${label(999)}]\n\n[${label(999)}]: /b`)).toHaveLength(1);
+    expect(links(`[${label(1000)}]\n\n[${label(1000)}]: /b`)).toHaveLength(0);
+  });
+
+  it('counts a character, however many code units it takes', () => {
+    expect(links(`[${label(999, '😀')}]\n\n[${label(999, '😀')}]: /b`)).toHaveLength(1);
+    expect(links(`[${label(1000, '😀')}]\n\n[${label(1000, '😀')}]: /b`)).toHaveLength(0);
+  });
+
+  it('leaves a definition past the limit as the words it is', () => {
+    expect(first(`[${label(1000)}]: /b`).type).toBe('paragraph');
+  });
+
+  it('leaves a footnote past the limit as the words it is', () => {
+    const document = parseMarkdown(`[^${label(1000)}]: words`);
+
+    expect(document.footnotes).toEqual([]);
+    expect(document.root.children[0].type).toBe('paragraph');
+  });
+
+  it('falls back to the shortcut when the label after it is too long', () => {
+    expect(links(`[a][${label(1000)}]\n\n[a]: /b`)).toHaveLength(1);
+  });
+
+  it('refuses a `<` in a destination in angle brackets unless it is escaped', () => {
+    expect(links('[a](<b<c>)')).toHaveLength(0);
+    expect(links('[a](<b\\<c>)')[0].url).toBe('b<c');
+  });
+
+  it('refuses a `(` in a title in brackets unless it is escaped', () => {
+    expect(links('[a](b (c(d))')).toHaveLength(0);
+    expect(links('[a](b (c\\(d))')[0].title).toBe('c(d');
+  });
+});
+
 describe('a document that would run out of stack', () => {
   it('stops reading labels inside labels', () => {
     const deep = `${':a['.repeat(5000)}x${']'.repeat(5000)}`;

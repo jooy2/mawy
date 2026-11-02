@@ -587,6 +587,42 @@ void main() {
     });
   });
 
+  group('what a link cannot hold', () {
+    List<MdLink> links(String source) =>
+        (first(source) as MdParagraph).children.whereType<MdLink>().toList();
+
+    test('reads a label of 999 characters and not one of 1000, which is the limit', () {
+      expect(links('[${'a' * 999}]\n\n[${'a' * 999}]: /b'), hasLength(1));
+      expect(links('[${'a' * 1000}]\n\n[${'a' * 1000}]: /b'), isEmpty);
+    });
+
+    test('counts a character, however many code units it takes', () {
+      expect(links('[${'😀' * 999}]\n\n[${'😀' * 999}]: /b'), hasLength(1));
+      expect(links('[${'😀' * 1000}]\n\n[${'😀' * 1000}]: /b'), isEmpty);
+    });
+
+    test('leaves a definition past the limit as the words it is', () {
+      expect(first('[${'a' * 1000}]: /b'), isA<MdParagraph>());
+    });
+
+    test('leaves a footnote past the limit as the words it is', () {
+      final MdDocument document = parseMarkdown('[^${'a' * 1000}]: words');
+
+      expect(document.footnotes, isEmpty);
+      expect(document.root.children.first, isA<MdParagraph>());
+    });
+
+    test('refuses a `<` in a destination in angle brackets unless it is escaped', () {
+      expect(links('[a](<b<c>)'), isEmpty);
+      expect(links(r'[a](<b\<c>)').single.url, 'b<c');
+    });
+
+    test('refuses a `(` in a title in brackets unless it is escaped', () {
+      expect(links('[a](b (c(d))'), isEmpty);
+      expect(links(r'[a](b (c\(d))').single.title, 'c(d');
+    });
+  });
+
   group('a document that would run out of stack', () {
     test('stops reading labels inside labels', () {
       expect(first('${':a[' * 5000}x${']' * 5000}'), isA<MdParagraph>());

@@ -170,6 +170,8 @@ The Dart parser does not need to be run against the suite. The two parsers' tree
 
 **Containers nest a hundred deep.** Past that nothing opens: the lines become the paragraphs they would be with no rules applied, and the markers on them stay as characters. Every container reads its own inside, so nesting costs a stack of calls as deep as the document. `> ` written a couple of thousand times is a four-kilobyte file with nothing in it, and anybody can send one to an application that draws documents from elsewhere. A hundred is deeper than anything written by hand and well short of the stack limit.
 
+**A link label holds 999 characters, and an inline directive's label nests a hundred deep.** The first is CommonMark's own number and the second is the rule above. Both are there for a document that came from somewhere else. Without the first, every `]` in a run of brackets reads back to its opener to see whether that is a label, and a 128 kB file with nothing in it held the page for three seconds. A label past the limit stays the words it is.
+
 ### Footnotes
 
 A `[^label]` in a sentence becomes a number, and the note it points at is drawn under the document with a link back to where it was mentioned:

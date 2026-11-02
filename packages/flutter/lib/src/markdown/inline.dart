@@ -14,6 +14,7 @@
 /// This is the React package's `internal/markdown/inline.ts`, in Dart.
 library;
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:mawy/src/markdown/ast.dart';
@@ -544,7 +545,10 @@ _Destination? _readInlineDestination(String source, int start, _Reach reach) {
     at += 1;
 
     while (at < source.length && source.codeUnitAt(at) != 0x3e) {
-      if (source.codeUnitAt(at) == 0x0a) {
+      // A line ending has no place in here and nor does a `<` that is not
+      // escaped, which is also what stops a run of `[a](<` reading to the end
+      // of the text from every one of them.
+      if (source.codeUnitAt(at) == 0x0a || source.codeUnitAt(at) == 0x3c) {
         return null;
       }
 
@@ -620,6 +624,11 @@ _Destination? _readInlineDestination(String source, int start, _Reach reach) {
     title = StringBuffer();
 
     while (at < source.length && source[at] != closing) {
+      // The same for a title in brackets, which cannot hold a bracket unescaped.
+      if (quote == '(' && source[at] == '(') {
+        return null;
+      }
+
       if (source.codeUnitAt(at) == 0x5c && _isEscapableCode(_codeAt(source, at + 1))) {
         at += 1;
       }
@@ -662,6 +671,31 @@ final RegExp _anyEscape = RegExp(r'\\.', dotAll: true);
 /// settled where the label is drawn rather than where it is looked up.
 String normalizeLabel(String label) => label.trim().replaceAll(_runsOfSpace, ' ').toLowerCase();
 
+/// The most a link label may hold, in characters, which is CommonMark's number.
+///
+/// The limit is there for the reader rather than the author. Without it every
+/// `]` in `[[[[a]]]]` folds everything back to its opener to find out whether
+/// that is a label, so a run of brackets costs the square of its length: 128
+/// kilobytes of them took two and a half minutes here, where each stretch is
+/// copied first, and three seconds in the TypeScript parser.
+const int _labelLimit = 999;
+
+/// Whether the text between two offsets is short enough to be a label.
+///
+/// Asked before anything is cut out of the source, because a stretch that does
+/// not fit is the case that has to cost nothing. A character is a code point
+/// and an offset is a code unit, so only a stretch between the two lengths
+/// needs counting, and that stretch is short.
+bool labelFits(String source, int start, int end) {
+  final int length = end - start;
+
+  if (length <= _labelLimit) {
+    return true;
+  }
+
+  return length <= _labelLimit * 2 && source.substring(start, end).runes.length <= _labelLimit;
+}
+
 final RegExp _escaped = RegExp(r'''\\([!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])''');
 
 /// A backslash taken off whatever it was in front of.
@@ -685,12 +719,14 @@ _Reference? _readReferenceLabel(String source, int start) {
     return null;
   }
 
+  // Past this no `]` could close a label that fits, so none is looked for.
+  final int limit = math.min(source.length, start + _labelLimit * 2 + 2);
   int at = start + 1;
   // A buffer, for the reason the text a paragraph holds is one: a label is read
   // a character at a time and a Dart string copies itself on every append.
   final StringBuffer label = StringBuffer();
 
-  while (at < source.length) {
+  while (at < limit) {
     final String character = source[at];
 
     if (character == r'\' && _isEscapableCode(_codeAt(source, at + 1))) {
@@ -704,7 +740,7 @@ _Reference? _readReferenceLabel(String source, int start) {
     }
 
     if (character == ']') {
-      return _Reference(label.toString(), at + 1);
+      return labelFits(source, start + 1, at) ? _Reference(label.toString(), at + 1) : null;
     }
 
     label.write(character);
@@ -1687,6 +1723,9 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
   int pendingAt = 0;
   int at = 0;
 
+  /// The next `]` from the last footnote looked for, which later ones share.
+  int noteClose = 0;
+
   /// Characters that are going to be a text node, once something ends it.
   void hold(String text, int from) {
     if (pending.isEmpty) {
@@ -1891,13 +1930,18 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
 
     /* A footnote, which is a label that points at a block written elsewhere. */
     if (character == '[' && _at(source, at + 1) == '^') {
-      final int close = source.indexOf(']', at + 2);
-      final String label = close == -1 ? '' : normalizeLabel(source.substring(at + 2, close));
+      if (noteClose != -1 && noteClose < at + 2) {
+        noteClose = source.indexOf(']', at + 2);
+      }
+
+      final String label = noteClose != -1 && labelFits(source, at + 2, noteClose)
+          ? normalizeLabel(source.substring(at + 2, noteClose))
+          : '';
 
       if (label.isNotEmpty && options.footnotes.contains(label)) {
         flush();
-        _append(chunks, _Chunk(MdFootnoteReference(span(at, close + 1), label)));
-        at = close + 1;
+        _append(chunks, _Chunk(MdFootnoteReference(span(at, noteClose + 1), label)));
+        at = noteClose + 1;
         continue;
       }
     }
@@ -1938,7 +1982,9 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
         continue;
       }
 
-      final String labelText = source.substring(opener.textStart, at);
+      final String labelText = labelFits(source, opener.textStart, at)
+          ? source.substring(opener.textStart, at)
+          : '';
       _Destination? destination;
       int end = at + 1;
 

@@ -23,7 +23,7 @@ library;
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/directive.dart';
 import 'package:mawy/src/markdown/entities.dart';
-import 'package:mawy/src/markdown/inline.dart' show normalizeLabel, unescaped;
+import 'package:mawy/src/markdown/inline.dart' show labelFits, normalizeLabel, unescaped;
 import 'package:mawy/src/markdown/source.dart';
 
 /// Somewhere a run of inline nodes has to go once there is one.
@@ -533,10 +533,11 @@ Sourced _takeDefinitions(Sourced paragraph, Map<String, MdDefinition> into) {
   ) {
     final String label = normalizeLabel(match.group(1)!);
 
-    // A label of nothing but whitespace is not a label, and the line it is
-    // written on is not a definition: it stays the paragraph it was. Taking it
-    // off and dropping it on the floor would lose the line.
-    if (label.isEmpty) {
+    // A label of nothing but whitespace is not a label, and nor is one longer
+    // than CommonMark allows, and the line it is written on is not a definition:
+    // it stays the paragraph it was. Taking it off and dropping it on the floor
+    // would lose the line.
+    if (label.isEmpty || !labelFits(match.group(1)!, 0, match.group(1)!.length)) {
       break;
     }
 
@@ -560,6 +561,15 @@ Sourced _takeDefinitions(Sourced paragraph, Map<String, MdDefinition> into) {
   }
 
   return taken == 0 ? paragraph : slice(paragraph, taken, paragraph.text.length);
+}
+
+/// The opening of a footnote on this line, if its label is one a reference
+/// could name. A definition nothing can reach would be drawn nowhere, which is
+/// the words lost, so a label past the limit leaves the line as the words it is.
+RegExpMatch? _footnoteOn(String text) {
+  final RegExpMatch? found = _footnote.firstMatch(text);
+
+  return found != null && labelFits(found.group(1)!, 0, found.group(1)!.length) ? found : null;
 }
 
 /* -------------------------------------------------------------------------
@@ -615,7 +625,7 @@ _Indented _takeIndented(List<Line> lines, int from, int width, bool opened) {
         blankInside ||
         _interrupts(next.text) ||
         _describes.hasMatch(next.text) ||
-        _footnote.hasMatch(next.text)) {
+        _footnoteOn(next.text) != null) {
       break;
     }
 
@@ -784,7 +794,7 @@ _Opened _opened(_Opened state, String text) {
   // A container of its own, and the end of what this can say about the lines.
   if (_quote.hasMatch(text) ||
       _markerAt(text) != null ||
-      _footnote.hasMatch(text) ||
+      _footnoteOn(text) != null ||
       _describes.hasMatch(text)) {
     return const _Opened(_What.unknown, null);
   }
@@ -1295,7 +1305,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
     }
 
     /* A footnote, which is written here and read at the bottom. */
-    final RegExpMatch? footnote = _footnote.firstMatch(line.text);
+    final RegExpMatch? footnote = _footnoteOn(line.text);
 
     if (footnote != null) {
       final int opened = at;

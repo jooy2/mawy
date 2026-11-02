@@ -10,7 +10,11 @@
 
 - **A small document could overflow the stack.** 24 kB of `:a[` inside each other did. A directive's label nests a hundred deep now, as everything else does.
 
+- **A run of brackets could freeze the thread that draws.** 32 kB of nested `[` took ten seconds and 128 kB took two and a half minutes, because every `]` read to the far end of the text again and copied it first. It stops where CommonMark says it does now.
+
 ### Changed
+
+- **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.
 
 - **`Enter` on a quoted line carries `> ` down**, the way a list item carries its bullet, and on an empty quoted line takes it away with a blank line under the quotation. It was a bare line ending. A `>` inside a code block is a character and nothing is carried, unless the block is inside the quotation. A list inside a quotation goes on as a list. The React package's source surface does the same.
 
