@@ -1390,3 +1390,17 @@ describe('frontmatter', () => {
     expect(document.frontmatter).toBe(null);
   });
 });
+
+describe('a document that would run out of stack', () => {
+  it('stops reading labels inside labels', () => {
+    const deep = `${':a['.repeat(5000)}x${']'.repeat(5000)}`;
+
+    expect(first(deep).type).toBe('paragraph');
+  });
+
+  it('takes a paragraph of a quarter of a million addresses', () => {
+    const links = inline(first('http://a.b/ '.repeat(250_000)));
+
+    expect(links.filter((node) => node.type === 'link')).toHaveLength(250_000);
+  });
+});

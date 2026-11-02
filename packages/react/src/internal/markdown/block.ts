@@ -1264,7 +1264,10 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
 
       const rest = takeIndented(lines, at, CONTINUATION, body.length > 0);
 
-      body.push(...rest.body);
+      for (const taken of rest.body) {
+        body.push(taken);
+      }
+
       at = rest.at;
 
       const label = normalizeLabel(footnote[1]);
@@ -1365,7 +1368,10 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
 
           const rest = takeIndented(lines, at, CONTINUATION, body.length > 0);
 
-          body.push(...rest.body);
+          for (const taken of rest.body) {
+            body.push(taken);
+          }
+
           at = rest.at;
           last = body[body.length - 1] ?? from;
 

@@ -64,6 +64,8 @@
 
 - **Parsing read to the end of the file at every line.** It was looking for a carriage return in a file that had none, and that was two thirds of the cost of parsing anything. A megabyte of real writing went from 264 ms to 54 ms.
 
+- **A small document could stop the page.** 24 kB of `:a[` inside each other ran out of stack and threw, and so did a paragraph of a quarter of a million bare addresses. A directive's label nests a hundred deep now, as everything else does, and neither goes on the stack.
+
 ### Changed
 
 - **`Tab` in a code block on the `wysiwyg` surface indents**, as it does on the source. `Escape` then `Tab` is still the way out.

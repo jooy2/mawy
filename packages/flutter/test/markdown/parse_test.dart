@@ -586,4 +586,10 @@ void main() {
       expect(document.frontmatter, isNull);
     });
   });
+
+  group('a document that would run out of stack', () {
+    test('stops reading labels inside labels', () {
+      expect(first('${':a[' * 5000}x${']' * 5000}'), isA<MdParagraph>());
+    });
+  });
 }

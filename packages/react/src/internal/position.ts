@@ -177,7 +177,9 @@ function linesOf(
         : null;
 
     if (escaped) {
-      rows.push(...escaped.pieces.map((piece) => ({ ...piece, at: at + piece.at })));
+      for (const piece of escaped.pieces) {
+        rows.push({ ...piece, at: at + piece.at });
+      }
     } else if (found === -1 || found + line.length > range.end) {
       break;
     } else {

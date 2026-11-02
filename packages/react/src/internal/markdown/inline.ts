@@ -943,7 +943,13 @@ function linkify(nodes: MdInline[], pattern: RegExp): MdInline[] {
 
   for (const node of nodes) {
     if (node.type === 'text') {
-      out.push(...linkifyText(node, pattern));
+      // One at a time rather than spread into the call. A spread is that many
+      // arguments on the stack, and a long enough paragraph of addresses runs
+      // out of stack here and takes the whole document with it.
+      for (const piece of linkifyText(node, pattern)) {
+        out.push(piece);
+      }
+
       continue;
     }
 
@@ -1518,7 +1524,7 @@ export function toPlainText(nodes: MdInline[]): string {
  * The scanner
  * ---------------------------------------------------------------------- */
 
-export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
+export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): MdInline[] {
   const source = raw.text;
   const state: State = { chunks: { head: null, tail: null }, delimiters: [], openers: [] };
   /** Where each character the document wrote as a backslash escape ended up. */
@@ -1709,7 +1715,10 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
     }
 
     /* A directive: a construct this parser reads and does not understand. */
-    if (character === ':' && source[at - 1] !== ':' && source[at + 1] !== ':') {
+    // A label is read by calling this again, so a run of labels inside labels is
+    // calls as deep as it is, and twenty-four kilobytes of `:a[` ran out of stack
+    // and took the page with it. See `NESTING`.
+    if (character === ':' && source[at - 1] !== ':' && source[at + 1] !== ':' && nested < NESTING) {
       const head = readDirectiveHead(source, at + 1);
       // A name on its own is not enough here. A colon is a colon in far more
       // sentences than it is a directive — `Note:` and `see:foo` among them —
@@ -1726,7 +1735,7 @@ export function parseInline(raw: Sourced, options: InlineOptions): MdInline[] {
             name: head.name,
             attributes: head.attributes,
             children: head.label
-              ? parseInline(slice(raw, head.label.start, head.label.end), options)
+              ? parseInline(slice(raw, head.label.start, head.label.end), options, nested + 1)
               : []
           })
         );

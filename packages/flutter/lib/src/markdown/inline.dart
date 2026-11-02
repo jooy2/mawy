@@ -1664,7 +1664,7 @@ final RegExp _hardBreak = RegExp(r'[ \t]{2,}$');
 final RegExp _trailingSpace = RegExp(r'[ \t]+$');
 
 /// Reads [raw] into inline nodes.
-List<MdInline> parseInline(Sourced raw, InlineOptions options) {
+List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0]) {
   final String source = raw.text;
   final _State state = _State();
 
@@ -1854,7 +1854,13 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
     }
 
     /* A directive: a construct this parser reads and does not understand. */
-    if (character == ':' && _at(source, at - 1) != ':' && _at(source, at + 1) != ':') {
+    // A label is read by calling this again, so a run of labels inside labels is
+    // calls as deep as it is, and twenty-four kilobytes of `:a[` ran out of stack
+    // and took the page with it. See [_nesting].
+    if (character == ':' &&
+        _at(source, at - 1) != ':' &&
+        _at(source, at + 1) != ':' &&
+        nested < _nesting) {
       final DirectiveHead? head = readDirectiveHead(source, at + 1);
       // A name on its own is not enough here. A colon is a colon in far more
       // sentences than it is a directive — `Note:` and `see:foo` among them —
@@ -1874,7 +1880,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options) {
               attributes: head.attributes,
               children: label == null
                   ? <MdInline>[]
-                  : parseInline(slice(raw, label.start, label.end), options),
+                  : parseInline(slice(raw, label.start, label.end), options, nested + 1),
             ),
           ),
         );
