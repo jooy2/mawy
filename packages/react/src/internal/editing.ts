@@ -468,34 +468,124 @@ function neighbour(root: HTMLElement, node: Node, back: boolean): Text | null {
   return null;
 }
 
-/** The place one drawn character before this one, or `null` at the very start. */
-function before(
-  root: HTMLElement,
-  node: Node,
-  offset: number
-): { node: Text; offset: number } | null {
-  if (node.nodeType === 3 && offset > 0) {
-    return { node: node as Text, offset: offset - 1 };
+/**
+ * The first run of text inside a child, or the last, or the run on the far side
+ * of it where it has none of its own.
+ *
+ * A place between two children of an element is not a place in a run of text,
+ * and it is where the caret is either side of a picture or a line break. Walked
+ * from the element itself, as a text node is, the walk left the element at once
+ * going back and went through it from the top going forwards: `Backspace` after
+ * words typed in front of a picture took the paragraph above, and `Delete` after
+ * a picture took the first letter of its own paragraph.
+ */
+function runBeside(root: HTMLElement, child: Node, back: boolean): Text | null {
+  const walker = root.ownerDocument.createTreeWalker(child, NodeFilter.SHOW_TEXT);
+  let found: Text | null = null;
+
+  for (let at = walker.nextNode(); at; at = walker.nextNode()) {
+    if ((at as Text).data.length) {
+      found = at as Text;
+
+      if (!back) {
+        break;
+      }
+    }
   }
 
-  const previous = neighbour(root, node, true);
-
-  return previous ? { node: previous, offset: previous.data.length - 1 } : null;
+  return (
+    found ??
+    (child.nodeType === 3 && (child as Text).data.length
+      ? (child as Text)
+      : neighbour(root, child, back))
+  );
 }
 
-/** The place one drawn character after this one, or `null` at the very end. */
-function after(
-  root: HTMLElement,
-  node: Node,
-  offset: number
-): { node: Text; offset: number } | null {
-  if (node.nodeType === 3 && offset < (node as Text).data.length) {
-    return { node: node as Text, offset };
+/** What says where one character a reader sees ends, where the platform has one. */
+const GRAPHEMES =
+  typeof Intl !== 'undefined' && 'Segmenter' in Intl
+    ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    : null;
+
+/**
+ * The one character a reader sees at an offset into a run of text.
+ *
+ * An offset counts UTF-16 units, and an emoji is two of them at the least. A key
+ * that took one unit took half an emoji, and what was left is not a character:
+ * the document had a lone surrogate in it from then on. Without a segmenter the
+ * two halves of a pair are still told apart by hand.
+ */
+function characterAt(data: string, offset: number): { start: number; end: number } {
+  if (GRAPHEMES) {
+    const found = GRAPHEMES.segment(data).containing(offset);
+
+    if (found) {
+      return { start: found.index, end: found.index + found.segment.length };
+    }
   }
 
-  const next = neighbour(root, node, false);
+  const code = data.charCodeAt(offset);
+  const low = code >= 0xdc00 && code <= 0xdfff;
+  const high = code >= 0xd800 && code <= 0xdbff;
 
-  return next ? { node: next, offset: 0 } : null;
+  return { start: offset - (low ? 1 : 0), end: offset + (high ? 2 : 1) };
+}
+
+/** One drawn character in a run of text: where it starts and where it ends. */
+interface MawyDrawnCharacter {
+  node: Text;
+  offset: number;
+  end: number;
+}
+
+/** The drawn character before this place, or `null` at the very start. */
+function before(root: HTMLElement, node: Node, offset: number): MawyDrawnCharacter | null {
+  if (node.nodeType === 3 && offset > 0) {
+    const character = characterAt((node as Text).data, offset - 1);
+
+    return { node: node as Text, offset: character.start, end: character.end };
+  }
+
+  const child = node.nodeType === 1 ? node.childNodes[offset - 1] : null;
+  const previous = child ? runBeside(root, child, true) : neighbour(root, node, true);
+
+  if (!previous) {
+    return null;
+  }
+
+  const character = characterAt(previous.data, previous.data.length - 1);
+
+  return { node: previous, offset: character.start, end: character.end };
+}
+
+/** The drawn character after this place, or `null` at the very end. */
+function after(root: HTMLElement, node: Node, offset: number): MawyDrawnCharacter | null {
+  if (node.nodeType === 3 && offset < (node as Text).data.length) {
+    const character = characterAt((node as Text).data, offset);
+
+    return { node: node as Text, offset: character.start, end: character.end };
+  }
+
+  const child = node.nodeType === 1 ? node.childNodes[offset] : null;
+  let next = child ? runBeside(root, child, false) : null;
+
+  if (!child) {
+    // Off the end of an element: the walk starts from its last descendant, or
+    // it would go through what the place is already after.
+    let last: Node = node;
+
+    while (last.lastChild) {
+      last = last.lastChild;
+    }
+
+    next = neighbour(root, last, false);
+  }
+
+  if (!next) {
+    return null;
+  }
+
+  return { node: next, offset: 0, end: characterAt(next.data, 0).end };
 }
 
 /**
@@ -696,7 +786,7 @@ function deleteBefore(
   }
 
   const from = sourceAt(root, back.node, back.offset, value);
-  const to = sourceAt(root, back.node, back.offset + 1, value);
+  const to = sourceAt(root, back.node, back.end, value);
 
   if (from === null || to === null) {
     return null;
@@ -705,11 +795,15 @@ function deleteBefore(
   const here = blockAt(root, node);
   const there = blockAt(root, back.node);
 
-  if (here !== there) {
+  // Markup written out as its characters is a block to the walk and a run of
+  // the same line to the document, with nothing between the two to join.
+  if (here !== there && to !== caret) {
     return joins(here, there) && to < caret ? splice(value, to, caret, '') : null;
   }
 
-  return splice(value, from, Math.max(to, from + 1), '');
+  // `deleted` for the last character of a bold word, which takes the markers
+  // with it. `**` left on a line of its own is neither bold nor nothing.
+  return deleted(value, from, Math.max(to, from + 1));
 }
 
 /** Delete, which is the same rule read the other way. */
@@ -767,7 +861,7 @@ function deleteAfter(
   }
 
   const from = sourceAt(root, ahead.node, ahead.offset, value);
-  const to = sourceAt(root, ahead.node, ahead.offset + 1, value);
+  const to = sourceAt(root, ahead.node, ahead.end, value);
 
   if (from === null || to === null) {
     return null;
@@ -776,13 +870,13 @@ function deleteAfter(
   const here = blockAt(root, node);
   const there = blockAt(root, ahead.node);
 
-  if (here !== there) {
+  if (here !== there && from !== caret) {
     return joins(here, there) && from > caret
       ? { value: value.slice(0, caret) + value.slice(from), caret }
       : null;
   }
 
-  return { value: value.slice(0, from) + value.slice(Math.max(to, from + 1)), caret };
+  return deleted(value, from, Math.max(to, from + 1));
 }
 
 /** The fenced code block a caret is in, taken off, with the caret kept among its characters. */

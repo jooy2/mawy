@@ -296,3 +296,22 @@ describe('a place in the document, read as a place on the page', () => {
     });
   });
 });
+
+describe('a thing drawn with no text of its own', () => {
+  it('puts a caret in front of it rather than inside it', async () => {
+    const source = 'a![p](/i.png)b';
+    const screen = await render(<MawyViewer value={source} images="show" />);
+    const place = domAt(screen.container, 1, source);
+
+    expect(place?.node.nodeName).toBe('P');
+    expect(sourceAt(screen.container, place!.node, place!.offset, source)).toBe(1);
+  });
+
+  it("reads a caret in front of a task's box as in front of its words", async () => {
+    const source = '- [ ] todo';
+    const screen = await render(<MawyViewer value={source} />);
+    const item = screen.container.querySelector('li') as Element;
+
+    expect(sourceAt(screen.container, item, 0, source)).toBe(source.indexOf('todo'));
+  });
+});

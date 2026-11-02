@@ -95,6 +95,14 @@ export function sourceAt(root: Element, node: Node, offset: number, text: string
     const element = node as Element;
     const child = element.childNodes[offset];
 
+    // A task's box is written with the marker and has no place in the document
+    // of its own. A caret in front of it is in front of the item's words: asked
+    // about the box itself, it was answered with the end of the box's item, so
+    // what was typed there landed after the words.
+    if (child?.nodeName === 'INPUT') {
+      return sourceAt(root, element, offset + 1, text);
+    }
+
     if (child) {
       // A position in an element means "before this child of it", and before
       // an element is outside it: a caret in front of a `<strong>` is in front
@@ -423,14 +431,16 @@ export function domAt(
   const host: Element = drawnAt(root, offset) ?? root;
   const own = host === root ? null : rangeOf(host);
 
-  // The end of a drawn thing with no text of its own — a line break, a picture
-  // — is after it rather than in it: a caret put inside a `<br>` is drawn in
-  // front of it, on the line before the one the break starts.
-  if (own && own.end === offset && atom(host) && host.parentNode) {
-    return {
-      node: host.parentNode,
-      offset: [...host.parentNode.childNodes].indexOf(host as ChildNode) + 1
-    };
+  // A drawn thing with no text of its own — a line break, a picture — has no
+  // inside for a caret: its end is after it, and anywhere else is in front of
+  // it. A caret put inside a `<br>` is drawn in front of it, on the line before
+  // the one the break starts, and one put inside an `<img>` is read back as the
+  // end of the picture, so the second letter typed in front of a picture
+  // landed behind it.
+  if (own && atom(host) && host.parentNode) {
+    const place = [...host.parentNode.childNodes].indexOf(host as ChildNode);
+
+    return { node: host.parentNode, offset: own.end === offset ? place + 1 : place };
   }
 
   // The root's own document rather than the global one, which is what every

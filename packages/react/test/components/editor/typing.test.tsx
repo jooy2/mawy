@@ -54,6 +54,12 @@ function put(root: HTMLElement, saying: string, offset: number): void {
   throw new Error(`no text node saying ${JSON.stringify(saying)}`);
 }
 
+/** The caret either side of a child of an element, which is where a picture has it. */
+function beside(root: HTMLElement, parent: Element, offset: number): void {
+  root.focus();
+  document.getSelection()?.collapse(parent, offset);
+}
+
 /** Lets the selection the editor reads catch up with one set from outside. */
 const settled = () => new Promise((resolve) => setTimeout(resolve, 30));
 
@@ -79,6 +85,34 @@ describe('Enter', () => {
   });
 });
 
+describe('a picture', () => {
+  const PICTURE = '![a](/i.png)';
+
+  it('keeps letters typed in front of it in front of it', async () => {
+    const { body, writes } = await editing(PICTURE);
+
+    beside(body, body.querySelector('p') as Element, 0);
+    await settled();
+    await userEvent.keyboard('ab');
+
+    await writes(`ab${PICTURE}`);
+    await userEvent.keyboard('{Backspace}');
+    await writes(`a${PICTURE}`);
+  });
+});
+
+describe('a place the arrows stop', () => {
+  it("writes in front of a task's words from in front of its box", async () => {
+    const { body, writes } = await editing('- [ ] todo');
+
+    beside(body, body.querySelector('li') as Element, 0);
+    await settled();
+    await userEvent.keyboard('x');
+
+    await writes('- [ ] xtodo');
+  });
+});
+
 describe('a character', () => {
   it('lands where the caret is after a character reference', async () => {
     const { body, writes } = await editing('a &amp; b &copy; c');
@@ -99,5 +133,37 @@ describe('a character', () => {
     await userEvent.keyboard('{Backspace}');
 
     await writes('ab');
+  });
+
+  it('goes whole, for an emoji of two units or of several', async () => {
+    for (const emoji of ['😀', '👨‍👩‍👧']) {
+      const back = await editing(`a${emoji}b`);
+
+      put(back.body, `a${emoji}b`, 1 + emoji.length);
+      await settled();
+      await userEvent.keyboard('{Backspace}');
+      await back.writes('ab');
+      await back.screen.unmount();
+
+      const ahead = await editing(`a${emoji}b`);
+
+      put(ahead.body, `a${emoji}b`, 1);
+      await settled();
+      await userEvent.keyboard('{Delete}');
+      await ahead.writes('ab');
+      await ahead.screen.unmount();
+    }
+  });
+
+  it('takes the markers with the last letter of a run', async () => {
+    for (const value of ['a **b**', 'a `b`', 'a *b*', 'a [b](u)']) {
+      const { body, screen, writes } = await editing(value);
+
+      put(body, 'b', 1);
+      await settled();
+      await userEvent.keyboard('{Backspace}');
+      await writes('a ');
+      await screen.unmount();
+    }
   });
 });

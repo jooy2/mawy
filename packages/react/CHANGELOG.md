@@ -10,6 +10,16 @@
 
 - **Text after a character reference went in the wrong place.** Every place after `&amp;` or `&copy;` in a paragraph was counted short, so a letter typed there landed inside the next reference, turned it into words, and sent the caret to the start of the block. References are found a character at a time now, and one key takes a whole one out.
 
+- **Letters typed in front of a picture jumped behind it.** The caret was put inside the `<img>`, which reads back as the end of the picture. `Backspace` and `Delete` beside a picture had the same trouble and took a letter from the wrong side of it.
+
+- **The last letter of a bold word, a code span or a link left its markers behind.** One key now takes them with it, as a selection of the word already did.
+
+- **`Backspace` and `Delete` cut an emoji in half.** A key took one UTF-16 unit, which left a lone surrogate in the document. Both take the character a reader sees, a family of joined emoji included.
+
+- **Letters typed in front of a task's box went after its words.** A caret in front of the box was read as the end of the item.
+
+- **`Backspace` and `Delete` did nothing at the edge of markup written out as its characters.**
+
 ## 1.8.0 (2026-09-24)
 
 ### Added
