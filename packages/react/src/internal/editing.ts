@@ -1368,6 +1368,39 @@ function breakAt(
   return { ...edit, caret: edit.caret + cut.opening };
 }
 
+/**
+ * The hard break a caret is under where nothing has been written after it yet,
+ * or `null`.
+ *
+ * A break at the end of a block is no break to CommonMark, so `Shift`+`Enter`
+ * after the last words of a paragraph wrote two spaces and a line ending and
+ * drew nothing, and the caret stayed up on the line it was on. What opens the
+ * line it was left on is whatever the containers around it write on every line
+ * of themselves. See `hardBreak`.
+ */
+export function trailingBreak(value: string, at: number): MdRange | null {
+  const line = startOfLine(value, at);
+  const stop = value.indexOf('\n', at);
+
+  if (
+    line === 0 ||
+    !/^[ \t>]*$/.test(value.slice(line, at)) ||
+    value.slice(at, stop === -1 ? value.length : stop).trim()
+  ) {
+    return null;
+  }
+
+  let from = line - 1;
+
+  while (value[from - 1] === ' ') {
+    from -= 1;
+  }
+
+  return line - 1 - from >= 2 && from > 0 && value[from - 1] !== '\n'
+    ? { start: from, end: at }
+    : null;
+}
+
 /** A picture and nothing else, as it is written. */
 const PICTURE = /^!\[[^\]]*\]\([^\n]*\)$/;
 
@@ -1398,29 +1431,31 @@ function cutAt(
   at: number,
   options: MarkdownOptions
 ): { value: string; at: number; opening: number } {
+  // On the line a hard break started, with nothing on it. The break is what the
+  // press replaces.
+  const held = trailingBreak(value, at);
+
+  if (held) {
+    return {
+      value: value.slice(0, held.start) + value.slice(held.end),
+      at: held.start,
+      opening: 0
+    };
+  }
+
   const document = parseMarkdown(value, options);
   let head = at;
   let closing = '';
   let opening = '';
 
-  if (/[*_~`[]/.test(value)) {
-    const blocks = [...document.root.children, ...document.footnotes];
-
-    for (const node of markedAt(blocks, at, []).reverse()) {
-      const words = wordsOf(value, node);
-
-      if (!words) {
-        continue;
-      }
-
-      if (!closing && head >= words.end) {
-        head = node.range.end;
-      } else if (!closing && head <= words.start) {
-        head = node.range.start;
-      } else {
-        closing += value.slice(words.end, node.range.end);
-        opening = value.slice(node.range.start, words.start) + opening;
-      }
+  for (const { node, words } of runsCut(value, document, at)) {
+    if (!closing && head >= words.end) {
+      head = node.range.end;
+    } else if (!closing && head <= words.start) {
+      head = node.range.start;
+    } else {
+      closing += value.slice(words.end, node.range.end);
+      opening = value.slice(node.range.start, words.start) + opening;
     }
   }
 
@@ -1466,6 +1501,46 @@ function cutAt(
     at: from + closing.length,
     opening: opening.length
   };
+}
+
+/** The runs of formatting and the links a place is inside, innermost first, with their words. */
+function runsCut(
+  value: string,
+  document: ReturnType<typeof parseMarkdown>,
+  at: number
+): { node: MdNode; words: MdRange }[] {
+  if (!/[*_~`[]/.test(value)) {
+    return [];
+  }
+
+  const blocks = [...document.root.children, ...document.footnotes];
+
+  return markedAt(blocks, at, [])
+    .reverse()
+    .flatMap((node) => {
+      const words = wordsOf(value, node);
+
+      return words ? [{ node, words }] : [];
+    });
+}
+
+/**
+ * The place a hard break goes for a caret at the outer edge of a run: on the far
+ * side of the run's markers, for the reason `cutAt` gives. A break among the
+ * run's words is one the run can hold, so it stays where the caret is.
+ */
+function pastRun(value: string, at: number, options: MarkdownOptions): number {
+  let head = at;
+
+  for (const { node, words } of runsCut(value, parseMarkdown(value, options), at)) {
+    if (head < words.end) {
+      break;
+    }
+
+    head = node.range.end;
+  }
+
+  return head;
 }
 
 /** `Enter` at one place, once `cutAt` has made the place ready. See `breakAt`. */
@@ -2750,13 +2825,20 @@ function editMade(
         return splice(value, start, end, '<br>');
       }
 
+      // A heading is one line of the file and holds no break, so what the key
+      // can mean there is the end of the heading.
+      if (/^H[1-6]$/.test(block?.tagName ?? '')) {
+        return breakAt(root, value, start, end, range.startContainer, options);
+      }
+
       // Two spaces and a newline: the hard break nearly every Markdown file in
       // the world is written with, however invisible it is. Inside a code block
       // a newline is just a newline, and either way the line it starts opens
       // with what the containers around it write on every line of themselves.
       // The source answers the same key with the same function, which is what
       // keeps one key one thing on the two surfaces. See `hardBreak`.
-      const broken = hardBreak({ value, start, end });
+      const past = start === end ? pastRun(value, start, options) : start;
+      const broken = hardBreak({ value, start: past, end: start === end ? past : end });
 
       return { value: broken.value, caret: broken.start };
     }

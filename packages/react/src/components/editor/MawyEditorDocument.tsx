@@ -52,6 +52,7 @@ import {
   overSpaces,
   reachedBlock,
   toggledTask,
+  trailingBreak,
   typedOver,
   type MawyAim,
   type MawyDrag,
@@ -347,6 +348,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
      * A press has answers of its own for the places between blocks. See `opened`.
      */
     const arrowed = React.useRef<'forwards' | 'backwards' | null>(null);
+    /** Whether the key the next input answers is `Enter` under `Shift`. */
+    const shifted = React.useRef(false);
     /** Bumped to throw the drawing away and make it again from the document. */
     const [generation, setGeneration] = React.useState(0);
     const gfm = parse?.gfm ?? true;
@@ -435,13 +438,29 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       () => noteFor(document_.footnotes, room, value),
       [document_, room, value]
     );
+    /**
+     * The hard break the caret is under with nothing written after it yet, which
+     * the page is told to draw for as long as the caret is there. Two numbers, so
+     * that a caret moving about does not draw the document again at every step.
+     * See `trailingBreak` and `withBreak`.
+     */
+    const [brokenFrom, brokenTo] = React.useMemo(() => {
+      const spot =
+        focused && selection.start === selection.end ? trailingBreak(value, selection.start) : null;
+
+      return spot ? [spot.start, spot.end] : [-1, -1];
+    }, [focused, selection.end, selection.start, value]);
     const blocks = React.useMemo(
       () =>
-        withNesting(
-          withRoom(document_.root.children, inNote ? null : room, value, document_.footnotes),
-          nested
+        withBreak(
+          withNesting(
+            withRoom(document_.root.children, inNote ? null : room, value, document_.footnotes),
+            nested
+          ),
+          brokenFrom,
+          brokenTo
         ),
-      [document_, inNote, nested, room, value]
+      [brokenFrom, brokenTo, document_, inNote, nested, room, value]
     );
     const footnotes = React.useMemo(
       () => new Map(document_.footnotes.map((footnote) => [footnote.label, footnote])),
@@ -681,7 +700,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       }
 
       const refuse = (event: Event) => {
-        const input = event as InputEvent;
+        // `Shift`+`Enter` is a line break whatever the browser calls it, which
+        // is not the same thing everywhere. The source reads the key as well.
+        const input =
+          shifted.current && (event as InputEvent).inputType === 'insertParagraph'
+            ? new InputEvent('beforeinput', { inputType: 'insertLineBreak' })
+            : (event as InputEvent);
 
         // A composition is the one thing the browser is allowed to do to this
         // tree. Refusing an `insertCompositionText` is refusing the composition
@@ -1885,6 +1909,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           aria-multiline="true"
           aria-label={label}
           onKeyDown={(event) => {
+            shifted.current = event.key === 'Enter' && event.shiftKey;
+
             arrowed.current = /^(?:ArrowUp|ArrowLeft|Home|PageUp)$/.test(event.key)
               ? 'backwards'
               : /^(?:ArrowDown|ArrowRight|End|PageDown)$/.test(event.key)
@@ -2565,6 +2591,55 @@ function parted(list: MdList, at: number, value: string): MdBlock[] {
 
 function empty(at: number): MdBlock {
   return { type: 'paragraph', range: { start: at, end: at }, children: [] };
+}
+
+/**
+ * The document's blocks, with the hard break the caret is under drawn at the end
+ * of the paragraph it ends, and a line for the caret after it. See `trailingBreak`.
+ *
+ * The paragraph, and everything around it, is drawn as reaching the caret, or
+ * the search for a place on the page would step over all of them. The second
+ * break is what makes the second line: a block's last `<br>` ends the line in
+ * front of it and starts none, so with only one the caret is drawn on the line
+ * above. It says it was drawn from the place the caret is, so a caret between the
+ * two reads back as that place.
+ */
+function withBreak(blocks: MdBlock[], from: number, to: number): MdBlock[] {
+  if (from === -1) {
+    return blocks;
+  }
+
+  const visit = <T extends MdNode>(nodes: readonly T[]): T[] =>
+    nodes.map((node) => {
+      if (from < node.range.start || from > node.range.end || !('children' in node)) {
+        return node;
+      }
+
+      const children = node.children as MdNode[];
+      const range = { start: node.range.start, end: Math.max(node.range.end, to) };
+
+      if (node.type === 'paragraph') {
+        return children[children.length - 1]?.range.end === from
+          ? ({
+              ...node,
+              range,
+              children: [
+                ...children,
+                { type: 'break', range: { start: from, end: to } },
+                { type: 'break', range: { start: to, end: to } }
+              ]
+            } as T)
+          : node;
+      }
+
+      const inner = visit(children);
+
+      return inner.some((child, index) => child !== children[index])
+        ? ({ ...node, range, children: inner } as T)
+        : node;
+    });
+
+  return visit(blocks);
 }
 
 /**

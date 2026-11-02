@@ -56,6 +56,8 @@
 
 - **`Mod`+`A` in a document that is nothing but a table only emptied its cells.** Everything selected is everything taken out.
 
+- **`Shift`+`Enter` at the very end of a paragraph looked as though nothing had happened.** CommonMark reads no break at the end of a paragraph, so the two spaces and the line ending were written, nothing was drawn, and the caret stayed on the line above. The line is drawn now for as long as the caret is on it, `Backspace` takes it back and `Enter` ends the paragraph. At the end of a bold run the break goes after the closing marker rather than tearing it off, and in a heading, which holds no break, the key ends the heading.
+
 ### Changed
 
 - **`Tab` in a code block on the `wysiwyg` surface indents**, as it does on the source. `Escape` then `Tab` is still the way out.

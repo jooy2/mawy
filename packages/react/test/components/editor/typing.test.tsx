@@ -285,6 +285,90 @@ describe('Enter again', () => {
   });
 });
 
+describe('Shift+Enter', () => {
+  it('draws the line it starts, at the end of a paragraph', async () => {
+    const { body, writes } = await editing('hello');
+
+    put(body, 'hello', 5);
+    await settled();
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+    await writes('hello  \n');
+
+    const paragraph = body.querySelector('p') as HTMLElement;
+
+    await vi.waitFor(() => expect(paragraph.querySelectorAll('br')).toHaveLength(2));
+
+    const [one, other] = [...paragraph.querySelectorAll('br')];
+
+    expect(other.getBoundingClientRect().top).toBeGreaterThan(one.getBoundingClientRect().top);
+
+    await userEvent.keyboard('x');
+    await writes('hello  \nx');
+    expect(paragraph.querySelectorAll('br')).toHaveLength(1);
+  });
+
+  it('takes the break back with Backspace, and with Enter ends the paragraph', async () => {
+    const back = await editing('hello');
+
+    put(back.body, 'hello', 5);
+    await settled();
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+    await back.writes('hello  \n');
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+    await back.writes('hello');
+    await back.screen.unmount();
+
+    const on = await editing('hello');
+
+    put(on.body, 'hello', 5);
+    await settled();
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+    await on.writes('hello  \n');
+    await settled();
+    await userEvent.keyboard('{Enter}');
+    await on.writes('hello\n\n');
+  });
+
+  it('draws it inside a list item and a quotation', async () => {
+    for (const [value, words, broken] of [
+      ['- a', 'a', '- a  \n  x'],
+      ['> a', 'a', '> a  \n> x']
+    ]) {
+      const { body, screen, writes } = await editing(value);
+
+      put(body, words, 1);
+      await settled();
+      await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+      await vi.waitFor(() => expect(body.querySelectorAll('br')).toHaveLength(2));
+      await userEvent.keyboard('x');
+      await writes(broken);
+      await screen.unmount();
+    }
+  });
+
+  it('goes after a run it is pressed at the end of', async () => {
+    const { body, writes } = await editing('**bold**');
+
+    put(body, 'bold', 4);
+    await settled();
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+
+    await writes('**bold**  \n');
+    expect(body.querySelector('strong')?.textContent).toBe('bold');
+  });
+
+  it('ends a heading, which holds no break', async () => {
+    const { body, writes } = await editing('# head');
+
+    put(body, 'head', 4);
+    await settled();
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+
+    await writes('# head\n\n');
+  });
+});
+
 describe('a heading typed over', () => {
   it('takes the level typed in front of its words', async () => {
     const { body, writes } = await editing('## Title');
