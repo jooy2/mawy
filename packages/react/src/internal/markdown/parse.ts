@@ -144,6 +144,13 @@ function read(source: string): Reading {
     mark();
   }
 
+  // Where the next of each line ending is, kept rather than searched for at
+  // every line. A document uses one kind or the other, so searching for both is
+  // a read to the end of the file for the kind it does not use: that was two
+  // thirds of the cost of parsing a real document, spent finding nothing.
+  let feed = source.indexOf('\n', at);
+  let carriage = source.indexOf('\r', at);
+
   while (at <= source.length) {
     const start = out;
     let text = '';
@@ -155,11 +162,17 @@ function read(source: string): Reading {
       mark();
     }
 
+    if (feed !== -1 && feed < at) {
+      feed = source.indexOf('\n', at);
+    }
+
+    if (carriage !== -1 && carriage < at) {
+      carriage = source.indexOf('\r', at);
+    }
+
     // The rest of the line taken in one piece. Built a character at a time it
     // was a string made and thrown away for every character in the document,
     // which is the cost of parsing rather than the cost of anything read.
-    const feed = source.indexOf('\n', at);
-    const carriage = source.indexOf('\r', at);
     const end = Math.min(
       feed === -1 ? source.length : feed,
       carriage === -1 ? source.length : carriage

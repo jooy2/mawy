@@ -62,6 +62,8 @@
 
 - **A language typed after three backticks went in as code.** A fence opens at the third backtick, with the caret inside it, so the `js` of ` ```js ` became the first line of the block. A word typed straight after the backticks and ended with `Enter` now moves up onto the fence. `Enter` first and the word is code, and so is anything that is not one word.
 
+- **Parsing read to the end of the file at every line.** It was looking for a carriage return in a file that had none, and that was two thirds of the cost of parsing anything. A megabyte of real writing went from 264 ms to 54 ms.
+
 ### Changed
 
 - **`Tab` in a code block on the `wysiwyg` surface indents**, as it does on the source. `Escape` then `Tab` is still the way out.
