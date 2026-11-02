@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **A space that ended a Korean syllable was written as something the page does not draw.** Chrome on a Mac hands the syllable and the space over together, and a browser writes a space at the end of a run of text as a no-break space, so the document held a character the parser takes off the end of a paragraph. On `wysiwyg` the space never appeared and the next word ran on from the last one, while the source showed it. It is a space now, and it is drawn like any other.
+
 ## 1.9.0 (2026-11-02)
 
 ### Fixed

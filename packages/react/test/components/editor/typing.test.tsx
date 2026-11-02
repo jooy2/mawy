@@ -157,6 +157,44 @@ describe('a space', () => {
 
     await writes('x **bold**');
   });
+
+  /**
+   * A Korean keyboard ends a syllable with the space bar, and Chrome on a Mac
+   * hands over the two as one commit. At the end of a run of text the browser
+   * writes the space as a no-break space, which is what is left in the tree here.
+   */
+  const composed = async (written: string, commit: string) => {
+    const seen = await editing('x');
+    const run = seen.body.querySelector('p')?.firstChild as Text;
+
+    put(seen.body, 'x', 1);
+    await settled();
+    seen.body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    run.data = written;
+    (document.getSelection() as Selection).collapse(run, written.length);
+    seen.body.dispatchEvent(
+      new CompositionEvent('compositionend', { bubbles: true, data: commit })
+    );
+
+    return seen;
+  };
+
+  it('is a space when a composition ended with one', async () => {
+    const { body, writes, said } = await composed('x다\u00a0', '다 ');
+
+    await writes('x다 ');
+    // Drawn, so the caret has something to be after.
+    await vi.waitFor(() => expect(body.textContent).toBe('x다\u00a0'));
+
+    await userEvent.keyboard(' ');
+    await vi.waitFor(() => expect(said()).toBeDefined());
+  });
+
+  it('stays a no-break space where a composition says it wrote one', async () => {
+    const { writes } = await composed('x다\u00a0', '다\u00a0');
+
+    await writes('x다\u00a0');
+  });
 });
 
 describe('Enter', () => {

@@ -1207,7 +1207,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
-        const after = spacedBack(contentOf(was.host), was.before, value.slice(was.start));
+        const after = spacedBack(
+          composedSpaces(contentOf(was.host), was.before, event.data),
+          was.before,
+          value.slice(was.start)
+        );
         // The run as the document has it, since that is what `after` has been
         // put back into: a no-break space drawn for a space is a space here.
         const written = spacedBack(was.before, was.before, value.slice(was.start));
@@ -2339,6 +2343,42 @@ function spacedBack(after: string, before: string, source: string): string {
     return after;
   }
 
+  const { head, tail } = unchangedEnds(after, before);
+
+  return (
+    source.slice(0, head) +
+    after.slice(head, after.length - tail) +
+    source.slice(before.length - tail, before.length)
+  );
+}
+
+/**
+ * A run of text as a composition left it, with a space it wrote read as a space.
+ *
+ * A Korean keyboard ends a syllable with the space bar, and Chrome on a Mac hands
+ * over the syllable and the space as one commit, so the space comes through here
+ * rather than as a key. A browser writes a space at the end of a run of text as a
+ * no-break space, so that it shows. In the document that is a character the parser
+ * takes off the end of a paragraph and the page has no reason to draw, so the
+ * space was in the source and nowhere on the page, and the next one was refused
+ * for standing beside it.
+ *
+ * Only in what the composition changed, and not where the composition itself says
+ * it wrote one, which is one somebody asked for.
+ */
+function composedSpaces(after: string, before: string, data: string): string {
+  if (!after.includes('\u00a0') || data.includes('\u00a0')) {
+    return after;
+  }
+
+  const { head, tail } = unchangedEnds(after, before);
+  const end = after.length - tail;
+
+  return after.slice(0, head) + after.slice(head, end).replace(/\u00a0/g, ' ') + after.slice(end);
+}
+
+/** How much of a run of text is still what it said before, from either end. */
+function unchangedEnds(after: string, before: string): { head: number; tail: number } {
   let head = 0;
 
   while (head < before.length && head < after.length && after[head] === before[head]) {
@@ -2355,11 +2395,7 @@ function spacedBack(after: string, before: string, source: string): string {
     tail += 1;
   }
 
-  return (
-    source.slice(0, head) +
-    after.slice(head, after.length - tail) +
-    source.slice(before.length - tail, before.length)
-  );
+  return { head, tail };
 }
 
 /** What a composition changed: a run of text, or an empty block's contents. */
