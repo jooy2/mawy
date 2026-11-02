@@ -558,10 +558,13 @@ const GRAPHEMES =
  */
 function characterAt(data: string, offset: number): { start: number; end: number } {
   if (GRAPHEMES) {
-    const found = GRAPHEMES.segment(data).containing(offset);
-
-    if (found) {
-      return { start: found.index, end: found.index + found.segment.length };
+    // Walked rather than asked with `containing`, which WebKit answers wrongly
+    // at the start of a character: with the character before it as well, so
+    // `Delete` in front of an emoji took the letter in front of that too.
+    for (const { index, segment } of GRAPHEMES.segment(data)) {
+      if (offset < index + segment.length) {
+        return { start: index, end: index + segment.length };
+      }
     }
   }
 
