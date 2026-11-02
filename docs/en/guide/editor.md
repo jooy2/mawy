@@ -97,6 +97,8 @@ A document past about six hundred lines is coloured where it can be seen and han
 
 Past about twenty thousand characters a key stops waiting for what can wait. The preview and the counts along the bottom follow once the typing stops rather than at every key, because they are the two things here that read the whole document for somebody who is not looking at them. Below that length neither ever falls behind.
 
+Apple Pencil's Scribble is on where a pencil might be, on a screen the size of a tablet, and only while the document is under that same length. To let a pencil write, the framework asks for the box of every character from the top of the document to the bottom of the field after each layout, which took three and a half seconds a key at 300 kB on an iPhone, for a pencil no iPhone has.
+
 :::
 
 The syntax colouring uses the token names of Mawy's parser, but not the parser itself. A line being typed is half-written most of the time, and a highlighter that waited for `**bold` to close before reacting would flicker on every keystroke. So it reads a line at a time, approximately, and leaves an unfinished marker alone.

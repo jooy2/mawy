@@ -20,6 +20,8 @@
 
 - **`Enter` on a phone's keyboard left the list behind.** A soft keyboard's `Enter` while a syllable is being composed comes down the text input connection as a line ending rather than a key, so `Enter` at the end of an item written in Korean gave a line with no bullet. The same two rules answer it now, and a quotation carries its `> ` down the same way.
 
+- **A key on a long document took seconds on an iPhone.** On iOS the framework works out the box of every character down to the bottom of the field after each layout, for Apple Pencil, one at a time. Nothing on an iPhone uses it. At 100 kB a key went from 440 ms to 71 ms, and on `split` from 888 ms to 65 ms, and at 300 kB it had been three and a half seconds.
+
 - **A caret that moved read the whole document.** The counts along the bottom were taken again at every step, the words with a regular expression that is interpreted rather than compiled on a phone, and the field worked out its colours again for a text that had not changed. Neither does now, and a caret at 100 kB went from 89 ms to 44 ms on Android.
 
 - **Parsing wrote a document out a character at a time**, which was two fifths of what it cost. Lines are taken in one piece now.
@@ -27,6 +29,8 @@
 ### Changed
 
 - **On a long document the preview and the counts follow once the typing stops.** Past twenty thousand characters neither is worked out at every key, because a key was waiting for two things nobody looks at while typing. Below that nothing has changed.
+
+- **Apple Pencil's Scribble is on where a pencil might be**: on a screen the size of a tablet, while the document is under twenty thousand characters. See above for what it costs.
 
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.
 

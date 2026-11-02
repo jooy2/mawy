@@ -19,6 +19,7 @@ library;
 
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -881,6 +882,20 @@ class _MawySourceFieldState extends State<MawySourceField>
   /// Whether a look at the window is already booked for the end of this frame.
   bool _booked = false;
 
+  /// Whether an Apple Pencil can write in the field.
+  ///
+  /// So that one can, the framework asks for the box of every character from
+  /// the top of the document to the bottom of the field after each layout, one
+  /// at a time, on iOS. That is most of the time a key takes on a long document:
+  /// three and a half seconds at 300 kilobytes on an iPhone, for a pencil no
+  /// iPhone has. So it is on where a pencil might be, on a screen the size of a
+  /// tablet, and only while the document is short enough to pay for it. The
+  /// other platforms' handwriting goes through the system and costs none of this.
+  bool get _scribbles =>
+      defaultTargetPlatform != TargetPlatform.iOS ||
+      (MediaQuery.sizeOf(context).shortestSide >= 600 &&
+          widget.controller.text.length < _scribblesUpTo);
+
   List<int> get _lineStarts {
     final String source = widget.controller.text;
 
@@ -1152,6 +1167,7 @@ class _MawySourceFieldState extends State<MawySourceField>
                     selectionColor: tokens.accentSoft,
                     maxLines: null,
                     expands: true,
+                    stylusHandwritingEnabled: _scribbles,
                     textAlign: TextAlign.start,
                     scrollPadding: const EdgeInsets.all(24),
                     // A selection is a run of text and not a row of blocks. The
@@ -1260,6 +1276,9 @@ double gutterWidthFor(BuildContext context, String text, TextStyle style) {
 /// it had. The React package uses the same number for the same reason, and the
 /// two are meant to stay the same number.
 const int kMawySourceWindowFrom = 600;
+
+/// How long a document an Apple Pencil can write in. See `_scribbles`.
+const int _scribblesUpTo = 20000;
 
 /// The type the source is drawn in.
 ///

@@ -1216,6 +1216,50 @@ void main() {
 
       expect(tester.widget<MawyViewer>(find.byType(MawyViewer)).value, '$long more');
     });
+
+    testWidgets('does not pay for a pencil on a phone', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(defaultValue: 'short', defaultMode: MawyEditorMode.plain),
+          size: const Size(390, 844),
+        ),
+      );
+
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText)).stylusHandwritingEnabled,
+        isFalse,
+      );
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+    testWidgets(
+      'keeps a pencil on a tablet, while the document is short',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          host(
+            const MawyEditor(defaultValue: 'short', defaultMode: MawyEditorMode.plain),
+            size: const Size(820, 1180),
+          ),
+        );
+
+        expect(
+          tester.widget<EditableText>(find.byType(EditableText)).stylusHandwritingEnabled,
+          isTrue,
+        );
+
+        await tester.pumpWidget(
+          host(
+            MawyEditor(key: UniqueKey(), defaultValue: long, defaultMode: MawyEditorMode.plain),
+            size: const Size(820, 1180),
+          ),
+        );
+
+        expect(
+          tester.widget<EditableText>(find.byType(EditableText)).stylusHandwritingEnabled,
+          isFalse,
+        );
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    );
   });
 
   group('the status bar', () {
