@@ -1,0 +1,262 @@
+[
+ {
+  "why": "Paragraphs. Every line used to search to the end of the file for a line ending the file does not use.",
+  "parts": [["word word word word.\n\n", 1500]]
+ },
+ {
+  "why": "Blank lines, for the same reason, with nothing else to hide it.",
+  "parts": [["\n", 32000]]
+ },
+ {
+  "why": "Lines ended by a carriage return alone, which is the same search for the other character.",
+  "parts": [["a\r", 16000]]
+ },
+ {
+  "why": "Lines ended by both characters.",
+  "parts": [["a\r\n", 10000]]
+ },
+ {
+  "why": "A flat list.",
+  "parts": [["- a\n", 8000]]
+ },
+ {
+  "why": "A list that changes its marker at every item, so every item opens a new list.",
+  "parts": [["- a\n* b\n+ c\n", 2600]]
+ },
+ {
+  "why": "A quotation carried on by lazy lines.",
+  "parts": [["> a\nb\n", 5000]]
+ },
+ {
+  "why": "Setext headings.",
+  "parts": [["a\n===\n", 5000]]
+ },
+ {
+  "why": "One setext heading of many lines. A Dart string copies itself to be added to.",
+  "parts": [["a\n", 16000], ["---\n", 1]]
+ },
+ {
+  "why": "One paragraph of many lines, for the same reason.",
+  "parts": [["word word\n", 3200]]
+ },
+ {
+  "why": "Headings that are all different.",
+  "parts": [["## h{n}\n", 3000]]
+ },
+ {
+  "why": "Headings that are all the same, each of which has to find a name nobody has.",
+  "parts": [["# a\n", 8000]]
+ },
+ {
+  "why": "HTML blocks.",
+  "parts": [["<div>\n", 5000]]
+ },
+ {
+  "why": "A fence that is never closed.",
+  "parts": [["```\n", 1], ["a\n", 16000]]
+ },
+ {
+  "why": "Many fences.",
+  "parts": [["```\na\n```\n", 3200]]
+ },
+ {
+  "why": "A definition list.",
+  "parts": [["a\n: b\n", 5000]]
+ },
+ {
+  "why": "A table with many rows.",
+  "parts": [["|a|b|\n|-|-|\n", 1], ["|c|d|\n", 5000]]
+ },
+ {
+  "why": "A table with many columns.",
+  "parts": [["|a", 8000], ["|\n", 1], ["|-", 8000], ["|\n", 1], ["|b", 8000], ["|\n", 1]]
+ },
+ {
+  "why": "A table cell of escaped pipes, built a character at a time.",
+  "parts": [["|a|\n|-|\n|", 1], ["\\|", 16000], ["|\n", 1]]
+ },
+ {
+  "why": "A table after a long paragraph.",
+  "parts": [["a\n", 16000], ["|a|\n|-|\n", 1]]
+ },
+ {
+  "why": "Link definitions that are all different.",
+  "parts": [["[a{n}]: b\n", 2500]]
+ },
+ {
+  "why": "Link definitions that are all the same.",
+  "parts": [["[a]: b\n", 5000]]
+ },
+ {
+  "why": "Link definitions between lines of text.",
+  "parts": [["[a]: b\nc\n", 3500]]
+ },
+ {
+  "why": "A link label past the length a label may have. The regular expression must not run out of room on it.",
+  "parts": [["[", 1], ["a", 32000], ["]: b\n", 1]]
+ },
+ {
+  "why": "A long title in a link definition.",
+  "parts": [["[a]: b \"", 1], ["c", 32000], ["\"\n", 1]]
+ },
+ {
+  "why": "Footnote definitions.",
+  "parts": [["[^{n}]: b\n", 2500]]
+ },
+ {
+  "why": "A footnote with a long indented body, taken a line at a time rather than spread into a call.",
+  "parts": [["[^1]: a\n", 1], ["    b\n", 5000]]
+ },
+ {
+  "why": "Footnote references that all resolve.",
+  "parts": [["a[^{n}] ", 3000], ["\n\n", 1], ["[^{n}]: b\n", 3000]]
+ },
+ {
+  "why": "Brackets that never close.",
+  "parts": [["[", 32000]]
+ },
+ {
+  "why": "Brackets nested as deep as they are long. Every `]` used to fold everything back to its opener.",
+  "parts": [["[", 16000], ["a", 1], ["]", 16000]]
+ },
+ {
+  "why": "Open brackets and then links, each of which turns off the brackets under it.",
+  "parts": [["[", 8000], ["[a](b) ", 4000]]
+ },
+ {
+  "why": "Footnote references that never close.",
+  "parts": [["[^a ", 8000]]
+ },
+ {
+  "why": "Footnote references that all close at the same far bracket.",
+  "parts": [["[^a ", 8000], ["]", 1]]
+ },
+ {
+  "why": "Links in bold, a paragraph of which has a delimiter left for every one of them.",
+  "parts": [["**[a](b)** ", 3000]]
+ },
+ {
+  "why": "One link around a great deal of emphasis.",
+  "parts": [["[", 1], ["*a* ", 8000], ["](b)", 1]]
+ },
+ {
+  "why": "Links inside links.",
+  "parts": [["[", 6000], ["](b)", 6000]]
+ },
+ {
+  "why": "Images inside images.",
+  "parts": [["![", 6000], ["](b)", 6000]]
+ },
+ {
+  "why": "Destinations in angle brackets that never close. Each one used to read to the end of the text.",
+  "parts": [["[a](<", 6400]]
+ },
+ {
+  "why": "Titles in brackets that never close, for the same reason.",
+  "parts": [["[a](b (", 4500]]
+ },
+ {
+  "why": "Reference labels that never close.",
+  "parts": [["[a][b", 6400]]
+ },
+ {
+  "why": "One reference label past the length a label may have.",
+  "parts": [["[a][", 1], ["b", 32000], ["]", 1]]
+ },
+ {
+  "why": "Runs of backticks that are all different lengths, none of which closes.",
+  "parts": [["`", 250, "rising"]]
+ },
+ {
+  "why": "Code spans.",
+  "parts": [["`a` ", 8000]]
+ },
+ {
+  "why": "Angle brackets. Dart used to copy the rest of the text at every one.",
+  "parts": [["<", 32000]]
+ },
+ {
+  "why": "Tags that never close.",
+  "parts": [["<a ", 10000]]
+ },
+ {
+  "why": "Attributes that never close.",
+  "parts": [["<a b=\"", 5000]]
+ },
+ {
+  "why": "A tag with a great many attributes.",
+  "parts": [["<a ", 1], ["b ", 16000]]
+ },
+ {
+  "why": "A comment that never closes.",
+  "parts": [["<!-- ", 1], ["a", 32000]]
+ },
+ {
+  "why": "Inline HTML that does close.",
+  "parts": [["<b>a</b> ", 3500]]
+ },
+ {
+  "why": "Autolinks that never close.",
+  "parts": [["<a:", 10000]]
+ },
+ {
+  "why": "Bare addresses, each of which used to copy the text after it in Dart, and to go on the stack here.",
+  "parts": [["http://a.b/ ", 2700]]
+ },
+ {
+  "why": "An address ending in closing brackets, which were counted again for each one.",
+  "parts": [["http://a.b/", 1], [")", 32000]]
+ },
+ {
+  "why": "Something that keeps nearly being an e-mail address.",
+  "parts": [["a.b@", 8000]]
+ },
+ {
+  "why": "Hard breaks of two spaces.",
+  "parts": [["a  \n", 8000]]
+ },
+ {
+  "why": "Hard breaks of a backslash.",
+  "parts": [["a\\\n", 10000]]
+ },
+ {
+  "why": "Emphasis that never closes.",
+  "parts": [["*a ", 10000]]
+ },
+ {
+  "why": "Underscores either side of a word.",
+  "parts": [["_", 16000], ["a", 1], ["_", 16000]]
+ },
+ {
+  "why": "Two kinds of emphasis, neither of which closes.",
+  "parts": [["*a_ ", 8000]]
+ },
+ {
+  "why": "Inline directives whose labels never close, read to the end of the line from every colon.",
+  "parts": [[":a[b", 8000]]
+ },
+ {
+  "why": "Inline directives inside each other, which ran out of stack at twenty-four kilobytes.",
+  "parts": [[":a[", 10000], ["x", 1], ["]", 10000]]
+ },
+ {
+  "why": "Container directives inside each other.",
+  "parts": [[":::note\n", 2000], ["a\n", 1], [":::\n", 2000]]
+ },
+ {
+  "why": "Quotation markers on one line.",
+  "parts": [["> ", 16000], ["a", 1]]
+ },
+ {
+  "why": "List markers on one line.",
+  "parts": [["- ", 16000], ["a", 1]]
+ },
+ {
+  "why": "A long run of letters with nothing to stop on.",
+  "parts": [["a", 32000]]
+ },
+ {
+  "why": "Character references.",
+  "parts": [["&amp; ", 5000]]
+ }
+]
