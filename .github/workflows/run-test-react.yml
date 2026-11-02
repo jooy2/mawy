@@ -47,6 +47,31 @@ jobs:
       - name: Size
         run: npm run size
 
+  # What a key costs on a long document, in the job's summary. A report rather
+  # than a gate: a millisecond belongs to the runner it was read on, so what can
+  # fail a change is counted in `cost.test.tsx` and `slow.test.ts` instead, and
+  # a failure here says something about the script and nothing about the change.
+  latency:
+    runs-on: ubuntu-latest
+    name: Latency report
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        name: Setup Node.js
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: packages/react/package-lock.json
+      - run: npm ci
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+      - name: Latency
+        run: npm run latency
+
   run-test-react:
     runs-on: ${{ matrix.os }}
     name: Test Node.js ${{ matrix.node_version }} on ${{ matrix.os }} (${{ matrix.browser }})

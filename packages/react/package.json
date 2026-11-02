@@ -20,6 +20,7 @@
   },
   "scripts": {
     "build": "node scripts/clean.mjs && tsc --project tsconfig.prod.json && node scripts/build-styles.mjs",
+    "latency": "node scripts/latency.mjs",
     "lint": "eslint . --report-unused-disable-directives",
     "parity": "tsx scripts/parity.mjs",
     "lint:fix": "eslint . --report-unused-disable-directives --fix",

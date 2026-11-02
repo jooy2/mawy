@@ -103,11 +103,12 @@ npm run typecheck    # tsc, source and tests
 npm test             # Vitest, in a real browser
 npm run build        # what `npm publish` would compile
 npm run size         # a real bundle of `dist/`, against `size-budget.json`
+npm run latency      # what a key costs on a long document, as a table
 ```
 
 `npm run size` needs `npm run build` to have run, since it bundles what would be published rather than what is in `src/`. It fails a change that puts a scenario more than two per cent over the number recorded in `size-budget.json`. If that is the change you meant, `npm run size -- --update` writes the new numbers back, and they go in the same commit. The site's [getting started](https://mawy.cdget.com/guide/getting-started) page quotes these figures, so a change that moves them moves those too.
 
-**What a change costs is checked by counting, not by the clock.** A time belongs to the machine it was read on, so a test that reads one either fails on a busy runner or is too loose to mean anything. `packages/react/test/components/editor/cost.test.tsx` counts how many times a key reads the text and what it touches on the page. `packages/flutter/tool/slow.json` lists documents shaped to be slow, and both packages parse each one at two lengths and compare: eight times the length has to take about eight times as long, whatever the machine. A shape added to that list is a shape both parsers answer, and a parser that makes a copy of the text somewhere fails it without anybody having to think of the case.
+**What a change costs is checked by counting, not by the clock.** A time belongs to the machine it was read on, so a test that reads one either fails on a busy runner or is too loose to mean anything. `packages/react/test/components/editor/cost.test.tsx` counts how many times a key reads the text and what it touches on the page. `packages/flutter/tool/slow.json` lists documents shaped to be slow, and both packages parse each one at two lengths and compare: eight times the length has to take about eight times as long, whatever the machine. A shape added to that list is a shape both parsers answer, and a parser that makes a copy of the text somewhere fails it without anybody having to think of the case. `npm run latency` is the one place a time is read, against a production build of React, and it is a report on CI rather than a gate.
 
 For the Flutter package:
 
