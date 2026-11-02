@@ -402,6 +402,21 @@ describe('a picture', () => {
 
     await writes(`\n\nend${PICTURE}`);
   });
+
+  it('survives a syllable composed beside it, with nothing else in the paragraph', async () => {
+    const { body, writes } = await editing(PICTURE);
+    const paragraph = body.querySelector('p') as Element;
+
+    beside(body, paragraph, 1);
+    await settled();
+
+    body.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    paragraph.appendChild(document.createTextNode('한'));
+    body.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '한' }));
+
+    await writes(`${PICTURE}한`);
+    expect(body.querySelector('img')).not.toBeNull();
+  });
 });
 
 describe('a place the arrows stop', () => {

@@ -676,11 +676,13 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       }
 
       const refuse = (event: Event) => {
+        const input = event as InputEvent;
+
         // A composition is the one thing the browser is allowed to do to this
         // tree. Refusing an `insertCompositionText` is refusing the composition
         // itself, and an editor that does that to a Korean keyboard eats
         // characters. What it did is read back in `compositionend` below.
-        if (composing.current) {
+        if (composing.current && /Composition/.test(input.inputType)) {
           return;
         }
 
@@ -688,11 +690,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
         const now = latest.current;
 
-        if (now.readOnly) {
+        // Anything else that arrives before the composition has said it is
+        // over is a change to a tree nothing is reading back yet.
+        if (now.readOnly || composing.current) {
           return;
         }
 
-        const input = event as InputEvent;
         const edit = editFor(
           input,
           element,
@@ -1076,7 +1079,11 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
-        const between = node.nodeType === 1 && Boolean(node.textContent);
+        // Anything in the element at all, a picture or a task's box included:
+        // only an element with nothing in it can be emptied again afterwards,
+        // and emptying one with a picture in it took React's own node away and
+        // the whole editor with it on the next render.
+        const between = node.nodeType === 1 && Boolean(node.firstChild);
         // Where the run of text starts rather than where the caret is, so the
         // caret's own answer is not the one being asked for here. Between two
         // things there is no run, and the caret's place is the answer.
@@ -1131,11 +1138,14 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         }
 
         const after = spacedBack(contentOf(was.host), was.before, value.slice(was.start));
-        const grown = after.length - was.before.length;
+        // The run as the document has it, since that is what `after` has been
+        // put back into: a no-break space drawn for a space is a space here.
+        const written = spacedBack(was.before, was.before, value.slice(was.start));
+        const grown = after.length - written.length;
         const typed =
           grown > 0 &&
-          after.slice(0, was.offset) === was.before.slice(0, was.offset) &&
-          after.slice(was.offset + grown) === was.before.slice(was.offset)
+          after.slice(0, was.offset) === written.slice(0, was.offset) &&
+          after.slice(was.offset + grown) === written.slice(was.offset)
             ? after.slice(was.offset, was.offset + grown)
             : '';
 

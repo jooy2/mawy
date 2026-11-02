@@ -46,6 +46,8 @@
 
 - **`Backspace` did nothing at the very start of a document.** A heading, a list item or a quotation that opens a document gives its marker up now. WebKit does not send `beforeinput` for that key there, so it is answered from `keydown` as well.
 
+- **A syllable composed beside a picture or a task's box took the whole editor down.** The element was emptied to put it back, which removed a node React drew. Words composed after a space a bold run ended with now stay in the run, as they do when typed.
+
 - **`Enter` could write any number of blank lines from the start of a paragraph.** It is refused there as it is on an empty paragraph. `Enter` straight after three backticks has nothing to do, because the fence is already open with the caret on its first line, and it no longer puts a blank line in front of the code. A quotation left by `Enter` no longer leaves an empty `> ` line behind it.
 
 - **`Mod`+`A` in a document that is nothing but a table only emptied its cells.** Everything selected is everything taken out.
