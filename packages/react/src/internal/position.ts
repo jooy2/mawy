@@ -247,11 +247,28 @@ const WRITTEN_AS = new Map<string, string[]>([
   ['\u203a', ["'"]]
 ]);
 
+/** A character reference, which is drawn as the one character it stands for. */
+const REFERENCE = /^&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6});/;
+
+/** The same thing inside a pattern, for the characters a reference may have been written for. */
+const REFERENCE_FORM = '&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6});';
+
+/** The longest reference there is, with room to spare, so finding one reads no further. */
+const REFERENCE_LONGEST = 40;
+
 /**
  * A line the document wrote differently from the way it is drawn — with
- * backslash escapes in it, or with marks the typographer put there — found at
- * or after `cursor` and ending by `limit`, as the rows either side of each
- * place the two disagree. `null` where it is not there that way either.
+ * backslash escapes in it, with character references, or with marks the
+ * typographer put there — found at or after `cursor` and ending by `limit`, as
+ * the rows either side of each place the two disagree. `null` where it is not
+ * there that way either.
+ *
+ * A reference is one drawn character for several written ones, so without this
+ * every place after `&amp;` was counted short: a letter typed there landed
+ * inside the next reference and turned it into words, and the caret went to
+ * the start of the block. Letters and digits are left out of what a reference
+ * may stand for, because a line that writes them that way is rare and a pattern
+ * that allows it for every letter is as long as the line times the alternatives.
  */
 function writtenLine(
   text: string,
@@ -263,17 +280,24 @@ function writtenLine(
   // keeps a line that is not in the document this way either from being a
   // search to the end of it.
   const within = text.slice(cursor, limit);
+  const references = within.includes('&');
 
-  if (!line || (!within.includes('\\') && ![...line].some((each) => WRITTEN_AS.has(each)))) {
+  if (
+    !line ||
+    (!references && !within.includes('\\') && ![...line].some((each) => WRITTEN_AS.has(each)))
+  ) {
     return null;
   }
 
   const pattern = [...line]
     .map((character) => {
-      const forms = WRITTEN_AS.get(character);
-      const literal = forms
-        ? `(?:${[character, ...forms].map(quoted).join('|')})`
-        : quoted(character);
+      const forms = [character, ...(WRITTEN_AS.get(character) ?? [])].map(quoted);
+
+      if (references && !/[a-zA-Z0-9]/.test(character)) {
+        forms.push(REFERENCE_FORM);
+      }
+
+      const literal = forms.length > 1 ? `(?:${forms.join('|')})` : forms[0];
 
       return ESCAPABLE.test(character) ? `\\\\?${literal}` : literal;
     })
@@ -302,6 +326,22 @@ function writtenLine(
       pieces.push(piece);
       source += 1;
       piece = { at: drawn, from: start + source, length: 0 };
+    }
+
+    // A reference, standing for the character drawn in its place. Unless the
+    // line says those characters as they are, which is `&foo;`, naming nothing.
+    const reference =
+      written[source] === '&'
+        ? REFERENCE.exec(written.slice(source, source + REFERENCE_LONGEST))
+        : null;
+
+    if (reference && !line.startsWith(reference[0], drawn)) {
+      pieces.push(piece);
+      source += reference[0].length;
+      drawn += (line.codePointAt(drawn) ?? 0) > 0xffff ? 2 : 1;
+      piece = { at: drawn, from: start + source, length: 0 };
+
+      continue;
     }
 
     // A mark the typographer drew, standing for a run longer than itself. The

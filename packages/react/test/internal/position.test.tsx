@@ -27,6 +27,33 @@ function at(container: HTMLElement, source: string, value: string, offset = 0): 
 }
 
 describe('a run of text', () => {
+  it('is found past a character reference, a place at a time', async () => {
+    const source = 'a &amp; b &copy; c';
+    const screen = await render(<MawyViewer value={source} />);
+    const drawn = 'a & b © c';
+
+    expect(at(screen.container, source, drawn, 2)).toBe(source.indexOf('&amp;'));
+    expect(at(screen.container, source, drawn, 3)).toBe(source.indexOf(' b'));
+    expect(at(screen.container, source, drawn, 7)).toBe(source.indexOf(' c'));
+    expect(at(screen.container, source, drawn, 9)).toBe(source.length);
+  });
+
+  it('is put back on the page past a character reference', async () => {
+    const source = 'a &amp; b';
+    const screen = await render(<MawyViewer value={source} />);
+    const place = domAt(screen.container, source.indexOf('b'), source);
+
+    expect(place?.node.textContent).toBe('a & b');
+    expect(place?.offset).toBe(4);
+  });
+
+  it('reads a reference that names nothing as the characters it is', async () => {
+    const source = 'a &nothing; b';
+    const screen = await render(<MawyViewer value={source} />);
+
+    expect(at(screen.container, source, source, 12)).toBe(12);
+  });
+
   it('is found where it was written, inside a paragraph', async () => {
     const source = 'A paragraph with words in it.';
     const screen = await render(<MawyViewer value={source} />);

@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **Text after a character reference went in the wrong place.** Every place after `&amp;` or `&copy;` in a paragraph was counted short, so a letter typed there landed inside the next reference, turned it into words, and sent the caret to the start of the block. References are found a character at a time now, and one key takes a whole one out.
+
 ## 1.8.0 (2026-09-24)
 
 ### Added
