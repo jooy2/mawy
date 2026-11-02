@@ -39,6 +39,7 @@ import {
   tableOfSize,
   tableRangeAt,
   tableSpanAt,
+  carryQuote,
   continueList,
   hardBreak,
   headingActive,
@@ -2895,11 +2896,14 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         return;
       }
 
-      // Carrying a list marker down is a thing done to a line of Markdown. In
+      // Carrying a marker down is a thing done to a line of Markdown. In
       // the drawn document `Enter` is an `insertParagraph`, which the surface
       // answers for in the container it was pressed in — this one is a list,
       // and that one is every one of them.
-      const next = showDocument ? null : continueList(state, parse?.definitionLists ?? true);
+      const definitions = parse?.definitionLists ?? true;
+      const next = showDocument
+        ? null
+        : (continueList(state, definitions) ?? carryQuote(state, definitions));
 
       // A second blank line, refused the way a second space is. One line ending
       // is a line, two are the blank line that separates two blocks, and a

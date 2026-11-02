@@ -58,9 +58,13 @@
 
 - **`Shift`+`Enter` at the very end of a paragraph looked as though nothing had happened.** CommonMark reads no break at the end of a paragraph, so the two spaces and the line ending were written, nothing was drawn, and the caret stayed on the line above. The line is drawn now for as long as the caret is on it, `Backspace` takes it back and `Enter` ends the paragraph. At the end of a bold run the break goes after the closing marker rather than tearing it off, and in a heading, which holds no break, the key ends the heading.
 
+- **Pressing `Enter` on a list inside a quotation left the list.** The next item is written now, on both surfaces.
+
 ### Changed
 
 - **`Tab` in a code block on the `wysiwyg` surface indents**, as it does on the source. `Escape` then `Tab` is still the way out.
+
+- **`Enter` on a quoted line of the source carries `> ` down**, the way a list item carries its bullet, and on an empty quoted line takes it away with a blank line under the quotation. It was a bare line ending, so the source and the formatted document answered the same key differently. A `>` inside a code block is a character and nothing is carried, unless the block is inside the quotation. A list inside a quotation goes on as a list.
 
 ## 1.8.0 (2026-09-24)
 

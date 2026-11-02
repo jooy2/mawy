@@ -831,6 +831,76 @@ String _partedFrom(String value, int at) {
 /// A line a quotation carries, which is the quotation's rather than an item's.
 final RegExp _quotedLine = RegExp(r'^[ \t]*>');
 
+/// A quoted line up to some place in it: what carries it, then what it says.
+final RegExp _quotedRun = RegExp(r'^((?:[ \t]*>[ \t]?)+)(.*)$');
+
+/// `Enter` on a quoted line of the source, which carries its marker down the way
+/// [continueList] carries a bullet. `null` where the line is not quoted.
+///
+/// One line ending and the marker: on the source a press writes a line, and a
+/// second line of a quotation is the same paragraph going on. On an empty quoted
+/// line the marker goes instead, parted from the quotation by a blank line, or
+/// the next word would be that paragraph's lazy continuation. In front of a
+/// line's words the line is pushed down, as an item is. Inside a code block a
+/// `>` is a character, unless the block is itself inside the quotation.
+EditState? carryQuote(EditState state, {bool definitionLists = true}) {
+  final String value = state.value;
+  final int start = state.start;
+  final int from = start <= 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1;
+  final RegExpMatch? quote = start == state.end
+      ? _quotedRun.firstMatch(value.substring(from, start))
+      : null;
+
+  if (quote == null) {
+    return null;
+  }
+
+  final MdCode? code = fencedAt(value, start);
+
+  if (code != null) {
+    final int fence = code.range.start;
+    final int line = fence <= 0 ? 0 : value.lastIndexOf('\n', fence - 1) + 1;
+
+    if (!_quotedLine.hasMatch(value.substring(line, fence))) {
+      return null;
+    }
+  }
+
+  final String marker = quote.group(1)!;
+  final String content = quote.group(2)!;
+  final int stop = value.indexOf('\n', start);
+  final int to = stop == -1 ? value.length : stop;
+
+  final String rest = value.substring(start, to);
+
+  if (content.trim().isEmpty && rest.trim().isEmpty) {
+    final String without = value.substring(0, from) + value.substring(to);
+    final String parted = _partedFrom(without, from);
+    final int at = from + parted.length;
+
+    return EditState(without.substring(0, from) + parted + without.substring(from), at, at);
+  }
+
+  // A list inside the quotation is a list first, read without what carries it
+  // and written back with it on every line.
+  final EditState? item = continueList(
+    EditState(content + rest, content.length, content.length),
+    definitionLists: definitionLists,
+  );
+
+  if (item != null) {
+    final String lines = item.value.split('\n').map((String line) => marker + line).join('\n');
+    final int before = item.value.substring(0, item.start).split('\n').length;
+    final int at = from + item.start + marker.length * before;
+
+    return EditState(value.substring(0, from) + lines + value.substring(to), at, at);
+  }
+
+  final int at = start + 1 + marker.length;
+
+  return EditState('${value.substring(0, start)}\n$marker${value.substring(start)}', at, at);
+}
+
 final RegExp _anyItem = RegExp(r'^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]', multiLine: true);
 
 /// The first line of the list item a line of words carries on, read the way

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   commandActive,
+  carryQuote,
   continueList,
   crowdedBy,
   hardBreak,
@@ -160,6 +161,40 @@ describe('line markers', () => {
     expect(run('taskList', '«a\n\nb»')).toBe('«- [ ] a\n\n- [ ] b»');
     // Which is the answer an ordered list has always given.
     expect(run('orderedList', '«a\n\nb»')).toBe('«1. a\n\n2. b»');
+  });
+
+  it('carries a quoted line down the way a list carries a bullet', () => {
+    const enter = (marked: string) => {
+      const state = at(marked);
+      const next = carryQuote(state);
+
+      return next && `${next.value.slice(0, next.start)}|${next.value.slice(next.start)}`;
+    };
+
+    expect(enter('> one|')).toBe('> one\n> |');
+    expect(enter('> > deep|')).toBe('> > deep\n> > |');
+    expect(enter('> o|ne')).toBe('> o\n> |ne');
+    expect(enter('> |one')).toBe('> \n> |one');
+    // An empty quoted line gives its marker up, with a blank line under the
+    // quotation so that the next word is not its lazy continuation.
+    expect(enter('> one\n> |')).toBe('> one\n\n|');
+    expect(enter('> |')).toBe('|');
+    expect(enter('words|')).toBe(null);
+  });
+
+  it('carries a list inside a quotation as a list', () => {
+    const state = at('> - one|');
+    const next = carryQuote(state);
+
+    expect(next?.value).toBe('> - one\n> - ');
+    expect(next?.start).toBe(next?.value.length);
+    expect(carryQuote(at('> 1. one|'))?.value).toBe('> 1. one\n> 2. ');
+    expect(carryQuote(at('> - |'))?.value).toBe('> ');
+  });
+
+  it('leaves a `>` in a code block alone, unless the block is in the quotation', () => {
+    expect(carryQuote(at('```\n> code|\n```'))).toBe(null);
+    expect(carryQuote(at('> ```\n> code|\n> ```'))?.value).toBe('> ```\n> code\n> \n> ```');
   });
 
   it('pushes an item down from in front of its words rather than giving its marker up', () => {

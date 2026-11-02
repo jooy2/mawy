@@ -821,6 +821,70 @@ function partedFrom(value: string, at: number): string {
 /** A line a quotation carries, which is the quotation's rather than an item's. */
 const QUOTED_LINE = /^[ \t]*>/;
 
+/** A quoted line up to some place in it: what carries it, then what it says. */
+const QUOTED_RUN = /^((?:[ \t]*>[ \t]?)+)(.*)$/;
+
+/**
+ * `Enter` on a quoted line of the source, which carries its marker down the way
+ * `continueList` carries a bullet. `null` where the line is not quoted.
+ *
+ * One line ending and the marker: on the source a press writes a line, and a
+ * second line of a quotation is the same paragraph going on. On an empty quoted
+ * line the marker goes instead, parted from the quotation by a blank line, or
+ * the next word would be that paragraph's lazy continuation. In front of a
+ * line's words the line is pushed down, as an item is. Inside a code block a
+ * `>` is a character, unless the block is itself inside the quotation.
+ */
+export function carryQuote(state: EditState, definitionLists = true): EditState | null {
+  const { value, start, end } = state;
+  const from = lineStartOf(value, start);
+  const quote = start === end ? QUOTED_RUN.exec(value.slice(from, start)) : null;
+  const code = quote ? fencedAt(value, start) : null;
+
+  if (
+    !quote ||
+    (code && !QUOTED_LINE.test(value.slice(lineStartOf(value, code.range.start), code.range.start)))
+  ) {
+    return null;
+  }
+
+  const [, marker, content] = quote;
+  const stop = value.indexOf('\n', start);
+  const to = stop === -1 ? value.length : stop;
+  const rest = value.slice(start, to);
+
+  if (!content.trim() && !rest.trim()) {
+    const without = value.slice(0, from) + value.slice(to);
+    const parted = partedFrom(without, from);
+    const at = from + parted.length;
+
+    return { value: without.slice(0, from) + parted + without.slice(from), start: at, end: at };
+  }
+
+  // A list inside the quotation is a list first, read without what carries it
+  // and written back with it on every line.
+  const item = continueList(
+    { value: content + rest, start: content.length, end: content.length },
+    definitionLists
+  );
+
+  if (item) {
+    const lines = item.value.split('\n');
+    const before = item.value.slice(0, item.start).split('\n').length;
+    const at = from + item.start + marker.length * before;
+
+    return {
+      value: value.slice(0, from) + lines.map((line) => marker + line).join('\n') + value.slice(to),
+      start: at,
+      end: at
+    };
+  }
+
+  const at = start + 1 + marker.length;
+
+  return { value: `${value.slice(0, start)}\n${marker}${value.slice(start)}`, start: at, end: at };
+}
+
 /** A line that might open a list item, somewhere in a document. */
 const ANY_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]/m;
 

@@ -220,32 +220,32 @@ Only a keystroke is refused. A document pasted in, opened from a file or handed 
 
 Every button on the toolbar runs a command that also has a keyboard shortcut. No command is reachable only from the toolbar, because that would make the editor unusable without a pointer.
 
-|                         |                                        |
-| ----------------------- | -------------------------------------- |
-| `Mod` + `B`             | Bold                                   |
-| `Mod` + `I`             | Italic                                 |
-| `Mod` + `Shift` + `X`   | Strikethrough                          |
-| `Mod` + `E`             | Code                                   |
-| `Mod` + `K`             | Link                                   |
-| `Mod` + `Shift` + `K`   | Image                                  |
-| `Mod` + `Shift` + `.`   | Quotation                              |
-| `Mod` + `Shift` + `8`   | Bulleted list                          |
-| `Mod` + `Shift` + `7`   | Numbered list                          |
-| `Mod` + `Shift` + `9`   | Task list                              |
-| `Mod` + `Shift` + `E`   | Code block                             |
-| `Mod` + `Shift` + `,`   | Divider                                |
-| `Mod` + `Alt` + `F`     | Footnote                               |
-| `Mod` + `1` to `6`      | Heading 1 to 6                         |
-| `Mod` + `0`             | Body text                              |
-| `Mod` + `F`             | Find and replace                       |
-| `Mod` + `S`             | Save                                   |
-| `Mod` + `Shift` + `U`   | Upload an image                        |
-| `Tab` / `Shift` + `Tab` | Indent, outdent                        |
-| `Mod` + `Z`             | Undo                                   |
-| `Mod` + `Shift` + `Z`   | Redo, and `Ctrl` + `Y` as well         |
-| `Enter`                 | Carries a list marker to the next line |
-| `Shift` + `Enter`       | A line break inside the block          |
-| `Home` / `End`          | The ends of the line                   |
+|                         |                                    |
+| ----------------------- | ---------------------------------- |
+| `Mod` + `B`             | Bold                               |
+| `Mod` + `I`             | Italic                             |
+| `Mod` + `Shift` + `X`   | Strikethrough                      |
+| `Mod` + `E`             | Code                               |
+| `Mod` + `K`             | Link                               |
+| `Mod` + `Shift` + `K`   | Image                              |
+| `Mod` + `Shift` + `.`   | Quotation                          |
+| `Mod` + `Shift` + `8`   | Bulleted list                      |
+| `Mod` + `Shift` + `7`   | Numbered list                      |
+| `Mod` + `Shift` + `9`   | Task list                          |
+| `Mod` + `Shift` + `E`   | Code block                         |
+| `Mod` + `Shift` + `,`   | Divider                            |
+| `Mod` + `Alt` + `F`     | Footnote                           |
+| `Mod` + `1` to `6`      | Heading 1 to 6                     |
+| `Mod` + `0`             | Body text                          |
+| `Mod` + `F`             | Find and replace                   |
+| `Mod` + `S`             | Save                               |
+| `Mod` + `Shift` + `U`   | Upload an image                    |
+| `Tab` / `Shift` + `Tab` | Indent, outdent                    |
+| `Mod` + `Z`             | Undo                               |
+| `Mod` + `Shift` + `Z`   | Redo, and `Ctrl` + `Y` as well     |
+| `Enter`                 | Carries a list or quotation marker |
+| `Shift` + `Enter`       | A line break inside the block      |
+| `Home` / `End`          | The ends of the line               |
 
 `Mod` is Command or Control, whichever the machine has. Both are accepted rather than guessed at.
 
@@ -286,6 +286,8 @@ A number outside one to six is left out.
 Every command is a **toggle**: pressing `Mod`+`B` on bold text unbolds it, and the toolbar button shows which are in force. Markers replace each other rather than stacking, so turning a numbered list into a bulleted one gives a bulleted list and not `- 1. item`. The code block is taken off from anywhere inside it, since a caret in a code block asking for one is asking for it to stop being one — and it is the only command that answers from in there. Everything in a code block is the characters it is, so there is no formatting to turn on or off: `**` put around a word in code is two asterisks and a word, and a `>` somebody typed is a greater-than sign. So with the caret in one, every other button and every other key is disabled, and none of them reads a marker in the code as formatting it should be drawn pressed for. On a line with nothing on it yet, the lists, the quotation and the headings write their marker for the words still to come, and a caret stays among the words it was among rather than coming out selected around the line.
 
 `Enter` at the end of a list item carries the marker down and counts an ordered list on, from the line an item runs on over as well as from its first. Pressing it again on the item that is still empty takes the marker away instead of making another. Without that, leaving a list would mean deleting the bullet the editor had just added.
+
+**A quoted line carries its marker the same way.** `Enter` writes `> ` on the next line and on an empty quoted line takes it away, with a blank line under the quotation so that the next word is not read as its paragraph going on. A list inside a quotation goes on as a list. Inside a code block a `>` is a character and nothing is carried, unless the block is itself inside the quotation. The formatted document is the other half of this: there `Enter` ends the paragraph, which takes a blank quoted line.
 
 **Leaving a list leaves it a blank line away.** A line of words straight under a list item is that item's lazy continuation to CommonMark, drawn at the end of it — so a marker given up with one line ending under the list left the caret somewhere the next word would join the item above, and the `Enter` after that carried the marker back down over a line the parser reads as the item's. At the end of a list the blank line goes in as the marker comes out. In the middle of one there is nowhere to put it: one blank line is already between the two items, and a second is the run neither surface will write. So the line waits, and the first letter typed on it writes the blank line and becomes a paragraph of its own.
 

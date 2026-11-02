@@ -1291,9 +1291,12 @@ class _MawyEditorState extends State<MawyEditor> {
   }
 
   /// `Enter` on a list item carries the marker down, and gives it up on an item
-  /// still empty. `null` is "this is not a list item", and `Enter` is `Enter`.
+  /// still empty, and a quoted line does the same. `null` is "neither of those",
+  /// and `Enter` is `Enter`.
   bool _enter() {
-    final EditState? carried = continueList(_state, definitionLists: widget.parse.definitionLists);
+    final EditState? carried =
+        continueList(_state, definitionLists: widget.parse.definitionLists) ??
+        carryQuote(_state, definitionLists: widget.parse.definitionLists);
 
     if (carried == null || widget.readOnly) {
       return false;

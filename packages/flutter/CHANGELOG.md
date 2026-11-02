@@ -8,6 +8,10 @@
 
 - **`Enter` in front of a list item's words gave its marker up.** `continueList` read the line up to the caret and nothing after it, so `- |one` was taken for an empty item and lost its bullet. The item goes down whole now, and the same is true of the React package.
 
+### Changed
+
+- **`Enter` on a quoted line carries `> ` down**, the way a list item carries its bullet, and on an empty quoted line takes it away with a blank line under the quotation. It was a bare line ending. A `>` inside a code block is a character and nothing is carried, unless the block is inside the quotation. A list inside a quotation goes on as a list. The React package's source surface does the same.
+
 ## 1.8.0 (2026-09-24)
 
 ### Added

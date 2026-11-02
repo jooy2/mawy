@@ -4,6 +4,7 @@ import 'package:mawy/src/editor/commands.dart'
     show
         MawyCrowding,
         MawyTableCommand,
+        carryQuote,
         crowdedBy,
         hardBreak,
         headingActive,
@@ -461,6 +462,38 @@ void main() {
 
     test('answers for a fence a document never closed the same way', () {
       expect(active(MawyCommand.quote, '```\n> co|de'), isFalse);
+    });
+  });
+
+  group('Enter, on a quoted line', () {
+    String? enter(String marked) {
+      final EditState? next = carryQuote(at(marked));
+
+      return next == null ? null : show(next);
+    }
+
+    test('carries the marker down the way a list carries a bullet', () {
+      expect(enter('> one|'), '> one\n> |');
+      expect(enter('> > deep|'), '> > deep\n> > |');
+      expect(enter('> o|ne'), '> o\n> |ne');
+      expect(enter('> |one'), '> \n> |one');
+      expect(enter('words|'), isNull);
+    });
+
+    test('gives the marker up on an empty quoted line, parted from the quotation', () {
+      expect(enter('> one\n> |'), '> one\n\n|');
+      expect(enter('> |'), '|');
+    });
+
+    test('carries a list inside a quotation as a list', () {
+      expect(enter('> - one|'), '> - one\n> - |');
+      expect(enter('> 1. one|'), '> 1. one\n> 2. |');
+      expect(enter('> - |'), '> |');
+    });
+
+    test('leaves a `>` in a code block alone, unless the block is in the quotation', () {
+      expect(enter('```\n> code|\n```'), isNull);
+      expect(enter('> ```\n> code|\n> ```'), '> ```\n> code\n> |\n> ```');
     });
   });
 

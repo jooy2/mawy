@@ -369,6 +369,18 @@ describe('Shift+Enter', () => {
   });
 });
 
+describe('a list inside a quotation', () => {
+  it('goes on as a list', async () => {
+    const { body, writes } = await editing('> - one');
+
+    put(body, 'one', 3);
+    await settled();
+    await userEvent.keyboard('{Enter}two');
+
+    await writes('> - one\n> - two');
+  });
+});
+
 describe('a heading typed over', () => {
   it('takes the level typed in front of its words', async () => {
     const { body, writes } = await editing('## Title');

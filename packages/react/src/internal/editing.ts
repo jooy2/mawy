@@ -17,6 +17,7 @@
  */
 
 import {
+  carryQuote,
   continueList,
   fencedAt,
   hardBreak,
@@ -1129,6 +1130,9 @@ export function fenceKept(was: string, at: number, edit: MawyEdit): MawyEdit {
 /** A quotation carries its own marker down the way a list carries a bullet. */
 const QUOTED = /^((?:[ \t]*>[ \t]?)+)(.*)$/;
 
+/** A line that opens a list item, with whatever carries it taken off. */
+const ITEM_OPENS = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]/;
+
 function continueQuote(value: string, caret: number): MawyEdit | null {
   const from = value.lastIndexOf('\n', caret - 1) + 1;
   const quote = QUOTED.exec(value.slice(from, caret));
@@ -1139,6 +1143,13 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
 
   const [, marker, content] = quote;
   const stop = value.indexOf('\n', caret);
+
+  // A list inside the quotation goes on as a list. See `carryQuote`.
+  if (ITEM_OPENS.test(content)) {
+    const carried = carryQuote({ value, start: caret, end: caret });
+
+    return carried && { value: carried.value, caret: carried.start };
+  }
 
   if (!content.trim() && value.slice(caret, stop === -1 ? value.length : stop).trim()) {
     // In front of the words of a quoted line, which is the line pushed down
