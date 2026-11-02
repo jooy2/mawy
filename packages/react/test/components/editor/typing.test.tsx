@@ -60,6 +60,34 @@ function beside(root: HTMLElement, parent: Element, offset: number): void {
   document.getSelection()?.collapse(parent, offset);
 }
 
+/** The words a selection goes between, in two runs of text. */
+function select(root: HTMLElement, from: [string, number], to: [string, number]): void {
+  root.focus();
+
+  const find = (saying: string) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if ((node as Text).data === saying) {
+        return node;
+      }
+    }
+
+    throw new Error(`no text node saying ${JSON.stringify(saying)}`);
+  };
+
+  document.getSelection()?.setBaseAndExtent(find(from[0]), from[1], find(to[0]), to[1]);
+}
+
+/**
+ * A press on a picture, dispatched: the address in these documents fetches
+ * nothing, so there is no picture on the page for a pointer to reach.
+ */
+function press(picture: HTMLElement): void {
+  picture.closest<HTMLElement>('.mawy-document-body')?.focus();
+  picture.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+}
+
 /** Lets the selection the editor reads catch up with one set from outside. */
 const settled = () => new Promise((resolve) => setTimeout(resolve, 30));
 
@@ -107,6 +135,16 @@ describe('a picture', () => {
     await userEvent.keyboard('{Delete}');
 
     await writes(`over${PICTURE}`);
+  });
+
+  it('can be taken out of a document with nothing else in it', async () => {
+    const { body, writes } = await editing(PICTURE);
+
+    press(body.querySelector('img') as HTMLElement);
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+
+    await writes('');
   });
 
   it('keeps letters typed in front of it in front of it', async () => {
@@ -196,6 +234,64 @@ describe('a character', () => {
       await writes('a ');
       await screen.unmount();
     }
+  });
+});
+
+describe('a selection', () => {
+  it('keeps the markers of a run it ends inside', async () => {
+    const { body, writes } = await editing('a **bold** tail');
+
+    select(body, ['bold', 2], [' tail', 3]);
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+
+    await writes('a **bo**il');
+  });
+
+  it('leaves one run where it ends in a run like the one it began in', async () => {
+    const { body, writes } = await editing('**one**\n\n**two**');
+
+    select(body, ['one', 1], ['two', 2]);
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+
+    await writes('**oo**');
+  });
+
+  it('stops at the words of a block when it only reaches the next one', async () => {
+    const remove = await editing('first\n\n# Head');
+
+    select(remove.body, ['first', 0], ['Head', 0]);
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+    await remove.writes('# Head');
+    await remove.screen.unmount();
+
+    const over = await editing('first\n\n# Head');
+
+    select(over.body, ['first', 0], ['Head', 0]);
+    await settled();
+    await userEvent.keyboard('X');
+    await over.writes('X\n\n# Head');
+    await over.screen.unmount();
+
+    const bold = await editing('first\n\n- item');
+
+    select(bold.body, ['first', 0], ['item', 0]);
+    await settled();
+    await userEvent.keyboard('{Control>}b{/Control}');
+    await bold.writes('**first**\n\n- item');
+  });
+
+  it('takes a table with everything else when everything is selected', async () => {
+    const { body, writes } = await editing('| a |\n| - |\n| 1 |');
+
+    put(body, 'a', 0);
+    document.getSelection()?.selectAllChildren(body);
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+
+    await writes('');
   });
 });
 

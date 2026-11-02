@@ -14,6 +14,10 @@
 
 - **Letters typed in front of a picture jumped behind it.** The caret was put inside the `<img>`, which reads back as the end of the picture. `Backspace` and `Delete` beside a picture had the same trouble and took a letter from the wrong side of it.
 
+- **A selection that reached the start of the next block took that block's markers.** A triple press stops there in Chromium and WebKit, so deleting a paragraph over a heading left the heading's words as a paragraph, typing over it joined the two, and bold went round both with a blank line inside. The selection now stops at the words it covers.
+
+- **A selection that ended inside bold or a link took the closing marker.** `**bo` was left drawn as those characters. Whatever is left of a run keeps its markers, typed over or deleted, and two runs of one kind left either side are one run.
+
 - **The last letter of a bold word, a code span or a link left its markers behind.** One key now takes them with it, as a selection of the word already did.
 
 - **`Backspace` and `Delete` cut an emoji in half.** A key took one UTF-16 unit, which left a lone surrogate in the document. Both take the character a reader sees, a family of joined emoji included.
@@ -23,6 +27,8 @@
 - **`Backspace` and `Delete` did nothing at the edge of markup written out as its characters.**
 
 - **`Backspace` did nothing at the very start of a document.** A heading, a list item or a quotation that opens a document gives its marker up now. WebKit does not send `beforeinput` for that key there, so it is answered from `keydown` as well.
+
+- **`Mod`+`A` in a document that is nothing but a table only emptied its cells.** Everything selected is everything taken out.
 
 ## 1.8.0 (2026-09-24)
 

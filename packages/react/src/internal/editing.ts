@@ -1812,12 +1812,83 @@ function targetOf(
   return { start: Math.min(head, tail), end: Math.max(head, tail) };
 }
 
+/** Whether nothing at all is drawn between the start of a block and a place in it. */
+function atStartOf(block: HTMLElement, node: Node, offset: number): boolean {
+  const range = block.ownerDocument.createRange();
+
+  range.selectNodeContents(block);
+  range.setEnd(node, offset);
+
+  return !range.toString() && !range.cloneContents().querySelector('img, br, hr');
+}
+
+/**
+ * A selection that reaches the very start of a later block and stops, which is
+ * what a triple press leaves in Chromium and WebKit, and `Shift` with an arrow.
+ *
+ * On the page nothing of that block is selected. In the document its end is past
+ * the block's markers, so what was read as the selection took them: deleting the
+ * paragraph over a heading left the heading's words as a paragraph, typing over
+ * it joined the two, and bold went round both with a blank line inside.
+ *
+ * `last` is where the words selected end. `from` and `to` are the run a deletion
+ * takes, which is the blank line as well, the whole of the first block where the
+ * selection starts at its start, and none of the markers of the block below.
+ */
+export function reachedBlock(
+  root: HTMLElement,
+  range: AbstractRange,
+  value: string
+): { last: number; from: number; to: number } | null {
+  const first = blockAt(root, range.startContainer);
+  const block = blockAt(root, range.endContainer);
+
+  if (
+    !first ||
+    !block ||
+    first === block ||
+    first.matches(CLOSED) ||
+    block.matches(CLOSED) ||
+    !atStartOf(block, range.endContainer, range.endOffset)
+  ) {
+    return null;
+  }
+
+  const below = rangeOf(block);
+  const start = sourceAt(root, range.startContainer, range.startOffset, value);
+  const top = topOf(root, block);
+  const above = top && top !== topOf(root, first) ? topRange(top.previousElementSibling) : null;
+  const back = above ? null : before(root, range.endContainer, range.endOffset);
+  const last = above?.end ?? (back && sourceAt(root, back.node, back.end, value));
+
+  if (!below || start === null || last === null || last === undefined || last < start) {
+    return null;
+  }
+
+  const whole = atStartOf(first, range.startContainer, range.startOffset);
+  const opens = whole ? (rangeOf(first)?.start ?? start) : start;
+  const line = startOfLine(value, opens);
+
+  return {
+    last,
+    // What a quotation writes in front of its paragraph is that block's too.
+    from: whole && OPENING.test(value.slice(line, opens)) ? line : opens,
+    to: below.start
+  };
+}
+
 /** Where the caret is, in the document and on the page, or `null` for nowhere. */
 function placeOf(
   root: HTMLElement,
   value: string,
   aim: MawyAim | null
-): { start: number; end: number; node: Node; offset: number } | null {
+): {
+  start: number;
+  end: number;
+  node: Node;
+  offset: number;
+  reached?: { from: number; to: number };
+} | null {
   const selection = root.ownerDocument.getSelection();
 
   if (!selection?.rangeCount) {
@@ -1853,7 +1924,15 @@ function placeOf(
   ) {
     const first = textBeside(root, range.startContainer, range.startOffset, false);
 
-    return first ? { start: 0, end: value.length, node: first, offset: 0 } : null;
+    if (first) {
+      return { start: 0, end: value.length, node: first, offset: 0 };
+    }
+
+    // No words anywhere, which is a document of pictures: one selected there
+    // was no selection at all, so nothing could be done to it from the keyboard.
+    if (!blockAt(root, range.startContainer) || !blockAt(root, range.endContainer)) {
+      return { start: 0, end: value.length, node: range.startContainer, offset: 0 };
+    }
   }
 
   // An end that is in no block is moved in, to the nearest run of text that is,
@@ -1866,11 +1945,14 @@ function placeOf(
     return null;
   }
 
+  const reached = reachedBlock(root, range, value);
+
   return {
     start: Math.min(head.at, tail.at),
-    end: Math.max(head.at, tail.at),
+    end: reached?.last ?? Math.max(head.at, tail.at),
     node: head.node,
-    offset: head.offset
+    offset: head.offset,
+    reached: reached ?? undefined
   };
 }
 
@@ -1931,7 +2013,67 @@ function intoClearedCell(value: string, caret: number, text: string): MawyEdit {
 function deleted(value: string, start: number, end: number): MawyEdit {
   const run = widened(value, start, end);
 
-  return splice(value, run.start, run.end, '');
+  return replaced(value, run.start, run.end, '');
+}
+
+/**
+ * A run replaced, with the markers it cut through kept in pairs.
+ *
+ * The drawn document does not show a selection where its ends sit among the
+ * markers, so one that starts in a bold word and ends after it took the closing
+ * marker with it: `**bo` was left drawn as those characters, and the rest of
+ * the paragraph with it. Whichever markers the run takes one of, the words left
+ * on that side are closed or opened again; where both ends are in runs of the
+ * same kind the two left are one run, and nothing is written between them.
+ */
+function replaced(value: string, start: number, end: number, text: string): MawyEdit {
+  if (start === end || !/[*_~`[\]]/.test(value.slice(start, end))) {
+    return splice(value, start, end, text);
+  }
+
+  const document = parseMarkdown(value);
+  const blocks = [...document.root.children, ...document.footnotes];
+  const pieces = (nodes: MdNode[], piece: (words: MdRange, node: MdNode) => string) =>
+    nodes.map((node) => {
+      const words = wordsOf(value, node);
+
+      return words ? piece(words, node) : '';
+    });
+  const closing = pieces(
+    markedAt(blocks, start, []).filter((node) => node.range.end < end),
+    (words, node) => (start <= words.end ? value.slice(words.end, node.range.end) : '')
+  )
+    .reverse()
+    .join('');
+  const opening = pieces(
+    markedAt(blocks, end, []).filter((node) => node.range.start > start),
+    (words, node) => (end >= words.start ? value.slice(node.range.start, words.start) : '')
+  ).join('');
+  const kept = closing === [...opening].reverse().join('') ? '' : closing + opening;
+
+  return {
+    value: value.slice(0, start) + text + kept + value.slice(end),
+    caret: start + text.length
+  };
+}
+
+/** Where the words of a run of formatting or a link are, between its markers. */
+function wordsOf(value: string, node: MdNode): MdRange | null {
+  if (node.type === 'inlineCode') {
+    const ticks = /^`+/.exec(value.slice(node.range.start))?.[0].length ?? 1;
+
+    return { start: node.range.start + ticks, end: node.range.end - ticks };
+  }
+
+  const children = 'children' in node ? (node.children as MdNode[]) : [];
+
+  return (node.type === 'strong' ||
+    node.type === 'emphasis' ||
+    node.type === 'delete' ||
+    node.type === 'link') &&
+    children.length
+    ? { start: children[0].range.start, end: children[children.length - 1].range.end }
+    : null;
 }
 
 /**
@@ -2028,21 +2170,7 @@ function widened(value: string, start: number, end: number): { start: number; en
       }
 
       const children = 'children' in node ? (node.children as MdNode[]) : [];
-      let words: MdRange | null = null;
-
-      if (node.type === 'inlineCode') {
-        const ticks = /^`+/.exec(value.slice(node.range.start))?.[0].length ?? 1;
-
-        words = { start: node.range.start + ticks, end: node.range.end - ticks };
-      } else if (
-        (node.type === 'strong' ||
-          node.type === 'emphasis' ||
-          node.type === 'delete' ||
-          node.type === 'link') &&
-        children.length
-      ) {
-        words = { start: children[0].range.start, end: children[children.length - 1].range.end };
-      }
+      const words = wordsOf(value, node);
 
       if (words && words.start >= from && words.end <= to) {
         from = Math.min(from, node.range.start);
@@ -2132,7 +2260,7 @@ export function typedOver(value: string, start: number, end: number, text: strin
 
   return cleared
     ? intoClearedCell(cleared.value, cleared.start, text)
-    : splice(value, start, end, text);
+    : replaced(value, start, end, text);
 }
 
 /**
@@ -2198,7 +2326,7 @@ function editMade(
   // More than one cell of a table selected: what is deleted or typed is about
   // the cells rather than about the pipes and line endings between them. See
   // `inCells`.
-  if (start !== end && cellsSelected(value, start, end)) {
+  if (start !== end && (start > 0 || end < value.length) && cellsSelected(value, start, end)) {
     return inCells(event, value, start, end);
   }
 
@@ -2276,7 +2404,7 @@ function editMade(
       return listKept(
         value,
         start,
-        rule ?? splice(opened.value, opened.at, opened.at + (end - start), event.data),
+        rule ?? replaced(opened.value, opened.at, opened.at + (end - start), event.data),
         options
       );
     }
@@ -2312,12 +2440,12 @@ function editMade(
     case 'deleteContentBackward':
       return start === end
         ? deleteBefore(root, value, range.startContainer, range.startOffset, start, options)
-        : deleted(value, start, end);
+        : deleted(value, place.reached?.from ?? start, place.reached?.to ?? end);
 
     case 'deleteContentForward':
       return start === end
         ? deleteAfter(root, value, range.startContainer, range.startOffset, start, options)
-        : deleted(value, start, end);
+        : deleted(value, place.reached?.from ?? start, place.reached?.to ?? end);
 
     // The run is on the clipboard by the time this arrives — the browser puts
     // it there before it asks — so what is left is taking it out of the
@@ -2325,7 +2453,9 @@ function editMade(
     // event was refused like any other the switch did not name, and a cut was
     // a copy.
     case 'deleteByCut':
-      return start === end ? null : deleted(value, start, end);
+      return start === end
+        ? null
+        : deleted(value, place.reached?.from ?? start, place.reached?.to ?? end);
 
     // A word, a line, or whatever the platform means by those on the keyboard
     // in front of the reader. The browser has already worked out which
@@ -2339,7 +2469,10 @@ function editMade(
     case 'deleteHardLineBackward':
     case 'deleteHardLineForward':
     case 'deleteEntireSoftLine': {
-      const target = start === end ? targetOf(event, root, value, aim) : { start, end };
+      const target =
+        start === end
+          ? targetOf(event, root, value, aim)
+          : { start: place.reached?.from ?? start, end: place.reached?.to ?? end };
 
       return target && target.start !== target.end
         ? deleted(value, target.start, target.end)

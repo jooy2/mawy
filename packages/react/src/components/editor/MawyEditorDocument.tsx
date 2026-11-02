@@ -48,6 +48,7 @@ import {
   listKept,
   markdownFor,
   openedAt,
+  reachedBlock,
   toggledTask,
   typedOver,
   type MawyAim,
@@ -900,7 +901,14 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         );
 
         if (start !== null && end !== null) {
-          now.onSelect({ start: Math.min(start, end), end: Math.max(start, end) });
+          // What the commands read, so it stops where the words selected stop.
+          // See `reachedBlock`.
+          const reached = selection.isCollapsed ? null : reachedBlock(element, range, now.value);
+
+          now.onSelect({
+            start: Math.min(start, end),
+            end: reached?.last ?? Math.max(start, end)
+          });
         }
       };
 
