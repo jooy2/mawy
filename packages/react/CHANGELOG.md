@@ -10,6 +10,8 @@
 
 - **Text after a character reference went in the wrong place.** Every place after `&amp;` or `&copy;` in a paragraph was counted short, so a letter typed there landed inside the next reference, turned it into words, and sent the caret to the start of the block. References are found a character at a time now, and one key takes a whole one out.
 
+- **`Backspace` under a picture deleted the picture.** A walk over the runs of text steps straight over a picture, so the key found the words above it and took everything in between. The line under a picture joins the picture now, `Delete` above one does the same, and a divider beside a line is what either key takes, rather than the two lines being joined across it.
+
 - **Letters typed in front of a picture jumped behind it.** The caret was put inside the `<img>`, which reads back as the end of the picture. `Backspace` and `Delete` beside a picture had the same trouble and took a letter from the wrong side of it.
 
 - **The last letter of a bold word, a code span or a link left its markers behind.** One key now takes them with it, as a selection of the word already did.
@@ -19,6 +21,8 @@
 - **Letters typed in front of a task's box went after its words.** A caret in front of the box was read as the end of the item.
 
 - **`Backspace` and `Delete` did nothing at the edge of markup written out as its characters.**
+
+- **`Backspace` did nothing at the very start of a document.** A heading, a list item or a quotation that opens a document gives its marker up now. WebKit does not send `beforeinput` for that key there, so it is answered from `keydown` as well.
 
 ## 1.8.0 (2026-09-24)
 

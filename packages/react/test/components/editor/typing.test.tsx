@@ -88,6 +88,27 @@ describe('Enter', () => {
 describe('a picture', () => {
   const PICTURE = '![a](/i.png)';
 
+  it('stays when the line under it is joined to it', async () => {
+    const { body, writes } = await editing(`up\n\n${PICTURE}\n\nunder`);
+
+    put(body, 'under', 0);
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+
+    await writes(`up\n\n${PICTURE}under`);
+    expect(body.querySelector('img')).not.toBeNull();
+  });
+
+  it('stays when the line over it is joined to it', async () => {
+    const { body, writes } = await editing(`over\n\n${PICTURE}`);
+
+    put(body, 'over', 4);
+    await settled();
+    await userEvent.keyboard('{Delete}');
+
+    await writes(`over${PICTURE}`);
+  });
+
   it('keeps letters typed in front of it in front of it', async () => {
     const { body, writes } = await editing(PICTURE);
 
@@ -102,6 +123,16 @@ describe('a picture', () => {
 });
 
 describe('a place the arrows stop', () => {
+  it('takes a divider away from the start of the words under it', async () => {
+    const { body, writes } = await editing('up\n\n---\n\ndown');
+
+    put(body, 'down', 0);
+    await settled();
+    await userEvent.keyboard('{Backspace}');
+
+    await writes('up\n\ndown');
+  });
+
   it("writes in front of a task's words from in front of its box", async () => {
     const { body, writes } = await editing('- [ ] todo');
 
@@ -163,6 +194,25 @@ describe('a character', () => {
       await settled();
       await userEvent.keyboard('{Backspace}');
       await writes('a ');
+      await screen.unmount();
+    }
+  });
+});
+
+describe('the top of the document', () => {
+  it('gives a marker up with Backspace, with nothing above to join to', async () => {
+    for (const [value, words, after] of [
+      ['# one', 'one', 'one'],
+      ['- one', 'one', 'one'],
+      ['> one', 'one', 'one'],
+      ['1. one\n2. two', 'one', 'one\n\n2. two']
+    ]) {
+      const { body, screen, writes } = await editing(value);
+
+      put(body, words, 0);
+      await settled();
+      await userEvent.keyboard('{Backspace}');
+      await writes(after);
       await screen.unmount();
     }
   });

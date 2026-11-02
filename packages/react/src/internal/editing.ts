@@ -172,12 +172,33 @@ export function inLabel(root: HTMLElement, node: Node): boolean {
 
 /** Whether what lies between two blocks is something to delete. */
 function joins(here: HTMLElement | null, there: HTMLElement | null): boolean {
-  return Boolean(here && there && !here.matches(CLOSED) && !there.matches(CLOSED));
+  return Boolean(
+    here &&
+    there &&
+    !here.matches(CLOSED) &&
+    !there.matches(CLOSED) &&
+    // A note's words are written somewhere else altogether, and what lies
+    // between them and the document's last words is not a blank line.
+    Boolean(here.closest(NOTES)) === Boolean(there.closest(NOTES))
+  );
 }
+
+/** What the document's notes are drawn inside. */
+const NOTES = '.mawy-md-footnotes';
 
 function splice(value: string, start: number, end: number, text: string): MawyEdit {
   return { value: value.slice(0, start) + text + value.slice(end), caret: start + text.length };
 }
+
+/** Where the line a place in a document is on starts. */
+const startOfLine = (value: string, at: number) =>
+  at > 0 ? value.lastIndexOf('\n', at - 1) + 1 : 0;
+
+/**
+ * All a line can open with that draws no character of its own: a quotation's
+ * marker, a list item's, a heading's, a task's box and the indentation between.
+ */
+const OPENING = /^[ \t]*(?:(?:>|[-*+]|\d{1,9}[.)]|#{1,6})[ \t]+)*(?:\[[ xX]\][ \t]+)?$/;
 
 /**
  * Where the blank lines between the document's blocks are drawn as empty
@@ -669,6 +690,57 @@ function asideRule(value: string, rule: MdRange): MawyEdit {
 }
 
 /**
+ * `Backspace` at the start of a block, or `Delete` at the end of one, beside
+ * a block that has no words of its own or none at that edge. `undefined` where
+ * the block beside it does have them, and the walk over the runs of text is
+ * right; `null` for a key that has nothing to do.
+ *
+ * A walk over the runs of text steps straight over a picture, a divider and
+ * drawn HTML, which have none. So the key found the words on the far side of
+ * them and took everything in between: `Backspace` under a picture joined that
+ * line to the paragraph over the picture, and the picture went with the blank
+ * lines.
+ *
+ * A picture at that edge is one more thing on a line, so the two are joined
+ * with the picture kept. A divider is what the key takes, and the line the
+ * caret is on stays what it is, as it does in an empty paragraph beside one.
+ * Anything else is left alone.
+ */
+function wordless(
+  value: string,
+  root: HTMLElement,
+  top: HTMLElement,
+  found: Node | null,
+  back: boolean,
+  caret: number
+): MawyEdit | null | undefined {
+  const beside = back ? top.previousElementSibling : top.nextElementSibling;
+  const range = topRange(beside);
+
+  if (!beside || !range || beside.closest(NOTES)) {
+    return undefined;
+  }
+
+  if (beside.tagName === 'HR') {
+    const gone = removeBlock(value, range.start, range.end);
+
+    return { value: gone.value, caret: back ? caret - (value.length - gone.value.length) : caret };
+  }
+
+  const pictures = [...beside.querySelectorAll('img[data-mawy-range]')].map(rangeOf);
+  const picture = back ? pictures[pictures.length - 1] : pictures[0];
+
+  if (picture && (back ? picture.end === range.end : picture.start === range.start)) {
+    return back
+      ? { value: value.slice(0, range.end) + value.slice(caret), caret: range.end }
+      : { value: value.slice(0, caret) + value.slice(range.start), caret };
+  }
+
+  // Something drawn with no text in it, past which the walk found words.
+  return found && beside.contains(found) ? undefined : root.contains(beside) ? null : undefined;
+}
+
+/**
  * Whether the blank line at `at` is a list's own separator, with items either
  * side of it.
  *
@@ -690,6 +762,51 @@ export function betweenItems(value: string, at: number, options: MarkdownOptions
       at < block.range.end &&
       !block.children.some((item) => item.range.start <= at && at <= item.range.end)
   );
+}
+
+/**
+ * `Backspace` in front of the first words of a document, where there is nothing
+ * above to join to and the marker is what the key takes. A heading that opens a
+ * document would otherwise be a heading for good, with the key that takes one
+ * away anywhere else doing nothing here.
+ */
+function markerGivenUp(value: string, caret: number): MawyEdit | null {
+  const from = startOfLine(value, caret);
+  const marker = value.slice(from, caret);
+
+  if (!marker.trim() || !OPENING.test(marker)) {
+    return null;
+  }
+
+  // A number under a line of words is that line going on, so the items below a
+  // first item given up are parted from it, or they stop being a list.
+  const stop = value.indexOf('\n', caret);
+  const below = stop === -1 ? '' : value.slice(stop + 1).split('\n', 1)[0];
+  const edit = splice(value, from, caret, '');
+  const end = stop - marker.length;
+
+  return /^\d{1,9}[.)][ \t]/.test(below)
+    ? { value: `${edit.value.slice(0, end)}\n${edit.value.slice(end)}`, caret: from }
+    : edit;
+}
+
+/**
+ * The same, asked from a keydown. WebKit sends no `beforeinput` for a key it has
+ * decided has nothing to delete, and in front of the first words is one of those.
+ */
+export function firstMarkerGone(
+  root: HTMLElement,
+  value: string,
+  aim: MawyAim | null
+): MawyEdit | null {
+  const place = placeOf(root, value, aim);
+
+  return place &&
+    place.start === place.end &&
+    !before(root, place.node, place.offset) &&
+    !atomAt(root, place.node, place.offset, true)
+    ? markerGivenUp(value, place.start)
+    : null;
 }
 
 function deleteBefore(
@@ -779,10 +896,18 @@ function deleteBefore(
         caret: caret - (range.start - above)
       };
     }
+
+    // What is above draws no words of its own, so the run of text the walk
+    // found is on the far side of it. See `wordless`.
+    const beside = range ? wordless(value, root, top, back?.node ?? null, true, caret) : undefined;
+
+    if (beside !== undefined) {
+      return beside;
+    }
   }
 
   if (!back) {
-    return null;
+    return markerGivenUp(value, caret);
   }
 
   const from = sourceAt(root, back.node, back.offset, value);
@@ -853,6 +978,14 @@ function deleteAfter(
 
     if (below !== null && below > from) {
       return { value: value.slice(0, from) + value.slice(below), caret };
+    }
+
+    const beside = range
+      ? wordless(value, root, top, ahead?.node ?? null, false, caret)
+      : undefined;
+
+    if (beside !== undefined) {
+      return beside;
     }
   }
 

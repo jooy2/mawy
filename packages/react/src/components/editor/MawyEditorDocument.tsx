@@ -41,6 +41,7 @@ import {
   documentAt,
   editFor,
   editForText,
+  firstMarkerGone,
   forLabel,
   heldText,
   inLabel,
@@ -1492,6 +1493,18 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       const selection = element?.ownerDocument.getSelection();
       const modified = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey;
       const node = selection?.anchorNode;
+
+      // See `firstMarkerGone`.
+      if (event.key === 'Backspace' && element && !readOnly && !modified && !composing.current) {
+        const edit = firstMarkerGone(element, value, aim.current);
+
+        if (edit) {
+          event.preventDefault();
+          onEdit(edit);
+        }
+
+        return;
+      }
 
       if (
         !element ||
