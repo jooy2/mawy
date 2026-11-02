@@ -2306,7 +2306,7 @@ class _EmptyActionState extends State<_EmptyAction> {
  * The status bar
  * ---------------------------------------------------------------------- */
 
-class _Status extends StatelessWidget {
+class _Status extends StatefulWidget {
   const _Status({
     required this.items,
     required this.tokens,
@@ -2318,6 +2318,48 @@ class _Status extends StatelessWidget {
   final MawyTokens tokens;
   final MawyStrings strings;
   final EditState state;
+
+  @override
+  State<_Status> createState() => _StatusState();
+}
+
+class _StatusState extends State<_Status> {
+  /// What was last counted, and the text that was counted.
+  ///
+  /// A count reads the whole document, and the words are a regular expression,
+  /// which is interpreted rather than compiled on a phone. So a caret that moved
+  /// counts nothing: that was nine tenths of what a move cost on an iPhone.
+  ({int lines, int words, int characters, int bytes})? _counts;
+  String? _counted;
+
+  void _count(String text) {
+    final List<MawyEditorStatusItem> items = widget.items;
+
+    _counted = text;
+    _counts = (
+      lines: items.contains(MawyEditorStatusItem.lines) ? countLines(text) : 0,
+      words: items.contains(MawyEditorStatusItem.words) ? countWords(text) : 0,
+      characters: items.contains(MawyEditorStatusItem.characters) ? countCharacters(text) : 0,
+      bytes: items.contains(MawyEditorStatusItem.size) ? countBytes(text) : 0,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _count(widget.state.value);
+  }
+
+  @override
+  void didUpdateWidget(_Status oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final String text = widget.state.value;
+
+    if (!identical(widget.items, oldWidget.items) || text != _counted) {
+      _count(text);
+    }
+  }
 
   static String _size(int bytes) {
     if (bytes < 1024) {
@@ -2333,10 +2375,14 @@ class _Status extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final EditState state = widget.state;
+    final MawyStrings strings = widget.strings;
+    final MawyTokens tokens = widget.tokens;
+    final ({int lines, int words, int characters, int bytes}) counts = _counts!;
     final MawyCaretAt at = caretAt(state.value, state.start, state.end);
     final List<String> cells = <String>[];
 
-    for (final MawyEditorStatusItem item in items) {
+    for (final MawyEditorStatusItem item in widget.items) {
       switch (item) {
         case MawyEditorStatusItem.position:
           cells.add(
@@ -2347,13 +2393,13 @@ class _Status extends StatelessWidget {
             cells.add(strings.statusSelected.replaceAll('%N', '${at.selected}'));
           }
         case MawyEditorStatusItem.lines:
-          cells.add('${countLines(state.value)} ${strings.statusLines}');
+          cells.add('${counts.lines} ${strings.statusLines}');
         case MawyEditorStatusItem.words:
-          cells.add('${countWords(state.value)} ${strings.statusWords}');
+          cells.add('${counts.words} ${strings.statusWords}');
         case MawyEditorStatusItem.characters:
-          cells.add('${countCharacters(state.value)} ${strings.statusCharacters}');
+          cells.add('${counts.characters} ${strings.statusCharacters}');
         case MawyEditorStatusItem.size:
-          cells.add(_size(countBytes(state.value)));
+          cells.add(_size(counts.bytes));
       }
     }
 

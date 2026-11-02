@@ -63,15 +63,28 @@ export interface MawyCaretAt {
 }
 
 export function caretAt(value: string, start: number, end: number): MawyCaretAt {
-  const before = value.slice(0, start).split('\n');
+  let line = 1;
+  let from = 0;
+
+  // A walk down the line endings rather than a split of everything before the
+  // caret, which made a list of every line in the document to count them, for
+  // every step the caret took.
+  for (
+    let next = value.indexOf('\n');
+    next !== -1 && next < start;
+    next = value.indexOf('\n', next + 1)
+  ) {
+    line += 1;
+    from = next + 1;
+  }
 
   return {
-    line: before.length,
+    line,
     // Code points, the way the count beside it on the same line is. An emoji
     // is one character to a reader and two to a `.length`, and a status bar
     // that says "column 5" and "3 selected" about the same three characters is
     // saying one of them wrong.
-    column: countCharacters(before[before.length - 1] ?? '') + 1,
+    column: countCharacters(value.slice(from, start)) + 1,
     selected: countCharacters(value.slice(start, end))
   };
 }

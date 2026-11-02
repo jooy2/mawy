@@ -65,6 +65,25 @@ class MawySourceController extends TextEditingController {
     TextStyle? style,
     required bool withComposing,
   }) {
+    final Object from = (text, style, gfm, tokens, matches, currentMatch, window);
+
+    if (_span == null || _spanFrom != from) {
+      _span = _build(style);
+      _spanFrom = from;
+    }
+
+    return _span!;
+  }
+
+  /// The last answer and what it was the answer to.
+  ///
+  /// A caret that moved rebuilds the field with none of this changed, and every
+  /// one of those read the whole document again to give back the spans it
+  /// already had.
+  TextSpan? _span;
+  Object? _spanFrom;
+
+  TextSpan _build(TextStyle? style) {
     final List<InlineSpan> spans = <InlineSpan>[];
     final MdHighlightWindow? only = window;
     final List<MdHighlightedLine> lines = highlightMarkdown(text, gfm: gfm, within: only);

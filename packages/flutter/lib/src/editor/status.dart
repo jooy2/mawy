@@ -78,15 +78,28 @@ class MawyCaretAt {
 
 /// Where the caret is in [value], and how much is selected.
 MawyCaretAt caretAt(String value, int start, int end) {
-  final List<String> before = value.substring(0, start).split('\n');
+  int line = 1;
+  int from = 0;
+
+  // A walk down the line endings rather than a split of everything before the
+  // caret, which made a list of every line in the document to count them, for
+  // every step the caret took.
+  for (
+    int next = value.indexOf('\n');
+    next != -1 && next < start;
+    next = value.indexOf('\n', next + 1)
+  ) {
+    line += 1;
+    from = next + 1;
+  }
 
   return MawyCaretAt(
-    before.length,
+    line,
     // Code points, the way the count beside it on the same line is. An emoji is
     // one character to a reader and two to a `length`, and a status bar that
     // says "column 5" and "3 selected" about the same three characters is
     // saying one of them wrong.
-    countCharacters(before.last) + 1,
+    countCharacters(value.substring(from, start)) + 1,
     countCharacters(value.substring(start, end)),
   );
 }
