@@ -18,6 +18,8 @@
 
 - **A key on a long document read the whole text five times, and a caret that moved read it four.** Each thing that wanted to know something about the document read it for itself. A text is read once now, and a caret that moved reads nothing.
 
+- **`Enter` on a phone's keyboard left the list behind.** A soft keyboard's `Enter` while a syllable is being composed comes down the text input connection as a line ending rather than a key, so `Enter` at the end of an item written in Korean gave a line with no bullet. The same two rules answer it now, and a quotation carries its `> ` down the same way.
+
 ### Changed
 
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.

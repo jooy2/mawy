@@ -605,6 +605,52 @@ class _ListKept extends TextInputFormatter {
   }
 }
 
+/// `Enter` on a soft keyboard, which is the only `Enter` a phone has.
+///
+/// A hardware key reaches `MawySourceField.onEnter` through the shortcuts and
+/// never gets this far. A soft keyboard's comes down the text input connection
+/// as a line ending in the text, with no key anywhere, so a list carried its
+/// marker down at a desk and not on the device most people write on. This asks
+/// the same two questions of the same two rules, on the update that holds that
+/// one character.
+///
+/// Whether a composition was open does not come into it. An input method ends
+/// one with the same update that writes the line ending, so the syllable being
+/// composed has been written by the time this reads the text.
+class _EnterCarried extends TextInputFormatter {
+  const _EnterCarried(this.definitionLists);
+
+  /// The parser's own option, which says whether a `: ` line ends a list.
+  final bool definitionLists;
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue before, TextEditingValue after) {
+    final int caret = after.selection.baseOffset;
+
+    if (after.text.length != before.text.length + 1 ||
+        !after.selection.isCollapsed ||
+        caret < 1 ||
+        after.text[caret - 1] != '\n' ||
+        before.text != after.text.substring(0, caret - 1) + after.text.substring(caret)) {
+      return after;
+    }
+
+    final EditState where = EditState(before.text, caret - 1, caret - 1);
+    final EditState? carried =
+        continueList(where, definitionLists: definitionLists) ??
+        carryQuote(where, definitionLists: definitionLists);
+
+    if (carried == null) {
+      return after;
+    }
+
+    return TextEditingValue(
+      text: carried.value,
+      selection: TextSelection(baseOffset: carried.start, extentOffset: carried.end),
+    );
+  }
+}
+
 class _OneOfEach extends TextInputFormatter {
   const _OneOfEach(this.onCrowded);
 
@@ -1099,7 +1145,11 @@ class _MawySourceFieldState extends State<MawySourceField>
                     // The detector above reads the pointer. Two things reading
                     // one gesture is a caret that jumps to where a selection
                     // was meant to start.
-                    inputFormatters: <TextInputFormatter>[_OneOfEach(widget.onCrowded), _listKept],
+                    inputFormatters: <TextInputFormatter>[
+                      _EnterCarried(widget.definitionLists),
+                      _OneOfEach(widget.onCrowded),
+                      _listKept,
+                    ],
                     rendererIgnoresPointer: true,
                     enableInteractiveSelection: true,
                   ),

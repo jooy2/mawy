@@ -1074,6 +1074,108 @@ void main() {
     });
   });
 
+  group('a keyboard with no keys', () {
+    /// A field showing [written], with the caret at the `|` in it, and what the
+    /// application has been told it says.
+    Future<List<String>> writing(WidgetTester tester, String written) async {
+      final List<String> told = <String>[];
+      final int caret = written.indexOf('|');
+      final String text = written.replaceFirst('|', '');
+
+      await tester.pumpWidget(
+        host(MawyEditor(defaultValue: text, defaultMode: MawyEditorMode.plain, onChange: told.add)),
+      );
+      await tester.showKeyboard(find.byType(EditableText));
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: caret),
+        ),
+      );
+      await tester.pump();
+
+      return told;
+    }
+
+    /// What a soft keyboard sends for `Enter`: no key, and a line ending in the
+    /// text where the caret was.
+    Future<void> enter(WidgetTester tester) async {
+      final TextEditingValue was = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .textEditingValue;
+      final int caret = was.selection.baseOffset;
+
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: was.text.replaceRange(caret, caret, '\n'),
+          selection: TextSelection.collapsed(offset: caret + 1),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('carries a list item down', (WidgetTester tester) async {
+      final List<String> told = await writing(tester, '- one|');
+
+      await enter(tester);
+
+      expect(told.last, '- one\n- ');
+    });
+
+    testWidgets('splits an item in the middle of its words', (WidgetTester tester) async {
+      final List<String> told = await writing(tester, '- on|e');
+
+      await enter(tester);
+
+      expect(told.last, '- on\n- e');
+    });
+
+    testWidgets('gives an empty item up', (WidgetTester tester) async {
+      final List<String> told = await writing(tester, '- one\n- |');
+
+      await enter(tester);
+
+      expect(told.last, '- one\n\n');
+    });
+
+    testWidgets('carries a quotation down', (WidgetTester tester) async {
+      final List<String> told = await writing(tester, '> one|');
+
+      await enter(tester);
+
+      expect(told.last, '> one\n> ');
+    });
+
+    testWidgets('carries an item a syllable was being composed in', (WidgetTester tester) async {
+      final List<String> told = await writing(tester, '- |');
+
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: '- 다',
+          selection: TextSelection.collapsed(offset: 3),
+          composing: TextRange(start: 2, end: 3),
+        ),
+      );
+      await tester.pump();
+
+      // One update: the syllable is finished by the line ending that follows it.
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(text: '- 다\n', selection: TextSelection.collapsed(offset: 4)),
+      );
+      await tester.pump();
+
+      expect(told.last, '- 다\n- ');
+    });
+
+    testWidgets('leaves a line of words alone', (WidgetTester tester) async {
+      final List<String> told = await writing(tester, 'one|');
+
+      await enter(tester);
+
+      expect(told.last, 'one\n');
+    });
+  });
+
   group('the status bar', () {
     testWidgets('counts the document', (WidgetTester tester) async {
       await tester.pumpWidget(
