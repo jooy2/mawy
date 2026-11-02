@@ -13,6 +13,8 @@
 /// wherever Dart lets it be.
 library;
 
+import 'dart:typed_data';
+
 final RegExp _nameStart = RegExp(r'[A-Za-z]');
 final RegExp _nameRest = RegExp(r'[A-Za-z0-9_-]');
 final RegExp _keyStart = RegExp(r'[A-Za-z_]');
@@ -67,13 +69,34 @@ String? _characterAt(String source, int at) => at >= 0 && at < source.length ? s
 /// where it is — for a block directive that leaves trailing text on the line,
 /// which means the line was never a directive; for a text one it means the
 /// bracket is a bracket.
-DirectiveLabel? _readLabel(String source, int at) {
+DirectiveLabel? _readLabel(String source, int at, DirectiveLabels known) {
   if (_characterAt(source, at) != '[') {
     return null;
   }
 
-  int depth = 0;
-  int index = at;
+  final Int32List closes = known.closes ??= _labelCloses(source);
+  final int end = closes[at];
+
+  return end == -1 ? null : DirectiveLabel(at + 1, end);
+}
+
+/// What has been worked out about the labels in a text, once anything needed it.
+class DirectiveLabels {
+  /// Where the `]` that closes each `[` is, or `-1`.
+  Int32List? closes;
+}
+
+/// Where the `]` that closes each `[` in a text is, or `-1`.
+///
+/// Read once for a text rather than from each label. A label that never closes
+/// reads to the end of its line to find that out, and a line of `:a[` does that
+/// from every colon in it: 128 kilobytes of them took five seconds. A line
+/// ending closes nothing, and a backslash takes the character after it,
+/// whichever that is, so a bracket it escapes is not a bracket.
+Int32List _labelCloses(String source) {
+  final Int32List closes = Int32List(source.length)..fillRange(0, source.length, -1);
+  final List<int> open = <int>[];
+  int index = 0;
 
   while (index < source.length) {
     final String character = source[index];
@@ -84,23 +107,17 @@ DirectiveLabel? _readLabel(String source, int at) {
     }
 
     if (character == '\n') {
-      return null;
-    }
-
-    if (character == '[') {
-      depth += 1;
-    } else if (character == ']') {
-      depth -= 1;
-
-      if (depth == 0) {
-        return DirectiveLabel(at + 1, index);
-      }
+      open.clear();
+    } else if (character == '[') {
+      open.add(index);
+    } else if (character == ']' && open.isNotEmpty) {
+      closes[open.removeLast()] = index;
     }
 
     index += 1;
   }
 
-  return null;
+  return closes;
 }
 
 class _Value {
@@ -254,7 +271,7 @@ _Attributes? _readAttributes(String source, int at) {
 ///
 /// [at] is just past the colons; `null` means there is no name there, which is
 /// every `:` in every sentence that was only ever a colon.
-DirectiveHead? readDirectiveHead(String source, int at) {
+DirectiveHead? readDirectiveHead(String source, int at, [DirectiveLabels? known]) {
   if (!_nameStart.hasMatch(_characterAt(source, at) ?? '')) {
     return null;
   }
@@ -266,7 +283,7 @@ DirectiveHead? readDirectiveHead(String source, int at) {
   }
 
   final String name = source.substring(at, end);
-  final DirectiveLabel? label = _readLabel(source, end);
+  final DirectiveLabel? label = _readLabel(source, end, known ?? DirectiveLabels());
 
   if (label != null) {
     end = label.end + 1;

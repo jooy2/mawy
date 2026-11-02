@@ -68,6 +68,8 @@
 
 - **A run of brackets could hold the page up for seconds.** A viewer draws documents it did not write, so this one matters past the editor. 128 kB of nested `[` took three seconds and 40 kB of `[a](<` two and a half, because every `]` and every `(` read to the far end of the text again. Both now stop where CommonMark says they do.
 
+- **Bold links in a long paragraph cost the square of their length**, and so did `:a[` that never closes, runs of backticks of different lengths and an address ending in closing brackets. Each is read once now.
+
 ### Changed
 
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.

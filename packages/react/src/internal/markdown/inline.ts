@@ -14,7 +14,7 @@
  */
 
 import type { MdDefinition, MdInline, MdRange, MdText } from './ast.js';
-import { readDirectiveHead } from './directive.js';
+import { readDirectiveHead, type DirectiveLabels } from './directive.js';
 import { decodeEntities } from './entities.js';
 import { endOffset, rangeOf, slice, type Sourced } from './source.js';
 import { safeImageUrl, safeUrl } from './url.js';
@@ -74,6 +74,12 @@ interface Opener {
   active: boolean;
   /** Where the label's text starts in the source, for a reference lookup. */
   textStart: number;
+  /**
+   * Where in `delimiters` the runs after this bracket begin, written down when
+   * the bracket is met. Looked up at every link that closed instead, it was the
+   * square of a paragraph that is a list of bold links.
+   */
+  bottom: number;
 }
 
 interface Chunk {
@@ -738,12 +744,48 @@ function readReferenceLabel(source: string, start: number): { label: string; end
  * Leaf scanners
  * ---------------------------------------------------------------------- */
 
+/**
+ * Where the last run of backticks of each length starts.
+ *
+ * Read once for a text, the first time a backtick turns up in it. An opener
+ * with no closer has to read to the end of the text to find that out, and a
+ * text whose runs are all different lengths is nothing but such openers, which
+ * made a megabyte of them cost three seconds. With this a run that has no
+ * closer is known at once, and one that has a closer pays for the search with
+ * the characters it then takes.
+ */
+function lastRuns(source: string): Map<number, number> {
+  const runs = new Map<number, number>();
+  let at = source.indexOf('`');
+
+  while (at !== -1) {
+    let run = 0;
+
+    while (source[at + run] === '`') {
+      run += 1;
+    }
+
+    runs.set(run, at);
+    at = source.indexOf('`', at + run);
+  }
+
+  return runs;
+}
+
 /** A run of backticks, and the matching run that closes it. */
-function readCodeSpan(source: string, start: number): { value: string; end: number } | null {
+function readCodeSpan(
+  source: string,
+  start: number,
+  runs: Map<number, number>
+): { value: string; end: number } | null {
   let fence = 0;
 
   while (source[start + fence] === '`') {
     fence += 1;
+  }
+
+  if ((runs.get(fence) ?? -1) <= start) {
+    return null;
   }
 
   let at = start + fence;
@@ -855,6 +897,10 @@ function canStartLiteral(before: string | undefined): boolean {
  */
 function trimLiteral(match: string): string {
   let end = match.length;
+  // Counted once and kept level as the end moves in. Counted at every bracket,
+  // a run of them at the end of an address cost the square of its length.
+  const opens = (match.match(/\(/g) ?? []).length;
+  let closes = (match.match(/\)/g) ?? []).length;
 
   while (end > 0) {
     const character = match[end - 1];
@@ -864,15 +910,10 @@ function trimLiteral(match: string): string {
       continue;
     }
 
-    if (character === ')') {
-      const slice = match.slice(0, end);
-      const opens = (slice.match(/\(/g) ?? []).length;
-      const closes = (slice.match(/\)/g) ?? []).length;
-
-      if (closes > opens) {
-        end -= 1;
-        continue;
-      }
+    if (character === ')' && closes > opens) {
+      closes -= 1;
+      end -= 1;
+      continue;
     }
 
     break;
@@ -1569,6 +1610,7 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
   /** Where each character the document wrote as a backslash escape ended up. */
   const escaped = new Set<number>();
   const reach: Reach = { stop: null };
+  const labels: DirectiveLabels = { closes: null };
   const { chunks, delimiters, openers } = state;
 
   /** Where a stretch of this text sits in the document. */
@@ -1577,6 +1619,8 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
   let pending = '';
   let pendingAt = 0;
   let at = 0;
+  /** Where the last run of backticks of each length starts, once one is met. */
+  let runs: Map<number, number> | null = null;
   /** The next `]` from the last footnote looked for, which later ones share. */
   let noteClose = 0;
 
@@ -1597,30 +1641,6 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
       );
       pending = '';
     }
-  };
-
-  /**
-   * Where in `delimiters` the run that follows this chunk begins.
-   *
-   * Asked of where each chunk was written rather than of where it sits in the
-   * array, because the two orders are the same one — chunks are appended as
-   * the source is read, and what replaces a span of them covers that same span
-   * — and the array position had to be looked up. Building a map of every
-   * chunk to do it, on every link that closes, was the length of a paragraph
-   * squared for a paragraph that is a list of links.
-   */
-  const delimiterBottom = (chunk: Chunk): number => {
-    const after = chunk.node.range.start;
-
-    for (let index = 0; index < delimiters.length; index += 1) {
-      const each = delimiters[index];
-
-      if (each && each.node.range.start > after) {
-        return index;
-      }
-    }
-
-    return delimiters.length;
   };
 
   while (at < source.length) {
@@ -1663,7 +1683,9 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
     }
 
     if (character === '`') {
-      const code = readCodeSpan(source, at);
+      runs ??= lastRuns(source);
+
+      const code = readCodeSpan(source, at, runs);
 
       if (code) {
         flush();
@@ -1760,7 +1782,7 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
     // calls as deep as it is, and twenty-four kilobytes of `:a[` ran out of stack
     // and took the page with it. See `NESTING`.
     if (character === ':' && source[at - 1] !== ':' && source[at + 1] !== ':' && nested < NESTING) {
-      const head = readDirectiveHead(source, at + 1);
+      const head = readDirectiveHead(source, at + 1, labels);
       // A name on its own is not enough here. A colon is a colon in far more
       // sentences than it is a directive — `Note:` and `see:foo` among them —
       // so an inline one has to carry a `[label]` or `{attributes}` to be one.
@@ -1813,7 +1835,12 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
       flush();
 
       const chunk = textChunk(text, span(at, at + text.length));
-      chunk.opener = { image, active: true, textStart: at + text.length };
+      chunk.opener = {
+        image,
+        active: true,
+        textStart: at + text.length,
+        bottom: delimiters.length
+      };
       append(chunks, chunk);
       openers.push(chunk);
       at += text.length;
@@ -1884,7 +1911,7 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
         continue;
       }
 
-      processEmphasis(state, delimiterBottom(openerChunk));
+      processEmphasis(state, opener.bottom);
 
       // Everything after the opener is this link's own label.
       const { children, depth: under } = between(openerChunk, null);
@@ -1926,12 +1953,24 @@ export function parseInline(raw: Sourced, options: InlineOptions, nested = 0): M
       }
 
       if (!opener.image) {
-        for (const other of openers) {
+        // From the innermost out, and only as far as the first one already off:
+        // a link turned off everything under it when it closed, so what is
+        // under that one is off too. All the way down at every link was a
+        // paragraph of open brackets and links costing the product of the two.
+        for (let index = openers.length - 1; index >= 0; index -= 1) {
+          const other = openers[index].opener;
+
           // Link openers only. An image's description is allowed to hold a
           // link, so the `![` further out is still an image waiting to close.
-          if (other.opener && !other.opener.image) {
-            other.opener.active = false;
+          if (!other || other.image) {
+            continue;
           }
+
+          if (!other.active) {
+            break;
+          }
+
+          other.active = false;
         }
       }
 

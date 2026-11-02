@@ -88,7 +88,12 @@ class _Delimiter {
 }
 
 class _Opener {
-  _Opener({required this.image, required this.active, required this.textStart});
+  _Opener({
+    required this.image,
+    required this.active,
+    required this.textStart,
+    required this.bottom,
+  });
 
   final bool image;
 
@@ -103,6 +108,11 @@ class _Opener {
 
   /// Where the label's text starts in the source, for a reference lookup.
   final int textStart;
+
+  /// Where in `delimiters` the runs after this bracket begin, written down when
+  /// the bracket is met. Looked up at every link that closed instead, it was the
+  /// square of a paragraph that is a list of bold links.
+  final int bottom;
 }
 
 class _Chunk {
@@ -761,12 +771,42 @@ class _CodeSpan {
   final int end;
 }
 
+/// Where the last run of backticks of each length starts.
+///
+/// Read once for a text, the first time a backtick turns up in it. An opener
+/// with no closer has to read to the end of the text to find that out, and a
+/// text whose runs are all different lengths is nothing but such openers, which
+/// made a megabyte of them cost three seconds. With this a run that has no
+/// closer is known at once, and one that has a closer pays for the search with
+/// the characters it then takes.
+Map<int, int> _lastRuns(String source) {
+  final Map<int, int> runs = <int, int>{};
+  int at = source.indexOf('`');
+
+  while (at != -1) {
+    int run = 0;
+
+    while (_at(source, at + run) == '`') {
+      run += 1;
+    }
+
+    runs[run] = at;
+    at = source.indexOf('`', at + run);
+  }
+
+  return runs;
+}
+
 /// A run of backticks, and the matching run that closes it.
-_CodeSpan? _readCodeSpan(String source, int start) {
+_CodeSpan? _readCodeSpan(String source, int start, Map<int, int> runs) {
   int fence = 0;
 
   while (_at(source, start + fence) == '`') {
     fence += 1;
+  }
+
+  if ((runs[fence] ?? -1) <= start) {
+    return null;
   }
 
   int at = start + fence;
@@ -880,6 +920,10 @@ bool _canStartLiteral(String? before) =>
 /// parentheses in the match balance.
 String _trimLiteral(String match) {
   int end = match.length;
+  // Counted once and kept level as the end moves in. Counted at every bracket,
+  // a run of them at the end of an address cost the square of its length.
+  final int opens = '('.allMatches(match).length;
+  int closes = ')'.allMatches(match).length;
 
   while (end > 0) {
     final String character = match[end - 1];
@@ -889,15 +933,10 @@ String _trimLiteral(String match) {
       continue;
     }
 
-    if (character == ')') {
-      final String head = match.substring(0, end);
-      final int opens = '('.allMatches(head).length;
-      final int closes = ')'.allMatches(head).length;
-
-      if (closes > opens) {
-        end -= 1;
-        continue;
-      }
+    if (character == ')' && closes > opens) {
+      closes -= 1;
+      end -= 1;
+      continue;
     }
 
     break;
@@ -1707,6 +1746,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
   /// Where each character the document wrote as a backslash escape ended up.
   final Set<int> escaped = <int>{};
   final _Reach reach = _Reach();
+  final DirectiveLabels labels = DirectiveLabels();
   final _Chain chunks = state.chunks;
   final List<_Chunk?> delimiters = state.delimiters;
   final List<_Chunk> openers = state.openers;
@@ -1722,6 +1762,9 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
   final StringBuffer pending = StringBuffer();
   int pendingAt = 0;
   int at = 0;
+
+  /// Where the last run of backticks of each length starts, once one is met.
+  Map<int, int>? runs;
 
   /// The next `]` from the last footnote looked for, which later ones share.
   int noteClose = 0;
@@ -1743,28 +1786,6 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
       );
       pending.clear();
     }
-  }
-
-  /// Where in [delimiters] the run that follows this chunk begins.
-  ///
-  /// Asked of where each chunk was written rather than of where it sits in the
-  /// list, because the two orders are the same one — chunks are appended as the
-  /// source is read, and what replaces a span of them covers that same span —
-  /// and the list position had to be searched for. Searching it for every
-  /// delimiter, on every link that closes, was the length of a paragraph cubed
-  /// for a paragraph that is a list of links.
-  int delimiterBottom(_Chunk chunk) {
-    final int after = chunk.node.range.start;
-
-    for (int index = 0; index < delimiters.length; index += 1) {
-      final _Chunk? each = delimiters[index];
-
-      if (each != null && each.node.range.start > after) {
-        return index;
-      }
-    }
-
-    return delimiters.length;
   }
 
   while (at < source.length) {
@@ -1807,7 +1828,9 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
     }
 
     if (character == '`') {
-      final _CodeSpan? code = _readCodeSpan(source, at);
+      runs ??= _lastRuns(source);
+
+      final _CodeSpan? code = _readCodeSpan(source, at, runs);
 
       if (code != null) {
         flush();
@@ -1900,7 +1923,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
         _at(source, at - 1) != ':' &&
         _at(source, at + 1) != ':' &&
         nested < _nesting) {
-      final DirectiveHead? head = readDirectiveHead(source, at + 1);
+      final DirectiveHead? head = readDirectiveHead(source, at + 1, labels);
       // A name on its own is not enough here. A colon is a colon in far more
       // sentences than it is a directive — `Note:` and `see:foo` among them —
       // so an inline one has to carry a `[label]` or `{attributes}` to be one.
@@ -1954,7 +1977,12 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
 
       final _Chunk chunk = _textChunk(text, span(at, at + text.length));
 
-      chunk.opener = _Opener(image: image, active: true, textStart: at + text.length);
+      chunk.opener = _Opener(
+        image: image,
+        active: true,
+        textStart: at + text.length,
+        bottom: delimiters.length,
+      );
       _append(chunks, chunk);
       openers.add(chunk);
       at += text.length;
@@ -2028,7 +2056,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
         continue;
       }
 
-      _processEmphasis(state, delimiterBottom(openerChunk));
+      _processEmphasis(state, opener.bottom);
 
       // Everything after the opener is this link's own label.
       final ({List<MdInline> children, int depth}) inside = _between(openerChunk, null);
@@ -2065,14 +2093,24 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
       }
 
       if (!opener.image) {
-        for (final _Chunk other in openers) {
+        // From the innermost out, and only as far as the first one already off:
+        // a link turned off everything under it when it closed, so what is
+        // under that one is off too. All the way down at every link was a
+        // paragraph of open brackets and links costing the product of the two.
+        for (int index = openers.length - 1; index >= 0; index -= 1) {
+          final _Opener? other = openers[index].opener;
+
           // Link openers only. An image's description is allowed to hold a
           // link, so the `![` further out is still an image waiting to close.
-          if (other.opener?.image ?? true) {
+          if (other == null || other.image) {
             continue;
           }
 
-          other.opener?.active = false;
+          if (!other.active) {
+            break;
+          }
+
+          other.active = false;
         }
       }
 

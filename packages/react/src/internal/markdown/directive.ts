@@ -42,13 +42,40 @@ export interface DirectiveHead {
  * which means the line was never a directive; for a text one it means the
  * bracket is a bracket.
  */
-function readLabel(source: string, at: number): { start: number; end: number } | null {
+function readLabel(
+  source: string,
+  at: number,
+  known: DirectiveLabels
+): { start: number; end: number } | null {
   if (source[at] !== '[') {
     return null;
   }
 
-  let depth = 0;
-  let index = at;
+  known.closes ??= labelCloses(source);
+
+  const end = known.closes[at];
+
+  return end === -1 ? null : { start: at + 1, end };
+}
+
+/** What has been worked out about the labels in a text, once anything needed it. */
+export interface DirectiveLabels {
+  closes: Int32Array | null;
+}
+
+/**
+ * Where the `]` that closes each `[` in a text is, or `-1`.
+ *
+ * Read once for a text rather than from each label. A label that never closes
+ * reads to the end of its line to find that out, and a line of `:a[` does that
+ * from every colon in it: 128 kilobytes of them took five seconds. A line ending
+ * closes nothing, and a backslash takes the character after it, whichever that
+ * is, so a bracket it escapes is not a bracket.
+ */
+function labelCloses(source: string): Int32Array {
+  const closes = new Int32Array(source.length).fill(-1);
+  const open: number[] = [];
+  let index = 0;
 
   while (index < source.length) {
     const character = source[index];
@@ -59,23 +86,17 @@ function readLabel(source: string, at: number): { start: number; end: number } |
     }
 
     if (character === '\n') {
-      return null;
-    }
-
-    if (character === '[') {
-      depth += 1;
-    } else if (character === ']') {
-      depth -= 1;
-
-      if (depth === 0) {
-        return { start: at + 1, end: index };
-      }
+      open.length = 0;
+    } else if (character === '[') {
+      open.push(index);
+    } else if (character === ']' && open.length) {
+      closes[open.pop() as number] = index;
     }
 
     index += 1;
   }
 
-  return null;
+  return closes;
 }
 
 /** A value, quoted or not. `null` when there is nothing readable at `at`. */
@@ -217,7 +238,11 @@ function readAttributes(
  * `at` is just past the colons; `null` means there is no name there, which is
  * every `:` in every sentence that was only ever a colon.
  */
-export function readDirectiveHead(source: string, at: number): DirectiveHead | null {
+export function readDirectiveHead(
+  source: string,
+  at: number,
+  known: DirectiveLabels = { closes: null }
+): DirectiveHead | null {
   if (!NAME_START.test(source[at] ?? '')) {
     return null;
   }
@@ -229,7 +254,7 @@ export function readDirectiveHead(source: string, at: number): DirectiveHead | n
   }
 
   const name = source.slice(at, end);
-  const label = readLabel(source, end);
+  const label = readLabel(source, end, known);
 
   if (label) {
     end = label.end + 1;
