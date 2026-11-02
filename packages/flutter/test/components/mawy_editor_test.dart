@@ -1208,6 +1208,10 @@ void main() {
 
   group('a long document', () {
     final String long = 'word ' * 5000;
+    final TargetPlatformVariant iOS = TargetPlatformVariant.only(TargetPlatform.iOS);
+
+    bool scribbles(WidgetTester tester) =>
+        tester.widget<EditableText>(find.byType(EditableText)).stylusHandwritingEnabled;
 
     Future<void> type(WidgetTester tester, String text) async {
       tester.testTextInput.updateEditingValue(
@@ -1247,7 +1251,7 @@ void main() {
       expect(tester.widget<MawyViewer>(find.byType(MawyViewer)).value, '$long more');
     });
 
-    testWidgets('does not pay for a pencil on a phone', (WidgetTester tester) async {
+    testWidgets('does not pay for a pencil on a phone', variant: iOS, (WidgetTester tester) async {
       await tester.pumpWidget(
         host(
           const MawyEditor(defaultValue: 'short', defaultMode: MawyEditorMode.plain),
@@ -1255,41 +1259,28 @@ void main() {
         ),
       );
 
-      expect(
-        tester.widget<EditableText>(find.byType(EditableText)).stylusHandwritingEnabled,
-        isFalse,
+      expect(scribbles(tester), isFalse);
+    });
+
+    testWidgets('keeps a pencil on a tablet', variant: iOS, (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(defaultValue: 'short', defaultMode: MawyEditorMode.plain),
+          size: const Size(820, 1180),
+        ),
       );
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-    testWidgets(
-      'keeps a pencil on a tablet, while the document is short',
-      (WidgetTester tester) async {
-        await tester.pumpWidget(
-          host(
-            const MawyEditor(defaultValue: 'short', defaultMode: MawyEditorMode.plain),
-            size: const Size(820, 1180),
-          ),
-        );
+      expect(scribbles(tester), isTrue);
 
-        expect(
-          tester.widget<EditableText>(find.byType(EditableText)).stylusHandwritingEnabled,
-          isTrue,
-        );
+      await tester.pumpWidget(
+        host(
+          MawyEditor(key: UniqueKey(), defaultValue: long, defaultMode: MawyEditorMode.plain),
+          size: const Size(820, 1180),
+        ),
+      );
 
-        await tester.pumpWidget(
-          host(
-            MawyEditor(key: UniqueKey(), defaultValue: long, defaultMode: MawyEditorMode.plain),
-            size: const Size(820, 1180),
-          ),
-        );
-
-        expect(
-          tester.widget<EditableText>(find.byType(EditableText)).stylusHandwritingEnabled,
-          isFalse,
-        );
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-    );
+      expect(scribbles(tester), isFalse);
+    });
   });
 
   group('the status bar', () {
