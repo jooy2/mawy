@@ -1143,10 +1143,18 @@ class _MawyViewerState extends State<MawyViewer>
                                           // selection can take the whole
                                           // document. See
                                           // [kMawyViewerLazyFrom].
+                                          //
+                                          // A boundary around it, so that a
+                                          // scroll moves what was painted. A
+                                          // column paints every child however
+                                          // far off the screen, and that was
+                                          // most of a frame on a phone.
                                           ? SliverToBoxAdapter(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: drawn,
+                                              child: RepaintBoundary(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: drawn,
+                                                ),
                                               ),
                                             )
                                           : SliverList(

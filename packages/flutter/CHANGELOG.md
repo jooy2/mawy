@@ -26,6 +26,8 @@
 
 - **Parsing wrote a document out a character at a time**, which was two fifths of what it cost. Lines are taken in one piece now.
 
+- **Scrolling a document of up to four hundred blocks dropped frames on a phone.** Every block was painted again at every frame, however far off the screen. At 100 kB on Android two frames in three took more than 16 ms, and none do now.
+
 ### Changed
 
 - **On a long document the preview and the counts follow once the typing stops.** Past twenty thousand characters neither is worked out at every key, because a key was waiting for two things nobody looks at while typing. Below that nothing has changed.
