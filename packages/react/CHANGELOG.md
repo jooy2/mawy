@@ -16,6 +16,10 @@
 
 - **Letters typed in front of a picture jumped behind it.** The caret was put inside the `<img>`, which reads back as the end of the picture. `Backspace` and `Delete` beside a picture had the same trouble and took a letter from the wrong side of it.
 
+- **A selected picture looked as though nothing had happened to it.** It has an outline now, in place of the tint it never had, and it can be selected in a document with nothing else in it, where every key used to do nothing.
+
+- **A picture copied or cut came back as another picture.** The clipboard held its alt text and a copy of the `<img>`, and pasting that read the markup back, so a picture carried inline went through `onUploadImage` again as a new file under a made-up name. It is copied as the Markdown it is written with, and a paste into either surface puts that in as it is.
+
 - **`Enter` drew two lines in front of a space, or at the end of a wrapped line.** A space left at the start of the new line is a place the page cannot put a caret, so an empty paragraph was drawn as well; the same happened at a line a paragraph goes on after. The spaces either side of the break go, and a line of the file that goes on is split where it is.
 
 - **`Enter` inside bold, a code span or a link tore the markers apart.** `**bo|ld**` became `**bo` over `ld**`, drawn as those characters. The run is closed in front of the break and opened again after it, a link keeps its address on both halves, and at the edge of one the break goes outside it.

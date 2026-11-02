@@ -2335,6 +2335,12 @@
   background: transparent;
 }
 
+/* What says a picture is selected, now that the tint does not. */
+.mawy-root .mawy-md-image[data-mawy-picked] {
+  outline: 2px solid var(--mawy-accent);
+  outline-offset: 2px;
+}
+
 .mawy-root .mawy-document-body > p:only-child:empty::before {
   content: var(--mawy-placeholder, '');
   color: var(--mawy-fg-subtle);

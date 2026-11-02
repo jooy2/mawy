@@ -62,6 +62,7 @@ import {
   type MawyEdit
 } from '../../internal/editing.js';
 import {
+  MAWY_SOURCE,
   fileFromDataUrl,
   imageFilesIn,
   markdownForImage,
@@ -2549,7 +2550,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const state = readOnly ? null : stateNow();
 
-      if (!state) {
+      // What this editor copied is on the clipboard as what it is written with,
+      // which the browser's own paste puts in as it is.
+      if (!state || event.clipboardData.getData(MAWY_SOURCE)) {
         return;
       }
 

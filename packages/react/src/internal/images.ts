@@ -17,6 +17,12 @@ import type { MawyImageSource } from '../types.js';
 import { markupHasContent } from './markdown/paste.js';
 import { dataImageBytes, writtenDestination } from './markdown/url.js';
 
+/**
+ * The kind of clipboard data that says this editor put it there, holding what
+ * it is written with. See `copied` in `MawyEditorDocument`.
+ */
+export const MAWY_SOURCE = 'application/x-mawy-source';
+
 /** The image files on a transfer, in the order it lists them. */
 export function imageFilesIn(transfer: DataTransfer | null): File[] {
   return [...(transfer?.files ?? [])].filter((file) => file.type.startsWith('image/'));

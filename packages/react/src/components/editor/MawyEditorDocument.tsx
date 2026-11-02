@@ -57,7 +57,7 @@ import {
   type MawyDrag,
   type MawyEdit
 } from '../../internal/editing.js';
-import { fileFromDataUrl, pastedImagesIn } from '../../internal/images.js';
+import { MAWY_SOURCE, fileFromDataUrl, pastedImagesIn } from '../../internal/images.js';
 import { pasteFromHtml } from '../../internal/markdown/paste.js';
 import { targetAt, type MawyBlockTarget } from '../../internal/overlays.js';
 import { caretBox, caretFromPoint, domAt, rangeOf, sourceAt } from '../../internal/position.js';
@@ -527,6 +527,26 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       selection.start === target.range.start &&
       selection.end === target.range.end;
 
+    /**
+     * The picture selected, marked so that it can be drawn as selected.
+     *
+     * The browser's tint is taken off it above, and the bar beside it is above
+     * it and can be off the screen, so a picture pressed looked like a picture
+     * nothing had happened to. Set on the element rather than through the
+     * drawing: the whole document would be drawn again for a press.
+     */
+    const pictureRange = pictureSelected ? `${selection.start},${selection.end}` : null;
+
+    React.useLayoutEffect(() => {
+      const picture = pictureRange
+        ? root.current?.querySelector(`img[data-mawy-range="${pictureRange}"]`)
+        : null;
+
+      picture?.setAttribute('data-mawy-picked', '');
+
+      return () => picture?.removeAttribute('data-mawy-picked');
+    }, [pictureRange]);
+
     /** Which picture is fetched with the page rather than when it is reached. */
     const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
     const context: RenderContext = React.useMemo(
@@ -751,6 +771,20 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        // A picture this editor put on the clipboard, which is already what it
+        // is written as. See `copied`.
+        const own = event.clipboardData?.getData(MAWY_SOURCE);
+
+        if (own) {
+          const edit = editForText(element, now.value, own, aim.current, now.options, now.nested);
+
+          if (edit) {
+            now.onEdit(edit);
+          }
+
+          return;
+        }
+
         const selection = element.ownerDocument.getSelection();
         const where = selection?.anchorNode;
         // A directive's label takes words and nothing else, the way a code
@@ -846,6 +880,45 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         }
       };
 
+      /**
+       * A picture copied or cut, as the Markdown it is written with.
+       *
+       * What the browser would have put on the clipboard is the picture's alt
+       * text and a copy of the `<img>`, and pasting that here read the markup
+       * back: a picture carried inline went through the application's upload
+       * as a new file under a made-up name, and came back as another picture.
+       * So the plain text is what is written in the document, the markup is one
+       * clean `<img>` for anywhere else, and a third kind says it came from an
+       * editor, so that a paste in here is put in as it is.
+       */
+      const copied = (event: ClipboardEvent) => {
+        const now = latest.current;
+        const picture = selectedPicture(element);
+        const range = picture ? rangeOf(picture) : null;
+
+        if (!picture || !range || !event.clipboardData) {
+          return;
+        }
+
+        const written = now.value.slice(range.start, range.end);
+        const clean = element.ownerDocument.createElement('img');
+
+        clean.alt = (picture as HTMLImageElement).alt;
+        clean.src = (picture as HTMLImageElement).src;
+
+        event.preventDefault();
+        event.clipboardData.setData('text/plain', written);
+        event.clipboardData.setData('text/html', clean.outerHTML);
+        event.clipboardData.setData(MAWY_SOURCE, written);
+
+        if (event.type === 'cut' && !now.readOnly) {
+          now.onEdit({
+            value: now.value.slice(0, range.start) + now.value.slice(range.end),
+            caret: range.start
+          });
+        }
+      };
+
       // A drag that ended without a drop in here — outside the surface, or
       // nowhere at all — leaves a run written down and nothing to do with it.
       // Forgotten here rather than at the next edit, so that a drop from
@@ -856,11 +929,15 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
       element.addEventListener('beforeinput', refuse);
       element.addEventListener('paste', paste);
+      element.addEventListener('copy', copied);
+      element.addEventListener('cut', copied);
       element.addEventListener('dragend', dragged);
 
       return () => {
         element.removeEventListener('beforeinput', refuse);
         element.removeEventListener('paste', paste);
+        element.removeEventListener('copy', copied);
+        element.removeEventListener('cut', copied);
         element.removeEventListener('dragend', dragged);
       };
     }, [aim]);
@@ -1783,6 +1860,26 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     );
   }
 );
+
+/**
+ * The picture a selection is exactly, or `null`.
+ *
+ * A press leaves a selection of one child of the paragraph, and `Shift` with an
+ * arrow across a picture leaves the same one.
+ */
+function selectedPicture(element: HTMLElement): Element | null {
+  const selection = element.ownerDocument.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  const child =
+    range &&
+    range.startContainer === range.endContainer &&
+    range.endOffset === range.startOffset + 1 &&
+    element.contains(range.startContainer)
+      ? range.startContainer.childNodes[range.startOffset]
+      : null;
+
+  return child?.nodeName === 'IMG' ? (child as Element) : null;
+}
 
 /** The formatting a caret can be at the edge of, drawn as an element of its own. */
 const INLINE_MARK = /^(?:CODE|STRONG|EM|DEL|S)$/;

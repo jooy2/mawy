@@ -364,6 +364,44 @@ describe('a picture', () => {
     await userEvent.keyboard('{Backspace}');
     await writes(`a${PICTURE}`);
   });
+
+  it('is marked while it is selected', async () => {
+    const { body } = await editing(`words\n\n${PICTURE}`);
+    const picture = body.querySelector('img') as HTMLElement;
+
+    press(picture);
+    await vi.waitFor(() => expect(picture.hasAttribute('data-mawy-picked')).toBe(true));
+
+    await userEvent.keyboard('{ArrowRight}');
+    await vi.waitFor(() => expect(picture.hasAttribute('data-mawy-picked')).toBe(false));
+  });
+
+  it('goes on the clipboard as it is written, and comes back as it went', async () => {
+    const { body, writes } = await editing(`${PICTURE}\n\nend`);
+
+    press(body.querySelector('img') as HTMLElement);
+    await settled();
+
+    const clipboardData = new DataTransfer();
+    const event = new ClipboardEvent('cut', { bubbles: true, cancelable: true, clipboardData });
+
+    Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+    body.dispatchEvent(event);
+
+    expect(clipboardData.getData('text/plain')).toBe(PICTURE);
+    expect(clipboardData.getData('text/html')).toContain('<img');
+    await writes('\n\nend');
+
+    put(body, 'end', 3);
+    await settled();
+
+    const paste = new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData });
+
+    Object.defineProperty(paste, 'clipboardData', { value: clipboardData });
+    body.dispatchEvent(paste);
+
+    await writes(`\n\nend${PICTURE}`);
+  });
 });
 
 describe('a place the arrows stop', () => {
