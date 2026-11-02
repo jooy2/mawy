@@ -76,7 +76,6 @@ class BlockContext {
 final RegExp _blank = RegExp(r'^[ \t]*$');
 final RegExp _atx = RegExp(r'^ {0,3}(#{1,6})(?:[ \t]+(.*))?$');
 final RegExp _fence = RegExp(r'^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$');
-final RegExp _thematic = RegExp(r'^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$');
 final RegExp _quote = RegExp(r'^ {0,3}>');
 final RegExp _quotePrefix = RegExp(r'^ {0,3}> ?');
 final RegExp _setext = RegExp(r'^ {0,3}(=+|-+)[ \t]*$');
@@ -113,6 +112,44 @@ final RegExp _spacing = RegExp(r'^[ \t]*');
 
 /// How far a block that opened on one line has to be indented to carry on.
 const int _continuation = 4;
+
+/// Three or more of `*`, `-` or `_` on a line, with only spaces between them.
+///
+/// Read with a loop rather than a regular expression, which had a choice to go
+/// back to at every mark on the line. Past a hundred thousand of those WebKit's
+/// compiled expressions run out of room and fall back to an interpreter forty
+/// times slower, so 256 kilobytes of `- - - -`, which is read at every level of
+/// the lists it opens, took four seconds there and a fraction of one anywhere
+/// else. The same loop here, because this file is that one.
+bool _isThematic(String line) {
+  int at = 0;
+
+  while (at < line.length && line[at] == ' ') {
+    at += 1;
+  }
+
+  if (at > 3 || at == line.length) {
+    return false;
+  }
+
+  final String mark = line[at];
+
+  if (mark != '*' && mark != '-' && mark != '_') {
+    return false;
+  }
+
+  int marks = 0;
+
+  for (; at < line.length; at += 1) {
+    if (line[at] == mark) {
+      marks += 1;
+    } else if (line[at] != ' ' && line[at] != '\t') {
+      return false;
+    }
+  }
+
+  return marks >= 3;
+}
 
 /// How far in a line's first non-space character sits, counting a tab as four.
 int indentOf(String line) {
@@ -682,10 +719,7 @@ bool _describesAhead(List<Line> lines, int from) {
 
 /// Whether a line may cut a paragraph short.
 bool _interrupts(String line) {
-  if (_thematic.hasMatch(line) ||
-      _atxAt(line) != null ||
-      _fence.hasMatch(line) ||
-      _quote.hasMatch(line)) {
+  if (_isThematic(line) || _atxAt(line) != null || _fence.hasMatch(line) || _quote.hasMatch(line)) {
     return true;
   }
 
@@ -891,7 +925,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
 
     /* Thematic break — before lists, because `- - -` is a rule and not three
      * empty bullets. */
-    if (_thematic.hasMatch(line.text)) {
+    if (_isThematic(line.text)) {
       blocks.add(MdThematicBreak(across(at, at)));
       at += 1;
       continue;
@@ -1088,7 +1122,7 @@ List<MdBlock> parseBlocks(List<Line> lines, BlockContext context, [int depth = 0
         // list as much as outside one: `* * *` on the second line of a list of
         // `*` items is a rule that ends the list, not an item with two more
         // bullets in it.
-        if (_thematic.hasMatch(lines[at].text)) {
+        if (_isThematic(lines[at].text)) {
           break;
         }
 

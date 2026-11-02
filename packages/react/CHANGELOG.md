@@ -70,6 +70,8 @@
 
 - **Bold links in a long paragraph cost the square of their length**, and so did `:a[` that never closes, runs of backticks of different lengths and an address ending in closing brackets. Each is read once now.
 
+- **A line of `- - - -` took four seconds in Safari.** The regular expression that reads a divider ran out of room in WebKit's compiled form on a long line and fell back to something forty times slower, at every level of the lists the line opens. A loop reads it now, and the same 256 kB takes a tenth of a second.
+
 ### Changed
 
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.

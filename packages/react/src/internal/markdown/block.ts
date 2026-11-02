@@ -79,7 +79,6 @@ export interface BlockContext {
 const BLANK = /^[ \t]*$/;
 const ATX = /^ {0,3}(#{1,6})(?:[ \t]+(.*))?$/;
 const FENCE = /^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$/;
-const THEMATIC = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 const QUOTE = /^ {0,3}>/;
 const QUOTE_PREFIX = /^ {0,3}> ?/;
 const SETEXT = /^ {0,3}(=+|-+)[ \t]*$/;
@@ -111,6 +110,42 @@ const SPACING = /^[ \t]*/;
 
 /** How far a block that opened on one line has to be indented to carry on. */
 const CONTINUATION = 4;
+
+/**
+ * Three or more of `*`, `-` or `_` on a line, with only spaces between them.
+ *
+ * Read with a loop rather than a regular expression, which had a choice to go
+ * back to at every mark on the line. Past a hundred thousand of those WebKit's
+ * compiled expressions run out of room and fall back to an interpreter forty
+ * times slower, so 256 kilobytes of `- - - -`, which is read at every level of
+ * the lists it opens, took four seconds there and a fraction of one anywhere
+ * else.
+ */
+function isThematic(line: string): boolean {
+  let at = 0;
+
+  while (line[at] === ' ') {
+    at += 1;
+  }
+
+  const mark = line[at];
+
+  if (at > 3 || (mark !== '*' && mark !== '-' && mark !== '_')) {
+    return false;
+  }
+
+  let marks = 0;
+
+  for (; at < line.length; at += 1) {
+    if (line[at] === mark) {
+      marks += 1;
+    } else if (line[at] !== ' ' && line[at] !== '\t') {
+      return false;
+    }
+  }
+
+  return marks >= 3;
+}
 
 /** How far in a line's first non-space character sits, counting a tab as four. */
 function indentOf(line: string): number {
@@ -676,7 +711,7 @@ function separates(line: Line, blocks: MdBlock[]): boolean {
 
 /** Whether a line may cut a paragraph short. */
 function interrupts(line: string): boolean {
-  if (THEMATIC.test(line) || atxAt(line) || FENCE.test(line) || QUOTE.test(line)) {
+  if (isThematic(line) || atxAt(line) || FENCE.test(line) || QUOTE.test(line)) {
     return true;
   }
 
@@ -846,7 +881,7 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
 
     /* Thematic break — before lists, because `- - -` is a rule and not three
      * empty bullets. */
-    if (THEMATIC.test(line.text)) {
+    if (isThematic(line.text)) {
       blocks.push({ type: 'thematicBreak', range: across(at, at) });
       at += 1;
       continue;
@@ -1047,7 +1082,7 @@ export function parseBlocks(lines: Line[], context: BlockContext, depth = 0): Md
         // list as much as outside one: `* * *` on the second line of a list of
         // `*` items is a rule that ends the list, not an item with two more
         // bullets in it.
-        if (THEMATIC.test(lines[at].text)) {
+        if (isThematic(lines[at].text)) {
           break;
         }
 
