@@ -1186,6 +1186,26 @@ void main() {
     });
   });
 
+  group('a toolbar floating over the source', () {
+    testWidgets('leaves the line being typed clear of it', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(
+          const MawyEditor(
+            defaultValue: document,
+            defaultMode: MawyEditorMode.plain,
+            frame: MawyFrame.floating,
+            toolbarPlacement: MawyToolbarPlacement.bottom,
+          ),
+        ),
+      );
+
+      final Rect field = tester.getRect(find.byType(EditableText));
+      final Rect button = tester.getRect(find.bySemanticsLabel('Bold'));
+
+      expect(field.bottom, lessThanOrEqualTo(button.top));
+    });
+  });
+
   group('a long document', () {
     final String long = 'word ' * 5000;
 

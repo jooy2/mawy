@@ -749,6 +749,7 @@ class MawySourceField extends StatefulWidget {
     this.scrollController,
     this.editableKey,
     this.lineNumbers = true,
+    this.room = EdgeInsets.zero,
     this.matches = const <MawyMatch>[],
     this.currentMatch = -1,
     super.key,
@@ -768,6 +769,13 @@ class MawySourceField extends StatefulWidget {
 
   /// Whether GitHub's additions are read.
   final bool gfm;
+
+  /// What to leave clear at the edges, for a toolbar floating over them.
+  ///
+  /// Outside the scrolling text rather than a [EditableText.scrollPadding]: a
+  /// caret on the last line of a document has nowhere further to scroll to, so
+  /// the line being typed would go on behind the bar.
+  final EdgeInsets room;
 
   /// Whether a `: ` line under a line of text is a definition. See [keptList].
   final bool definitionLists;
@@ -1196,12 +1204,10 @@ class _MawySourceFieldState extends State<MawySourceField>
       ],
     );
 
+    final EdgeInsets room = EdgeInsets.fromLTRB(16, 14, 16, 14) + widget.room;
+
     if (!widget.lineNumbers) {
-      return Container(
-        color: tokens.background,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        child: field,
-      );
+      return Container(color: tokens.background, padding: room, child: field);
     }
 
     final TextStyle numbers = style.copyWith(color: tokens.foregroundSubtle);
@@ -1211,7 +1217,7 @@ class _MawySourceFieldState extends State<MawySourceField>
       child: Stack(
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: room,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[

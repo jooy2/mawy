@@ -511,6 +511,17 @@ class _MawyEditorState extends State<MawyEditor> {
   late String _previewed = _value;
   Timer? _previewTimer;
 
+  /// What a toolbar floating over the document takes from it.
+  EdgeInsets get _floatingRoom {
+    if (widget.frame != MawyFrame.floating || widget.toolbar.isEmpty) {
+      return EdgeInsets.zero;
+    }
+
+    return widget.toolbarPlacement == MawyToolbarPlacement.top
+        ? const EdgeInsets.only(top: _floatingBar)
+        : const EdgeInsets.only(bottom: _floatingBar);
+  }
+
   /// What the pane beside the source is, this build.
   ///
   /// A document with nothing in it draws nothing, and a pane drawing nothing
@@ -1097,6 +1108,7 @@ class _MawyEditorState extends State<MawyEditor> {
     final Widget source = MawySourceField(
       controller: _controller,
       focusNode: _focus,
+      room: _floatingRoom,
       tokens: tokens,
       strings: strings,
       gfm: widget.parse.gfm,
@@ -1378,6 +1390,9 @@ class _MawyEditorState extends State<MawyEditor> {
 /// next one being typed. A keystroke refused again says it again, from the
 /// start, because somebody pressing the key twice meant it twice.
 const Duration kMawyNoticeTime = Duration(milliseconds: 1800);
+
+/// How tall a floating toolbar is, with the gap under it.
+const double _floatingBar = 60;
 
 /// How long a document is before a key stops waiting for what can wait.
 ///

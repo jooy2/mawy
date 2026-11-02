@@ -30,6 +30,8 @@
 
 - **The find bar left the keyboard where it was.** Opening it did not take the focus from the field it was opened from, so on a phone the query went into the document.
 
+- **The line being typed went behind a floating toolbar.** The text stops above the bar now, so the last line of a document is never under it.
+
 ### Changed
 
 - **On a long document the preview and the counts follow once the typing stops.** Past twenty thousand characters neither is worked out at every key, because a key was waiting for two things nobody looks at while typing. Below that nothing has changed.
