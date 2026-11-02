@@ -369,6 +369,39 @@ describe('Shift+Enter', () => {
   });
 });
 
+describe('a language', () => {
+  const typed = async (keys: string, expected: string) => {
+    const { body, screen, writes } = await editing('');
+
+    beside(body, body.querySelector('p') as Element, 0);
+    await settled();
+
+    for (const key of keys.split('|')) {
+      await userEvent.keyboard(key);
+      await settled();
+    }
+
+    await writes(expected);
+    await screen.unmount();
+  };
+
+  it('is taken from a word typed straight after the backticks', async () => {
+    await typed('```|js|{Enter}|x', '```js\nx\n```');
+  });
+
+  it('is not taken from a word typed after Enter, which is code', async () => {
+    await typed('```|{Enter}|ls|{Enter}', '```\nls\n\n```');
+  });
+
+  it('is not taken from anything but one word', async () => {
+    await typed('```|a b|{Enter}', '```\na b\n\n```');
+  });
+
+  it('is not taken once the caret has moved', async () => {
+    await typed('```|js|{ArrowLeft}|{Enter}', '```\nj\ns\n```');
+  });
+});
+
 describe('a list inside a quotation', () => {
   it('goes on as a list', async () => {
     const { body, writes } = await editing('> - one');

@@ -95,6 +95,8 @@ export interface MawyEdit {
   betweenBlocks?: boolean;
   /** Formatting the caret goes on holding after this edit. See `heldText`. */
   holds?: readonly MawyCommand[];
+  /** The caret was left in a fence just opened with nothing in it. See `namedFence`. */
+  fence?: boolean;
 }
 
 /**
@@ -1377,6 +1379,39 @@ function breakAt(
   // In front of the markers opened again after the break, on the words they
   // open, so what is typed next is in the formatting those words are in.
   return { ...edit, caret: edit.caret + cut.opening };
+}
+
+/** What a fence's language can be written as. */
+const LANGUAGE = /^[a-zA-Z][\w+#.-]*$/;
+
+/**
+ * `Enter` after a word typed straight behind the three backticks that opened a
+ * fence, which moves the word onto the fence as the block's language.
+ *
+ * Three backticks open the block at once, with the caret inside it, because a
+ * fence left open turns everything under it into code. So the `js` of a hand
+ * typing a fence the way it is written in a file went in as the first line of
+ * the code. `Enter` is what says the word was on the fence's line all along.
+ *
+ * `start` is where the block's words start, written down by the keystroke that
+ * opened it and let go of by anything but more of the word. `Enter` first and
+ * the word is code, and so is one typed into a block the toolbar made, which is
+ * why this is not asked of every block with one word in it. `null` where there
+ * is one line of something else, or the caret has moved.
+ */
+export function namedFence(value: string, start: number, at: number): MawyEdit | null {
+  const code = fencedAt(value, at);
+
+  if (!code || code.content.start !== start || code.content.end !== at) {
+    return null;
+  }
+
+  const name = value.slice(start, at);
+  const head = value.indexOf('\n', code.range.start);
+
+  return LANGUAGE.test(name)
+    ? { value: value.slice(0, head) + name + value.slice(head, start) + value.slice(at), caret: at }
+    : null;
 }
 
 /**

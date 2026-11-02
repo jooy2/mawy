@@ -48,6 +48,7 @@ import {
   inLabel,
   listKept,
   markdownFor,
+  namedFence,
   openedAt,
   overSpaces,
   reachedBlock,
@@ -350,6 +351,8 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
     const arrowed = React.useRef<'forwards' | 'backwards' | null>(null);
     /** Whether the key the next input answers is `Enter` under `Shift`. */
     const shifted = React.useRef(false);
+    /** Where the words of a fence just opened start. See `namedFence`. */
+    const fence = React.useRef<number | null>(null);
     /** Bumped to throw the drawing away and make it again from the document. */
     const [generation, setGeneration] = React.useState(0);
     const gfm = parse?.gfm ?? true;
@@ -725,6 +728,23 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           return;
         }
 
+        // The word a fence was just opened for. See `namedFence`.
+        const fenced = fence.current;
+
+        if (input.inputType !== 'insertText' && input.inputType !== 'deleteContentBackward') {
+          fence.current = null;
+        }
+
+        if (input.inputType === 'insertParagraph' && fenced !== null) {
+          const named = namedFence(now.value, fenced, selectionRef.current.start);
+
+          if (named) {
+            now.onEdit(named);
+
+            return;
+          }
+        }
+
         const edit = editFor(
           input,
           element,
@@ -738,6 +758,10 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
         if (!edit) {
           return;
+        }
+
+        if (edit.fence) {
+          fence.current = edit.caret;
         }
 
         /*
@@ -1911,6 +1935,10 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           onKeyDown={(event) => {
             shifted.current = event.key === 'Enter' && event.shiftKey;
 
+            if (/^(?:Arrow|Home$|End$|Page)/.test(event.key)) {
+              fence.current = null;
+            }
+
             arrowed.current = /^(?:ArrowUp|ArrowLeft|Home|PageUp)$/.test(event.key)
               ? 'backwards'
               : /^(?:ArrowDown|ArrowRight|End|PageDown)$/.test(event.key)
@@ -1921,6 +1949,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
           }}
           onMouseDown={(event) => {
             arrowed.current = null;
+            fence.current = null;
             pressCell(event);
           }}
           onClick={(event) => {

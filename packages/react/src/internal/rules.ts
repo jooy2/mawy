@@ -20,6 +20,9 @@
  * So a fence is opened *closed*, with whatever was on the line inside it, and a
  * break is given a line under it to carry on typing on.
  *
+ * A language typed after the third backtick is answered when `Enter` says it
+ * was one. See `namedFence` in `editing.ts`.
+ *
  * The other two are a marker typed where a marker already is, which the parser
  * reads as the words of a heading or as a list inside an item, and which is
  * never what was meant: see `RETYPED` and `AGAIN`.
@@ -97,7 +100,10 @@ export function ruleFor(value: string, at: number, text: string): MawyEdit | nul
 
     return {
       value: value.slice(0, from) + block + value.slice(to),
-      caret: from + lead.length + mark.length + 1 + carry.length
+      caret: from + lead.length + mark.length + 1 + carry.length,
+      // With nothing on the line, what is typed next may be the block's
+      // language. See `namedFence`.
+      fence: !rest.trim()
     };
   }
 
