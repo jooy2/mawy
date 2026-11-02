@@ -1,0 +1,67 @@
+name: publish-flutter
+
+# A release of `mawy` is a tag: `flutter-v1.9.0` publishes 1.9.0. The two packages
+# version independently, so each has a tag of its own.
+#
+# There is no token in this repository. pub.dev trusts a tag of this shape from
+# this repository, through the automated publishing set on the package's admin
+# page, and the job proves who it is with an id token. The tag pattern there is
+# `flutter-v{{version}}`, and it has to stay in step with the one below.
+on:
+  push:
+    tags:
+      - 'flutter-v[0-9]+.[0-9]+.[0-9]+'
+
+defaults:
+  run:
+    working-directory: ./packages/flutter
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish to pub.dev
+
+    permissions:
+      # What pub.dev's automated publishing asks GitHub for.
+      id-token: write
+      # What the release page below needs.
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+      # Not for the SDK. It is what turns the job's id token into a credential
+      # pub.dev reads. It goes first so that the `dart` on the path afterwards
+      # is the one Flutter brought, because this package needs Flutter to
+      # resolve.
+      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      # A tag that disagrees with the manifest would be refused by pub.dev only
+      # after everything else had run. Said here, it is said first.
+      - name: Check the tag is the version in the manifest
+        run: |
+          test "flutter-v$(sed -n 's/^version: //p' pubspec.yaml)" = "$GITHUB_REF_NAME"
+      # `dart pub publish` refuses a tree with uncommitted changes in it, and on
+      # the runner the SDK's own `pub get` rewrites `analysis_options.yaml`. See
+      # the same step in `run-test-flutter.yml`.
+      - name: Publish
+        run: |
+          git status --porcelain
+          git checkout -- .
+          dart pub publish --force
+      # The section of the changelog with this version on it, and nothing else.
+      - name: Create the release page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#flutter-v}"
+          awk -v heading="## $version" \
+            'index($0, heading) == 1 { found = 1; next } /^## / { found = 0 } found' \
+            CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          test -s "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "mawy $version" \
+            --notes-file "$RUNNER_TEMP/notes.md"

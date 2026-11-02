@@ -1,0 +1,61 @@
+name: publish-react
+
+# A release of `mawy-react` is a tag: `react-v1.9.0` publishes 1.9.0. The two
+# packages version independently, so each has a tag of its own.
+#
+# There is no token in this repository. npm trusts this file by name, through
+# the trusted publisher set on the package's settings page, and a run of it
+# proves who it is with an id token that lasts as long as the job. Provenance
+# comes with that and needs no flag. Renaming this file breaks the trust until
+# the name on npm is changed to match.
+on:
+  push:
+    tags:
+      - 'react-v[0-9]+.[0-9]+.[0-9]+'
+
+defaults:
+  run:
+    working-directory: ./packages/react
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish to npm
+
+    permissions:
+      # What npm's trusted publishing asks GitHub for.
+      id-token: write
+      # What the release page below needs.
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        name: Setup Node.js
+        with:
+          node-version: '26'
+          registry-url: 'https://registry.npmjs.org'
+          # npm's own advice for a release: nothing from a cache goes into what
+          # is published.
+          package-manager-cache: false
+      - run: npm ci
+      # A tag that disagrees with the manifest would publish a version nobody
+      # meant, under a name the page below would then contradict.
+      - name: Check the tag is the version in the manifest
+        run: test "react-v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      # `prepare` builds `dist/` on the way, the same build the tests ran against.
+      - name: Publish
+        run: npm publish
+      # The section of the changelog with this version on it, and nothing else.
+      - name: Create the release page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#react-v}"
+          awk -v heading="## $version" \
+            'index($0, heading) == 1 { found = 1; next } /^## / { found = 0 } found' \
+            CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          test -s "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "mawy-react $version" \
+            --notes-file "$RUNNER_TEMP/notes.md"

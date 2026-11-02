@@ -91,8 +91,13 @@ is a promise as well as a version: the exported API is under semantic
 versioning, so a name that goes away or changes shape waits for a major.
 
 The steps are bumping the version in `packages/react/package.json` and
-`packages/flutter/pubspec.yaml`, retitling `## vNext` with the number and
-the date, `npm run size -- --update` if a change moved the bundle — the figures
-on the site's getting-started page are those numbers and move with them —
-tagging, and `--provenance` for npm, which wants a workflow with an id token.
-Publishing is a person with credentials rather than anything here.
+`packages/flutter/pubspec.yaml`, putting the number and the date on a heading
+under `## vNext`, `npm run size -- --update` if a change moved the bundle — the
+figures on the site's getting-started page are those numbers and move with them
+— and pushing a tag for each package, `react-v1.9.0` and `flutter-v1.9.0`.
+
+The tag is the release. `publish-react.yml` and `publish-flutter.yml` publish
+through OIDC and make the release page from that version's section of the
+changelog, and there is no token in the repository. npm trusts the first by its
+filename and pub.dev trusts the second by the tag pattern
+`flutter-v{{version}}`, so renaming either means changing that as well.
