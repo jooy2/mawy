@@ -58,6 +58,11 @@ with where the code is.
 
 ## Reported
 
+A run dragged on `wysiwyg`, a picture among them, has only ever been tested with
+dispatched events. A pointer driven through the browser's debugging protocol does
+not start a native drag and drop, so the drop itself has not been seen working in
+a real browser.
+
 - **A paste from Word on Windows, or from Outlook.** A picture whose `<img>`
   points at a file on the copying machine is read out of the RTF on the same
   clipboard now, matched to the markup by counting — `picturesInRtf` in
