@@ -11,7 +11,7 @@
  */
 
 import type { MdCode, MdListItem, MdNode, MdRange, MdTable } from './markdown/ast.js';
-import { parseMarkdown } from './markdown/parse.js';
+import { documentOf } from './markdown/parsed.js';
 
 export interface EditState {
   value: string;
@@ -381,7 +381,7 @@ export function fencedAt(value: string, offset: number): MdCode | null {
     return null;
   }
 
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
 
   return codeNodeAt([...document.root.children, ...document.footnotes], offset);
 }
@@ -912,7 +912,7 @@ function ownerOf(
     return null;
   }
 
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   const blocks = [...document.root.children, ...document.footnotes];
   const owner = verbatimAt(blocks, at) ? null : itemNodeAt(blocks, at);
 
@@ -965,7 +965,7 @@ function lineAt(value: string, at: number): string {
 
 /** The top-level list a place in a document is inside, where it is inside one. */
 function listAt(value: string, at: number, definitionLists: boolean): MdRange | null {
-  const list = parseMarkdown(value, { definitionLists }).root.children.find(
+  const list = documentOf(value, { definitionLists }).root.children.find(
     (block) => block.type === 'list' && block.range.start <= at && at <= block.range.end
   );
 
@@ -1468,7 +1468,7 @@ function tableAt(value: string, offset: number): TableAt | null {
     return null;
   }
 
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   const table = tableNodeAt([...document.root.children, ...document.footnotes], offset);
 
   if (!table) {
@@ -1653,7 +1653,7 @@ function insertTable(state: EditState, columns = 2, rows = 2): EditState | null 
     return null;
   }
 
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   const blocks = [...document.root.children, ...document.footnotes];
 
   if (verbatimAt(blocks, start) || verbatimAt(blocks, end)) {
@@ -1996,7 +1996,7 @@ function clearCells(state: EditState): EditState | null {
  */
 export function hardBreak(state: EditState): EditState {
   const { value, start, end } = state;
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   const blocks = [...document.root.children, ...document.footnotes];
   const from = lineStartOf(value, start);
   const code = codeAt(blocks, start);
@@ -2135,7 +2135,7 @@ function runAround(value: string, at: number, mark: string): { from: number; to:
  * those, and refusing it would be refusing the word.
  */
 function literalAt(value: string, at: number): boolean {
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   const blocks = [...document.root.children, ...document.footnotes];
 
   return verbatimAt(blocks, at) || tableNodeAt(blocks, at) !== null;
@@ -2622,7 +2622,7 @@ export function tableRangeAt(value: string, offset: number): { start: number; en
     return null;
   }
 
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   const table = tableNodeAt([...document.root.children, ...document.footnotes], offset);
 
   return table ? { start: table.range.start, end: table.range.end } : null;

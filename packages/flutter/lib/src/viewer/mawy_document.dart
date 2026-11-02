@@ -48,6 +48,7 @@ import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/linking.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/parse.dart';
+import 'package:mawy/src/markdown/parsed.dart';
 import 'package:mawy/src/markdown/render.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
@@ -207,7 +208,7 @@ class _MawyDocumentState extends State<MawyDocument> with MawyLinking<MawyDocume
 
   /// Reads the document, and throws away everything that was about the last one.
   void _read() {
-    _document = parseMarkdown(widget.value, widget.parse);
+    _document = documentOf(widget.value, widget.parse);
     _footnoteKeys.clear();
     _mentions.clear();
     _mentionKeys.clear();

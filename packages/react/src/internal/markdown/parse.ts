@@ -437,15 +437,31 @@ function matterIn(lines: readonly Line[]): { count: number; start: number; end: 
   return null;
 }
 
+/** Every option, as what it is when nothing was said about it. */
+export function withDefaults(options: MarkdownOptions) {
+  return {
+    gfm: options.gfm ?? true,
+    breaks: options.breaks ?? false,
+    definitionLists: options.definitionLists ?? true,
+    headingIds: options.headingIds ?? true,
+    frontmatter: options.frontmatter ?? true,
+    typographer: options.typographer ?? false,
+    autolinkSchemes: options.autolinkSchemes ?? false,
+    quotes: { ...DEFAULT_QUOTES, ...options.typographerQuotes }
+  };
+}
+
 export function parseMarkdown(source: string, options: MarkdownOptions = {}): MdDocument {
-  const gfm = options.gfm ?? true;
-  const breaks = options.breaks ?? false;
-  const definitionLists = options.definitionLists ?? true;
-  const headingIds = options.headingIds ?? true;
-  const frontmatter = options.frontmatter ?? true;
-  const typographer = options.typographer ?? false;
-  const autolinkSchemes = options.autolinkSchemes ?? false;
-  const quotes = { ...DEFAULT_QUOTES, ...options.typographerQuotes };
+  const {
+    gfm,
+    breaks,
+    definitionLists,
+    headingIds,
+    frontmatter,
+    typographer,
+    autolinkSchemes,
+    quotes
+  } = withDefaults(options);
 
   const definitions = new Map<string, MdDefinition>();
   const footnotes = new Map<string, MdFootnoteDefinition>();

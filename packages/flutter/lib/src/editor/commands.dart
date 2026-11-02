@@ -15,6 +15,7 @@ import 'dart:math' as math;
 
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/parse.dart';
+import 'package:mawy/src/markdown/parsed.dart';
 
 /// A document and where the caret is in it.
 class EditState {
@@ -433,7 +434,7 @@ MdCode? fencedAt(String value, int offset) {
     return null;
   }
 
-  final MdDocument document = parseMarkdown(value);
+  final MdDocument document = documentOf(value);
 
   return _codeNodeAt(<MdNode>[...document.root.children, ...document.footnotes], offset);
 }
@@ -920,7 +921,7 @@ final RegExp _anyItem = RegExp(r'^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]', multiLine: 
     return null;
   }
 
-  final MdDocument document = parseMarkdown(value);
+  final MdDocument document = documentOf(value);
   final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
   final MdListItem? owner = _verbatimAt(blocks, at) ? null : _itemNodeAt(blocks, at);
 
@@ -977,10 +978,7 @@ String _lineAt(String value, int at) {
 
 /// The top-level list a place in a document is inside, where it is inside one.
 MdRange? _listAt(String value, int at, bool definitionLists) {
-  final MdDocument document = parseMarkdown(
-    value,
-    MawyParseOptions(definitionLists: definitionLists),
-  );
+  final MdDocument document = documentOf(value, MawyParseOptions(definitionLists: definitionLists));
 
   for (final MdNode block in document.root.children) {
     if (block is MdList && block.range.start <= at && at <= block.range.end) {
@@ -1567,7 +1565,7 @@ _TableAt? _tableAt(String value, int offset) {
     return null;
   }
 
-  final MdDocument document = parseMarkdown(value);
+  final MdDocument document = documentOf(value);
   final MdTable? table = _tableNodeAt(<MdNode>[
     ...document.root.children,
     ...document.footnotes,
@@ -1767,7 +1765,7 @@ EditState? _insertTable(EditState state, {int columns = 2, int rows = 2}) {
     return null;
   }
 
-  final MdDocument document = parseMarkdown(value);
+  final MdDocument document = documentOf(value);
   final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
 
   if (_verbatimAt(blocks, start) || _verbatimAt(blocks, end)) {
@@ -2110,7 +2108,7 @@ EditState? _removeTable(EditState state) {
 EditState hardBreak(EditState state) {
   final String value = state.value;
   final int start = state.start;
-  final MdDocument document = parseMarkdown(value);
+  final MdDocument document = documentOf(value);
   final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
   final int from = _lineStartOf(value, start);
   final MdCode? code = _codeAt(blocks, start);
@@ -2254,7 +2252,7 @@ MawyCrowding? crowdedBy(String value, int caret) {
 /// writes for them: a space typed at the end of a cell's words is beside one of
 /// those, and refusing it would be refusing the word.
 bool _literalAt(String value, int at) {
-  final MdDocument document = parseMarkdown(value);
+  final MdDocument document = documentOf(value);
   final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
 
   return _verbatimAt(blocks, at) || _tableNodeAt(blocks, at) != null;
@@ -2770,7 +2768,7 @@ MdRange? tableRangeAt(String value, int offset) {
     return null;
   }
 
-  final MdDocument document = parseMarkdown(value);
+  final MdDocument document = documentOf(value);
   final MdTable? table = _tableNodeAt(<MdNode>[
     ...document.root.children,
     ...document.footnotes,

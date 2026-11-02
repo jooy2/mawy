@@ -30,7 +30,8 @@ import {
   type MawyCommand
 } from './commands.js';
 import type { MdNode, MdRange } from './markdown/ast.js';
-import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
+import type { MarkdownOptions } from './markdown/parse.js';
+import { documentOf } from './markdown/parsed.js';
 import { markdownFromHtml, wrappedPlainText } from './markdown/paste.js';
 import { rangeOf, sourceAt } from './position.js';
 import { ruleFor } from './rules.js';
@@ -412,7 +413,7 @@ export function openedAt(
   // follow; opening the line here too would write a blank line the source
   // surface does not, and the same keystroke would mean two things.
   if (
-    parseMarkdown(value, options).root.children.some(
+    documentOf(value, options).root.children.some(
       (block) => block.type === 'list' && block.range.start <= at && at <= block.range.end
     )
   ) {
@@ -459,7 +460,7 @@ function settle(edit: MawyEdit, options: MarkdownOptions): MawyEdit {
 
   for (const extra of ['', '\n', '\n\n']) {
     const value = edit.value.slice(0, edit.caret) + extra + edit.value.slice(edit.caret);
-    const blocks = parseMarkdown(value, options).root.children;
+    const blocks = documentOf(value, options).root.children;
 
     if (
       !extra &&
@@ -778,7 +779,7 @@ function wordless(
  * no blank line of its own to give up.
  */
 export function betweenItems(value: string, at: number, options: MarkdownOptions): boolean {
-  return parseMarkdown(value, options).root.children.some(
+  return documentOf(value, options).root.children.some(
     (block) =>
       block.type === 'list' &&
       block.range.start < at &&
@@ -1218,7 +1219,7 @@ function continueNote(value: string, caret: number, options: MarkdownOptions): M
     return null;
   }
 
-  const note = parseMarkdown(value, options).footnotes.find(
+  const note = documentOf(value, options).footnotes.find(
     (each) => each.range.start <= caret && caret <= each.range.end
   );
 
@@ -1492,7 +1493,7 @@ function cutAt(
     };
   }
 
-  const document = parseMarkdown(value, options);
+  const document = documentOf(value, options);
   let head = at;
   let closing = '';
   let opening = '';
@@ -1555,7 +1556,7 @@ function cutAt(
 /** The runs of formatting and the links a place is inside, innermost first, with their words. */
 function runsCut(
   value: string,
-  document: ReturnType<typeof parseMarkdown>,
+  document: ReturnType<typeof documentOf>,
   at: number
 ): { node: MdNode; words: MdRange }[] {
   if (!/[*_~`[]/.test(value)) {
@@ -1581,7 +1582,7 @@ function runsCut(
 function pastRun(value: string, at: number, options: MarkdownOptions): number {
   let head = at;
 
-  for (const { node, words } of runsCut(value, parseMarkdown(value, options), at)) {
+  for (const { node, words } of runsCut(value, documentOf(value, options), at)) {
     if (head < words.end) {
       break;
     }
@@ -1729,7 +1730,7 @@ export function nestingWaits(
   }
 
   const moved = next.start > 0 ? next.value.lastIndexOf('\n', next.start - 1) + 1 : 0;
-  const item = itemAt(parseMarkdown(next.value, options).root.children, next.start);
+  const item = itemAt(documentOf(next.value, options).root.children, next.start);
 
   return !item || item.range.start < moved;
 }
@@ -1761,7 +1762,7 @@ function movedOut(value: string, at: number, options: MarkdownOptions): MawyEdit
   }
 
   const moved = next.start > 0 ? next.value.lastIndexOf('\n', next.start - 1) + 1 : 0;
-  const item = itemAt(parseMarkdown(next.value, options).root.children, next.start);
+  const item = itemAt(documentOf(next.value, options).root.children, next.start);
 
   return item && item.range.start >= moved ? { value: next.value, caret: next.start } : null;
 }
@@ -1851,7 +1852,7 @@ export function wrapRange(
     return { start, end };
   }
 
-  const document = parseMarkdown(value, options);
+  const document = documentOf(value, options);
   const blocks = [...document.root.children, ...document.footnotes];
   const opens = markedAt(blocks, start, []).filter((node) => end > node.range.end);
   const closes = markedAt(blocks, end, []).filter((node) => start < node.range.start);
@@ -1913,7 +1914,7 @@ interface MawyRun {
 /** The runs of formatting whose markers reach a place, whether or not it is among their words. */
 function runsAround(value: string, offset: number): MawyRun[] {
   const out: MawyRun[] = [];
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
 
   const walk = (nodes: readonly MdNode[]) => {
     for (const node of nodes) {
@@ -2393,7 +2394,7 @@ function replaced(value: string, start: number, end: number, text: string): Mawy
     return splice(value, start, end, text);
   }
 
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   const blocks = [...document.root.children, ...document.footnotes];
   const pieces = (nodes: MdNode[], piece: (words: MdRange, node: MdNode) => string) =>
     nodes.map((node) => {
@@ -2521,7 +2522,7 @@ function widened(value: string, start: number, end: number): { start: number; en
     return { start, end };
   }
 
-  const document = parseMarkdown(value);
+  const document = documentOf(value);
   let from = start;
   let to = end;
 

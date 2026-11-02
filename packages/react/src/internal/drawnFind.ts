@@ -16,7 +16,8 @@
  */
 
 import type { MdNode } from './markdown/ast.js';
-import { parseMarkdown, type MarkdownOptions } from './markdown/parse.js';
+import type { MarkdownOptions } from './markdown/parse.js';
+import { documentOf } from './markdown/parsed.js';
 import { domAt } from './position.js';
 import type { MawyMatch } from './search.js';
 
@@ -26,7 +27,7 @@ import type { MawyMatch } from './search.js';
  */
 function drawnRuns(value: string, options: MarkdownOptions): { start: number; end: number }[] {
   const runs: { start: number; end: number }[] = [];
-  const document = parseMarkdown(value, options);
+  const document = documentOf(value, options);
 
   const walk = (nodes: readonly MdNode[]) => {
     for (const node of nodes) {

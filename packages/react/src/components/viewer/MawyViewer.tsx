@@ -29,7 +29,7 @@ import { useControlled } from '../../internal/controlled.js';
 import { FilePicker } from '../../internal/controls.js';
 import { carriesFile, useFileDrag } from '../../internal/drag.js';
 import { useStrings } from '../../internal/strings.js';
-import { parseMarkdown } from '../../internal/markdown/parse.js';
+import { documentOf } from '../../internal/markdown/parsed.js';
 import { LIVE } from '../../internal/markdown/live.js';
 import { firstImage, renderBlocks, renderFootnotes } from '../../internal/markdown/render.js';
 import { findInDocument, NOTHING_FOUND } from '../../internal/markdown/find.js';
@@ -533,7 +533,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
   const document_ = React.useMemo(
     () =>
-      parseMarkdown(text, {
+      documentOf(text, {
         gfm,
         breaks,
         definitionLists,

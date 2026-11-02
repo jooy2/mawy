@@ -25,7 +25,7 @@ import type {
 } from '../../internal/markdown/ast.js';
 import { useHighlighter } from '../../internal/highlighter.js';
 import { LIVE } from '../../internal/markdown/live.js';
-import { parseMarkdown } from '../../internal/markdown/parse.js';
+import { documentOf } from '../../internal/markdown/parsed.js';
 import {
   firstImage,
   isLineBreakHtml,
@@ -432,7 +432,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
     React.useImperativeHandle(ref, () => root.current as HTMLElement);
 
-    const document_ = React.useMemo(() => parseMarkdown(value, options), [value, options]);
+    const document_ = React.useMemo(() => documentOf(value, options), [value, options]);
     // The same highlighter the preview is given, asked for the same way: not
     // until the document has a fenced code block with a language on it.
     const highlighter = useHighlighter(highlight, document_);

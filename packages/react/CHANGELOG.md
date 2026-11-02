@@ -64,6 +64,8 @@
 
 - **Parsing read to the end of the file at every line.** It was looking for a carriage return in a file that had none, and that was two thirds of the cost of parsing anything. A megabyte of real writing went from 264 ms to 54 ms.
 
+- **A key read the whole text eight to eleven times, and an arrow five.** Each thing that wanted to know something about the document read it for itself. A text is read once now, and a caret that moved reads nothing. With the line above, a key on `wysiwyg` at 300 kB went from 267 ms to 33 ms, an arrow from 173 ms to 16 ms, and a key on the source from 335 ms to 35 ms.
+
 - **A small document could stop the page.** 24 kB of `:a[` inside each other ran out of stack and threw, and so did a paragraph of a quarter of a million bare addresses. A directive's label nests a hundred deep now, as everything else does, and neither goes on the stack.
 
 - **A run of brackets could hold the page up for seconds.** A viewer draws documents it did not write, so this one matters past the editor. 128 kB of nested `[` took three seconds and 40 kB of `[a](<` two and a half, because every `]` and every `(` read to the far end of the text again. Both now stop where CommonMark says they do.

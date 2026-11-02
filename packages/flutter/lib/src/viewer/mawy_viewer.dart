@@ -26,6 +26,7 @@ import 'package:mawy/src/internal/wheel.dart';
 import 'package:mawy/src/markdown/ast.dart';
 import 'package:mawy/src/markdown/find.dart';
 import 'package:mawy/src/markdown/parse.dart';
+import 'package:mawy/src/markdown/parsed.dart';
 import 'package:mawy/src/markdown/render.dart';
 import 'package:mawy/src/theme/tokens.dart';
 import 'package:mawy/src/types.dart';
@@ -516,7 +517,7 @@ class _MawyViewerState extends State<MawyViewer>
   /// was in the middle of a build is telling something outside this widget to
   /// change while the frame it is part of is being put together.
   void _read() {
-    _document = parseMarkdown(widget.value, widget.parse);
+    _document = documentOf(widget.value, widget.parse);
     _headings.clear();
     _footnoteKeys.clear();
     _order.clear();
