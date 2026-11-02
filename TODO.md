@@ -74,6 +74,16 @@ a real browser.
   Outlook's `cid:` pictures come with RTF at all. A clipboard that breaks the
   counting loses its pictures the way every such paste did before.
 
+- **`Enter` from an iPhone's keyboard.** `_EnterCarried` in
+  `lib/src/editor/source_field.dart` has been seen working with a real keyboard
+  on Android. An iPhone cannot be driven from a script, so on iOS it has only
+  been tested with the updates a keyboard would send.
+- **One toolbar test on macOS WebKit.** `puts what does not fit into a menu, and
+  gives it all back` failed once on CI at `6d96921`, with `Find` not yet in the
+  row, and passed when the job was run again. It has not been reproduced.
+- **One full WebKit run that stopped short.** It finished 26 of 40 files with no
+  test failed, the log was not kept, and every full run since has finished.
+
 ## Release
 
 Each package carries a number of its own, dated in its own changelog. The number
