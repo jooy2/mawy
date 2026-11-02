@@ -14,6 +14,8 @@
 
 - **Bold links in a long paragraph cost the square of their length**, and so did `:a[` that never closes, runs of backticks of different lengths and an address ending in closing brackets. Each is read once now.
 
+- **The parser copied the rest of the text wherever it looked at the rest of the text.** A Dart string copies, so a `<` in a long paragraph, a paragraph of many lines, a table cell of escaped pipes and a paragraph of bare addresses all cost the square of their length. A quarter of a million addresses took a minute and a half, and take less than a second.
+
 ### Changed
 
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.

@@ -844,9 +844,12 @@ _CodeSpan? _readCodeSpan(String source, int start, Map<int, int> runs) {
   return null;
 }
 
-final RegExp _autolinkUri = RegExp(r'^<([A-Za-z][A-Za-z\d+.-]{1,31}:[^\s<>]*)>');
+// Read with `matchAsPrefix` at the bracket rather than over what is left of the
+// text, so none of the three carries a `^`: a copy of the rest of the paragraph
+// for every `<` in it is the square of the paragraph.
+final RegExp _autolinkUri = RegExp(r'<([A-Za-z][A-Za-z\d+.-]{1,31}:[^\s<>]*)>');
 final RegExp _autolinkEmail = RegExp(
-  r"^<([A-Za-z\d.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z\d](?:[A-Za-z\d-]{0,61}[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]{0,61}[A-Za-z\d])?)*)>",
+  r"<([A-Za-z\d.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z\d](?:[A-Za-z\d-]{0,61}[A-Za-z\d])?(?:\.[A-Za-z\d](?:[A-Za-z\d-]{0,61}[A-Za-z\d])?)*)>",
 );
 // An attribute name is a letter, `_` or `:` and then letters, digits, `_`,
 // `.`, `:` and `-` — which is the specification's own rule, and is narrower
@@ -858,7 +861,7 @@ final RegExp _autolinkEmail = RegExp(
 // before the general form. Without that, `<!--> foo -->` is one comment as far
 // as the closing `-->` rather than a comment and then some text.
 final RegExp _inlineHtml = RegExp(
-  r'''^(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[A-Za-z_:][A-Za-z\d_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*/?>|</[A-Za-z][A-Za-z\d-]*\s*>|<!-->|<!--->|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![A-Za-z][^>]*>|<!\[CDATA\[[\s\S]*?\]\]>)''',
+  r'''(?:<[A-Za-z][A-Za-z\d-]*(?:\s+[A-Za-z_:][A-Za-z\d_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*/?>|</[A-Za-z][A-Za-z\d-]*\s*>|<!-->|<!--->|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![A-Za-z][^>]*>|<!\[CDATA\[[\s\S]*?\]\]>)''',
 );
 
 /* -------------------------------------------------------------------------
@@ -969,6 +972,17 @@ String? _addressUrl(String text) {
   return safeUrl('mailto:$text');
 }
 
+/// The first match at or after an offset.
+///
+/// From the offset rather than over `value.substring(start)`, which copies what
+/// is left of the text for every address in it: a paragraph of a quarter of a
+/// million of them took a minute and a half.
+RegExpMatch? _matchFrom(RegExp pattern, String value, int start) {
+  final Iterator<RegExpMatch> matches = pattern.allMatches(value, start).iterator;
+
+  return matches.moveNext() ? matches.current : null;
+}
+
 /// A text node split around the bare URLs and e-mail addresses inside it.
 ///
 /// The pieces get their offsets by counting from the node's own start, which is
@@ -990,13 +1004,13 @@ List<MdInline> _linkifyText(MdText node, RegExp pattern) {
   int search = 0;
 
   while (search <= value.length) {
-    final RegExpMatch? match = pattern.firstMatch(value.substring(search));
+    final RegExpMatch? match = _matchFrom(pattern, value, search);
 
     if (match == null) {
       break;
     }
 
-    final int at = search + match.start;
+    final int at = match.start;
     final String whole = match.group(0)!;
 
     search = at + whole.length;
@@ -1211,13 +1225,13 @@ String _typeset(String value) {
   int search = 0;
 
   while (search <= value.length) {
-    final RegExpMatch? match = _wideLiteral.firstMatch(value.substring(search));
+    final RegExpMatch? match = _matchFrom(_wideLiteral, value, search);
 
     if (match == null) {
       break;
     }
 
-    final int at = search + match.start;
+    final int at = match.start;
     final String whole = match.group(0)!;
 
     search = at + whole.length;
@@ -1851,8 +1865,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
     }
 
     if (character == '<') {
-      final String rest = source.substring(at);
-      final RegExpMatch? uri = _autolinkUri.firstMatch(rest);
+      final Match? uri = _autolinkUri.matchAsPrefix(source, at);
 
       if (uri != null) {
         final String? url = safeUrl(uri.group(1)!);
@@ -1877,7 +1890,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
         continue;
       }
 
-      final RegExpMatch? email = _autolinkEmail.firstMatch(rest);
+      final Match? email = _autolinkEmail.matchAsPrefix(source, at);
 
       if (email != null) {
         flush();
@@ -1898,7 +1911,7 @@ List<MdInline> parseInline(Sourced raw, InlineOptions options, [int nested = 0])
         continue;
       }
 
-      final RegExpMatch? html = _inlineHtml.firstMatch(rest);
+      final Match? html = _inlineHtml.matchAsPrefix(source, at);
 
       if (html != null) {
         flush();

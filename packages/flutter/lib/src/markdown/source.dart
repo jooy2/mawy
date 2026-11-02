@@ -82,11 +82,41 @@ class Sourced {
   /// document it was not written.
   Sourced([int from = 0]) : spans = <Span>[Span(0, from, 0)];
 
+  String _written = '';
+
+  /// What is being added, which is the one place this file reads differently
+  /// from its TypeScript half. A Dart string is immutable, so adding to one
+  /// copies all of it, and a paragraph of many lines or a table cell built a
+  /// character at a time cost the square of its length.
+  StringBuffer? _adding;
+
   /// The assembled text.
-  String text = '';
+  String get text {
+    final StringBuffer? adding = _adding;
+
+    if (adding != null) {
+      _written = adding.toString();
+      _adding = null;
+    }
+
+    return _written;
+  }
+
+  set text(String value) {
+    _adding = null;
+    _written = value;
+  }
+
+  /// How long [text] is, without assembling it.
+  int get length => _adding?.length ?? _written.length;
 
   /// Where each piece of it came from.
   final List<Span> spans;
+
+  /// Characters added to the end of [text].
+  void add(String more) {
+    (_adding ??= StringBuffer(_written)).write(more);
+  }
 }
 
 /// Text known to be one unbroken run of the document, added to the end.
@@ -104,10 +134,10 @@ void append(Sourced into, String text, int from) {
   if (last.from + last.length == from) {
     last.length += text.length;
   } else {
-    into.spans.add(Span(into.text.length, from, text.length));
+    into.spans.add(Span(into.length, from, text.length));
   }
 
-  into.text += text;
+  into.add(text);
 }
 
 /// One unbroken run of the document, on its own.
