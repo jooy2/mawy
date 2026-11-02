@@ -147,6 +147,8 @@ A caret in a place the page cannot draw is the same problem. Markdown does not k
 
 `Backspace` at the start of a block joins it to the one before it: two list items run together, a paragraph joins the heading above it. Two joins are refused. Joining a table cell to the cell beside it would remove the pipe between them, and joining a code block to whatever is above it would remove the fence.
 
+**`Enter` ends a line once, wherever the caret is in it.** The spaces either side of the break go, because no line draws them. Where a paragraph goes on, on the next line of the file, that line ending is the one the break writes over. Inside bold, italic, strikethrough, a code span or a link the run is closed in front of the break and opened again after it, and a link keeps its address on both halves; at the edge of one the break goes outside it. In front of a heading's words, a list item's or a quoted line's, the block goes down whole and the caret stays with the words.
+
 **A picture and a divider are not stepped over.** `Backspace` under a picture joins the line to the picture, and `Delete` over one does the same from the other side; neither takes the picture. Beside a divider either key takes the divider and leaves the line as it was. At the very top of the document, with nothing above to join to, `Backspace` gives up the marker of a heading, a list item or a quotation.
 
 **A selection stops at the words it covers.** A triple press selects up to the start of the next block, and nothing of that block is selected. So typing over it, deleting it or making it bold leaves that block's markers alone, and a deletion takes the block it started at the start of with it. A selection that ends inside bold or a link keeps the markers of what is left.

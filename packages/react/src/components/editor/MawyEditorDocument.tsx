@@ -36,6 +36,7 @@ import {
 import {
   NOTE_INDENT,
   besideLink,
+  blankAbove,
   blankParagraphs,
   blockAt,
   documentAt,
@@ -709,10 +710,14 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
          * break is made of, and a paste is left exactly as it came. See
          * `crowdedBy`.
          */
-        const block = blockAt(element, element.ownerDocument.getSelection()?.anchorNode ?? element);
+        const anchor = element.ownerDocument.getSelection();
+        const block = blockAt(element, anchor?.anchorNode ?? element);
         const crowding: MawyCrowding | null =
           input.inputType === 'insertParagraph'
-            ? block?.tagName === 'P' && !block.textContent && block.parentElement === element
+            ? (block?.tagName === 'P' && !block.firstChild && block.parentElement === element) ||
+              (anchor?.isCollapsed &&
+                anchor.anchorNode &&
+                blankAbove(element, anchor.anchorNode, anchor.anchorOffset))
               ? 'break'
               : null
             : input.inputType === 'insertText' && input.data === ' '

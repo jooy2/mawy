@@ -162,6 +162,17 @@ describe('line markers', () => {
     expect(run('orderedList', '«a\n\nb»')).toBe('«1. a\n\n2. b»');
   });
 
+  it('pushes an item down from in front of its words rather than giving its marker up', () => {
+    const enter = (value: string, start: number) =>
+      continueList({ value, start, end: start })?.value;
+
+    // What is before the caret is all the marker there is, and the words after
+    // it are what makes it an item.
+    expect(enter('- one\n- two', 2)).toBe('- \n- one\n- two');
+    expect(enter('1. one', 3)).toBe('1. \n2. one');
+    expect(enter('- ', 2)).toBe('');
+  });
+
   it('carries a definition marker down only where the parser reads one', () => {
     const at = (value: string) => ({ value, start: value.length, end: value.length });
 

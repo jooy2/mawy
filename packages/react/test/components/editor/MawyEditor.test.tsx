@@ -2943,7 +2943,8 @@ describe('the document surface', () => {
     put(body, 'One two.', 4);
     type(body, 'insertParagraph');
 
-    expect(onChange).toHaveBeenLastCalledWith('One \n\ntwo.');
+    // Without the space in front of the break, which no line draws.
+    expect(onChange).toHaveBeenLastCalledWith('One\n\ntwo.');
   });
 
   it('draws the paragraph Enter made, keeps it once the caret has gone, and refuses a second', async () => {
@@ -3871,9 +3872,9 @@ describe('the document surface', () => {
 
     await userEvent.keyboard('{Enter}');
 
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n\n'));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n\n'));
     await userEvent.keyboard('after');
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n> \n\nafter'));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('> one\n> two\n\nafter'));
   });
 
   it('types into words an underline is drawn around', async () => {

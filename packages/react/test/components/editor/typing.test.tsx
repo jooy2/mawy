@@ -92,6 +92,82 @@ function press(picture: HTMLElement): void {
 const settled = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 describe('Enter', () => {
+  it('breaks once in front of a space, with no paragraph drawn between', async () => {
+    const { body, writes } = await editing('hello world');
+
+    put(body, 'hello world', 5);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+
+    await writes('hello\n\nworld');
+    expect(body.querySelectorAll('p')).toHaveLength(2);
+    expect(document.getSelection()?.anchorNode?.textContent).toBe('world');
+  });
+
+  it('ends a line of a paragraph without adding to it', async () => {
+    const { body, writes } = await editing('one\ntwo');
+
+    put(body, 'one\ntwo', 3);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+
+    await writes('one\n\ntwo');
+  });
+
+  it('leaves a bold run whole at its edge, and closes it either side inside', async () => {
+    const edge = await editing('a **bold** b');
+
+    put(edge.body, 'bold', 4);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+    await edge.writes('a **bold**\n\nb');
+    await edge.screen.unmount();
+
+    const inside = await editing('a **bold** b');
+
+    put(inside.body, 'bold', 2);
+    await settled();
+    await userEvent.keyboard('{Enter}X');
+    await inside.writes('a **bo**\n\n**Xld** b');
+  });
+
+  it('gives each half of a link its address', async () => {
+    const { body, writes } = await editing('[words](http://a.b)');
+
+    put(body, 'words', 2);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+
+    await writes('[wo](http://a.b)\n\n[rds](http://a.b)');
+  });
+
+  it('takes a heading down whole from in front of its words', async () => {
+    const { body, writes } = await editing('# Title');
+
+    put(body, 'Title', 0);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+
+    await writes('\n\n# Title');
+  });
+
+  it('pushes an item or a quoted line down from in front of its words', async () => {
+    const item = await editing('- one\n- two');
+
+    put(item.body, 'one', 0);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+    await item.writes('- \n- one\n- two');
+    await item.screen.unmount();
+
+    const quoted = await editing('> one\n> two');
+
+    put(quoted.body, 'one\ntwo', 4);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+    await quoted.writes('> one\n> \n> two');
+  });
+
   it('keeps the caret on screen at the bottom of the pane', async () => {
     const words = Array.from({ length: 30 }, (_, index) => `Paragraph ${index}.`).join('\n\n');
     const { body, screen } = await editing(words, { height: 300 });
@@ -110,6 +186,34 @@ describe('Enter', () => {
 
       expect(caret?.bottom).toBeLessThanOrEqual(pane.getBoundingClientRect().bottom);
     });
+  });
+});
+
+describe('Enter again', () => {
+  it('does not write a second empty paragraph from the words under the first', async () => {
+    const { body, writes, said } = await editing('aa bb');
+
+    put(body, 'aa bb', 2);
+    await settled();
+    await userEvent.keyboard('{Enter}{Enter}');
+    await writes('aa\n\n\n\nbb');
+
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(said()).toBe('Only one blank line in a row.'));
+    await writes('aa\n\n\n\nbb');
+  });
+
+  it('has nothing to do in a code block with nothing in it yet', async () => {
+    const { body, writes } = await editing('');
+
+    beside(body, body.querySelector('p') as Element, 0);
+    await settled();
+    await userEvent.keyboard('```');
+    await writes('```\n\n```');
+    await settled();
+
+    await userEvent.keyboard('{Enter}x');
+    await writes('```\nx\n```');
   });
 });
 
@@ -137,6 +241,17 @@ describe('a picture', () => {
     await writes(`over${PICTURE}`);
   });
 
+  it('takes Enter beside it', async () => {
+    const { body, writes, said } = await editing(PICTURE);
+
+    beside(body, body.querySelector('p') as Element, 1);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+
+    await writes(`${PICTURE}\n\n`);
+    expect(said()).toBeUndefined();
+  });
+
   it('can be taken out of a document with nothing else in it', async () => {
     const { body, writes } = await editing(PICTURE);
 
@@ -145,6 +260,16 @@ describe('a picture', () => {
     await userEvent.keyboard('{Backspace}');
 
     await writes('');
+  });
+
+  it('keeps Enter from replacing it while it is selected', async () => {
+    const { body, writes } = await editing(PICTURE);
+
+    press(body.querySelector('img') as HTMLElement);
+    await settled();
+    await userEvent.keyboard('{Enter}');
+
+    await writes(`${PICTURE}\n\n`);
   });
 
   it('keeps letters typed in front of it in front of it', async () => {

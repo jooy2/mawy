@@ -493,6 +493,14 @@ void main() {
       expect(enter('- one\n- |\n- two'), '- one\n|\n- two');
     });
 
+    test('pushes an item down from in front of its words rather than giving its marker up', () {
+      // What is before the caret is all the marker there is, and the words after
+      // it are what makes it an item.
+      expect(enter('- |one\n- two'), '- \n- |one\n- two');
+      expect(enter('1. |one'), '1. \n2. |one');
+      expect(enter('- |'), '|');
+    });
+
     test('carries a definition marker down only where the parser reads one', () {
       expect(enter('Apple\n: A fruit.|'), 'Apple\n: A fruit.\n: |');
       expect(continueList(at('Apple\n: A fruit.|'), definitionLists: false), isNull);

@@ -12,7 +12,15 @@
 
 - **`Backspace` under a picture deleted the picture.** A walk over the runs of text steps straight over a picture, so the key found the words above it and took everything in between. The line under a picture joins the picture now, `Delete` above one does the same, and a divider beside a line is what either key takes, rather than the two lines being joined across it.
 
+- **`Enter` beside a picture was refused as a second blank line.** A paragraph with nothing but a picture in it has no text, and that was all the check read. `Enter` with a picture selected writes a line under it rather than replacing it.
+
 - **Letters typed in front of a picture jumped behind it.** The caret was put inside the `<img>`, which reads back as the end of the picture. `Backspace` and `Delete` beside a picture had the same trouble and took a letter from the wrong side of it.
+
+- **`Enter` drew two lines in front of a space, or at the end of a wrapped line.** A space left at the start of the new line is a place the page cannot put a caret, so an empty paragraph was drawn as well; the same happened at a line a paragraph goes on after. The spaces either side of the break go, and a line of the file that goes on is split where it is.
+
+- **`Enter` inside bold, a code span or a link tore the markers apart.** `**bo|ld**` became `**bo` over `ld**`, drawn as those characters. The run is closed in front of the break and opened again after it, a link keeps its address on both halves, and at the edge of one the break goes outside it.
+
+- **`Enter` in front of a list item's words, or a quoted line's, gave its marker up.** The words after the caret were not looked at, so the item was taken for an empty one. The block goes down whole now, on the source surface too, as a heading does.
 
 - **A selection that reached the start of the next block took that block's markers.** A triple press stops there in Chromium and WebKit, so deleting a paragraph over a heading left the heading's words as a paragraph, typing over it joined the two, and bold went round both with a blank line inside. The selection now stops at the words it covers.
 
@@ -27,6 +35,8 @@
 - **`Backspace` and `Delete` did nothing at the edge of markup written out as its characters.**
 
 - **`Backspace` did nothing at the very start of a document.** A heading, a list item or a quotation that opens a document gives its marker up now. WebKit does not send `beforeinput` for that key there, so it is answered from `keydown` as well.
+
+- **`Enter` could write any number of blank lines from the start of a paragraph.** It is refused there as it is on an empty paragraph. `Enter` straight after three backticks has nothing to do, because the fence is already open with the caret on its first line, and it no longer puts a blank line in front of the code. A quotation left by `Enter` no longer leaves an empty `> ` line behind it.
 
 - **`Mod`+`A` in a document that is nothing but a table only emptied its cells.** Everything selected is everything taken out.
 

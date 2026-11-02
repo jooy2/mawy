@@ -757,7 +757,12 @@ export function continueList(state: EditState, definitionLists = true): EditStat
     return null;
   }
 
-  if (own && !content.trim()) {
+  // `content` stops at the caret, so a caret in front of an item's words is not
+  // on an empty item: what is after it is the item being pushed down a line.
+  const stop = state.value.indexOf('\n', state.start);
+  const rest = state.value.slice(state.start, stop === -1 ? state.value.length : stop);
+
+  if (own && !content.trim() && !rest.trim()) {
     // An empty item: the marker goes, and so does the list. See `partedFrom`
     // for the line ending that keeps it gone.
     const without = state.value.slice(0, from) + state.value.slice(state.start);

@@ -190,6 +190,9 @@ function splice(value: string, start: number, end: number, text: string): MawyEd
   return { value: value.slice(0, start) + text + value.slice(end), caret: start + text.length };
 }
 
+/** Whether a character is one a line can open or end with and the page not draw. */
+const isBlank = (character: string | undefined) => character === ' ' || character === '\t';
+
 /** Where the line a place in a document is on starts. */
 const startOfLine = (value: string, at: number) =>
   at > 0 ? value.lastIndexOf('\n', at - 1) + 1 : 0;
@@ -448,15 +451,24 @@ function settle(edit: MawyEdit, options: MarkdownOptions): MawyEdit {
 
   for (const extra of ['', '\n', '\n\n']) {
     const value = edit.value.slice(0, edit.caret) + extra + edit.value.slice(edit.caret);
-    const caret = edit.caret + extra.length;
     const blocks = parseMarkdown(value, options).root.children;
 
-    if (!extra && blocks.some((block) => block.range.start <= caret && caret <= block.range.end)) {
+    if (
+      !extra &&
+      blocks.some((block) => block.range.start <= edit.caret && edit.caret <= block.range.end)
+    ) {
       return edit;
     }
 
-    if (blankParagraphs(value, blocks).includes(caret)) {
-      return { value, caret, betweenBlocks: true };
+    const blanks = blankParagraphs(value, blocks);
+
+    // On the far side of what was added, or in front of it where what comes
+    // next is a list straight under the line, which wants its blank line below
+    // the caret rather than above.
+    for (const caret of [edit.caret + extra.length, edit.caret]) {
+      if (blanks.includes(caret)) {
+        return { value, caret, betweenBlocks: true };
+      }
     }
   }
 
@@ -1121,11 +1133,25 @@ function continueQuote(value: string, caret: number): MawyEdit | null {
   }
 
   const [, marker, content] = quote;
+  const stop = value.indexOf('\n', caret);
+
+  if (!content.trim() && value.slice(caret, stop === -1 ? value.length : stop).trim()) {
+    // In front of the words of a quoted line, which is the line pushed down
+    // rather than an empty one given up. Over the quotation's first line there
+    // is no quoted line to leave blank, so a paragraph is opened above it.
+    return from > 0 && QUOTED.test(value.slice(startOfLine(value, from - 1), from - 1))
+      ? splice(value, caret, caret, `\n${marker}`)
+      : { value: `${value.slice(0, from)}\n\n${value.slice(from)}`, caret: caret + 2 };
+  }
 
   if (!content.trim()) {
     // An empty quoted line: the marker goes, the same way an empty list item
-    // gives its bullet up rather than making another one.
-    return { value: value.slice(0, from) + value.slice(caret), caret: from, betweenBlocks: true };
+    // gives its bullet up rather than making another one. With the blank quoted
+    // line `Enter` wrote above it, which has nothing left to separate.
+    const above = from > 0 ? startOfLine(value, from - 1) : from;
+    const start = /^[ \t>]+$/.test(value.slice(above, Math.max(above, from - 1))) ? above : from;
+
+    return { value: value.slice(0, start) + value.slice(caret), caret: start, betweenBlocks: true };
   }
 
   // Two lines rather than one, and the middle one blank. A quotation's lines
@@ -1310,52 +1336,181 @@ function breakAt(
   // gives up its marker — and a code block is where that rule does not hold:
   // two blank lines in the middle of one are two blank lines somebody typed.
   if (tag === 'PRE') {
-    return splice(value, start, end, '\n');
+    const code = start === end ? fencedAt(value, start) : null;
+
+    // Three backticks open the block with the caret already on its first line,
+    // and the `Enter` a hand presses after them out of habit has nothing to do.
+    // Written, it put a blank line in front of the code being typed.
+    return code && code.content.start === code.content.end
+      ? { value, caret: start }
+      : splice(value, start, end, '\n');
   }
 
-  if (start === end) {
-    const outward = movedOut(value, start, options);
+  // What is selected goes first, and the press is then a press at the place it
+  // left. A picture selected is the exception: it is one thing, and pressing a
+  // picture and then `Enter` means a line under it rather than losing it.
+  const taken =
+    start === end
+      ? null
+      : PICTURE.test(value.slice(start, end))
+        ? { value, caret: end }
+        : deleted(value, start, end);
+  const cut = cutAt(taken?.value ?? value, taken?.caret ?? start, options);
+  const edit = brokenAt(root, cut.value, cut.at, node, options);
 
-    if (outward) {
-      return outward;
-    }
+  // In front of the markers opened again after the break, on the words they
+  // open, so what is typed next is in the formatting those words are in.
+  return { ...edit, caret: edit.caret + cut.opening };
+}
 
-    const item = continueList({ value, start, end }, options.definitionLists ?? true);
+/** A picture and nothing else, as it is written. */
+const PICTURE = /^!\[[^\]]*\]\([^\n]*\)$/;
 
-    if (item) {
-      return settle(
-        {
-          value: item.value,
-          caret: item.start,
-          // A marker given up leaves the caret where nothing is drawn any more,
-          // which is the whole point of giving it up.
-          betweenBlocks: item.value.length < value.length
-        },
-        options
-      );
-    }
+/**
+ * The words either side of a place, made ready for `Enter` to come between them.
+ *
+ * The caret is at one place on the page and the document is written in markers
+ * that have to pair up, and a line ending does not leave a pair alone:
+ *
+ * - At the outer edge of a run of formatting or a link the place is on the far
+ *   side of its markers, which is where a press there means. It was on the near
+ *   side, so `Enter` after a bold word left `**word` above and `**` drawn as
+ *   characters below.
+ * - Inside one the run is closed in front of the break and opened again after
+ *   it, and a link keeps its address on both halves.
+ * - The spaces either side go, because a line draws neither. A space left on
+ *   the new line was not a paragraph's first character but a line the caret
+ *   could not be on, so the press drew an empty paragraph as well as the break,
+ *   which read as `Enter` going off twice.
+ * - Where the paragraph goes on, on the next line of the file, that line ending
+ *   is the one the break writes over. The press ends a line; it does not add
+ *   one to the two the next paragraph is already written below.
+ * - In front of a heading's words the heading goes down whole. The press has
+ *   nothing to end, and `#` with nothing after it is not a heading.
+ */
+function cutAt(
+  value: string,
+  at: number,
+  options: MarkdownOptions
+): { value: string; at: number; opening: number } {
+  const document = parseMarkdown(value, options);
+  let head = at;
+  let closing = '';
+  let opening = '';
 
-    const quoted = continueQuote(value, start);
+  if (/[*_~`[]/.test(value)) {
+    const blocks = [...document.root.children, ...document.footnotes];
 
-    if (quoted) {
-      return settle(quoted, options);
-    }
+    for (const node of markedAt(blocks, at, []).reverse()) {
+      const words = wordsOf(value, node);
 
-    // After the two containers written with a marker on every line, because a
-    // list or a quotation inside a note is that list's or that quotation's
-    // line first, and the note's only where neither answered.
-    const note = continueNote(value, start, options);
+      if (!words) {
+        continue;
+      }
 
-    if (note) {
-      return settle(note, options);
+      if (!closing && head >= words.end) {
+        head = node.range.end;
+      } else if (!closing && head <= words.start) {
+        head = node.range.start;
+      } else {
+        closing += value.slice(words.end, node.range.end);
+        opening = value.slice(node.range.start, words.start) + opening;
+      }
     }
   }
 
-  const opened = openedAt(root, node, value, start, options);
-  const shift = opened.at - start;
+  const start = startOfLine(value, head);
+  const before = value.slice(start, head);
+  const opens = OPENING.test(before);
+
+  if (opens && /^ {0,3}#/.test(before) && value[head] !== undefined && value[head] !== '\n') {
+    return { value, at: start, opening: 0 };
+  }
+
+  let from = head;
+  let to = head;
+
+  while (!opens && from > start && isBlank(value[from - 1])) {
+    from -= 1;
+  }
+
+  while (isBlank(value[to])) {
+    to += 1;
+  }
+
+  const block = document.root.children.find(
+    (each) => each.type === 'paragraph' && each.range.start <= at && at <= each.range.end
+  );
+
+  if (block && value[to] === '\n' && to + 1 < block.range.end) {
+    to += 1;
+
+    while (isBlank(value[to])) {
+      to += 1;
+    }
+  } else if (block && value[from - 1] === '\n' && from - 1 > block.range.start) {
+    from -= 1;
+
+    while (isBlank(value[from - 1])) {
+      from -= 1;
+    }
+  }
+
+  return {
+    value: value.slice(0, from) + closing + opening + value.slice(to),
+    at: from + closing.length,
+    opening: opening.length
+  };
+}
+
+/** `Enter` at one place, once `cutAt` has made the place ready. See `breakAt`. */
+function brokenAt(
+  root: HTMLElement,
+  value: string,
+  at: number,
+  node: Node,
+  options: MarkdownOptions
+): MawyEdit {
+  const outward = movedOut(value, at, options);
+
+  if (outward) {
+    return outward;
+  }
+
+  const item = continueList({ value, start: at, end: at }, options.definitionLists ?? true);
+
+  if (item) {
+    return settle(
+      {
+        value: item.value,
+        caret: item.start,
+        // A marker given up leaves the caret where nothing is drawn any more,
+        // which is the whole point of giving it up.
+        betweenBlocks: item.value.length < value.length
+      },
+      options
+    );
+  }
+
+  const quoted = continueQuote(value, at);
+
+  if (quoted) {
+    return settle(quoted, options);
+  }
+
+  // After the two containers written with a marker on every line, because a
+  // list or a quotation inside a note is that list's or that quotation's line
+  // first, and the note's only where neither answered.
+  const note = continueNote(value, at, options);
+
+  if (note) {
+    return settle(note, options);
+  }
+
+  const opened = openedAt(root, node, value, at, options);
 
   return settle(
-    { ...splice(opened.value, start + shift, end + shift, '\n\n'), betweenBlocks: true },
+    { ...splice(opened.value, opened.at, opened.at, '\n\n'), betweenBlocks: true },
     options
   );
 }
@@ -2261,6 +2416,24 @@ export function typedOver(value: string, start: number, end: number, text: strin
   return cleared
     ? intoClearedCell(cleared.value, cleared.start, text)
     : replaced(value, start, end, text);
+}
+
+/**
+ * Whether `Enter` at a place would make a second empty paragraph in a row: at
+ * the start of a block with one drawn straight above it, where the caret stays
+ * with the words and each press would write another under nobody's eye. The
+ * empty paragraph itself is answered in `MawyEditorDocument`. See `crowdedBy`.
+ */
+export function blankAbove(root: HTMLElement, node: Node, offset: number): boolean {
+  const block = blockAt(root, node);
+  const top = topOf(root, node);
+
+  return Boolean(
+    block &&
+    top &&
+    emptyAt(top.previousElementSibling) !== null &&
+    atStartOf(top as HTMLElement, node, offset)
+  );
 }
 
 /**

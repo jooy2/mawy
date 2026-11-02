@@ -774,7 +774,12 @@ EditState? continueList(EditState state, {bool definitionLists = true}) {
     return null;
   }
 
-  if (own != null && content.trim().isEmpty) {
+  // `content` stops at the caret, so a caret in front of an item's words is not
+  // on an empty item: what is after it is the item being pushed down a line.
+  final int stop = state.value.indexOf('\n', state.start);
+  final String rest = state.value.substring(state.start, stop == -1 ? state.value.length : stop);
+
+  if (own != null && content.trim().isEmpty && rest.trim().isEmpty) {
     // An empty item: the marker goes, and so does the list. See [_partedFrom]
     // for the line ending that keeps it gone.
     final String without = state.value.substring(0, from) + state.value.substring(state.start);
