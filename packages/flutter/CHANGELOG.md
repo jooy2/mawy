@@ -22,6 +22,8 @@
 
 - **A caret that moved read the whole document.** The counts along the bottom were taken again at every step, the words with a regular expression that is interpreted rather than compiled on a phone, and the field worked out its colours again for a text that had not changed. Neither does now, and a caret at 100 kB went from 89 ms to 44 ms on Android.
 
+- **Parsing wrote a document out a character at a time**, which was two fifths of what it cost. Lines are taken in one piece now.
+
 ### Changed
 
 - **A link label holds 999 characters, as CommonMark says.** Past that it is the words it is, and so is a definition or a footnote written with one. `[a](<b<c>)` is no longer a link and nor is `[a](b (c(d))`, because an unescaped `<` cannot be in the first and an unescaped `(` cannot be in the title of the second.

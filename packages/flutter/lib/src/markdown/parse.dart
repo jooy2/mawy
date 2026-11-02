@@ -160,35 +160,53 @@ _Reading _read(String source) {
     mark();
   }
 
+  // Where the next of each line ending is, kept rather than searched for at
+  // every line. A document uses one kind or the other, so searching for both is
+  // a read to the end of the file for the kind it does not use.
+  int feed = source.indexOf('\n', at);
+  int carriage = source.indexOf('\r', at);
+
   while (at <= source.length) {
     final int start = out;
-    final StringBuffer text = StringBuffer();
+    String text = '';
 
     while (at < source.length && source[at] == '\t') {
-      text.write('    ');
+      text += '    ';
       at += 1;
       out += 4;
       mark();
     }
 
-    while (at < source.length && source[at] != '\n' && source[at] != '\r') {
-      text.write(source[at]);
-      at += 1;
-      out += 1;
+    if (feed != -1 && feed < at) {
+      feed = source.indexOf('\n', at);
     }
 
-    lines.add(Line(text.toString(), start));
+    if (carriage != -1 && carriage < at) {
+      carriage = source.indexOf('\r', at);
+    }
+
+    // The rest of the line taken in one piece. Written a character at a time
+    // into a buffer it was two fifths of the cost of parsing a document.
+    final int end = feed == -1
+        ? (carriage == -1 ? source.length : carriage)
+        : (carriage == -1 || feed < carriage ? feed : carriage);
+
+    text += source.substring(at, end);
+    out += end - at;
+    at = end;
+
+    lines.add(Line(text, start));
 
     if (at >= source.length) {
       break;
     }
 
-    final bool carriage = source[at] == '\r' && at + 1 < source.length && source[at + 1] == '\n';
+    final bool pair = source[at] == '\r' && at + 1 < source.length && source[at + 1] == '\n';
 
-    at += carriage ? 2 : 1;
+    at += pair ? 2 : 1;
     out += 1;
 
-    if (carriage) {
+    if (pair) {
       mark();
     }
   }
