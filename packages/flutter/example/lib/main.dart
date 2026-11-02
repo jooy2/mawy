@@ -194,13 +194,18 @@ class _GalleryAppState extends State<GalleryApp> {
             child: editor,
           );
 
+          // There is no `Scaffold` here to move the page out of the keyboard's
+          // way, so without this the caret goes on down behind it.
           return embedded
               ? dropping
-              : Column(
-                  children: <Widget>[
-                    _Switch(sample: sample, onChange: _choose),
-                    Expanded(child: dropping),
-                  ],
+              : Padding(
+                  padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+                  child: Column(
+                    children: <Widget>[
+                      _Switch(sample: sample, onChange: _choose),
+                      Expanded(child: dropping),
+                    ],
+                  ),
                 );
         }
 
