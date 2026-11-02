@@ -34,6 +34,8 @@
 
 - **A space at the end of a bold run drew its markers.** `**word **` is not bold, so the run came undone until the next letter. The space goes after the closing marker, and the next letter goes on inside the run. A space typed first with bold held goes in as itself rather than as `** **`.
 
+- **A marker typed in front of a heading's words stayed in its words.** `# ` in front of a `##` heading was a heading saying `# Title`, so a level could only be changed from the toolbar. A marker typed there now takes the heading's place, and one typed on an empty list item takes that item's, rather than opening a list inside it.
+
 - **Letters typed in front of a task's box went after its words.** A caret in front of the box was read as the end of the item.
 
 - **`Backspace` and `Delete` did nothing at the edge of markup written out as its characters.**

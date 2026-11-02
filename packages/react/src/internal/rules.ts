@@ -19,6 +19,10 @@
  *
  * So a fence is opened *closed*, with whatever was on the line inside it, and a
  * break is given a line under it to carry on typing on.
+ *
+ * The other two are a marker typed where a marker already is, which the parser
+ * reads as the words of a heading or as a list inside an item, and which is
+ * never what was meant: see `RETYPED` and `AGAIN`.
  */
 
 import { containerOf } from './commands.js';
@@ -29,6 +33,16 @@ const FENCE = /^(?:`{3,}|~{3,})$/;
 
 /** The three characters a break can be written with, spaces between allowed. */
 const BREAK = /^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+
+/**
+ * A block's shorthand typed in front of a heading's words, which is the first
+ * thing on the line for anybody reading the page: the heading's own marker is
+ * not drawn. Its indentation, then what was typed.
+ */
+const RETYPED = /^( {0,3})#{1,6}[ \t]+((?:#{1,6}|[-*+]|\d{1,9}[.)]|>)[ \t])$/;
+
+/** An item's marker with nothing after it, and a marker typed there. */
+const AGAIN = /^([ \t]*)(?:[-*+]|\d{1,9}[.)])[ \t]+((?:[-*+]|\d{1,9}[.)]) )$/;
 
 /**
  * What the shorthand just completed turns into, or `null` for "not one".
@@ -45,6 +59,29 @@ export function ruleFor(value: string, at: number, text: string): MawyEdit | nul
   const ending = value.indexOf('\n', at);
   const to = ending === -1 ? value.length : ending;
   const rest = value.slice(at, to);
+  const again = rest ? null : AGAIN.exec(head);
+
+  if (again) {
+    // The marker `Enter` carried down, and the same thing typed after it by a
+    // hand used to writing every bullet. Two would be a list inside the item.
+    return {
+      value: value.slice(0, from) + again[1] + again[2] + value.slice(at),
+      caret: from + again[1].length + again[2].length
+    };
+  }
+
+  const retyped = RETYPED.exec(head);
+
+  if (retyped) {
+    // The markers typed take the place of the heading's. A heading holds words
+    // and no blocks, so `## # Title` was a heading with a `#` in its words, and
+    // on the page a level could only be changed from the toolbar.
+    return {
+      value: value.slice(0, from) + retyped[1] + retyped[2] + value.slice(at),
+      caret: from + retyped[1].length + retyped[2].length
+    };
+  }
+
   // Only the fence reads the line's containers. Inside one, the characters a
   // break is written with are a bullet at least as often as they are a break,
   // and telling those two apart is the parser's job rather than a pattern's.

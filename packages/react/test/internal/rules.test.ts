@@ -94,3 +94,37 @@ describe('a thematic break', () => {
     expect(type('x --|', '-')).toBe(null);
   });
 });
+
+describe('a heading typed over', () => {
+  it('takes the level typed in front of its words', () => {
+    expect(type('## #|Title', ' ')).toBe('# |Title');
+    expect(type('# ###|Title', ' ')).toBe('### |Title');
+  });
+
+  it('takes the marker of another block', () => {
+    expect(type('## -|Title', ' ')).toBe('- |Title');
+    expect(type('## 1.|Title', ' ')).toBe('1. |Title');
+    expect(type('## >|Title', ' ')).toBe('> |Title');
+  });
+
+  it('leaves a hash among the words alone', () => {
+    expect(type('## Two #|Title', ' ')).toBe(null);
+    expect(type('## #|Title', 'x')).toBe(null);
+  });
+});
+
+describe('a marker typed on an empty item', () => {
+  it('stays one marker rather than a list inside the item', () => {
+    expect(type('- one\n- -|', ' ')).toBe('- one\n- |');
+    expect(type('* one\n* *|', ' ')).toBe('* one\n* |');
+    expect(type('1. one\n2. 2.|', ' ')).toBe('1. one\n2. |');
+  });
+
+  it('changes the kind of list the item is in', () => {
+    expect(type('- 1.|', ' ')).toBe('1. |');
+  });
+
+  it('leaves an item with words in it alone', () => {
+    expect(type('- -|words', ' ')).toBe(null);
+  });
+});

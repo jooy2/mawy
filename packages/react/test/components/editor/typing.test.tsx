@@ -285,6 +285,19 @@ describe('Enter again', () => {
   });
 });
 
+describe('a heading typed over', () => {
+  it('takes the level typed in front of its words', async () => {
+    const { body, writes } = await editing('## Title');
+
+    put(body, 'Title', 0);
+    await settled();
+    await userEvent.keyboard('### ');
+
+    await writes('### Title');
+    expect(body.querySelector('h3')?.textContent).toBe('Title');
+  });
+});
+
 describe('a picture', () => {
   const PICTURE = '![a](/i.png)';
 
