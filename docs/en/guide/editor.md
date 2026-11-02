@@ -585,7 +585,7 @@ Capturing `Tab` in a textarea creates a keyboard trap: somebody who cannot use a
 
 **Press `Escape`, then `Tab`, and the focus moves on.** One `Escape` arms it and anything else typed disarms it again. It is the rule CodeMirror, Monaco and GitHub's own editor all use, so anybody who has met one of those already knows it. The surface also announces it to a screen reader.
 
-The drawn document captures `Tab` only in a list item and on a line of a table cell written as a list item, where it nests the item the way it does on the source. Everywhere else it is one focusable element, and `Tab` moves straight out of it.
+The drawn document captures `Tab` only in a list item and on a line of a table cell written as a list item, where it nests the item the way it does on the source, and in a code block, where it indents. Everywhere else it is one focusable element, and `Tab` moves straight out of it.
 
 ## Undo
 

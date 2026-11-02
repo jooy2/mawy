@@ -56,6 +56,10 @@
 
 - **`Mod`+`A` in a document that is nothing but a table only emptied its cells.** Everything selected is everything taken out.
 
+### Changed
+
+- **`Tab` in a code block on the `wysiwyg` surface indents**, as it does on the source. `Escape` then `Tab` is still the way out.
+
 ## 1.8.0 (2026-09-24)
 
 ### Added

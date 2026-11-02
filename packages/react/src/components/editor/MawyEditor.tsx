@@ -2782,6 +2782,20 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           return;
         }
 
+        // In a code block it indents, as it does on the source: spaces are what
+        // the block is made of, and `Escape` first is still the way out.
+        if (host.closest('pre')) {
+          event.preventDefault();
+
+          const next = indent(state, event.shiftKey);
+
+          if (next.value !== state.value) {
+            run(state, next);
+          }
+
+          return;
+        }
+
         if (!host.closest('li')) {
           return;
         }

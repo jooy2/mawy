@@ -595,3 +595,15 @@ describe('the top of the document', () => {
     }
   });
 });
+
+describe('a code block', () => {
+  it('takes Tab as indentation', async () => {
+    const { body, writes } = await editing('```\nab\n```');
+
+    put(body, 'ab', 2);
+    await settled();
+    await userEvent.keyboard('{Tab}');
+
+    await writes('```\nab  \n```');
+  });
+});
