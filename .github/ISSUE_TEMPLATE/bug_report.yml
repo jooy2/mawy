@@ -25,7 +25,7 @@ body:
     attributes:
       label: Package version
       description: The version of `mawy` you are on, or the commit if you are on a checkout.
-      placeholder: '1.9.1'
+      placeholder: '1.10.0'
     validations:
       required: true
 

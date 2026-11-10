@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.10.0 (2026-11-10)
+
 ### Breaking changes
 
 - **A token redeclared through a class wins in the dark palette as well, and whichever stylesheet loads last.** The three palettes are at zero specificity now, so a class passed through `className`, or a rule that names the root such as `.my-docs .mawy-root`, beats them in both palettes. Before, a class tied with the light palette and won only by loading after it, and lost to the dark one outright, so a dark viewer kept the library's colours and which one won was a bundler's decision. A value given through `style` already won in both. An application whose override was meant for one palette scopes it to that palette with `[data-mawy-color-scheme='dark']`, or `'light'`. The [Theming](https://mawy.cdget.com/api/theming) page also said that a declaration on an element around a viewer reaches every surface inside it, which it never did: every root declares every token, and a declaration on an element beats what it would have inherited. It says to name the root now, and why the tokens are not read from outside it.
@@ -15,6 +17,10 @@
 - **The find bar can read its query as a regular expression.** A switch beside the case-sensitive one reads the query as a JavaScript pattern, with `^` and `$` at the ends of each line, in the editor and in the viewer. The box is still plain text until the switch is on, which is why it was left out before: a `(` typed into a find box that is always a pattern is a syntax error. A pattern that is not one yet finds nothing, and the bar says `Invalid pattern` in place of the count; a match of nothing at all, such as `a*` between two letters, is passed over. A replacement can write in what a match captured, with `$&`, `$1` to `$99`, `$<name>` and `$$`. `MawyStrings` gained `findRegex` and `findInvalid`. The Flutter package reads the same patterns the same way, and the parity check compares the two.
 
 - **A control of the application's own can wrap the selection.** `MawyEditorHandle` gained `wrap(before, after)`, which writes the two around the selection as one step to undo and leaves the same words selected, or writes both at the caret and leaves the caret between them. A button for an inline format the toolbar does not have, such as `:kbd[…]`, had to read `selectionStart` off the textarea or the page's own selection, and on `wysiwyg` that is the drawn words rather than the Markdown under them. `wrap` reads the selection of whichever surface is showing. It does nothing in `preview` or while the editor is read-only, as `insert` does.
+
+- **A press on a divider on `wysiwyg` selects it, and `Delete` or `Backspace` takes it out.** A divider draws no character, so nothing reached it but `Backspace` from the line under it. It is drawn with an outline when selected, and the space a few pixels either side of its line is part of what a pointer can press, taken out of its margins so that nothing moves.
+
+- **The words a new link is going on stay marked while its bar has the focus.** The page's own selection went with the focus to the address, so what the link would be put on was no longer shown anywhere. They are marked with the CSS Custom Highlight API, as the find bar's matches are, and a browser without it marks nothing, as before.
 
 ### Changed
 
@@ -29,10 +35,6 @@
 - **Bold, italic, strikethrough and code are read out of the document, on both surfaces.** Their buttons were drawn pressed only where the selection ended exactly at the markers, so a bold word selected in the middle had a bold button that was not pressed; they are pressed now for a caret or a selection anywhere inside a run. Pressed with the caret among a run's words, a button takes the run off. On `wysiwyg` it held the formatting off for words not typed yet, so the button came up while the word stayed formatted, and on the source it wrote a pair of markers at the caret, which inside a code span was a second span in the middle of the first. At the end of a run on `wysiwyg` it still holds the formatting off for what is typed next. With some of a run's words selected it takes the formatting off those and leaves the rest formatted either side. The Flutter package does the same, and the parity check compares the two.
 
 - **The toolbar's table grid inserts a table under the table the caret is in.** It was drawn disabled there, since a cell holds no table, and read as a button that did nothing. `Mod`+`Alt`+`T` does the same. The Flutter package does too.
-
-- **A press on a divider on `wysiwyg` selects it, and `Delete` or `Backspace` takes it out.** A divider draws no character, so nothing reached it but `Backspace` from the line under it. It is drawn with an outline when selected, and the space a few pixels either side of its line is part of what a pointer can press, taken out of its margins so that nothing moves.
-
-- **The words a new link is going on stay marked while its bar has the focus.** The page's own selection went with the focus to the address, so what the link would be put on was no longer shown anywhere. They are marked with the CSS Custom Highlight API, as the find bar's matches are, and a browser without it marks nothing, as before.
 
 - **A picture that could not be fetched is drawn as a box with its description in it.** The browser drew it as its description in the type of the words around it, with a small icon in some browsers and none in WebKit, so in a sentence it read as more of the sentence. It is drawn now as an icon and the description in a dashed frame of the palette's colours, the same in every browser. It is still the `<img>` it was, with the same `alt`, and the address it was given is kept on it as `data-mawy-src` for a copy.
 
