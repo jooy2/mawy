@@ -23,7 +23,7 @@ dependencies:
   # is a plugin, and which plugin is the application's choice. This is an
   # application, so it chooses.
   file_selector: ^1.0.4
-  desktop_drop: ^0.7.1
+  desktop_drop: ^0.8.4
   # How the documentation site tells a framed gallery which palette the page
   # around it is in. Web-only, and imported behind a conditional so a gallery
   # built for anything else never sees it — see `lib/host.dart`.
