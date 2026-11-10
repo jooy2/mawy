@@ -59,8 +59,8 @@ The one dependency is [`lucide_icons_flutter`](https://pub.dev/packages/lucide_i
 
 | What you import         | Gzipped |
 | ----------------------- | ------- |
-| `MawyViewer`            | 34.1 kB |
-| `MawyEditor`            | 84.4 kB |
+| `MawyViewer`            | 34.2 kB |
+| `MawyEditor`            | 84.5 kB |
 | `mawy-react/markdown`   | 12.9 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
 | `mawy-react/styles.css` | 7.7 kB  |

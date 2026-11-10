@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import axe from 'axe-core';
 import { MawyEditor, MawyViewer } from 'mawy-react';
@@ -118,6 +119,60 @@ describe('the viewer', () => {
 
       expect(box.getAttribute('tabindex'), selector).toBe('0');
     }
+  });
+
+  /**
+   * A document with nothing focusable in it, in a box shorter than it is.
+   *
+   * The sample above has a link, and axe counts a scrolling region with a link
+   * inside it as one a keyboard can reach: the link takes the focus and the
+   * arrows scroll from there. Without one there was nowhere for the focus to
+   * go, and the rest of the document was out of a keyboard's reach.
+   */
+  const LONG = '# Title\n\n' + 'Line\n\n'.repeat(80);
+
+  it('lets a keyboard scroll a document that has no link in it', async () => {
+    const screen = await render(
+      <div style={{ height: 300 }}>
+        <MawyViewer value={LONG} toolbar={false} style={{ height: '100%' }} />
+      </div>
+    );
+    const scroll = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+    // Asserted first, because a box that does not scroll passes for the wrong
+    // reason.
+    expect(scroll.scrollHeight).toBeGreaterThan(scroll.clientHeight);
+    expect(await violations(screen.container)).toEqual([]);
+
+    await userEvent.keyboard('{Tab}');
+
+    // A stop with a name, so a screen reader says what it has arrived on.
+    expect(document.activeElement).toBe(scroll);
+    expect(screen.getByRole('region', { name: 'Document' }).element()).toBe(scroll);
+  });
+
+  for (const mode of ['split', 'preview'] as const) {
+    it(`lets a keyboard scroll the editor's preview on ${mode}`, async () => {
+      const screen = await render(
+        <div style={{ height: 300 }}>
+          <MawyEditor defaultValue={LONG} mode={mode} modes={[mode]} style={{ height: '100%' }} />
+        </div>
+      );
+      const scroll = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+      expect(scroll.scrollHeight).toBeGreaterThan(scroll.clientHeight);
+      expect(scroll.getAttribute('tabindex')).toBe('0');
+      expect(await violations(screen.container)).toEqual([]);
+    });
+  }
+
+  it('keeps the empty state out of the tab order, where there is nothing to scroll', async () => {
+    const screen = await render(<MawyViewer toolbar={false} />);
+    const scroll = screen.container.querySelector('.mawy-viewer-scroll') as HTMLElement;
+
+    // Still focusable by a click, so that a shortcut has somewhere to land.
+    expect(scroll.getAttribute('tabindex')).toBe('-1');
+    expect(scroll.hasAttribute('role')).toBe(false);
   });
 
   it('gives a choice one tab stop and moves inside it with the arrows', async () => {

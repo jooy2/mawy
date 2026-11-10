@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **A document with no link in it could not be scrolled from the keyboard.** The viewer's scrolling pane was out of the tab order, so a keyboard had nothing in it to put the focus on, and axe reported `scrollable-region-focusable`. The pane is a tab stop now, a region named after the file or "Document", with a focus ring when it is reached by `Tab`. The same pane is the editor's preview on `split` and `preview`. The empty state stays out of the tab order, because it has its own button and nothing to scroll.
+
 ## 1.9.1 (2026-11-02)
 
 ### Fixed

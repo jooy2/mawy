@@ -1080,6 +1080,7 @@ A document drawn by [`MawyDocument`](../api/components/mawy-document) carries no
 - Menus close on `Escape` and give the focus back to the control that opened them.
 - Following an outline entry moves the focus as well as the scroll, so the next `Tab` carries on from the heading rather than from the panel.
 - A code block's copy button is invisible until the pointer or the focus is on it, and is never removed from the layout. `Tab` walks past a button that is not in the layout.
+- The document is a tab stop of its own, a region named after the file or "Document", so the arrows and the page keys scroll it even when it has no link in it. The empty state is not, because it has its own button and nothing to scroll.
 - A wide table and a long line of code each scroll sideways inside their own box, and each is a tab stop, so a keyboard reaches the right-hand end of them.
 - `Escape` puts the tooltips away, and the next move of the pointer brings them back. Nothing is lost, because every button they name already says the same words to a screen reader.
 - The interface declares the language of its own words, and says nothing about the document's. That language is the author's, and this library does not know it.

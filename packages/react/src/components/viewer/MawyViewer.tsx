@@ -1108,19 +1108,37 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
           />
         ) : null}
 
-        {/* Focusable by click but not by `Tab`: a keystroke has to land
-            somewhere, and `Ctrl`+`F` in a document somebody has just clicked
-            into should reach this viewer rather than the browser's own find.
-            `-1` rather than `0` because a reader Tabbing through a page is on
-            their way somewhere, and a stop on the text they can already see is
-            a stop that says nothing. */}
         {/* The document and whatever hovers over it, and nothing else.
             A floating group hung from the viewer would reach across the
             outline as well, and a bar over a list of headings is a bar over
             something it has nothing to do with. */}
         <div className="mawy-viewer-pane">
           {inside && toolbarPlacement === 'top' ? chrome : null}
-          <div className="mawy-viewer-scroll" ref={scroller} tabIndex={-1} onClick={followAnchor}>
+          {/* A tab stop while there is a document, which is WCAG 2.1.1: the
+              arrows and the page keys scroll whatever has the focus, and a
+              document with no link in it gave a keyboard nothing inside this
+              pane to put the focus on, so it could not be read past its first
+              screen. `-1` was here before, on the reasoning that a stop on text
+              already in view says nothing. It does say something, once it is a
+              named region: where the document is, for a reader who cannot
+              see it, and the way to scroll it, for one who cannot use a mouse.
+              A stop whether it overflows or not, for the reason the code
+              blocks give in `render.tsx`: answering that would mean measuring
+              on every resize to save a keyboard one press.
+
+              Without a document it stays `-1`, focusable by click and not by
+              `Tab`: the empty state has its own button, and there is nothing to
+              scroll. A keystroke still has to land somewhere, so that `Ctrl`+`F`
+              in a viewer somebody has just clicked into reaches this one rather
+              than the browser's own find. */}
+          <div
+            className="mawy-viewer-scroll"
+            ref={scroller}
+            role={hasDocument ? 'region' : undefined}
+            aria-label={hasDocument ? (fileName ?? strings.document) : undefined}
+            tabIndex={hasDocument ? 0 : -1}
+            onClick={followAnchor}
+          >
             {hasDocument && raw ? (
               // The measure, the type and the colours are the document's, so
               // the same element carries them; only what is inside it changes.

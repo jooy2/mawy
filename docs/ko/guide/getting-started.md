@@ -59,8 +59,8 @@ flutter pub add mawy
 
 | 가져오는 것             | gzip    |
 | ----------------------- | ------- |
-| `MawyViewer`            | 34.1 kB |
-| `MawyEditor`            | 84.4 kB |
+| `MawyViewer`            | 34.2 kB |
+| `MawyEditor`            | 84.5 kB |
 | `mawy-react/markdown`   | 12.9 kB |
 | `mawy-react/highlight`  | 2.8 kB  |
 | `mawy-react/styles.css` | 7.7 kB  |

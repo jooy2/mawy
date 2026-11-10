@@ -2779,9 +2779,16 @@
  */
 
 /* Clicked into so a shortcut has somewhere to land, which is not a reason to
-   draw a ring around the whole document. `:focus-visible` still does. */
-.mawy-root .mawy-viewer-scroll:focus {
+   draw a ring around the whole document. Reached by `Tab` it is, because the
+   document is a tab stop and a stop nobody can see is a keyboard lost on the
+   page. Inside the pane rather than around it: the pane is as big as the
+   viewer, and a ring outside it is a ring the viewer's own edges cut off. */
+.mawy-root .mawy-viewer-scroll:focus:not(:focus-visible) {
   outline: none;
+}
+
+.mawy-root .mawy-viewer-scroll:focus-visible {
+  outline-offset: -2px;
 }
 
 .mawy-root .mawy-find-hit {
