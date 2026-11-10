@@ -1,0 +1,70 @@
+# Mawy
+
+> A Markdown editor that also does the reading — write in WYSIWYG or in the source, switch freely, and show the finished document through a read-only viewer.
+
+One parser, one document model and one renderer, shipped twice: `mawy-react` on npm and
+`mawy` on pub.dev. A document means the same thing in a browser and in an app, and the
+library writes its own CommonMark parser, syntax highlighter, editing surface and toolbar
+rather than pulling any of them in.
+
+## Guide
+
+- [Getting started](https://mawy.cdget.com/guide/getting-started): Mawy ships as one package per framework, and the two are one library. They share the parser, the reading of a document, and the palette down to the colour…
+- [Editor](https://mawy.cdget.com/guide/editor): This package has three surfaces, and the React package's wysiwyg is the one it does not have. wysiwyg draws the document and edits it where it is drawn, which…
+- [Viewer](https://mawy.cdget.com/guide/viewer): The viewer renders a Markdown document and does not edit it.
+- [Publishing](https://mawy.cdget.com/guide/publishing): What a page needs around a Mawy document when people are going to find that page through a search engine.
+- [Playground](https://mawy.cdget.com/guide/playground): The editor and the viewer running with nothing switched off, in whichever package you picked.
+
+## API
+
+- [API](https://mawy.cdget.com/api/): Every component, type and function the package exports, one page each: what it is, what it takes and what it gives back.
+- [Theming](https://mawy.cdget.com/api/theming): Every colour, radius and duration the library draws with, in one place, and the whole of what an application may change.
+- [Components](https://mawy.cdget.com/api/components/): What this package draws a document with. Each page lists every prop, its type, its default and what it does.
+- [MawyViewer](https://mawy.cdget.com/api/components/mawy-viewer): A Markdown document, rendered and not editable. See the viewer for what it does and why.
+- [MawyEditor](https://mawy.cdget.com/api/components/mawy-editor): A Markdown editor with the viewer beside it. See the editor.
+- [MawyDocument](https://mawy.cdget.com/api/components/mawy-document): A document with no viewer around it: no toolbar, no find bar, no outline, and none of the behaviour that comes with them.
+- [Functions](https://mawy.cdget.com/api/functions/): What the package exports that is not a component or a type: the parser on its own, the anchors it gives a heading, the pictures a document points at, the…
+- [parseMarkdown](https://mawy.cdget.com/api/functions/parse-markdown): Reads a string as Markdown. This is the same call the viewer makes, with the same options, so a document parsed here and a document drawn there are the same…
+- [slugify](https://mawy.cdget.com/api/functions/slugify): A heading's anchor, in the spelling GitHub uses.
+- [imageUrls](https://mawy.cdget.com/api/functions/image-urls): Every address a parsed document draws a picture from, for an application finding the stored files no document needs any more.
+- [mawyHighlighter](https://mawy.cdget.com/api/functions/mawy-highlighter): The syntax highlighter this library ships, for the languages a document usually shows. See colouring a code block.
+- [Finding text](https://mawy.cdget.com/api/functions/find): The arithmetic behind the find bar, exported so an application can drive it from an interface of its own.
+- [Types](https://mawy.cdget.com/api/types/): Every type the package exports, one page each.
+- [Editor modes](https://mawy.cdget.com/api/types/editor-mode): Which surface a document is shown on. They all show the same document. See the editor.
+- [MawyEditorToolbarItem](https://mawy.cdget.com/api/types/editor-toolbar-item): One control on the editor's toolbar.
+- [MawyEditorStatusItem](https://mawy.cdget.com/api/types/editor-status-item): What the editor counts along its bottom edge.
+- [MawyViewerToolbarItem](https://mawy.cdget.com/api/types/viewer-toolbar-item): One control on the viewer's toolbar. See the toolbar.
+- [MawyColorScheme](https://mawy.cdget.com/api/types/color-scheme): Which palette to draw in.
+- [MawyLocale](https://mawy.cdget.com/api/types/locale): The language of the viewer's and the editor's own interface.
+- [MawyParseOptions](https://mawy.cdget.com/api/types/parse-options): How the Markdown itself is read.
+- [MdDocument](https://mawy.cdget.com/api/types/md-document): A parsed document: the tree, its outline, and the footnotes under it. What parseMarkdown gives back.
+- [MawyHtmlPolicy](https://mawy.cdget.com/api/types/html-policy): What becomes of raw HTML written inside a document.
+- [Links](https://mawy.cdget.com/api/types/link-target): Where a link the document wrote opens, and what it declares about where it goes.
+- [Link and image policy](https://mawy.cdget.com/api/types/drawing-policy): How a link and a picture the document wrote are drawn, for a page that does not want them followed or fetched.
+- [MawyUrlResolver](https://mawy.cdget.com/api/types/url-resolver): Where a relative URL points.
+- [MawyTypography](https://mawy.cdget.com/api/types/typography): How the document is set. See setting the type.
+- [MawyFontFamily](https://mawy.cdget.com/api/types/font-family): Which typeface the document is set in.
+- [MawyFont](https://mawy.cdget.com/api/types/font): A typeface the viewer's toolbar offers. See typefaces.
+- [MawyMeasure](https://mawy.cdget.com/api/types/measure): How wide the text is allowed to run.
+- [MawyDirectiveKind](https://mawy.cdget.com/api/types/directive-kind): Which of the three shapes a directive was written in.
+- [Directives](https://mawy.cdget.com/api/types/directives): What draws the constructs this package does not know about, by name. See directives.
+- [MawyHighlighter](https://mawy.cdget.com/api/types/highlighter): Something that can colour a code block. See colouring a code block.
+- [Images](https://mawy.cdget.com/api/types/image): What a picture in a document becomes, and where a picture put into the editor goes. See images.
+- [MawyRange](https://mawy.cdget.com/api/types/range): Where a piece of a document was written, in the offsets of the Markdown the component was given.
+- [MawyViewerAnchors](https://mawy.cdget.com/api/types/viewer-anchors): Where each block of a drawn document sits in the box that scrolls it.
+- [Frame](https://mawy.cdget.com/api/types/frame): Whether the surface has a frame around it, and which end its toolbar is at.
+- [MawyQuotes](https://mawy.cdget.com/api/types/quotes): The four marks a quotation is drawn with, for a document whose language does not write one the way English does.
+
+## Comparison and migration
+
+- [Comparison](https://mawy.cdget.com/comparison): What Mawy does differently from the Markdown editors a web application usually reaches for, and what those editors do that it does not.
+- [Migration](https://mawy.cdget.com/migrate/): What it takes to replace another Markdown editor with Mawy, and what happens to the documents you already have.
+- [From Toast UI Editor](https://mawy.cdget.com/migrate/toast-ui-editor): What each Toast UI Editor option, method and plugin becomes in Mawy, and which of them have nothing here.
+- [From MDXEditor](https://mawy.cdget.com/migrate/mdxeditor): What each MDXEditor plugin and prop becomes in Mawy, and the one case where you should stay where you are.
+- [From Milkdown](https://mawy.cdget.com/migrate/milkdown): What the editor built out of Milkdown plugins, or assembled for you as Crepe, becomes in Mawy.
+- [From react-md-editor](https://mawy.cdget.com/migrate/react-md-editor): What each @uiw/react-md-editor prop becomes in Mawy, and the one default that changes what your documents look like.
+
+## Optional
+
+- [Changelog](https://mawy.cdget.com/changelog): every released version of the React package, newest first
+- [Repository](https://github.com/jooy2/mawy): both packages, the parity check between them, and how to build either
