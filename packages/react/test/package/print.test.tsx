@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { cdp, server } from 'vitest/browser';
+// For its types alone: the provider is what gives `cdp()` a `send`, and
+// `test/tsconfig.json` names only its `context` types.
+import type {} from '@vitest/browser-playwright';
 import { render } from 'vitest-browser-react';
 import { MawyEditor, MawyViewer } from 'mawy-react';
 import '../../src/styles.css';
@@ -145,4 +149,31 @@ describe('printing', () => {
     expect(layer?.style.position).toBe('static');
     expect(input?.style.display).toBe('none');
   });
+
+  /**
+   * The one rule here that is about colour, and the one that had stopped
+   * working: the paper palette was at (0,1,0) and the dark one at (0,2,0), so a
+   * reader who had picked dark printed a page of ink. Asked of a printed page
+   * rather than of the rule, which is why it needs a browser that can be told
+   * it is printing. Chromium can, through its debugging protocol; the other two
+   * cannot from here.
+   */
+  it.runIf(server.browser === 'chromium')(
+    'prints dark on light whatever the reader chose',
+    async () => {
+      const screen = await render(<MawyViewer value={SAMPLE} colorScheme="dark" />);
+      const root = screen.container.querySelector('.mawy-root') as HTMLElement;
+
+      await cdp().send('Emulation.setEmulatedMedia', { media: 'print' });
+
+      try {
+        expect(getComputedStyle(root).backgroundColor).toBe('rgb(255, 255, 255)');
+        expect(getComputedStyle(root.querySelector('.mawy-md') as Element).color).toBe(
+          'rgb(0, 0, 0)'
+        );
+      } finally {
+        await cdp().send('Emulation.setEmulatedMedia', { media: '' });
+      }
+    }
+  );
 });

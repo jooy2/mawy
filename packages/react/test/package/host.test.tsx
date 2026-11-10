@@ -341,3 +341,113 @@ describe('the document', () => {
     expect(await withHost(screen.container)).toEqual([]);
   });
 });
+
+/**
+ * Where a token an application redeclares reaches.
+ *
+ * A custom property declared on an element beats the value it would have
+ * inherited, and every Mawy root declares every token, so the answer is the
+ * root and whatever is inside it. What these hold is that the answer is the same
+ * whichever stylesheet loaded first and whichever palette is showing, and that
+ * a root inside a root — the viewer an editor draws its preview with — does not
+ * take back what was given to the one around it.
+ */
+describe('a token', () => {
+  const RED = 'rgb(255, 0, 0)';
+  const LINK = '[a link](https://example.com)';
+
+  /** A sheet put in front of the library's, so that it loses every tie. */
+  function before(css: string) {
+    const sheet = document.createElement('style');
+
+    sheet.textContent = css;
+    document.head.prepend(sheet);
+
+    return sheet;
+  }
+
+  const linkIn = (container: Element, scope = '') =>
+    getComputedStyle(container.querySelector(`${scope} .mawy-md a`) as Element).color;
+
+  it("reaches the editor's preview when it is given to the editor", async () => {
+    const screen = await render(
+      <MawyEditor
+        defaultValue={LINK}
+        mode="split"
+        style={{ '--mawy-accent': 'red' } as React.CSSProperties}
+      />
+    );
+
+    expect(linkIn(screen.container, '.mawy-editor-preview')).toBe(RED);
+  });
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    it(`given through a class, wins whichever sheet loaded first, in ${colorScheme}`, async () => {
+      const sheet = before('.brand { --mawy-accent: red; }');
+
+      try {
+        const screen = await render(
+          <MawyViewer value={LINK} className="brand" colorScheme={colorScheme} />
+        );
+
+        expect(linkIn(screen.container)).toBe(RED);
+      } finally {
+        sheet.remove();
+      }
+    });
+
+    it(`given to every root inside a wrapper, reaches them all, in ${colorScheme}`, async () => {
+      const sheet = before('.my-docs .mawy-root { --mawy-accent: red; }');
+
+      try {
+        const screen = await render(
+          <div className="my-docs">
+            <MawyViewer value={LINK} colorScheme={colorScheme} />
+            <MawyEditor defaultValue={LINK} mode="split" colorScheme={colorScheme} />
+          </div>
+        );
+
+        expect(linkIn(screen.container, '.mawy-viewer:not(.mawy-editor-preview > *)')).toBe(RED);
+        expect(linkIn(screen.container, '.mawy-editor-preview')).toBe(RED);
+      } finally {
+        sheet.remove();
+      }
+    });
+  }
+
+  it('given for one palette, leaves the other alone', async () => {
+    const sheet = before(
+      ".my-docs .mawy-root[data-mawy-color-scheme='dark'] { --mawy-accent: red; }"
+    );
+
+    try {
+      const screen = await render(
+        <div className="my-docs">
+          <MawyViewer value={LINK} colorScheme="dark" />
+          <MawyViewer value={LINK} colorScheme="light" />
+        </div>
+      );
+      const [dark, light] = [...screen.container.querySelectorAll('.mawy-md a')];
+
+      expect(getComputedStyle(dark).color).toBe(RED);
+      expect(getComputedStyle(light).color).toBe('rgb(91, 52, 234)');
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it('keeps each palette where nothing was given', async () => {
+    const screen = await render(
+      <div>
+        <MawyViewer value={LINK} colorScheme="dark" />
+        <MawyEditor defaultValue={LINK} mode="split" colorScheme="dark" />
+      </div>
+    );
+
+    // The dark accent in the viewer and in the preview the editor draws: the
+    // preview takes its palette from the editor rather than declaring one.
+    for (const link of screen.container.querySelectorAll('.mawy-md a')) {
+      expect(getComputedStyle(link).color).toBe('rgb(157, 134, 255)');
+    }
+  });
+});

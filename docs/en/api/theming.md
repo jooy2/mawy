@@ -17,13 +17,27 @@ The finished stylesheet, imported once by the embedding application. Every value
 @import 'mawy-react/styles.css';
 ```
 
-The tokens are declared on **`.mawy-root`** rather than on `:root`. A component library has no business writing to the document element, and a viewer that read its palette from `:root` could not be dark inside a light page. They cascade, so one declaration on a wrapping element reaches every Mawy surface inside it.
+The tokens are declared on **`.mawy-root`** rather than on `:root`. A component library has no business writing to the document element, and a viewer that read its palette from `:root` could not be dark inside a light page.
+
+So a token is redeclared on the root or inside it. A custom property declared on an element beats the value the element would have inherited, and every root declares every token, so a declaration on an element around a viewer stops at the root. To reach every Mawy surface inside a wrapper, name the roots:
 
 ```css
-.my-docs {
+.my-docs .mawy-root {
   --mawy-accent: #b8005c;
 }
 ```
+
+For one component, a class passed through `className` or a value passed through `style` does the same. The library's own palettes are at zero specificity, so any of these wins whichever stylesheet loads first, and wins in both palettes. To set a token for one palette only, name that palette:
+
+```css
+.my-docs .mawy-root[data-mawy-color-scheme='dark'] {
+  --mawy-accent: #ff7ab8;
+}
+```
+
+`system` is the third value and follows the platform, so a value meant for it in the dark goes under `@media (prefers-color-scheme: dark)` with `[data-mawy-color-scheme='system']`. An editor's preview takes its tokens from the editor, so a value given to `MawyEditor` reaches the document it previews.
+
+Reading the tokens from outside the root would mean the root declaring none of them, and then an application's own directive drawn in `var(--mawy-note)`, or a font whose `stack` is written with `var(--mawy-font-sans)`, would read nothing.
 
 ## The properties
 

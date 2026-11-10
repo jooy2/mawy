@@ -46,9 +46,11 @@ function clamp(value: number, min: number, max: number): number {
  * The typography, as the custom properties the stylesheet reads.
  *
  * Everything the document is set with goes through these five, so an
- * application that would rather drive the type itself can declare them on a
- * wrapping element and leave the toolbar off — the same tokens, reached from
- * the other side.
+ * application that would rather drive the type itself can declare them on the
+ * document, `.mawy-md`, and leave the toolbar off — the same tokens, reached
+ * from the other side. On the document rather than around the viewer, because
+ * these are declared on the root and a declaration beats what an element would
+ * have inherited.
  */
 export function typographyStyle(
   typography: MawyTypography,

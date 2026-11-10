@@ -990,6 +990,8 @@ Every colour the viewer draws with is a `--mawy-*` custom property declared on `
 
 They are on `.mawy-root` rather than on `:root` on purpose. A component library has no reason to write to the document element, and a viewer that read its palette from `:root` could not be dark inside a light page, which a single embedded document often needs to be.
 
+That also means a token is redeclared on the root or inside it, and not on an element around the viewer, where the root's own declaration wins. A rule that names the root wins whichever stylesheet loads first and in both palettes. [Theming](../api/theming) has the details, including how to set a token for one palette only.
+
 :::
 
 The light and dark palettes are chosen by `colorScheme`, which is `system` unless you set it. `system` follows the platform setting: `prefers-color-scheme` in a browser, the platform brightness in an app. `light` and `dark` do not follow it, so an application with its own switch can drive the viewer from that, and a reader on a dark machine still gets the light document you asked for.

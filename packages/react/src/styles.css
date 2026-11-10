@@ -5,8 +5,7 @@
  *
  * Everything the library draws is expressed through the custom properties
  * declared here, so a host application themes the editor by redeclaring a token
- * rather than by out-specifying a rule. The tokens cascade, which means one
- * declaration on a wrapping element reaches every Mawy surface inside it.
+ * rather than by out-specifying a rule.
  *
  * `--mawy-*` is the whole namespace, and nothing outside it is a supported
  * thing to override.
@@ -16,13 +15,40 @@
  * writing to the document element, and a viewer that read its palette from
  * `:root` could not be dark inside a light page — which is exactly what a
  * side-by-side editor and preview, or a single embedded document, wants to be.
+ *
+ * What that costs is a declaration on an element around a viewer. A custom
+ * property declared on an element beats the value it would have inherited, so
+ * `.my-docs { --mawy-accent: … }` on a wrapper stops at the root, which declares
+ * its own. A token has to be redeclared on the root or inside it. The way to
+ * have one reach in from outside the root was weighed and kept out: declaring
+ * nothing here and reading every token with a default, `var(--mawy-accent,
+ * #5b34ea)`, leaves `--mawy-accent` undefined for everybody else who reads it —
+ * a font's `stack` written as `'Inter', var(--mawy-font-sans)` and an
+ * application's own directive drawn in `var(--mawy-note)`, which is how this
+ * package's documentation writes both.
  */
 
 /* ---------------------------------------------------------------------------
  * Tokens
+ *
+ * All three palettes are at zero specificity, so that any rule an application
+ * writes to redeclare one wins, whichever stylesheet loaded last and in both
+ * palettes: a class passed through `className`, or `.my-docs .mawy-root`. At
+ * (0,1,0) and (0,2,0), which is where they were, a class on the root tied with
+ * the light palette and won only by coming later, and lost to the dark one
+ * outright — and which sheet comes later is a bundler's decision rather than
+ * the application's. An application that means one palette names it, as
+ * `.my-docs .mawy-root[data-mawy-color-scheme='dark']`. The order of the three
+ * blocks below is what decides between them.
+ *
+ * And none of them is declared on the viewer an editor draws its preview
+ * with. That viewer is a `.mawy-root` of its own, and a root declares every
+ * token, so a token given to the editor — through `style`, or a class — was
+ * declared again under it and never reached the preview. The preview is always
+ * in the editor's palette, so it takes the editor's, token for token.
  * ------------------------------------------------------------------------- */
 
-.mawy-root {
+:where(.mawy-root:not(.mawy-editor-preview > .mawy-root)) {
   /* The three families the document may be set in. Named roles, not fonts: the
    * package ships no typefaces and should not pretend to. */
   --mawy-font-sans:
@@ -110,7 +136,7 @@
 /* Two selectors and not one: an explicit `dark` wins wherever it is set, and
  * `system` is the only value that asks the operating system. A single
  * `prefers-color-scheme` block would make `light` unreachable on a dark machine. */
-.mawy-root[data-mawy-color-scheme='dark'] {
+:where(.mawy-root[data-mawy-color-scheme='dark']:not(.mawy-editor-preview > .mawy-root)) {
   --mawy-bg: #17171b;
   --mawy-bg-sunken: #101014;
   --mawy-bg-raised: #1e1e24;
@@ -163,7 +189,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .mawy-root[data-mawy-color-scheme='system'] {
+  :where(.mawy-root[data-mawy-color-scheme='system']:not(.mawy-editor-preview > .mawy-root)) {
     --mawy-bg: #17171b;
     --mawy-bg-sunken: #101014;
     --mawy-bg-raised: #1e1e24;
