@@ -74,6 +74,18 @@ It is a defence rather than a wall, and a selector that means it still wins:
 
 Two things are deliberately left alone. `div` and `span` are not reset, because a directive is drawn out of the application's own markup and resetting that would take the application's styling off its own widget. And the tokens are untouched, because redeclaring one is how this is meant to be done.
 
+### When the page is not yours
+
+A component library that puts a viewer on other people's pages cannot decide which of them has a rule like `.article .content li`, and that rule is as specific as the library's own. For that case the package ships the same stylesheet a second time, with every rule one class stronger:
+
+```css
+@import 'mawy-react/styles.isolated.css';
+```
+
+Import it instead of `styles.css`, not beside it. Every rule that began with `.mawy-root` begins with `.mawy-root.mawy-root`, which matches the same elements and counts one class more, so a page rule needs three classes to reach in rather than two. On a page with no rules of its own it draws exactly what `styles.css` draws.
+
+Redeclaring a token works the same under either sheet. The palettes stay at zero specificity, and a `--mawy-*` declaration anywhere else keeps the selector it had. What needs the extra class is an override of a document element or a `.mawy-md-*` class, as in `.my-docs .mawy-root.mawy-root .mawy-md p`.
+
 :::
 
 ::: fw flutter

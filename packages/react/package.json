@@ -63,6 +63,7 @@
       "default": "./dist/server.js"
     },
     "./styles.css": "./dist/styles.css",
+    "./styles.isolated.css": "./dist/styles.isolated.css",
     "./package.json": "./package.json"
   },
   "typesVersions": {

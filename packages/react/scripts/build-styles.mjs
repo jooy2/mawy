@@ -16,6 +16,9 @@
  * one to read; what ships is the same rules in the same order with the prose
  * taken out.
  *
+ * It also writes `styles.isolated.css`, the same rules a class stronger, which
+ * `isolate.mjs` explains.
+ *
  * Which makes two things worth checking rather than assuming, and both checks
  * are at the bottom. Every `--mawy-*` custom property the source declares is
  * still declared in what shipped, because the palette is the package's whole
@@ -29,6 +32,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { transform } from 'esbuild';
+import { isolate } from './isolate.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const srcDir = resolve(packageDir, 'src');
@@ -90,4 +94,28 @@ for (const path of stylesheetsUnder(srcDir)) {
   }
 
   writeFileSync(resolve(distDir, path), code);
+
+  // The same sheet a class stronger, for a page whose own rules are more
+  // specific than this one's. See `isolate.mjs`. Asked the same two questions,
+  // and a third: that everything the lift was meant to reach was reached.
+  if (path === 'styles.css') {
+    const isolated = isolate(code);
+    const missing = [...declaredIn(written)].filter((name) => !isolated.includes(`${name}:`));
+    const unlifted =
+      isolated.match(/(?:^|[{},])\.mawy-root(?!\.mawy-root)(?![\w-])[^{]*\{(?!--)/g) ?? [];
+
+    if (missing.length > 0) {
+      throw new Error(`styles.isolated.css: lifting dropped ${missing.join(', ')}`);
+    }
+
+    if (zeroSpecificityIn(isolated) !== zeroSpecificityIn(written)) {
+      throw new Error('styles.isolated.css: lifting lost a :where()');
+    }
+
+    if (unlifted.length > 0) {
+      throw new Error(`styles.isolated.css: left a rule at its own strength: ${unlifted[0]}`);
+    }
+
+    writeFileSync(resolve(distDir, 'styles.isolated.css'), isolated);
+  }
 }

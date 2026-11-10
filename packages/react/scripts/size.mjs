@@ -55,7 +55,8 @@ const SCENARIOS = [
   { name: 'The highlighter', entry: 'mawy-react/highlight', imports: ['mawyHighlighter'] },
   { name: 'The parser alone', entry: 'mawy-react/markdown', imports: ['parseMarkdown'] },
   { name: 'A server document', entry: 'mawy-react/server', imports: ['MawyDocument'] },
-  { name: 'styles.css', stylesheet: 'dist/styles.css' }
+  { name: 'styles.css', stylesheet: 'dist/styles.css' },
+  { name: 'styles.isolated.css', stylesheet: 'dist/styles.isolated.css' }
 ];
 
 const gzip = (text) => gzipSync(Buffer.from(text), { level: 9 }).length;
