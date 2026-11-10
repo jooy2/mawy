@@ -333,8 +333,10 @@ export interface MawyEditorHandle {
    * format of the application's own, such as `:kbd[…]`, is the case this is
    * for. What is wrapped is the Markdown under the selection on whichever
    * surface is showing: on `wysiwyg`, a word selected in a run drawn bold is
-   * wrapped inside its asterisks, which is where the drawn word is. Nothing
-   * while the editor is read-only or in `preview`.
+   * wrapped inside its asterisks, which is where the drawn word is, and a
+   * selection from a run's words to words outside it is wrapped around the
+   * whole run, as the toolbar's formats are, so the halves never cross the
+   * run's own markers. Nothing while the editor is read-only or in `preview`.
    */
   wrap(before: string, after: string): void;
 }
@@ -1531,7 +1533,15 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           return;
         }
 
-        const { value, start, end } = before;
+        // On the drawn document a selection from a run's words to the words
+        // after it starts between the run's own markers, and the halves written
+        // there cross them: `**:kbd[bold** text]`. So it runs over the range
+        // the toolbar's formats do, out to the edge of any inline it only half
+        // covers. See `wrapRange`.
+        const { value } = before;
+        const { start, end } = showDocument
+          ? wrapRange(value, before.start, before.end, options)
+          : before;
         const inside = start + opening.length;
 
         // The selection kept on what was selected rather than collapsed after
@@ -1545,7 +1555,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
         });
       }
     }),
-    [focusDrawn, readOnly, run, selection.end, selection.start, showDocument, stateNow]
+    [focusDrawn, options, readOnly, run, selection.end, selection.start, showDocument, stateNow]
   );
 
   /**

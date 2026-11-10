@@ -161,7 +161,7 @@ interface MawyEditorHandle {
 
 `insert` writes Markdown where the caret is, in place of whatever is selected, as one step to undo, and leaves the caret after it. `focus` puts the focus back on whichever surface is showing, with the caret where it was left.
 
-`wrap` writes `before` and `after` around the selection as one step to undo, and leaves the same words selected between them, so a second control pressed straight after wraps them again. With nothing selected it writes both where the caret is and leaves the caret between them. It is the way to give an inline format of the application's own, such as a directive, a button. What it wraps is the Markdown under the selection on whichever surface is showing, so on `wysiwyg` a word selected in a bold run is wrapped inside its asterisks.
+`wrap` writes `before` and `after` around the selection as one step to undo, and leaves the same words selected between them, so a second control pressed straight after wraps them again. With nothing selected it writes both where the caret is and leaves the caret between them. It is the way to give an inline format of the application's own, such as a directive, a button. What it wraps is the Markdown under the selection on whichever surface is showing, so on `wysiwyg` a word selected in a bold run is wrapped inside its asterisks. A selection on `wysiwyg` that runs from a run's words to words outside it is wrapped around the whole run, as the toolbar's formats are, so `**bold** text` selected from `bold` to the end becomes `:kbd[**bold** text]` and never `**:kbd[bold** text]`. A link, a code span, a struck-out run and a picture are taken whole the same way.
 
 All three do nothing in `preview`, and `insert` and `wrap` do nothing while the editor is read-only.
 

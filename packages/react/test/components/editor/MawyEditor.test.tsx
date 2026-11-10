@@ -881,6 +881,100 @@ describe('the toolbar and the keyboard', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one **two** three'));
   });
 
+  /**
+   * A selection from a run's words to the words outside it starts, in the
+   * document, between the run's markers, and wrapping there crossed them:
+   * `**:kbd[bold** text]`. The same drawn selection started before the
+   * `<strong>` rather than inside its text gave `:kbd[**bold** text]`, so which
+   * one a reader got depended on a DOM position nobody can see. The handle runs
+   * over the range the toolbar's own formats do. See `wrapRange`.
+   */
+  it('wraps around a run the selection on the drawn document only half covers', async () => {
+    const text = (root: HTMLElement, saying: string): Text => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if ((node as Text).data === saying) {
+          return node as Text;
+        }
+      }
+
+      throw new Error(`No run of text says ${JSON.stringify(saying)}.`);
+    };
+    type Place = (paragraph: HTMLElement) => [Node, number];
+    const cases: [string, Place, Place, string][] = [
+      [
+        '**bold** text',
+        (p) => [text(p, 'bold'), 0],
+        (p) => [text(p, ' text'), 5],
+        ':kbd[**bold** text]'
+      ],
+      [
+        '**bold** text',
+        (p) => [text(p, 'bold'), 2],
+        (p) => [text(p, ' text'), 5],
+        ':kbd[**bold** text]'
+      ],
+      [
+        'text **bold**',
+        (p) => [text(p, 'text '), 0],
+        (p) => [text(p, 'bold'), 4],
+        ':kbd[text **bold**]'
+      ],
+      [
+        '*italic* text',
+        (p) => [text(p, 'italic'), 0],
+        (p) => [text(p, ' text'), 5],
+        ':kbd[*italic* text]'
+      ],
+      [
+        '~~struck~~ text',
+        (p) => [text(p, 'struck'), 0],
+        (p) => [text(p, ' text'), 5],
+        ':kbd[~~struck~~ text]'
+      ],
+      [
+        '[link](https://example.com) text',
+        (p) => [text(p, 'link'), 0],
+        (p) => [text(p, ' text'), 5],
+        ':kbd[[link](https://example.com) text]'
+      ],
+      // The same drawn selections, started or ended on the paragraph rather
+      // than in the run's text, which were already right.
+      ['**bold** text', (p) => [p, 0], (p) => [text(p, ' text'), 5], ':kbd[**bold** text]'],
+      [
+        'text **bold**',
+        (p) => [text(p, 'text '), 0],
+        (p) => [p, p.childNodes.length],
+        ':kbd[text **bold**]'
+      ]
+    ];
+
+    for (const [value, from, to, expected] of cases) {
+      const onChange = vi.fn();
+      const handle: { current: MawyEditorHandle | null } = { current: null };
+      const screen = await render(
+        <MawyEditor defaultValue={value} mode="wysiwyg" onChange={onChange} handle={handle} />
+      );
+      const body = bodyOf(screen);
+      const paragraph = body.querySelector('p') as HTMLElement;
+      const range = document.createRange();
+      const selection = document.getSelection() as Selection;
+
+      body.focus();
+      range.setStart(...from(paragraph));
+      range.setEnd(...to(paragraph));
+      selection.removeAllRanges();
+      selection.addRange(range);
+      await new Promise((done) => setTimeout(done, 30));
+
+      handle.current?.wrap(':kbd[', ']');
+
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(expected));
+      await screen.unmount();
+    }
+  });
+
   it('wraps nothing in a read-only editor, or with nothing to wrap it in', async () => {
     const onChange = vi.fn();
     const handle: { current: MawyEditorHandle | null } = { current: null };

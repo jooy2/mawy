@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **`MawyEditorHandle.wrap` on `wysiwyg` wraps around a run the selection only half covers, rather than through it.** A selection that starts among a bold run's words and ends after them starts, in the document, between the run's asterisks, so `**bold** text` selected from `bold` to the end and wrapped in `:kbd[` and `]` became `**:kbd[bold** text]`, which is neither. Italic, strikethrough and links broke the same way. The same drawn selection started before the `<strong>` rather than inside its text gave `:kbd[**bold** text]`, so which one a reader got depended on a DOM position nobody can see. `wrap` now runs over the range the toolbar's formats already did: an end between an inline's markers, with the other end outside that inline, moves out to the inline's edge, and a selection inside one inline is left where it is. A selection that starts in the middle of a run takes the whole run as well, `:kbd[**bold** text]`, rather than splitting it.
+
 ## 1.10.0 (2026-11-10)
 
 ### Breaking changes
