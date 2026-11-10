@@ -2164,22 +2164,27 @@ class _ToolbarState extends State<_Toolbar> {
       }
 
       if (item == MawyEditorToolbarItem.heading) {
+        final int depth = widget.headingLevels.firstWhere(
+          (int each) => headingActive(widget.state, each),
+          orElse: () => 0,
+        );
+
         // One menu rather than a button a level, which is what the React
         // package's toolbar does: the levels and body text are answers to one
-        // question, and a button each is that many questions.
+        // question, and a button each is that many questions. Over a heading
+        // it offers, the level's own icon, held down as a formatting button is
+        // over its formatting.
         children.add(
           MawyToolbarMenu(
-            icon: LucideIcons.heading,
+            icon: depth == 0 ? LucideIcons.heading : _headingIcons[depth - 1],
             label: widget.strings.heading,
             tokens: widget.tokens,
             focusNode: next(),
             enabled: !widget.inTable && !widget.inCode,
+            pressed: depth != 0,
             builder: (VoidCallback close) => MawyToolbarChoice<int>(
               tokens: widget.tokens,
-              value: widget.headingLevels.firstWhere(
-                (int depth) => headingActive(widget.state, depth),
-                orElse: () => 0,
-              ),
+              value: depth,
               options: <MawyToolbarOption<int>>[
                 for (final int depth in widget.headingLevels)
                   MawyToolbarOption<int>(

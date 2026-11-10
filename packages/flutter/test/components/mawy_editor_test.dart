@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mawy/mawy.dart';
 import 'package:mawy/src/editor/source_field.dart' show MawySourceField, MawySourceGutter;
 import 'package:mawy/src/internal/find_bar.dart' show MawyFindBar;
@@ -395,6 +396,33 @@ void main() {
       );
 
       expect(list.pressed, isTrue);
+    });
+
+    testWidgets('draws the heading menu as pressed over a heading', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(const MawyEditor(defaultValue: '# Title\n\nWords', defaultMode: MawyEditorMode.plain)),
+      );
+
+      final EditableTextState field = tester.state(find.byType(EditableText));
+      MawyToolbarButton heading() => tester.widget(
+        find.byWidgetPredicate(
+          (Widget widget) => widget is MawyToolbarButton && widget.label == 'Heading',
+        ),
+      );
+
+      field.widget.controller.selection = const TextSelection.collapsed(offset: 4);
+      await tester.pump();
+
+      // Held down as the bold button is over bold words, with the menu shut,
+      // and drawn with the level's own icon.
+      expect(heading().pressed, isTrue);
+      expect(heading().icon, LucideIcons.heading1);
+
+      field.widget.controller.selection = const TextSelection.collapsed(offset: 12);
+      await tester.pump();
+
+      expect(heading().pressed, isFalse);
+      expect(heading().icon, LucideIcons.heading);
     });
 
     testWidgets('speaks the locale it was given', (WidgetTester tester) async {

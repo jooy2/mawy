@@ -349,6 +349,7 @@ class MawyToolbarMenu extends StatefulWidget {
     required this.builder,
     this.focusNode,
     this.enabled = true,
+    this.pressed = false,
     super.key,
   });
 
@@ -369,6 +370,11 @@ class MawyToolbarMenu extends StatefulWidget {
 
   /// Whether it can be opened at all. See [MawyToolbarButton.enabled].
   final bool enabled;
+
+  /// Whether it is drawn held down while it is shut, for a menu whose choice
+  /// is in force where the caret is: the heading menu over a heading, the way
+  /// the bold button is held down over bold words.
+  final bool pressed;
 
   @override
   State<MawyToolbarMenu> createState() => _MawyToolbarMenuState();
@@ -579,7 +585,7 @@ class _MawyToolbarMenuState extends State<MawyToolbarMenu> {
           icon: widget.icon,
           label: widget.label,
           tokens: widget.tokens,
-          pressed: _entry != null,
+          pressed: _entry != null || widget.pressed,
           enabled: widget.enabled,
           focusNode: _button,
           onPressed: _toggle,

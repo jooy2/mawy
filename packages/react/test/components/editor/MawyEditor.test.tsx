@@ -963,6 +963,25 @@ describe('the toolbar and the keyboard', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('## Section'));
   });
 
+  it('holds the heading button down over a heading, and draws its level', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue={'## Title\n\nWords'} mode="wysiwyg" style={WIDE} />
+    );
+    const button = () => screen.getByRole('button', { name: 'Heading' }).element();
+
+    put(bodyOf(screen), 'Title', 2);
+    await vi.waitFor(() => expect(button()).toHaveAttribute('data-mawy-pressed', 'true'));
+    // The level's own icon, the one its option in the menu has.
+    expect(button().querySelector('svg')?.getAttribute('class')).toContain('heading-2');
+    // Drawn and not said: a button that opens a menu is not a toggle, and the
+    // level is the option checked inside it.
+    expect(button()).not.toHaveAttribute('aria-pressed');
+
+    put(bodyOf(screen), 'Words', 2);
+    await vi.waitFor(() => expect(button()).not.toHaveAttribute('data-mawy-pressed'));
+    expect(button().querySelector('svg')?.getAttribute('class')).not.toContain('heading-2');
+  });
+
   it('offers all six heading levels until it is told otherwise', async () => {
     const onChange = vi.fn();
     const screen = await render(

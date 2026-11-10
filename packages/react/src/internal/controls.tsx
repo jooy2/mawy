@@ -58,6 +58,14 @@ export interface MenuProps {
   /** Off in the modes where what the menu holds has nothing to act on. */
   disabled?: boolean;
   /**
+   * Drawn as held down while it is shut, for a menu whose choice is in force
+   * where the caret is: the heading menu over a heading, the way the bold
+   * button is held down over bold words. Drawn only, and not said as pressed,
+   * because a button that opens a menu is not a toggle; what the menu would
+   * choose is said by the option checked inside it.
+   */
+  pressed?: boolean;
+  /**
    * What is inside the panel.
    *
    * A function is called when the panel opens rather than when the menu is
@@ -109,7 +117,7 @@ export function useDismiss(): (() => void) | null {
  * on and the component does not honour is worse than no role at all.
  */
 export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu(
-  { label, icon, text, disabled, children, tabIndex, onFocus },
+  { label, icon, text, disabled, pressed, children, tabIndex, onFocus },
   ref
 ) {
   const [open, setOpen] = React.useState(false);
@@ -174,7 +182,7 @@ export const Menu = React.forwardRef<HTMLButtonElement, MenuProps>(function Menu
         // A button that says what is chosen is named for what it chooses as
         // well, or it is read out as a language and nothing else.
         aria-label={text ? `${label}: ${text}` : undefined}
-        pressed={open}
+        pressed={open || pressed}
         disabled={disabled}
         tabIndex={tabIndex}
         onFocus={onFocus}

@@ -370,25 +370,32 @@ export function MawyEditorToolbar({
     }
 
     if (item === 'heading') {
+      const depth = headingLevels.find((each) => headingActive(each)) ?? 0;
+      // The level the caret is in, drawn with the icon its option has, and held
+      // down as a formatting button is over its formatting. Over body text the
+      // menu's own icon. See `MenuProps.pressed`.
+      const Shown = depth === 0 ? HeadingIcon : HEADING_ICONS[depth];
+
       return (
         <Menu
           key={key}
           label={strings.heading}
-          icon={<HeadingIcon className="mawy-icon" aria-hidden="true" />}
+          icon={<Shown className="mawy-icon" aria-hidden="true" />}
           disabled={inTable || inCode}
+          pressed={depth !== 0}
           {...itemProps(at)}
         >
           <Choice<string>
             label={strings.heading}
-            value={String(headingLevels.find((depth) => headingActive(depth)) ?? 0)}
+            value={String(depth)}
             onChange={(chosen) => onHeading(Number(chosen) as MawyHeadingLevel | 0)}
             options={[
-              ...headingLevels.map((depth) => {
-                const Icon = HEADING_ICONS[depth];
+              ...headingLevels.map((level) => {
+                const Icon = HEADING_ICONS[level];
 
                 return {
-                  value: String(depth),
-                  label: strings[`heading${depth}`],
+                  value: String(level),
+                  label: strings[`heading${level}`],
                   icon: <Icon className="mawy-icon" aria-hidden="true" />
                 };
               }),

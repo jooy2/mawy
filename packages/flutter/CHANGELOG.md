@@ -15,6 +15,8 @@
 
 - **A space or an `Enter` in front of the character it would write moves the caret past that character instead of being refused.** A second space in a row and a second blank line are still not written, but the press that would have written one with the caret in front of a space, or at the end of a line with a blank line under it, was refused and said so, though the caret was one character from where the press meant it to be. Now the caret steps over the space, and `Enter` walks down a run of blank lines a line at a time; only a press with nothing left to step over is refused. A soft keyboard's space and line ending are read the same way. The React package does the same, and the parity check compares the two.
 
+- **The toolbar's heading button shows the level the caret is in.** It is a menu, and was drawn pressed only while it was open, so it was the one formatting control that did not show what was in force. With the caret in a heading of a level the menu offers, it is drawn pressed and with that level's icon, as in the React package.
+
 
 ## 1.9.0 (2026-11-02)
 
