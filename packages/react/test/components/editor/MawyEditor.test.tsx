@@ -2694,6 +2694,35 @@ describe('the document surface', () => {
     );
   });
 
+  it('marks the words a new link is going on while its bar has the focus', async () => {
+    const screen = await render(
+      <div style={WIDE}>
+        <MawyEditor defaultValue="Words here." mode="wysiwyg" />
+      </div>
+    );
+    const marked = () =>
+      typeof CSS !== 'undefined' && 'highlights' in CSS
+        ? [...((CSS.highlights.get('mawy-pending') as Highlight | undefined) ?? [])].map((range) =>
+            (range as Range).toString()
+          )
+        : ['Words'];
+
+    put(bodyOf(screen), 'Words here.', 0, 5);
+    await screen.getByRole('button', { name: 'Link' }).click();
+
+    // The page's selection went with the focus to the address, and the words
+    // stay marked. See `paintPending`.
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(
+        page.getByRole('textbox', { name: 'Link address' }).element()
+      )
+    );
+    expect(marked()).toEqual(['Words']);
+
+    await userEvent.keyboard('{Escape}');
+    await vi.waitFor(() => expect(marked()).toEqual([]));
+  });
+
   it('asks for a new link from a bar, and writes it once it has an address', async () => {
     const onChange = vi.fn();
     const screen = await render(

@@ -124,6 +124,30 @@ function repaint(): void {
   }
 }
 
+/**
+ * The words a new link is being asked for, marked on the drawn document for as
+ * long as its bar is open; `null` takes the mark away.
+ *
+ * The bar takes the focus to its address, and a selection on the page goes
+ * with the focus, so the words the link would go on were no longer marked by
+ * anything while the address was typed. A range the browser paints, for the
+ * reason the matches are one: nothing can be put around words in a tree React
+ * owns. A browser without the API marks nothing, which is what it did before.
+ */
+export function paintPending(range: Range | null): void {
+  const highlights = registry();
+
+  if (!highlights) {
+    return;
+  }
+
+  if (range) {
+    highlights.set('mawy-pending', new Highlight(range));
+  } else {
+    highlights.delete('mawy-pending');
+  }
+}
+
 /** A place in the document as a range on the page, or `null` where it is not drawn. */
 export function rangeFor(root: HTMLElement, value: string, match: MawyMatch): Range | null {
   const head = domAt(root, match.start, value);

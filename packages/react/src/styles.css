@@ -2882,6 +2882,12 @@
   background-color: var(--mawy-find-current);
 }
 
+/* The words a new link is going on, for as long as its bar has the focus and
+ * the page's own selection has gone with it. See `paintPending`. */
+.mawy-root .mawy-document-body ::highlight(mawy-pending) {
+  background-color: color-mix(in srgb, var(--mawy-accent) 24%, transparent);
+}
+
 /* A code block's own syntax, from whichever highlighter drew it -------------
  *
  * Thirteen names and eight colours: `constant` reads as a number because that

@@ -126,7 +126,13 @@ import {
   replaceMatch,
   replacementFor
 } from '../../internal/search.js';
-import { drawnMatches, paintMatches, rangeFor, unpaintMatches } from '../../internal/drawnFind.js';
+import {
+  drawnMatches,
+  paintMatches,
+  paintPending,
+  rangeFor,
+  unpaintMatches
+} from '../../internal/drawnFind.js';
 import {
   MAWY_ACCEPT,
   acceptsFile,
@@ -1920,6 +1926,22 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const blockBar = React.useRef<HTMLDivElement>(null);
   /** A new link or picture being asked for, which is the bar there is while there is one. */
   const insertHere = showDocument && inserting && inserting.value === text ? inserting : null;
+  const pendingStart = insertHere ? insertHere.range.start : -1;
+  const pendingEnd = insertHere ? insertHere.range.end : -1;
+
+  // The words that link is going on, marked while its bar has the focus. See
+  // `paintPending`.
+  React.useLayoutEffect(() => {
+    const element = drawn.current;
+
+    if (!element || pendingStart === pendingEnd) {
+      return;
+    }
+
+    paintPending(rangeFor(element, text, { start: pendingStart, end: pendingEnd }));
+
+    return () => paintPending(null);
+  }, [pendingEnd, pendingStart, text]);
   const blockHere: MawyBlockTarget | MawyInsertTarget | null =
     !showDocument || !editable || !focused
       ? null

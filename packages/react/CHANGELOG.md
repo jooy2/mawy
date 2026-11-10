@@ -30,6 +30,8 @@
 
 - **The toolbar's table grid inserts a table under the table the caret is in.** It was drawn disabled there, since a cell holds no table, and read as a button that did nothing. `Mod`+`Alt`+`T` does the same. The Flutter package does too.
 
+- **The words a new link is going on stay marked while its bar has the focus.** The page's own selection went with the focus to the address, so what the link would be put on was no longer shown anywhere. They are marked with the CSS Custom Highlight API, as the find bar's matches are, and a browser without it marks nothing, as before.
+
 - **A picture that could not be fetched is drawn as a box with its description in it.** The browser drew it as its description in the type of the words around it, with a small icon in some browsers and none in WebKit, so in a sentence it read as more of the sentence. It is drawn now as an icon and the description in a dashed frame of the palette's colours, the same in every browser. It is still the `<img>` it was, with the same `alt`, and the address it was given is kept on it as `data-mawy-src` for a copy.
 
 - **The toolbar's find button closes the find bar it opened.** It was drawn pressed while the bar was open and opened it again when pressed.
