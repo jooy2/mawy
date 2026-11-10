@@ -716,6 +716,29 @@ void main() {
     });
   });
 
+  group('a list or a quotation taken off', () {
+    test('sets a line taken out of the middle apart from the rest', () {
+      // Straight under an item, a line of words is that item's lazy
+      // continuation, so the line taken out went up into the item above it.
+      expect(run(MawyCommand.bulletList, '- one\n- t|wo\n- three'), '- one\n\nt|wo\n\n- three');
+      expect(run(MawyCommand.bulletList, '- one\n- t|wo'), '- one\n\nt|wo');
+      expect(
+        run(MawyCommand.orderedList, '1. one\n2. t|wo\n3. three'),
+        '1. one\n\nt|wo\n\n3. three',
+      );
+      expect(run(MawyCommand.taskList, '- [ ] a\n- [x] |b\n- [ ] c'), '- [ ] a\n\n|b\n\n- [ ] c');
+      expect(run(MawyCommand.quote, '> a\n> |b\n> c'), '> a\n\n|b\n\n> c');
+      // Where there is a blank line already, or nothing, nothing more is written.
+      expect(run(MawyCommand.bulletList, '- o|ne\n\nAfter'), 'o|ne\n\nAfter');
+    });
+
+    test('makes each item of a list taken off a paragraph of its own', () {
+      expect(run(MawyCommand.bulletList, '«- one\n- two\n- three»'), '«one\n\ntwo\n\nthree»');
+      // A quotation's lines are one paragraph, and stay one.
+      expect(run(MawyCommand.quote, '«> one\n> two»'), '«one\ntwo»');
+    });
+  });
+
   group('a hard break', () {
     String broken(String marked) => show(hardBreak(at(marked)));
 

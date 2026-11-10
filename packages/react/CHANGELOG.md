@@ -20,6 +20,8 @@
 
 - **The toolbar's heading button shows the level the caret is in.** It is a menu, and was drawn pressed only while it was open, so it was the one formatting control that did not show what was in force. With the caret in a heading of a level the menu offers, it is drawn pressed and with that level's icon, `H1` to `H6`, the one its option in the menu has. It is not given `aria-pressed`, because a button that opens a menu is not a toggle; the level is the option checked inside the menu.
 
+- **A list or a quotation taken off a line in the middle of others leaves that line a paragraph of its own.** It was left straight under the item above it, where a line of words is that item's lazy continuation, so it went up into the item and was drawn on the end of its words. A blank line is written either side of it now, where there is none already, and a list taken off several items makes each item a paragraph rather than one paragraph of all of them. The Flutter package does the same, and the parity check compares the two.
+
 - **The icon set this package draws is `lucide-react` 1.70 or newer.** It was 1.48 or newer. Every icon the editor and the viewer use is the same drawing in both versions, so nothing on the page changes. An application that holds its own `lucide-react` below 1.70 gets a second copy of it rather than sharing one, until it raises its own.
 
 ### Fixed

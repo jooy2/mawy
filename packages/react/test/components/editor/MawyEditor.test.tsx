@@ -3165,6 +3165,24 @@ describe('the document surface', () => {
     expect(screen.container.querySelector('.mawy-notice')).toBeNull();
   });
 
+  it('sets a list item taken out of the middle of a list apart, as a paragraph', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue={'- one\n- two\n- three'}
+        mode="wysiwyg"
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+
+    put(bodyOf(screen), 'two', 1);
+    await userEvent.click(screen.getByRole('button', { name: 'Bulleted list' }));
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('- one\n\ntwo\n\n- three'));
+    expect([...bodyOf(screen).children].map((block) => block.tagName)).toEqual(['UL', 'P', 'UL']);
+  });
+
   it('steps over a space on the drawn document before refusing the next', async () => {
     const onChange = vi.fn();
     const screen = await render(

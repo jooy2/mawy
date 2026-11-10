@@ -17,6 +17,8 @@
 
 - **The toolbar's heading button shows the level the caret is in.** It is a menu, and was drawn pressed only while it was open, so it was the one formatting control that did not show what was in force. With the caret in a heading of a level the menu offers, it is drawn pressed and with that level's icon, as in the React package.
 
+- **A list or a quotation taken off a line in the middle of others leaves that line a paragraph of its own.** It was left straight under the item above it, where a line of words is that item's lazy continuation, so it went up into the item. A blank line is written either side of it now, where there is none already, and a list taken off several items makes each item a paragraph. It is the React package's arithmetic, and the parity check compares the two.
+
 
 ## 1.9.0 (2026-11-02)
 

@@ -138,6 +138,24 @@ describe('line markers', () => {
     expect(run('heading1', '«Title»')).toBe('«# Title»');
   });
 
+  it('sets a list item or a quoted line taken out of the middle apart from the rest', () => {
+    // Straight under an item, a line of words is that item's lazy continuation,
+    // so the line taken out went up into the item above it.
+    expect(run('bulletList', '- one\n- t|wo\n- three')).toBe('- one\n\nt|wo\n\n- three');
+    expect(run('bulletList', '- one\n- t|wo')).toBe('- one\n\nt|wo');
+    expect(run('orderedList', '1. one\n2. t|wo\n3. three')).toBe('1. one\n\nt|wo\n\n3. three');
+    expect(run('taskList', '- [ ] a\n- [x] |b\n- [ ] c')).toBe('- [ ] a\n\n|b\n\n- [ ] c');
+    expect(run('quote', '> a\n> |b\n> c')).toBe('> a\n\n|b\n\n> c');
+    // Where there is a blank line already, or nothing, nothing more is written.
+    expect(run('bulletList', '- o|ne\n\nAfter')).toBe('o|ne\n\nAfter');
+  });
+
+  it('makes each item of a list taken off a paragraph of its own', () => {
+    expect(run('bulletList', '«- one\n- two\n- three»')).toBe('«one\n\ntwo\n\nthree»');
+    // A quotation's lines are one paragraph, and stay one.
+    expect(run('quote', '«> one\n> two»')).toBe('«one\ntwo»');
+  });
+
   it('writes a marker on an empty line, for the words still to come', () => {
     expect(run('bulletList', 'One.\n\n|')).toBe('One.\n\n- |');
     expect(run('taskList', '|')).toBe('- [ ] |');

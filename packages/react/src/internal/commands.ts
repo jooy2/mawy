@@ -157,15 +157,20 @@ function togglePrefix(
   prefix: string,
   blanks: boolean
 ): EditState {
-  return mapLines(state, (lines) => {
+  let off = false;
+  const after = mapLines(state, (lines) => {
     const content = lines.filter((line) => line.trim());
     const on = content.length > 0 && content.every((line) => MARKERS[kind].test(line));
 
-    return lines.map((line) => {
-      if (on) {
-        return bare(line);
-      }
+    off = on;
 
+    // Each item a paragraph of its own. A quotation's lines are one paragraph
+    // already, and stay one.
+    if (on) {
+      return blanks ? lines.map(bare) : paragraphs(lines.map(bare));
+    }
+
+    return lines.map((line) => {
       if (!line.trim()) {
         // A line of its own is where the caret is, and a marker is what was
         // asked for there — the empty item or quotation the next words go in.
@@ -181,19 +186,79 @@ function togglePrefix(
       return indentOf(line) + prefix + bare(line).trimStart();
     });
   });
+
+  return off ? setApart(state, after) : after;
+}
+
+/**
+ * Lines that were list items, each made a paragraph of its own.
+ *
+ * Without the marker, two items one under the other are two lines of one
+ * paragraph, and a list taken off three items drew one line of words. A blank
+ * line goes between any two that have words on them.
+ */
+function paragraphs(lines: string[]): string[] {
+  const out: string[] = [];
+
+  for (const line of lines) {
+    if (line.trim() && out.length > 0 && out[out.length - 1].trim()) {
+      out.push('');
+    }
+
+    out.push(line);
+  }
+
+  return out;
+}
+
+/**
+ * The lines a list or a quotation was just taken off, set apart from the lines
+ * either side of them.
+ *
+ * A line of words straight under a list item or a quoted line is that block's
+ * lazy continuation to CommonMark, so an item taken out of the middle of a list
+ * went up into the item above and was drawn on the end of its words. A blank
+ * line either side makes it the paragraph of its own it was meant to be, and
+ * leaves what is above and below it the list it was. Where the line beside it is
+ * blank already, or there is none, nothing is written.
+ */
+function setApart(state: EditState, after: EditState): EditState {
+  const [from, to] = lineRange(state.value, state.start, state.end);
+  const { value } = after;
+  const stop = to + value.length - state.value.length;
+  const head = from >= 2 ? value.lastIndexOf('\n', from - 2) + 1 : 0;
+  const tail = value.indexOf('\n', stop + 1);
+  const above = from > 0 && value.slice(head, from - 1).trim() !== '';
+  const below =
+    stop < value.length && value.slice(stop + 1, tail === -1 ? value.length : tail).trim() !== '';
+  const shift = above ? 1 : 0;
+
+  return {
+    value:
+      value.slice(0, from) +
+      (above ? '\n' : '') +
+      value.slice(from, stop) +
+      (below ? '\n' : '') +
+      value.slice(stop),
+    start: after.start + shift,
+    end: after.end + shift
+  };
 }
 
 function toggleOrdered(state: EditState): EditState {
-  return mapLines(state, (lines) => {
+  let off = false;
+  const after = mapLines(state, (lines) => {
     const content = lines.filter((line) => line.trim());
     const on = content.length > 0 && content.every((line) => MARKERS.orderedList.test(line));
     let number = 0;
 
-    return lines.map((line) => {
-      if (on) {
-        return bare(line);
-      }
+    off = on;
 
+    if (on) {
+      return paragraphs(lines.map(bare));
+    }
+
+    return lines.map((line) => {
       // Blank lines inside the block keep their place and do not take a number,
       // and a blank line on its own is the first item, still to be written.
       if (!line.trim()) {
@@ -205,6 +270,8 @@ function toggleOrdered(state: EditState): EditState {
       return `${indentOf(line)}${number}. ${bare(line).trimStart()}`;
     });
   });
+
+  return off ? setApart(state, after) : after;
 }
 
 /**

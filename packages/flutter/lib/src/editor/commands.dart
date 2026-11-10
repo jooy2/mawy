@@ -192,16 +192,23 @@ String _bare(String line) {
 /// two paragraphs as a list used to leave behind — and what [_toggleOrdered]
 /// beside this has always got right.
 EditState _togglePrefix(EditState state, String kind, String prefix, {required bool blanks}) {
-  return _mapLines(state, (List<String> lines) {
+  bool off = false;
+  final EditState after = _mapLines(state, (List<String> lines) {
     final List<String> content = lines.where((String line) => line.trim().isNotEmpty).toList();
     final bool on =
         content.isNotEmpty && content.every((String line) => _markers[kind]!.hasMatch(line));
 
-    return lines.map((String line) {
-      if (on) {
-        return _bare(line);
-      }
+    off = on;
 
+    // Each item a paragraph of its own. A quotation's lines are one paragraph
+    // already, and stay one.
+    if (on) {
+      final List<String> stripped = lines.map(_bare).toList();
+
+      return blanks ? stripped : _paragraphs(stripped);
+    }
+
+    return lines.map((String line) {
       if (line.trim().isEmpty) {
         // A line of its own is where the caret is, and a marker is what was
         // asked for there — the empty item or quotation the next words go in.
@@ -217,21 +224,78 @@ EditState _togglePrefix(EditState state, String kind, String prefix, {required b
       return _indentOf(line) + prefix + _bare(line).trimLeft();
     }).toList();
   });
+
+  return off ? _setApart(state, after) : after;
+}
+
+/// Lines that were list items, each made a paragraph of its own.
+///
+/// Without the marker, two items one under the other are two lines of one
+/// paragraph, and a list taken off three items drew one line of words. A blank
+/// line goes between any two that have words on them.
+List<String> _paragraphs(List<String> lines) {
+  final List<String> out = <String>[];
+
+  for (final String line in lines) {
+    if (line.trim().isNotEmpty && out.isNotEmpty && out.last.trim().isNotEmpty) {
+      out.add('');
+    }
+
+    out.add(line);
+  }
+
+  return out;
+}
+
+/// The lines a list or a quotation was just taken off, set apart from the lines
+/// either side of them.
+///
+/// A line of words straight under a list item or a quoted line is that block's
+/// lazy continuation to CommonMark, so an item taken out of the middle of a list
+/// went up into the item above and was drawn on the end of its words. A blank
+/// line either side makes it the paragraph of its own it was meant to be, and
+/// leaves what is above and below it the list it was. Where the line beside it
+/// is blank already, or there is none, nothing is written.
+EditState _setApart(EditState state, EditState after) {
+  final List<int> span = _lineRange(state.value, state.start, state.end);
+  final int from = span[0];
+  final String value = after.value;
+  final int stop = span[1] + value.length - state.value.length;
+  final int head = from >= 2 ? value.lastIndexOf('\n', from - 2) + 1 : 0;
+  final int tail = stop < value.length ? value.indexOf('\n', stop + 1) : -1;
+  final bool above = from > 0 && value.substring(head, from - 1).trim().isNotEmpty;
+  final bool below =
+      stop < value.length &&
+      value.substring(stop + 1, tail == -1 ? value.length : tail).trim().isNotEmpty;
+  final int shift = above ? 1 : 0;
+
+  return EditState(
+    value.substring(0, from) +
+        (above ? '\n' : '') +
+        value.substring(from, stop) +
+        (below ? '\n' : '') +
+        value.substring(stop),
+    after.start + shift,
+    after.end + shift,
+  );
 }
 
 EditState _toggleOrdered(EditState state) {
-  return _mapLines(state, (List<String> lines) {
+  bool off = false;
+  final EditState after = _mapLines(state, (List<String> lines) {
     final List<String> content = lines.where((String line) => line.trim().isNotEmpty).toList();
     final bool on =
         content.isNotEmpty &&
         content.every((String line) => _markers[_orderedList]!.hasMatch(line));
     int number = 0;
 
-    return lines.map((String line) {
-      if (on) {
-        return _bare(line);
-      }
+    off = on;
 
+    if (on) {
+      return _paragraphs(lines.map(_bare).toList());
+    }
+
+    return lines.map((String line) {
       // Blank lines inside the block keep their place and do not take a number,
       // and a blank line on its own is the first item, still to be written.
       if (line.trim().isEmpty) {
@@ -243,6 +307,8 @@ EditState _toggleOrdered(EditState state) {
       return '${_indentOf(line)}$number. ${_bare(line).trimLeft()}';
     }).toList();
   });
+
+  return off ? _setApart(state, after) : after;
 }
 
 /// A heading of this depth over every line the selection touches, or off it.
