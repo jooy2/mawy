@@ -18,7 +18,7 @@
 
 - **A document with no link in it could not be scrolled from the keyboard.** The viewer's scrolling pane was out of the tab order, so a keyboard had nothing in it to put the focus on, and axe reported `scrollable-region-focusable`. The pane is a tab stop now, a region named after the file or "Document", with a focus ring when it is reached by `Tab`. The same pane is the editor's preview on `split` and `preview`. The empty state stays out of the tab order, because it has its own button and nothing to scroll.
 
-- **A token given to an editor did not reach its preview.** The preview is a viewer, and a viewer's root declared every token again, so `style={{ '--mawy-accent': … }}` on `MawyEditor` coloured the source and left the preview in the library's accent. The preview takes its tokens from the editor now.
+- **A token given to an editor did not reach its preview.** The preview is a viewer, and a viewer's root declared every token again, so a `--mawy-accent` given to `MawyEditor` through `style` coloured the source and left the preview in the library's accent. The preview takes its tokens from the editor now.
 
 - **A dark viewer printed dark.** The paper palette lost to the dark one on specificity, so a reader who had chosen dark printed light letters on a page of ink. Paper is dark on light whatever the reader chose, as it was meant to be.
 
