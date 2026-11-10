@@ -13,7 +13,13 @@ import type {
   MawyParseOptions,
   MawyUrlResolver
 } from '../../types.js';
-import { crowdedBy, indent, type MawyCommand, type MawyCrowding } from '../../internal/commands.js';
+import {
+  crowdedBy,
+  indent,
+  removeBlock,
+  type MawyCommand,
+  type MawyCrowding
+} from '../../internal/commands.js';
 import type { MawyStrings } from '../../internal/i18n.js';
 import type {
   MdBlock,
@@ -574,6 +580,39 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
       return () => picture?.removeAttribute('data-mawy-picked');
     }, [pictureRange]);
+
+    /**
+     * The divider selected, marked so that it can be drawn as selected, the
+     * way a picture is: a browser draws no tint over one. Set on the element as
+     * the selection changes, rather than through the drawing. See
+     * `selectedRule`.
+     */
+    React.useEffect(() => {
+      const element = root.current;
+
+      if (!element) {
+        return;
+      }
+
+      const owner = element.ownerDocument;
+      let marked: Element | null = null;
+      const mark = () => {
+        const rule = selectedRule(element);
+
+        if (rule !== marked) {
+          marked?.removeAttribute('data-mawy-picked');
+          rule?.setAttribute('data-mawy-picked', '');
+          marked = rule;
+        }
+      };
+
+      owner.addEventListener('selectionchange', mark);
+
+      return () => {
+        owner.removeEventListener('selectionchange', mark);
+        marked?.removeAttribute('data-mawy-picked');
+      };
+    }, []);
 
     /** Which picture is fetched with the page rather than when it is reached. */
     const picture = React.useMemo(() => firstImage(document_.root.children), [document_]);
@@ -1670,6 +1709,19 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         return null;
       }
 
+      // Beside a paragraph with nothing in it — the one an earlier press here
+      // opened, or a blank line's — the press is a press on that paragraph. It
+      // was read as a press between two blocks like any other, and wrote a
+      // blank line beside the one already there, so a second press a little
+      // above or below the first opened a second paragraph.
+      const blank = [blocks[at], blocks[at - 1]].find(
+        (block) => block.tagName === 'P' && !block.firstChild && rangeOf(block)
+      );
+
+      if (blank) {
+        return { value, caret: rangeOf(blank)!.start, betweenBlocks: true };
+      }
+
       const top = rangeOf(blocks[at - 1]);
       const bottom = rangeOf(blocks[at]);
       // The line ending that closes the block above, and the line under it.
@@ -1710,6 +1762,27 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       const selection = element?.ownerDocument.getSelection();
       const modified = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey;
       const node = selection?.anchorNode;
+
+      // A divider selected by a press on it, taken out with the blank line that
+      // set it off. See `selectedRule`.
+      if (
+        (event.key === 'Backspace' || event.key === 'Delete') &&
+        element &&
+        !readOnly &&
+        !modified
+      ) {
+        const rule = selectedRule(element);
+        const range = rule ? rangeOf(rule) : null;
+
+        if (range) {
+          const removed = removeBlock(value, range.start, range.end);
+
+          event.preventDefault();
+          onEdit({ value: removed.value, caret: removed.start });
+
+          return;
+        }
+      }
 
       // See `firstMarkerGone`.
       if (event.key === 'Backspace' && element && !readOnly && !modified && !composing.current) {
@@ -1994,9 +2067,15 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
             pressImage(event);
 
-            // A press on a divider leaves the caret beside it on the document
-            // itself. The gap between two blocks has an answer of its own. See
-            // `strayCaret` and `openedInside`.
+            // A press on a divider selects it, for `Delete` and `Backspace` to
+            // take away. See `selectedRule`.
+            if (element && !readOnly && pressRule(element, event.target as Element)) {
+              return;
+            }
+
+            // A press beside a divider leaves the caret beside it on the
+            // document itself. The gap between two blocks has an answer of its
+            // own. See `strayCaret` and `openedInside`.
             if (
               element &&
               selection?.isCollapsed &&
@@ -2039,6 +2118,43 @@ function selectedPicture(element: HTMLElement): Element | null {
       : null;
 
   return child?.nodeName === 'IMG' ? (child as Element) : null;
+}
+
+/**
+ * The divider a selection is exactly, or `null`.
+ *
+ * A divider draws no character, so nothing a caret or a drag could do reached
+ * it: a press on one put the caret on the next line of words, and the only way
+ * to take one away was `Backspace` from the line under it, which a reader had
+ * no reason to guess. A press on it selects it the way a press on a picture
+ * selects that, and `Delete` or `Backspace` takes it out.
+ */
+function selectedRule(element: HTMLElement): Element | null {
+  const selection = element.ownerDocument.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  const child =
+    range &&
+    range.startContainer === element &&
+    range.endContainer === element &&
+    range.endOffset === range.startOffset + 1
+      ? element.childNodes[range.startOffset]
+      : null;
+
+  return child?.nodeName === 'HR' ? (child as Element) : null;
+}
+
+/** A press on a divider, which selects it and says it did. See `selectedRule`. */
+function pressRule(element: HTMLElement, target: Element): boolean {
+  if (target.tagName !== 'HR' || target.parentElement !== element || !rangeOf(target)) {
+    return false;
+  }
+
+  const at = [...element.childNodes].indexOf(target);
+
+  element.focus({ preventScroll: true });
+  element.ownerDocument.getSelection()?.setBaseAndExtent(element, at, element, at + 1);
+
+  return true;
 }
 
 /**

@@ -4082,6 +4082,61 @@ describe('the document surface', () => {
     expect(body.querySelectorAll('p')).toHaveLength(2);
   });
 
+  it('opens one paragraph between two dividers however near them it is pressed', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        style={{ height: 400 }}
+        modes={['wysiwyg']}
+        defaultValue={'a\n\n---\n\n---\n\nb'}
+        onChange={onChange}
+      />
+    );
+    const body = bodyOf(screen);
+    const [one, other] = [...body.querySelectorAll('hr')].map((rule) =>
+      rule.getBoundingClientRect()
+    );
+    const press = (y: number) =>
+      userEvent.click(page.elementLocator(body), {
+        position: { x: one.width / 2, y: y - body.getBoundingClientRect().top }
+      });
+
+    await press((one.bottom + other.top) / 2);
+    await vi.waitFor(() => expect(body.querySelectorAll('p')).toHaveLength(3));
+
+    // Above and below the paragraph that press opened, which is a press on it
+    // rather than between it and a divider. See `openedInside`.
+    const opened = [...body.querySelectorAll('p')].find((each) => !each.textContent)!;
+    const [rule] = [...body.querySelectorAll('hr')].map((each) => each.getBoundingClientRect());
+
+    await press((rule.bottom + opened.getBoundingClientRect().top) / 2);
+    await press(opened.getBoundingClientRect().bottom + 2);
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(body.querySelectorAll('p')).toHaveLength(3);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('selects a divider pressed, and takes it away with Delete', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        style={{ height: 400 }}
+        modes={['wysiwyg']}
+        defaultValue={'a\n\n---\n\nb'}
+        onChange={onChange}
+      />
+    );
+    const rule = () => bodyOf(screen).querySelector('hr');
+
+    await userEvent.click(page.elementLocator(rule()!));
+    await vi.waitFor(() => expect(rule()).toHaveAttribute('data-mawy-picked'));
+
+    await userEvent.keyboard('{Delete}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('a\n\nb'));
+    expect(rule()).toBeNull();
+  });
+
   it('takes a divider away with Backspace or Delete from the paragraph beside it', async () => {
     for (const key of ['{Backspace}', '{Delete}'] as const) {
       const onChange = vi.fn();

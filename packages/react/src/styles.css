@@ -2412,6 +2412,34 @@
   outline-offset: 2px;
 }
 
+/* A divider pressed is selected the same way, for `Delete` to take away, and
+ * a browser draws no tint over one at all. See `selectedRule`. */
+.mawy-root .mawy-md-rule[data-mawy-picked] {
+  outline: 2px solid var(--mawy-accent);
+  outline-offset: 5px;
+}
+
+/* Something to press, which a line one pixel tall is not. Six pixels above and
+ * below it are the divider's too, taken out of its margins so that nothing
+ * around it moves, and the line is still drawn in the middle of them. */
+.mawy-root .mawy-document-body .mawy-md-rule {
+  box-sizing: content-box;
+  margin-block: calc(2.2em - 6px);
+  padding-block: 6px;
+  background-clip: content-box;
+  cursor: pointer;
+}
+
+/* The first and the last block have no margin on their outer side, and the six
+ * pixels come out of nothing there. */
+.mawy-root .mawy-document-body > .mawy-md-rule:first-child {
+  margin-top: -6px;
+}
+
+.mawy-root .mawy-document-body > .mawy-md-rule:last-child {
+  margin-bottom: -6px;
+}
+
 .mawy-root .mawy-document-body > p:only-child:empty::before {
   content: var(--mawy-placeholder, '');
   color: var(--mawy-fg-subtle);

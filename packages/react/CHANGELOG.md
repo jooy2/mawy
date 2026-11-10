@@ -30,6 +30,8 @@
 
 - **The toolbar's table grid inserts a table under the table the caret is in.** It was drawn disabled there, since a cell holds no table, and read as a button that did nothing. `Mod`+`Alt`+`T` does the same. The Flutter package does too.
 
+- **A press on a divider on `wysiwyg` selects it, and `Delete` or `Backspace` takes it out.** A divider draws no character, so nothing reached it but `Backspace` from the line under it. It is drawn with an outline when selected, and the space a few pixels either side of its line is part of what a pointer can press, taken out of its margins so that nothing moves.
+
 - **The words a new link is going on stay marked while its bar has the focus.** The page's own selection went with the focus to the address, so what the link would be put on was no longer shown anywhere. They are marked with the CSS Custom Highlight API, as the find bar's matches are, and a browser without it marks nothing, as before.
 
 - **A picture that could not be fetched is drawn as a box with its description in it.** The browser drew it as its description in the type of the words around it, with a small icon in some browsers and none in WebKit, so in a sentence it read as more of the sentence. It is drawn now as an icon and the description in a dashed frame of the palette's colours, the same in every browser. It is still the `<img>` it was, with the same `alt`, and the address it was given is kept on it as `data-mawy-src` for a copy.
@@ -41,6 +43,8 @@
 ### Fixed
 
 - **Formatting put on words selected with a space either side of them was drawn as its markers.** `** bold **` is not bold, because a run cannot open before a space or close after one, and a browser that selects the space after a double-clicked word made it every time. The markers go around the words now and the spaces stay outside them. Italic is written with `*` where a letter is beside it, since `_` inside a word is not emphasis, which is why italic in the middle of a word showed its underscores. The Flutter package does the same.
+
+- **A second press beside the paragraph a press between two dividers opened opened another one.** The empty paragraph was read as a block like any other, and a press between it and a divider wrote a blank line beside it. It is a press on that paragraph now.
 
 - **`Mod`+`A` and `Delete` did nothing to a block written so far as its marker.** With the caret in a `# `, `- ` or `> ` on `wysiwyg`, a select-all collapsed to a caret at the start and the key after it had nothing to delete. The caret is put back after what is drawn under it changes, and that was asked whether anything had changed by comparing two objects that were never the same, then put back as a caret. It compares where they are now, and puts a selection back whole.
 
