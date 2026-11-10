@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Breaking changes
+
+- **`lucide_icons_flutter` is `^4.0.2`.** It bundles Lucide 1.67 and splits each weight into a library of its own, which is what stops a debug build for the web overflowing its stack. An application that depends on it as well raises its own constraint to `^4.0.2`. A regular icon such as `LucideIcons.bold` is where it was; a weighted one moved, so `LucideIcons.bold300` is `LucideIcons300.bold` from `lucide_icons_300.dart`. The fonts are about 0.3 MB more in a web build. The lowest Flutter this package supports is still 3.32.
+
 ### Added
 
 - **A control of the application's own can wrap the selection.** `MawyEditorHandle` gained `wrap(before, after)`, which writes the two around the selection as one change, leaves the same words selected between them and puts the focus in the source; with nothing selected it writes both at the caret and leaves the caret between them. A button for an inline format the toolbar does not have, such as `:kbd[…]`, could only replace the selection with `insert`, which meant knowing what was selected. It does nothing in `preview`, while the editor is read only, or when both halves are empty. The React package's handle does the same.

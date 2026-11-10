@@ -17,17 +17,17 @@ dependencies:
   # What `onLinkTap` is answered with. The library refuses a plugin — opening a
   # URL is the application's job and every application has already chosen how it
   # does that — and this is an application, so it chooses.
-  url_launcher: ^6.3.0
+  url_launcher: ^6.3.2
   # What `MawyEditor.onOpen` is answered with, and what catches a file dropped
   # on the window. Both are the same refusal the library makes: reading a file
   # is a plugin, and which plugin is the application's choice. This is an
   # application, so it chooses.
-  file_selector: ^1.0.3
-  desktop_drop: ^0.7.0
+  file_selector: ^1.0.4
+  desktop_drop: ^0.7.1
   # How the documentation site tells a framed gallery which palette the page
   # around it is in. Web-only, and imported behind a conditional so a gallery
   # built for anything else never sees it — see `lib/host.dart`.
-  web: ^1.1.0
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_lints: ^6.0.0

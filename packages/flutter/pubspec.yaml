@@ -22,7 +22,7 @@ dependencies:
     sdk: flutter
   # The same icon set the React package draws, so the two toolbars are the same
   # toolbar. MIT, and it brings nothing else with it.
-  lucide_icons_flutter: ^3.1.0
+  lucide_icons_flutter: ^4.0.2
 
 dev_dependencies:
   flutter_test:
