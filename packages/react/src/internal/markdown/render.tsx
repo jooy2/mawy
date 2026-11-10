@@ -1696,11 +1696,27 @@ export function renderBlocks(
     // beside, so the marker is drawn as the characters it is — see
     // `revealedIn` in `MawyEditorDocument`, which decides that and nothing here
     // does.
+    //
+    // A heading's marker is drawn in the heading's own element, and so in its
+    // type and with its margins. Drawn in a paragraph, an empty heading the
+    // caret went into and out of changed height both times, and everything
+    // under it moved with every press.
     if (revealed(block, context)) {
+      const Tag =
+        block.type === 'heading' ? (`h${headingLevel(block.depth, context)}` as 'h1') : 'p';
+
       return (
-        <p key={index} className="mawy-md-source mawy-md-source-block" {...origin(block, context)}>
+        <Tag
+          key={index}
+          className={
+            block.type === 'heading'
+              ? 'mawy-md-heading mawy-md-source mawy-md-source-block'
+              : 'mawy-md-source mawy-md-source-block'
+          }
+          {...origin(block, context)}
+        >
           {context.source?.slice(block.range.start, block.range.end)}
-        </p>
+        </Tag>
       );
     }
 

@@ -2054,12 +2054,18 @@
  * springing up around it at every keystroke said something was wrong where
  * nothing was: the space after it makes the heading, as it does in every other
  * editor that reads these as they are typed.
+ *
+ * The family and the size rather than the whole of `font`, which would take a
+ * heading's weight and line height away as well. A heading's marker is drawn in
+ * the heading's own element, and is as tall there as the heading will be once
+ * its words are typed. See `renderBlocks`.
  */
 .mawy-root .mawy-md-source-block {
   border-radius: 0;
   background: none;
   color: inherit;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 .mawy-root .mawy-md-html img {
@@ -2320,9 +2326,23 @@
 }
 
 /* A block with nothing in it is still somewhere the caret has to be able to
- * go, and a box of no height is nowhere on the screen for it to sit. */
-.mawy-root .mawy-document-body :is(p, h1, h2, h3, h4, h5, h6):empty {
+ * go, and a box of no height is nowhere on the screen for it to sit.
+ *
+ * Each as tall as its marker is with the caret in it, which is the same block
+ * drawn as its characters (see `revealedIn`), so a press into one and back out
+ * moves nothing under it. A quotation's marker is drawn as a paragraph, and an
+ * empty quotation with no line in it was the bar and its padding and nothing
+ * else: a press on it drew the line and pushed the document down by it. */
+.mawy-root .mawy-document-body :is(p, blockquote):empty {
   min-height: calc(1em * var(--mawy-doc-line-height));
+}
+
+/* A heading's own line, which is shorter than a paragraph's and is the one its
+ * marker and its words are drawn on. Its content box, because a second-level
+ * heading's rule and the room above it are under the line rather than in it. */
+.mawy-root .mawy-document-body :is(h1, h2, h3, h4, h5, h6):empty {
+  box-sizing: content-box;
+  min-height: 1lh;
 }
 
 /* An empty code block too. Its `code` is an inline element with nothing in it,

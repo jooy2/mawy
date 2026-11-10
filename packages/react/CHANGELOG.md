@@ -24,6 +24,8 @@
 
 ### Fixed
 
+- **An empty heading moved the document under it when the caret went into it and out of it on `wysiwyg`.** A heading written so far as `# ` is drawn as its marker while the caret is in it, and that was drawn as a paragraph, which is a different height from the empty heading drawn once the caret left; the document under it jumped by the difference with every press. The marker is drawn in the heading's own element and type now, and an empty heading is as tall as one line of its own type, so the two are the same height, and typing the heading's first letter no longer moves anything either. An empty quotation `> ` did the same the other way round, and is drawn a line tall now.
+
 - **A document with no link in it could not be scrolled from the keyboard.** The viewer's scrolling pane was out of the tab order, so a keyboard had nothing in it to put the focus on, and axe reported `scrollable-region-focusable`. The pane is a tab stop now, a region named after the file or "Document", with a focus ring when it is reached by `Tab`. The same pane is the editor's preview on `split` and `preview`. The empty state stays out of the tab order, because it has its own button and nothing to scroll.
 
 - **A token given to an editor did not reach its preview.** The preview is a viewer, and a viewer's root declared every token again, so a `--mawy-accent` given to `MawyEditor` through `style` coloured the source and left the preview in the library's accent. The preview takes its tokens from the editor now.

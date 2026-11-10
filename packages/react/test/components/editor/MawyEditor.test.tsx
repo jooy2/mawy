@@ -2386,7 +2386,9 @@ describe('the document surface', () => {
     await vi.waitFor(() => {
       expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe('#');
     });
-    expect(bodyOf(screen).querySelector('h1')).toBeNull();
+    // In the heading it is, so that the line is already as tall as the heading
+    // will be. See `revealedIn`.
+    expect(bodyOf(screen).querySelector('.mawy-md-source')?.tagName).toBe('H1');
 
     // And the space that means a heading is one keystroke away rather than an
     // undo away.
@@ -3181,6 +3183,32 @@ describe('the document surface', () => {
     expect(screen.container.querySelector('.mawy-notice')?.textContent).toBe(
       'Only one space in a row.'
     );
+  });
+
+  it('draws an empty heading and an empty quotation as tall with the caret in them', async () => {
+    for (const marker of ['# ', '## ', '> ']) {
+      const screen = await render(
+        <MawyEditor defaultValue={`One\n\n${marker}\n\nThree`} mode="wysiwyg" />
+      );
+      const body = bodyOf(screen);
+      const below = () =>
+        [...body.querySelectorAll('p')]
+          .find((each) => each.textContent === 'Three')!
+          .getBoundingClientRect().top;
+
+      put(body, 'One', 1);
+      await new Promise((done) => setTimeout(done, 30));
+
+      const away = below();
+
+      // The block written out as its marker, the way it is with the caret in
+      // it, and nothing under it moved to make room. See `revealedIn`.
+      put(body, '', 0);
+      await vi.waitFor(() =>
+        expect(body.querySelector('.mawy-md-source')?.textContent).toBe(marker)
+      );
+      expect(Math.abs(below() - away)).toBeLessThan(0.5);
+    }
   });
 
   it('takes an empty paragraph out with Backspace and Delete, one at a time', async () => {
