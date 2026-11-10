@@ -235,6 +235,17 @@ class MawyEditorHandle {
   /// A caret nobody has put anywhere yet is at the end of the document. Nothing
   /// while the editor is read only or in `preview`.
   void insert(String markdown) => _editor?._insertFromOutside(markdown);
+
+  /// The selection written between [before] and [after], as one change, and
+  /// still selected inside them, with the focus in the source. With nothing
+  /// selected, both are written where the caret is and the caret is left
+  /// between them.
+  ///
+  /// A control for an inline format of the application's own, such as
+  /// `:kbd[…]`, is the case this is for. A caret nobody has put anywhere yet is
+  /// at the end of the document. Nothing while the editor is read only or in
+  /// `preview`, or when both halves are empty.
+  void wrap(String before, String after) => _editor?._wrapFromOutside(before, after);
 }
 
 /// A Markdown editor: the source, a preview, and a switch between them.
@@ -728,6 +739,33 @@ class _MawyEditorState extends State<MawyEditor> {
         before.value.substring(0, before.start) + markdown + before.value.substring(before.end),
         at,
         at,
+      ),
+    );
+  }
+
+  void _wrapFromOutside(String opening, String closing) {
+    if (widget.readOnly ||
+        _current == MawyEditorMode.preview ||
+        (opening.isEmpty && closing.isEmpty)) {
+      return;
+    }
+
+    final EditState before = _state;
+    final String value = before.value;
+    final int inside = before.start + opening.length;
+
+    // The selection kept on what was selected rather than collapsed after it,
+    // so a second control pressed straight after wraps the same words again,
+    // which is what the toolbar's own formats do.
+    _apply(
+      EditState(
+        value.substring(0, before.start) +
+            opening +
+            value.substring(before.start, before.end) +
+            closing +
+            value.substring(before.end),
+        inside,
+        inside + before.end - before.start,
       ),
     );
   }

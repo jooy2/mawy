@@ -311,6 +311,17 @@ export interface MawyEditorHandle {
    * read-only or in `preview`.
    */
   insert(markdown: string): void;
+  /**
+   * The selection written between [before] and [after], as one step to undo,
+   * and still selected inside them; with nothing selected, both written where
+   * the caret is and the caret left between them. A control for an inline
+   * format of the application's own, such as `:kbd[…]`, is the case this is
+   * for. What is wrapped is the Markdown under the selection on whichever
+   * surface is showing: on `wysiwyg`, a word selected in a run drawn bold is
+   * wrapped inside its asterisks, which is where the drawn word is. Nothing
+   * while the editor is read-only or in `preview`.
+   */
+  wrap(before: string, after: string): void;
 }
 
 export interface MawyEditorProps extends Omit<
@@ -1481,6 +1492,26 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           value: before.value.slice(0, before.start) + markdown + before.value.slice(before.end),
           start: at,
           end: at
+        });
+      },
+      wrap: (opening: string, closing: string) => {
+        const before = readOnly ? null : stateNow();
+
+        if (!before || (!opening && !closing)) {
+          return;
+        }
+
+        const { value, start, end } = before;
+        const inside = start + opening.length;
+
+        // The selection kept on what was selected rather than collapsed after
+        // it, so a second control pressed straight after wraps the same words
+        // again — which is what the toolbar's own formats do.
+        run(before, {
+          value:
+            value.slice(0, start) + opening + value.slice(start, end) + closing + value.slice(end),
+          start: inside,
+          end: inside + (end - start)
         });
       }
     }),

@@ -812,6 +812,102 @@ describe('the toolbar and the keyboard', () => {
     }
   });
 
+  it('wraps the selection when something outside asks, and keeps it selected', async () => {
+    const onChange = vi.fn();
+    const handle: { current: MawyEditorHandle | null } = { current: null };
+    const screen = await render(
+      <MawyEditor
+        defaultValue="one two three"
+        modes={['plain']}
+        onChange={onChange}
+        handle={handle}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(4, 7);
+    handle.current?.wrap(':kbd[', ']');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one :kbd[two] three'));
+    // Still on the word, so the same control pressed again wraps the same word.
+    // Polled, because the selection is put back after the render the change
+    // causes rather than with the change.
+    await vi.waitFor(() => expect([input.selectionStart, input.selectionEnd]).toEqual([9, 12]));
+
+    handle.current?.wrap('**', '**');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one :kbd[**two**] three'));
+  });
+
+  it('puts the caret between the two halves when nothing is selected', async () => {
+    const onChange = vi.fn();
+    const handle: { current: MawyEditorHandle | null } = { current: null };
+    const screen = await render(
+      <MawyEditor defaultValue="one two" modes={['plain']} onChange={onChange} handle={handle} />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(4, 4);
+    handle.current?.wrap(':kbd[', ']');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one :kbd[]two'));
+    await vi.waitFor(() => expect([input.selectionStart, input.selectionEnd]).toEqual([9, 9]));
+  });
+
+  it('wraps the Markdown under a selection on the drawn document', async () => {
+    const onChange = vi.fn();
+    const handle: { current: MawyEditorHandle | null } = { current: null };
+    const screen = await render(
+      <MawyEditor
+        defaultValue="one **two** three"
+        mode="wysiwyg"
+        onChange={onChange}
+        handle={handle}
+      />
+    );
+
+    // The drawn word, which is the run inside the asterisks.
+    put(bodyOf(screen), 'two', 0, 3);
+    await new Promise((done) => setTimeout(done, 30));
+
+    handle.current?.wrap(':kbd[', ']');
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one **:kbd[two]** three'));
+
+    // And as one step: undone, it is the document it was.
+    await userEvent.keyboard('{Control>}z{/Control}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('one **two** three'));
+  });
+
+  it('wraps nothing in a read-only editor, or with nothing to wrap it in', async () => {
+    const onChange = vi.fn();
+    const handle: { current: MawyEditorHandle | null } = { current: null };
+    const screen = await render(
+      <div>
+        <MawyEditor
+          defaultValue="one"
+          modes={['plain']}
+          readOnly
+          onChange={onChange}
+          handle={handle}
+        />
+      </div>
+    );
+
+    handle.current?.wrap('**', '**');
+    await screen.rerender(
+      <div>
+        <MawyEditor defaultValue="one" modes={['plain']} onChange={onChange} handle={handle} />
+      </div>
+    );
+    handle.current?.wrap('', '');
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('inserts nothing into a read-only editor', async () => {
     const onChange = vi.fn();
     const handle: { current: MawyEditorHandle | null } = { current: null };

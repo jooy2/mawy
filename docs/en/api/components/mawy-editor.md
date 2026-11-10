@@ -155,16 +155,22 @@ There is no image upload here. The editor writes the Markdown an application han
 interface MawyEditorHandle {
   focus(): void;
   insert(markdown: string): void;
+  wrap(before: string, after: string): void;
 }
 ```
 
-`insert` writes Markdown where the caret is, in place of whatever is selected, as one step to undo, and leaves the caret after it. `focus` puts the focus back on whichever surface is showing, with the caret where it was left. Both do nothing in `preview`, and `insert` does nothing while the editor is read-only.
+`insert` writes Markdown where the caret is, in place of whatever is selected, as one step to undo, and leaves the caret after it. `focus` puts the focus back on whichever surface is showing, with the caret where it was left.
+
+`wrap` writes `before` and `after` around the selection as one step to undo, and leaves the same words selected between them, so a second control pressed straight after wraps them again. With nothing selected it writes both where the caret is and leaves the caret between them. It is the way to give an inline format of the application's own, such as a directive, a button. What it wraps is the Markdown under the selection on whichever surface is showing, so on `wysiwyg` a word selected in a bold run is wrapped inside its asterisks.
+
+All three do nothing in `preview`, and `insert` and `wrap` do nothing while the editor is read-only.
 
 ```tsx
 const editor = useRef<MawyEditorHandle>(null);
 
 <>
   <button onClick={() => editor.current?.insert('> [!NOTE]\n> ')}>Note</button>
+  <button onClick={() => editor.current?.wrap(':kbd[', ']')}>Key</button>
   <MawyEditor handle={editor} />
 </>;
 ```
@@ -185,10 +191,15 @@ class MawyEditorHandle {
 
   void focus();
   void insert(String markdown);
+  void wrap(String before, String after);
 }
 ```
 
-The application makes one and hands it over, the way a `ScrollController` is handed to a scroll view. `insert` writes Markdown where the caret is, in place of whatever is selected, as one change, and leaves the caret after it and the focus in the source; a caret nobody has placed yet is at the end of the document. `focus` puts the focus back in the source with the caret where it was left. Both do nothing in `preview`, `insert` does nothing while the editor is read only, and both do nothing before an editor has the handle or after it is gone.
+The application makes one and hands it over, the way a `ScrollController` is handed to a scroll view. `insert` writes Markdown where the caret is, in place of whatever is selected, as one change, and leaves the caret after it and the focus in the source; a caret nobody has placed yet is at the end of the document. `focus` puts the focus back in the source with the caret where it was left.
+
+`wrap` writes `before` and `after` around the selection as one change, leaves the same words selected between them and puts the focus in the source, so a second control pressed straight after wraps them again. With nothing selected it writes both where the caret is and leaves the caret between them. It is the way to give an inline format of the application's own, such as a directive, a button.
+
+All three do nothing in `preview`, `insert` and `wrap` do nothing while the editor is read only, and none of them does anything before an editor has the handle or after it is gone.
 
 ```dart
 final MawyEditorHandle editor = MawyEditorHandle();
@@ -196,6 +207,7 @@ final MawyEditorHandle editor = MawyEditorHandle();
 Column(
   children: [
     NoteButton(onPressed: () => editor.insert('> [!NOTE]\n> ')),
+    KeyButton(onPressed: () => editor.wrap(':kbd[', ']')),
     Expanded(child: MawyEditor(handle: editor)),
   ],
 );

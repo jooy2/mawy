@@ -1429,6 +1429,76 @@ void main() {
       expect(field.focusNode.hasFocus, isTrue);
     });
 
+    testWidgets('wraps the selection, and keeps it selected inside the two halves', (
+      WidgetTester tester,
+    ) async {
+      final MawyEditorHandle handle = MawyEditorHandle();
+      final List<String> seen = <String>[];
+
+      // Before there is an editor to act on, nothing happens and nothing throws.
+      handle.wrap('**', '**');
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two three',
+            mode: MawyEditorMode.plain,
+            handle: handle,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection(baseOffset: 4, extentOffset: 7);
+      handle.wrap(':kbd[', ']');
+      await tester.pump();
+
+      expect(seen.last, 'one :kbd[two] three');
+      expect(field.controller.selection, const TextSelection(baseOffset: 9, extentOffset: 12));
+      expect(field.focusNode.hasFocus, isTrue);
+
+      // Still on the word, so the same control pressed again wraps the same word.
+      handle.wrap('**', '**');
+      await tester.pump();
+
+      expect(seen.last, 'one :kbd[**two**] three');
+    });
+
+    testWidgets('puts the caret between the two halves when nothing is selected', (
+      WidgetTester tester,
+    ) async {
+      final MawyEditorHandle handle = MawyEditorHandle();
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two',
+            mode: MawyEditorMode.plain,
+            handle: handle,
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.controller.selection = const TextSelection.collapsed(offset: 4);
+      handle.wrap(':kbd[', ']');
+      await tester.pump();
+
+      expect(seen.last, 'one :kbd[]two');
+      expect(field.controller.selection, const TextSelection.collapsed(offset: 9));
+
+      // Two empty halves are nothing to write.
+      handle.wrap('', '');
+      await tester.pump();
+
+      expect(seen, hasLength(1));
+    });
+
     testWidgets('puts the focus back, and does nothing where there is no source to act on', (
       WidgetTester tester,
     ) async {
@@ -1459,6 +1529,7 @@ void main() {
         ),
       );
       handle.insert('two');
+      handle.wrap('**', '**');
       await tester.pump();
 
       await tester.pumpWidget(
@@ -1473,6 +1544,7 @@ void main() {
         ),
       );
       handle.insert('two');
+      handle.wrap('**', '**');
       await tester.pump();
 
       expect(seen, isEmpty);
@@ -1481,6 +1553,7 @@ void main() {
 
       // The editor is gone, and the handle with it.
       handle.insert('two');
+      handle.wrap('**', '**');
       expect(seen, isEmpty);
     });
   });

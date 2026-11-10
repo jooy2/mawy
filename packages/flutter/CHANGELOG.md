@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Added
+
+- **A control of the application's own can wrap the selection.** `MawyEditorHandle` gained `wrap(before, after)`, which writes the two around the selection as one change, leaves the same words selected between them and puts the focus in the source; with nothing selected it writes both at the caret and leaves the caret between them. A button for an inline format the toolbar does not have, such as `:kbd[…]`, could only replace the selection with `insert`, which meant knowing what was selected. It does nothing in `preview`, while the editor is read only, or when both halves are empty. The React package's handle does the same.
+
 ## 1.9.0 (2026-11-02)
 
 ### Fixed

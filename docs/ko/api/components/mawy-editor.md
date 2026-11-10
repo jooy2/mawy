@@ -155,16 +155,22 @@ MawyEditor(defaultValue: '# 안녕하세요', onChange: save);
 interface MawyEditorHandle {
   focus(): void;
   insert(markdown: string): void;
+  wrap(before: string, after: string): void;
 }
 ```
 
-`insert`는 커서 자리에 마크다운을 쓰고, 선택한 내용이 있으면 그것을 대신합니다. 되돌리기 한 번에 되돌아가는 한 단계이고, 커서는 쓴 내용 뒤에 둡니다. `focus`는 지금 보이는 화면에 포커스를 돌려주고, 커서는 두었던 자리에 있습니다. 둘 다 `preview`에서는 아무 일도 하지 않고, `insert`는 에디터가 읽기 전용일 때도 아무 일도 하지 않습니다.
+`insert`는 커서 자리에 마크다운을 쓰고, 선택한 내용이 있으면 그것을 대신합니다. 되돌리기 한 번에 되돌아가는 한 단계이고, 커서는 쓴 내용 뒤에 둡니다. `focus`는 지금 보이는 화면에 포커스를 돌려주고, 커서는 두었던 자리에 있습니다.
+
+`wrap`은 선택한 내용 앞에 `before`를, 뒤에 `after`를 씁니다. 되돌리기 한 번에 되돌아가는 한 단계이고, 감싼 글자는 그 사이에서 선택된 채로 남습니다. 그래서 바로 이어 누른 컨트롤이 같은 글자를 한 번 더 감쌉니다. 선택한 내용이 없으면 커서 자리에 둘을 쓰고 커서를 그 사이에 둡니다. 지시문처럼 애플리케이션이 직접 정한 인라인 서식에 버튼을 달 때 씁니다. 감싸는 것은 지금 보이는 화면에서 선택 아래에 있는 마크다운이라, `wysiwyg`에서 굵게 그려진 단어를 선택하면 별표 안쪽이 감싸집니다.
+
+셋 다 `preview`에서는 아무 일도 하지 않고, `insert`와 `wrap`은 에디터가 읽기 전용일 때도 아무 일도 하지 않습니다.
 
 ```tsx
 const editor = useRef<MawyEditorHandle>(null);
 
 <>
   <button onClick={() => editor.current?.insert('> [!NOTE]\n> ')}>참고</button>
+  <button onClick={() => editor.current?.wrap(':kbd[', ']')}>키</button>
   <MawyEditor handle={editor} />
 </>;
 ```
@@ -185,10 +191,15 @@ class MawyEditorHandle {
 
   void focus();
   void insert(String markdown);
+  void wrap(String before, String after);
 }
 ```
 
-애플리케이션이 만들어 넘기며, 스크롤 뷰에 `ScrollController`를 넘기는 것과 같습니다. `insert`는 커서 자리에 마크다운을 선택 영역 대신 한 번의 변경으로 쓰고, 커서를 그 뒤에 두고 초점을 원문에 둡니다. 아직 아무도 커서를 두지 않았다면 문서 끝에 씁니다. `focus`는 커서를 둔 자리 그대로 초점을 원문에 돌려줍니다. `preview`에서는 둘 다 아무 일도 하지 않고, 읽기 전용일 때는 `insert`가 아무 일도 하지 않으며, 에디터가 받기 전이나 사라진 뒤에도 둘 다 아무 일도 하지 않습니다.
+애플리케이션이 만들어 넘기며, 스크롤 뷰에 `ScrollController`를 넘기는 것과 같습니다. `insert`는 커서 자리에 마크다운을 선택 영역 대신 한 번의 변경으로 쓰고, 커서를 그 뒤에 두고 초점을 원문에 둡니다. 아직 아무도 커서를 두지 않았다면 문서 끝에 씁니다. `focus`는 커서를 둔 자리 그대로 초점을 원문에 돌려줍니다.
+
+`wrap`은 선택한 내용 앞에 `before`를, 뒤에 `after`를 한 번의 변경으로 쓰고, 감싼 글자를 그 사이에서 선택된 채로 두며 초점을 원문에 둡니다. 그래서 바로 이어 누른 컨트롤이 같은 글자를 한 번 더 감쌉니다. 선택한 내용이 없으면 커서 자리에 둘을 쓰고 커서를 그 사이에 둡니다. 지시문처럼 애플리케이션이 직접 정한 인라인 서식에 버튼을 달 때 씁니다.
+
+`preview`에서는 셋 다 아무 일도 하지 않고, 읽기 전용일 때는 `insert`와 `wrap`이 아무 일도 하지 않으며, 에디터가 받기 전이나 사라진 뒤에는 어느 것도 아무 일도 하지 않습니다.
 
 ```dart
 final MawyEditorHandle editor = MawyEditorHandle();
@@ -196,6 +207,7 @@ final MawyEditorHandle editor = MawyEditorHandle();
 Column(
   children: [
     NoteButton(onPressed: () => editor.insert('> [!NOTE]\n> ')),
+    KeyButton(onPressed: () => editor.wrap(':kbd[', ']')),
     Expanded(child: MawyEditor(handle: editor)),
   ],
 );
