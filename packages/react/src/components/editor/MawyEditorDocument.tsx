@@ -1029,9 +1029,7 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
         const clean = element.ownerDocument.createElement('img');
 
         clean.alt = (picture as HTMLImageElement).alt;
-        // The address it was given, where it could not be fetched and a picture
-        // of its description is drawn in its place. See `Picture`.
-        clean.src = picture.getAttribute('data-mawy-src') ?? (picture as HTMLImageElement).src;
+        clean.src = (picture as HTMLImageElement).src;
 
         event.preventDefault();
         event.clipboardData.setData('text/plain', written);

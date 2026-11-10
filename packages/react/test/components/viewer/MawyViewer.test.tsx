@@ -560,11 +560,12 @@ describe('images', () => {
     const image = () => screen.container.querySelector('img') as HTMLImageElement;
 
     await vi.waitFor(() => expect(image()).toHaveAttribute('data-mawy-broken'));
-    // Still the picture it was, named the same, with the address it was given
-    // kept beside the one drawn in its place. See `Picture`.
+    // Still the picture it was, named the same and with the address it was
+    // given, and the stand-in drawn through `srcset`. See `Picture`.
     expect(image().getAttribute('alt')).toBe('a missing map');
-    expect(image().getAttribute('data-mawy-src')).toBe('/no-such-picture.png');
-    expect(decodeURIComponent(image().getAttribute('src') ?? '')).toContain('a missing map');
+    expect(image().getAttribute('src')).toBe('/no-such-picture.png');
+    expect(decodeURIComponent(image().getAttribute('srcset') ?? '')).toContain('a missing map');
+    await vi.waitFor(() => expect(image().currentSrc).toMatch(/^data:image\/svg\+xml,/));
   });
 
   it('hands the picture over where the application says how to draw one', async () => {

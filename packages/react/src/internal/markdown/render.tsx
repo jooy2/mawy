@@ -366,8 +366,12 @@ function marked(node: MdInline, value: string, context: RenderContext): React.Re
  *
  * Still the `<img>` it was, so that everything that finds a picture on the
  * page — the editor pressing, selecting and copying one, a caret stepping past
- * one — finds this one too. The address it was given is kept beside it, for
- * the copy, and an address mended in its bar is fetched again.
+ * one — finds this one too, and with the `src` it was given, which is what an
+ * application reading the page and the editor's copy both ask it for. The
+ * stand-in is drawn through `srcset`, which a browser draws in preference to
+ * `src`: put in `src`, it took the address's place, and a 404 that came back
+ * before anything had read the address left nothing to read it from. An
+ * address mended in its bar takes the stand-in off and is fetched again.
  */
 function Picture(props: React.ComponentPropsWithoutRef<'img'>): React.ReactElement {
   const [broken, setBroken] = React.useState<string | null>(null);
@@ -381,9 +385,8 @@ function Picture(props: React.ComponentPropsWithoutRef<'img'>): React.ReactEleme
   return (
     <img
       {...props}
-      src={shown ?? props.src}
+      srcSet={shown ?? props.srcSet}
       data-mawy-broken={failed ? '' : undefined}
-      data-mawy-src={failed ? address : undefined}
       onError={() => {
         if (!failed) {
           setBroken(address);
