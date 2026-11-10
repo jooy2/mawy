@@ -739,8 +739,13 @@ describe('tables', () => {
       'Before.\n\n|  ^|  |\n| --- | --- |\n|  |  |\n\nAfter.'
     );
     expect(table('insertTable', '^')).toBe('|  ^|  |\n| --- | --- |\n|  |  |');
-    // Not inside a table that is already there.
-    expect(table('insertTable', TABLE.replace('c', 'c^'))).toBe(null);
+    // Under the table the caret is in, since a cell holds none.
+    expect(table('insertTable', TABLE.replace('c', 'c^'))).toBe(
+      `${TABLE}\n\n|  ^|  |\n| --- | --- |\n|  |  |`
+    );
+    expect(table('insertTable', `${TABLE.replace('c', 'c^')}\n\nAfter.`)).toBe(
+      `${TABLE}\n\n|  ^|  |\n| --- | --- |\n|  |  |\n\nAfter.`
+    );
   });
 
   it('inserts a table inside the quotation or list item the caret is in', () => {

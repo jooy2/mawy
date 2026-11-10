@@ -30,6 +30,7 @@
 
 - **Bold, italic, strikethrough and code are read out of the document.** Their buttons were drawn pressed only where the selection ended exactly at the markers, so a bold word selected in the middle had a bold button that was not pressed; they are pressed now for a caret or a selection anywhere inside a run. Pressed with the caret among a run's words, a button takes the run off, where it wrote a pair of markers at the caret — inside a code span, a second span in the middle of the first. With some of a run's words selected it takes the formatting off those and leaves the rest formatted either side. Put on, the markers go around the words and not around a space selected either side of them, because `** bold **` is not bold, and italic is written with `*` where a letter is beside it, since `_` inside a word is not emphasis. It is the React package's arithmetic, and the parity check compares the two.
 
+- **The toolbar's table grid inserts a table under the table the caret is in.** It was drawn disabled there, since a cell holds no table, and read as a button that did nothing. The React package does the same.
 
 ## 1.9.0 (2026-11-02)
 

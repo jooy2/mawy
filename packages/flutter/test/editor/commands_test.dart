@@ -274,6 +274,19 @@ void main() {
       expect(removed('> a | b | e\n> --- | --- | ---', 2), '> b | e\n> --- | ---');
     });
 
+    test('inserts a table under the table the caret is in, since a cell holds none', () {
+      const String table = '| a | b |\n| - | - |\n| c | d |';
+
+      expect(
+        runTableCommand(MawyTableCommand.insertTable, const EditState(table, 3, 3))?.value,
+        '$table\n\n|  |  |\n| --- | --- |\n|  |  |',
+      );
+      expect(
+        tableOfSize(const EditState('$table\n\nAfter.', 3, 3), 1, 2)?.value,
+        '$table\n\n|  |\n| --- |\n|  |\n\nAfter.',
+      );
+    });
+
     test('inserts a table of the size asked for, the header counted among the rows', () {
       expect(
         tableOfSize(const EditState('', 0, 0), 3, 1)?.value,

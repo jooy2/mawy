@@ -2003,7 +2003,9 @@ bool _verbatimAt(List<MdNode> nodes, int offset) {
   return false;
 }
 
-/// A table of two columns, a header and one row, where the caret is.
+/// A table of two columns, a header and one row, where the caret is — or under
+/// the table the caret is in, since a cell holds no table and the press that
+/// asked for one there did nothing at all.
 ///
 /// With a blank line either side of it, because a table has to be a block of
 /// its own to be one. Empty rather than filled with column names: whatever
@@ -2017,12 +2019,11 @@ bool _verbatimAt(List<MdNode> nodes, int offset) {
 /// block around one would change what the rest of the code is.
 EditState? _insertTable(EditState state, {int columns = 2, int rows = 2}) {
   final String value = state.value;
-  final int start = state.start;
-  final int end = state.end;
-
-  if (_tableAt(value, start) != null) {
-    return null;
-  }
+  final MdRange? inside = _tableAt(value, state.start) != null
+      ? tableRangeAt(value, state.start)
+      : null;
+  final int start = inside?.end ?? state.start;
+  final int end = inside?.end ?? state.end;
 
   final MdDocument document = documentOf(value);
   final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];

@@ -1869,7 +1869,9 @@ function verbatimAt(nodes: readonly MdNode[], offset: number): boolean {
 }
 
 /**
- * A table of two columns, a header and one row, where the caret is.
+ * A table of two columns, a header and one row, where the caret is — or under
+ * the table the caret is in, since a cell holds no table and the press that
+ * asked for one there did nothing at all.
  *
  * With a blank line either side of it, because a table has to be a block of its
  * own to be one. Empty rather than filled with column names: whatever words it
@@ -1882,11 +1884,10 @@ function verbatimAt(nodes: readonly MdNode[], offset: number): boolean {
  * block around one would change what the rest of the code is.
  */
 function insertTable(state: EditState, columns = 2, rows = 2): EditState | null {
-  const { value, start, end } = state;
-
-  if (tableAt(value, start)) {
-    return null;
-  }
+  const { value } = state;
+  const inside = tableAt(value, state.start) ? tableRangeAt(value, state.start) : null;
+  const start = inside ? inside.end : state.start;
+  const end = inside ? inside.end : state.end;
 
   const document = documentOf(value);
   const blocks = [...document.root.children, ...document.footnotes];

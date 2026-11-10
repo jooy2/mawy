@@ -1637,9 +1637,15 @@ void main() {
       );
       expect(find.byType(MawyTableSizeGrid), findsNothing);
 
-      // Inside a table there is nowhere for another to go.
+      // Inside a table the next goes under it, since a cell holds none. It was
+      // drawn disabled there, and read as a button that did nothing.
       await press(tester, 'Table');
-      expect(tester.widget<MawyTableSizeGrid>(find.byType(MawyTableSizeGrid)).enabled, isFalse);
+      expect(tester.widget<MawyTableSizeGrid>(find.byType(MawyTableSizeGrid)).enabled, isTrue);
+
+      await tester.tap(find.bySemanticsLabel('Insert a table 1 columns wide and 2 rows tall'));
+      await tester.pumpAndSettle();
+
+      expect(seen.last, endsWith('|  |  |  |\n\n|  |\n| --- |\n|  |'));
     });
 
     testWidgets('grows the size with the arrows and inserts it with Enter', (

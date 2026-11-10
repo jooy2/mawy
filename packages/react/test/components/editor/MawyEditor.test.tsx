@@ -5059,6 +5059,26 @@ describe('tables', () => {
     expect(bodyOf(screen).querySelector('th')?.textContent).toBe('Name');
   });
 
+  it('inserts a table under the one the caret is in', async () => {
+    const onChange = vi.fn();
+    const table = '| a | b |\n| --- | --- |\n| c | d |';
+    const screen = await render(
+      <MawyEditor defaultValue={table} mode="plain" onChange={onChange} style={WIDE} />
+    );
+
+    sourceOf(screen).focus();
+    sourceOf(screen).setSelectionRange(3, 3);
+    await screen.getByRole('button', { name: 'Table' }).click();
+    // Offered rather than disabled, which read as a button that did nothing.
+    await screen
+      .getByRole('button', { name: 'Insert a table 2 columns wide and 2 rows tall' })
+      .click();
+
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(`${table}\n\n|  |  |\n| --- | --- |\n|  |  |`)
+    );
+  });
+
   it('inserts a table of the size the grid is pressed at, by pointer or by the arrows', async () => {
     const onChange = vi.fn();
     const screen = await render(
