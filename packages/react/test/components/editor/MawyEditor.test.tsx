@@ -3183,6 +3183,25 @@ describe('the document surface', () => {
     expect([...bodyOf(screen).children].map((block) => block.tagName)).toEqual(['UL', 'P', 'UL']);
   });
 
+  it('selects all of a block written as its marker, and deletes it', async () => {
+    for (const marker of ['# ', '- ', '> ']) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue={`Words\n\n${marker}`} mode="wysiwyg" onChange={onChange} />
+      );
+
+      put(bodyOf(screen), '', 0);
+      await vi.waitFor(() =>
+        expect(bodyOf(screen).querySelector('.mawy-md-source')?.textContent).toBe(marker)
+      );
+
+      // A selection that changed what is drawn written out is put back whole,
+      // and not collapsed to its start. See `drawnReveal`.
+      await userEvent.keyboard('{ControlOrMeta>}a{/ControlOrMeta}{Backspace}');
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(''));
+    }
+  });
+
   it('steps over a space on the drawn document before refusing the next', async () => {
     const onChange = vi.fn();
     const screen = await render(

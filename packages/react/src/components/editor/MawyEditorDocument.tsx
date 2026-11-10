@@ -655,6 +655,13 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
      * caret that has left the surface. Nothing was edited, so the editor's own
      * restoring — which runs after an edit — has nothing to run for; this is the
      * same job for the other reason.
+     *
+     * Compared by where it is rather than by which object says so, since every
+     * selection reads it afresh: a selection that left the same thing revealed
+     * was put back all the same, collapsed to its start, so `Mod`+`A` over a
+     * document that was a `#` and nothing else selected nothing, and the
+     * `Delete` after it had nothing to take. And put back whole, so that a
+     * selection that changed what is revealed is still the selection it was.
      */
     const drawnReveal = React.useRef(reveal);
 
@@ -664,7 +671,12 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
 
       drawnReveal.current = reveal;
 
-      if (!element || was === reveal || composing.current || !focused) {
+      if (
+        !element ||
+        (was?.start === reveal?.start && was?.end === reveal?.end) ||
+        composing.current ||
+        !focused
+      ) {
         return;
       }
 
@@ -678,18 +690,19 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
       }
 
       const at = domAt(element, selection.start, value);
+      const to = selection.end === selection.start ? at : domAt(element, selection.end, value);
 
-      if (!at) {
+      if (!at || !to) {
         return;
       }
 
       const range = owner.createRange();
 
       range.setStart(at.node, at.offset);
-      range.collapse(true);
+      range.setEnd(to.node, to.offset);
       owner.getSelection()?.removeAllRanges();
       owner.getSelection()?.addRange(range);
-    }, [focused, reveal, selection.start, value]);
+    }, [focused, reveal, selection.start, selection.end, value]);
 
     /**
      * `beforeinput` rather than React's `onBeforeInput`, and a listener of our
