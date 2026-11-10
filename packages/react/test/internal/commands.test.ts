@@ -949,6 +949,16 @@ describe('a hard break', () => {
     expect(broken('> - a|')).toBe('> - a  \n>   |');
   });
 
+  it('writes a backslash on a line with nothing on it yet, so the key can be pressed again', () => {
+    // Two spaces on a line of their own are a blank line, which ends the
+    // paragraph rather than breaking it.
+    expect(broken('one  \n|')).toBe('one  \n\\\n|');
+    expect(broken('one  \n\\\n|')).toBe('one  \n\\\n\\\n|');
+    expect(broken('one\n|two')).toBe('one\n\\\n|two');
+    expect(broken('> one  \n> |')).toBe('> one  \n> \\\n> |');
+    expect(broken('- a  \n  |')).toBe('- a  \n  \\\n  |');
+  });
+
   it('writes a line ending inside a code block, where a character is itself', () => {
     expect(broken('```\nco|de\n```')).toBe('```\nco\n|de\n```');
     expect(broken('    co|de')).toBe('    co\n|de');

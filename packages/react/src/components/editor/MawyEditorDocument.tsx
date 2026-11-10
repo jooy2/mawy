@@ -2714,12 +2714,21 @@ function withBreak(blocks: MdBlock[], from: number, to: number): MdBlock[] {
       const range = { start: node.range.start, end: Math.max(node.range.end, to) };
 
       if (node.type === 'paragraph') {
-        return children[children.length - 1]?.range.end === from
+        const last = children[children.length - 1];
+        // The backslash a break on an empty line is written with, which the
+        // parser reads as the character it is at the end of a paragraph. The
+        // break is drawn in its place. See `trailingBreak`.
+        const kept =
+          last?.type === 'text' && last.value === '\\' && last.range.start === from
+            ? children.slice(0, -1)
+            : children;
+
+        return kept[kept.length - 1]?.range.end === from
           ? ({
               ...node,
               range,
               children: [
-                ...children,
+                ...kept,
                 { type: 'break', range: { start: from, end: to } },
                 { type: 'break', range: { start: to, end: to } }
               ]

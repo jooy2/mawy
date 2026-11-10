@@ -1427,6 +1427,11 @@ export function namedFence(value: string, start: number, at: number): MawyEdit |
  * drew nothing, and the caret stayed up on the line it was on. What opens the
  * line it was left on is whatever the containers around it write on every line
  * of themselves. See `hardBreak`.
+ *
+ * A backslash there is no break either, and is drawn as the character it is:
+ * the second press in a row writes one on a line of its own, which drew a `\`
+ * where the key had asked for an empty line. The range starts at the backslash,
+ * so that what is drawn in its place is the break. See `withBreak`.
  */
 export function trailingBreak(value: string, at: number): MdRange | null {
   const line = startOfLine(value, at);
@@ -1438,6 +1443,13 @@ export function trailingBreak(value: string, at: number): MdRange | null {
     value.slice(at, stop === -1 ? value.length : stop).trim()
   ) {
     return null;
+  }
+
+  // A backslash the line above ends with, which is the break `hardBreak` writes
+  // on a line with nothing else on it. Not one escaped by a backslash before it,
+  // which is a backslash and nothing more.
+  if (value[line - 2] === '\\' && value[line - 3] !== '\\') {
+    return { start: line - 2, end: at };
   }
 
   let from = line - 1;

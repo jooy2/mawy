@@ -22,6 +22,8 @@
 
 - **A list or a quotation taken off a line in the middle of others leaves that line a paragraph of its own.** It was left straight under the item above it, where a line of words is that item's lazy continuation, so it went up into the item and was drawn on the end of its words. A blank line is written either side of it now, where there is none already, and a list taken off several items makes each item a paragraph rather than one paragraph of all of them. The Flutter package does the same, and the parity check compares the two.
 
+- **`Shift`+`Enter` on a line with nothing on it yet writes a backslash.** Pressed twice in a row, the second press wrote two spaces on a line of their own, which is a blank line: the paragraph ended there, every press after it wrote another blank line, and the caret, on a line no paragraph held, was drawn at the top of the paragraph and under it by turns. A backslash at the end of a line is the other hard break CommonMark has and the one that can stand alone, so the key now makes as many empty lines as it is pressed, and `wysiwyg` draws the last of them as an empty line while the caret is under it. Left at the end of a paragraph with nothing after it, a backslash is drawn as a `\` by this library and every other renderer, where two spaces would be nothing.
+
 - **The icon set this package draws is `lucide-react` 1.70 or newer.** It was 1.48 or newer. Every icon the editor and the viewer use is the same drawing in both versions, so nothing on the page changes. An application that holds its own `lucide-react` below 1.70 gets a second copy of it rather than sharing one, until it raises its own.
 
 ### Fixed

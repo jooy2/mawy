@@ -2169,6 +2169,16 @@ EditState? _removeTable(EditState state) {
 /// words in there is code and not a quotation. See [_containerOf] and
 /// [_codeAt].
 ///
+/// On a line with nothing written on it yet the break is a backslash instead.
+/// Two spaces there are a line of spaces and nothing else, which is a blank line
+/// and ends the paragraph: the key pressed twice in a row ended the paragraph on
+/// the second press and wrote one more blank line on every press after it. A
+/// backslash at the end of a line is the other hard break CommonMark has, and
+/// the one that can stand on a line of its own, so the key makes as many empty
+/// lines as it is pressed. Left at the end of a paragraph with nothing after it,
+/// a backslash is drawn as one, where two spaces would be nothing at all — the
+/// cost of the empty lines.
+///
 /// It is the React package's `hardBreak`, where the drawn document answers
 /// `insertLineBreak` with the same three, and the parity check compares the two.
 EditState hardBreak(EditState state) {
@@ -2178,11 +2188,14 @@ EditState hardBreak(EditState state) {
   final List<MdNode> blocks = <MdNode>[...document.root.children, ...document.footnotes];
   final int from = _lineStartOf(value, start);
   final MdCode? code = _codeAt(blocks, start);
+  final ({String lead, String carry, String mark}) line = _containerOf(
+    value.substring(from, start),
+  );
   final String mark = _tableNodeAt(blocks, start) != null
       ? '<br>'
       : code != null
       ? '\n${_insideOf(value, code, from)}'
-      : '  \n${_containerOf(value.substring(from, start)).carry}';
+      : '${line.mark.trim().isNotEmpty ? '  ' : r'\'}\n${line.carry}';
   final int at = start + mark.length;
 
   return EditState(value.substring(0, start) + mark + value.substring(state.end), at, at);

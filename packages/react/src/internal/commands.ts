@@ -2060,6 +2060,17 @@ function clearCells(state: EditState): EditState | null {
  * only the browser's own answer: a bare line ending, which Markdown reads as
  * one space in the middle of a paragraph. So the same key said two different
  * things on the two surfaces.
+ *
+ * On a line with nothing written on it yet the break is a backslash instead.
+ * Two spaces there are a line of spaces and nothing else, which is a blank line
+ * and ends the paragraph: the key pressed twice in a row ended the paragraph
+ * on the second press and wrote one more blank line on every press after it,
+ * and the caret, on a line no paragraph held, was drawn at the top of the
+ * paragraph and under it by turns. A backslash at the end of a line is the
+ * other hard break CommonMark has, and the one that can stand on a line of its
+ * own, so the key makes as many empty lines as it is pressed. Left at the end of
+ * a paragraph with nothing after it, a backslash is drawn as one, where two
+ * spaces would be nothing at all — the cost of the empty lines.
  */
 export function hardBreak(state: EditState): EditState {
   const { value, start, end } = state;
@@ -2067,11 +2078,12 @@ export function hardBreak(state: EditState): EditState {
   const blocks = [...document.root.children, ...document.footnotes];
   const from = lineStartOf(value, start);
   const code = codeAt(blocks, start);
+  const line = containerOf(value.slice(from, start));
   const mark = tableNodeAt(blocks, start)
     ? '<br>'
     : code
       ? `\n${insideOf(value, code, from)}`
-      : `  \n${containerOf(value.slice(from, start)).carry}`;
+      : `${line.mark.trim() ? '  ' : '\\'}\n${line.carry}`;
   const at = start + mark.length;
 
   return { value: value.slice(0, start) + mark + value.slice(end), start: at, end: at };

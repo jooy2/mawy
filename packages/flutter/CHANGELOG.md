@@ -19,6 +19,8 @@
 
 - **A list or a quotation taken off a line in the middle of others leaves that line a paragraph of its own.** It was left straight under the item above it, where a line of words is that item's lazy continuation, so it went up into the item. A blank line is written either side of it now, where there is none already, and a list taken off several items makes each item a paragraph. It is the React package's arithmetic, and the parity check compares the two.
 
+- **`Shift`+`Enter` on a line with nothing on it yet writes a backslash.** Pressed twice in a row, the second press wrote two spaces on a line of their own, which is a blank line, and the paragraph ended there. A backslash at the end of a line is the other hard break CommonMark has and the one that can stand alone, so the key now makes as many empty lines as it is pressed. Left at the end of a paragraph with nothing after it, a backslash is drawn as a `\` by the preview and every other renderer, where two spaces would be nothing. It is the React package's `hardBreak`, and the parity check compares the two.
+
 
 ## 1.9.0 (2026-11-02)
 

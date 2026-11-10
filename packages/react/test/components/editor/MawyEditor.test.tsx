@@ -3202,6 +3202,32 @@ describe('the document surface', () => {
     }
   });
 
+  it('writes Shift+Enter pressed again as a backslash, and keeps the caret going down', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Text" mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+
+    put(body, 'Text', 4);
+    await userEvent.keyboard(
+      '{Shift>}{Enter}{/Shift}{Shift>}{Enter}{/Shift}{Shift>}{Enter}{/Shift}'
+    );
+
+    // Two spaces on a line of their own would be a blank line, which ends the
+    // paragraph; a backslash is a break that can stand there. See `hardBreak`.
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Text  \n\\\n\\\n'));
+    // Drawn as empty lines while the caret is under them, not as a backslash.
+    expect(body.textContent).toBe('Text');
+    expect(body.querySelectorAll('p')).toHaveLength(1);
+
+    await userEvent.keyboard('x');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Text  \n\\\n\\\nx'));
+
+    await userEvent.keyboard('{Backspace}{Backspace}{Backspace}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Text  \n'));
+  });
+
   it('steps over a space on the drawn document before refusing the next', async () => {
     const onChange = vi.fn();
     const screen = await render(

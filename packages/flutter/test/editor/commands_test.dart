@@ -746,6 +746,19 @@ void main() {
       expect(broken('one|two'), 'one  \n|two');
     });
 
+    test(
+      'writes a backslash on a line with nothing on it yet, so the key can be pressed again',
+      () {
+        // Two spaces on a line of their own are a blank line, which ends the
+        // paragraph rather than breaking it.
+        expect(broken('one  \n|'), 'one  \n\\\n|');
+        expect(broken('one  \n\\\n|'), 'one  \n\\\n\\\n|');
+        expect(broken('one\n|two'), 'one\n\\\n|two');
+        expect(broken('> one  \n> |'), '> one  \n> \\\n> |');
+        expect(broken('- a  \n  |'), '- a  \n  \\\n  |');
+      },
+    );
+
     test('opens the line it starts with what the containers write on every line', () {
       // Without the `>` the second line is only the first's lazy continuation:
       // drawn quoted, written as something else, and a `>` typed after it is a
