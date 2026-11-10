@@ -3211,6 +3211,89 @@ describe('the document surface', () => {
     expect(screen.container.querySelector('.mawy-notice')).toBeNull();
   });
 
+  it('draws a formatting button pressed over words selected inside its run', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue="A **bold word** here" mode="wysiwyg" style={WIDE} />
+    );
+
+    // Selected in the middle, where the characters beside the selection are
+    // letters rather than markers. See `formattedRun`.
+    put(bodyOf(screen), 'bold word', 1, 4);
+    await vi.waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Bold' }).element()).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+  });
+
+  it('formats words selected with a space either side, and italic inside a word', async () => {
+    for (const [name, selected, written] of [
+      ['Bold', [3, 8], 'foo **bar** baz'],
+      ['Italic', [4, 7], 'foo _bar_ baz'],
+      ['Strikethrough', [3, 7], 'foo ~~bar~~ baz']
+    ] as const) {
+      const onChange = vi.fn();
+      const screen = await render(
+        <MawyEditor defaultValue="foo bar baz" mode="wysiwyg" onChange={onChange} style={WIDE} />
+      );
+
+      // A space selected with the word, as a double-click on Windows does.
+      put(bodyOf(screen), 'foo bar baz', selected[0], selected[1]);
+      // From this editor's own toolbar: each of the three is on the page.
+      await userEvent.click(
+        screen.container.querySelector(`button[aria-label="${name}"]`) as HTMLElement
+      );
+      await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith(written));
+      expect(bodyOf(screen).textContent).toBe('foo bar baz');
+    }
+  });
+
+  it('takes the code span off on the source when its button is pressed inside it', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="Say `code` here"
+        modes={['plain']}
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+    const input = sourceOf(screen);
+
+    input.focus();
+    input.setSelectionRange(7, 7);
+    await vi.waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Code', exact: true }).element()).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+
+    // A pair of backticks written at the caret was a second span in the middle
+    // of the first.
+    await userEvent.click(screen.getByRole('button', { name: 'Code', exact: true }));
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Say code here'));
+  });
+
+  it('takes inline code off the word the caret is in when its button is pressed', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="Say `code` here" mode="wysiwyg" onChange={onChange} style={WIDE} />
+    );
+    const button = () => screen.getByRole('button', { name: 'Code', exact: true }).element();
+
+    put(bodyOf(screen), 'code', 2);
+    await vi.waitFor(() => expect(button()).toHaveAttribute('aria-pressed', 'true'));
+
+    // Among its words, the run comes off whole, rather than being held off for
+    // words not typed yet while the word stays in code. See `unwrappedAt`.
+    await userEvent.click(button());
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Say code here'));
+    expect(bodyOf(screen).querySelector('code')).toBeNull();
+    expect(button()).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('sets a list item taken out of the middle of a list apart, as a paragraph', async () => {
     const onChange = vi.fn();
     const screen = await render(
@@ -4047,17 +4130,25 @@ describe('the document surface', () => {
     expect(bold()).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('turns bold off in the middle of a bold word, for what is typed there', async () => {
+  it('takes bold off the word the caret is in the middle of, and holds it at the end', async () => {
     const onChange = vi.fn();
     const screen = await render(
-      <MawyEditor defaultValue="**bold**" mode="wysiwyg" onChange={onChange} />
+      <MawyEditor defaultValue="**bold** **more**" mode="wysiwyg" onChange={onChange} />
     );
 
+    // In the middle, the run comes off, as the button drawn pressed there says
+    // it will; nothing is held for words not typed yet. See `formattedRun`.
     put(bodyOf(screen), 'bold', 2);
-    await userEvent.keyboard('{ControlOrMeta>}b{/ControlOrMeta}x');
+    await userEvent.keyboard('{ControlOrMeta>}b{/ControlOrMeta}');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('bold **more**'));
+    expect(bodyOf(screen).querySelectorAll('strong')).toHaveLength(1);
 
-    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('**bo**x**ld**'));
-    expect(bodyOf(screen).querySelectorAll('strong')).toHaveLength(2);
+    // At the end, where somebody typing bold words stops, it is held off for
+    // what comes next and the word stays bold.
+    put(bodyOf(screen), 'more', 4);
+    await userEvent.keyboard('{ControlOrMeta>}b{/ControlOrMeta}x');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('bold **more**x'));
+    expect(bodyOf(screen).querySelector('strong')?.textContent).toBe('more');
   });
 
   it('composes into the formatting the caret was holding', async () => {

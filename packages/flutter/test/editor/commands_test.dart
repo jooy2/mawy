@@ -73,6 +73,40 @@ void main() {
       expect(run(MawyCommand.bold, 'one «**two**» three'), 'one «two» three');
       expect(run(MawyCommand.bold, 'one **«two»** three'), 'one «two» three');
     });
+
+    test('puts the markers around the words and not the spaces either side of them', () {
+      // `** two**` is two asterisks and a word: a run cannot open before a space.
+      expect(run(MawyCommand.bold, 'one« two »three'), 'one **«two»** three');
+      expect(run(MawyCommand.strikethrough, 'one «two »three'), 'one ~~«two»~~ three');
+    });
+
+    test('writes italic with `*` beside a letter, where `_` is not emphasis', () {
+      expect(run(MawyCommand.italic, 'one«two»three'), 'one*«two»*three');
+      expect(run(MawyCommand.italic, 'one «two» three'), 'one _«two»_ three');
+    });
+
+    test('takes the run a caret is among the words of off whole', () {
+      // A caret was given a pair of markers of its own, which in a code span
+      // is a second span in the middle of the first.
+      expect(run(MawyCommand.code, 'Say `co|de` here'), 'Say co|de here');
+      expect(run(MawyCommand.bold, 'Say **bo|ld** here'), 'Say bo|ld here');
+      expect(run(MawyCommand.italic, '*it|al*'), 'it|al');
+      expect(run(MawyCommand.strikethrough, '~~|gone~~'), '|gone');
+    });
+
+    test('takes the formatting off what is selected of a run, and leaves the rest', () {
+      expect(run(MawyCommand.bold, 'x **bold «text»** y'), 'x **bold** «text» y');
+      expect(run(MawyCommand.bold, '**bo«l»d**'), '**bo**«l»**d**');
+      expect(run(MawyCommand.italic, '_hel«l»o_'), '*hel*«l»*o*');
+      expect(run(MawyCommand.bold, '**«bold»**'), '«bold»');
+    });
+
+    test('is on wherever the selection is inside a run of it', () {
+      expect(commandActive(MawyCommand.bold, at('A **bo«ld wo»rd** here')), isTrue);
+      expect(commandActive(MawyCommand.italic, at('*a «b» c*')), isTrue);
+      expect(commandActive(MawyCommand.code, at('`co|de`')), isTrue);
+      expect(commandActive(MawyCommand.bold, at('A «bold» **word**')), isFalse);
+    });
   });
 
   group('links', () {

@@ -321,11 +321,31 @@ export function toggleHeading(state: EditState, depth: number): EditState {
  * Both sides of "already wrapped" are checked: the markers may be inside the
  * selection, because the reader selected them, or outside it, because they
  * double-clicked the word between them. Only the second is ever thought of.
+ *
+ * Inside a run of the same formatting it comes off instead, which is what the
+ * button being drawn pressed there promises. A caret among the run's words
+ * takes the whole run off. Some of its words selected take the formatting off
+ * those and leave the rest in it, as two runs either side; the whole of them
+ * selected takes it off all of them. A caret was given a pair of markers of its
+ * own, and in a code span that is a second span in the middle of the first.
+ * See `formattedRun`.
+ *
+ * Put on, the markers go around the words and not around the spaces either
+ * side of them: a run of formatting cannot open before a space or close after
+ * one, so `** bold**` is two asterisks and a word, and a word double-clicked in
+ * a browser that selects the space after it was written that way. Italic is
+ * written with `*` where a letter or a digit is beside it, because `_` inside a
+ * word is not emphasis.
  */
-function toggleWrap(state: EditState, marker: string): EditState {
+function toggleWrap(state: EditState, command: MawyCommand, marker: string): EditState {
   const { value, start, end } = state;
   const selected = value.slice(start, end);
   const width = marker.length;
+  const run = formattedRun(value, start, end, command);
+
+  if (run && !(start === run.range.start && end === run.range.end)) {
+    return unwrapped(value, start, end, run);
+  }
 
   if (selected.length >= width * 2 && selected.startsWith(marker) && selected.endsWith(marker)) {
     const inner = selected.slice(width, -width);
@@ -345,12 +365,155 @@ function toggleWrap(state: EditState, marker: string): EditState {
     };
   }
 
+  const words = selected.trim();
+  const from = words ? start + (selected.length - selected.trimStart().length) : start;
+  const to = words ? from + words.length : end;
+  const mark =
+    marker === '_' && (WORDY.test(value[from - 1] ?? '') || WORDY.test(value[to] ?? ''))
+      ? '*'
+      : marker;
+
   return {
-    value: value.slice(0, start) + marker + selected + marker + value.slice(end),
+    value: value.slice(0, from) + mark + value.slice(from, to) + mark + value.slice(to),
     // An empty selection leaves the caret between the two markers, ready to
     // type; a real one stays around the words it was around.
-    start: start + width,
-    end: end + width
+    start: from + width,
+    end: to + width
+  };
+}
+
+/** A letter or a digit, which `_` beside it is a character of the word rather than emphasis. */
+const WORDY = /[\p{L}\p{N}]/u;
+
+/** A run of one kind of formatting: where it is written, and where its words are. */
+export interface MawyRun {
+  range: MdRange;
+  start: number;
+  end: number;
+}
+
+/** The node each wrapping command writes. */
+const RUN_NODES: Partial<Record<MawyCommand, MdNode['type']>> = {
+  bold: 'strong',
+  italic: 'emphasis',
+  strikethrough: 'delete',
+  code: 'inlineCode'
+};
+
+/**
+ * The innermost run of a command's formatting whose words hold the selection,
+ * or `null`.
+ *
+ * A caret anywhere among the words or at either end of them; a selection
+ * inside them, or the run itself with its markers. Read out of the parse
+ * rather than off the characters beside the selection, which said a bold word
+ * was bold only where the selection ended exactly at its markers: selected in
+ * the middle, it was a bold word the bold button was not drawn pressed for.
+ *
+ * Where the words start is counted off the markers in front of them, which is
+ * the run of the same character the node opens with: two for bold, one for
+ * italic, and all of them for strikethrough and code, whose runs can be longer.
+ */
+export function formattedRun(
+  value: string,
+  start: number,
+  end: number,
+  command: MawyCommand
+): MawyRun | null {
+  const type = RUN_NODES[command];
+
+  if (!type || !/[*_~`]/.test(value)) {
+    return null;
+  }
+
+  const document = documentOf(value);
+  let found: MawyRun | null = null;
+
+  const walk = (nodes: readonly MdNode[]) => {
+    for (const node of nodes) {
+      if (start < node.range.start || end > node.range.end) {
+        continue;
+      }
+
+      if (node.type === type) {
+        const character = value[node.range.start];
+        let width = 0;
+
+        while (
+          width < (node.range.end - node.range.start) / 2 &&
+          value[node.range.start + width] === character &&
+          (type !== 'strong' || width < 2) &&
+          (type !== 'emphasis' || width < 1)
+        ) {
+          width += 1;
+        }
+
+        const run = {
+          range: node.range,
+          start: node.range.start + width,
+          end: node.range.end - width
+        };
+
+        if (
+          (start >= run.start && end <= run.end) ||
+          (start === node.range.start && end === node.range.end)
+        ) {
+          found = run;
+        }
+      }
+
+      if ('children' in node) {
+        walk(node.children as MdNode[]);
+      }
+    }
+  };
+
+  walk([...document.root.children, ...document.footnotes]);
+
+  return found;
+}
+
+/**
+ * A run's formatting taken off what is selected of it: off the whole run for a
+ * caret or for all of its words, and off the words selected otherwise, with
+ * the rest left formatted either side. See `toggleWrap`.
+ */
+function unwrapped(value: string, start: number, end: number, run: MawyRun): EditState {
+  const opening = value.slice(run.range.start, run.start);
+  const closing = value.slice(run.end, run.range.end);
+
+  if (start === end || (start === run.start && end === run.end)) {
+    const words = value.slice(run.start, run.end);
+    const at = (place: number) =>
+      Math.min(Math.max(place - opening.length, run.range.start), run.range.start + words.length);
+
+    return {
+      value: value.slice(0, run.range.start) + words + value.slice(run.range.end),
+      start: at(start),
+      end: at(end)
+    };
+  }
+
+  // `_` beside a letter is not emphasis, and the two halves now have one.
+  const open = opening.replace(/_/g, '*');
+  const close = closing.replace(/_/g, '*');
+  const before = value.slice(run.start, start);
+  const after = value.slice(end, run.end);
+  const head = before.trimEnd();
+  const tail = after.trimStart();
+  const left = (head ? open + head + close : '') + before.slice(head.length);
+  const right = after.slice(0, after.length - tail.length) + (tail ? open + tail + close : '');
+  const from = run.range.start + left.length;
+
+  return {
+    value:
+      value.slice(0, run.range.start) +
+      left +
+      value.slice(start, end) +
+      right +
+      value.slice(run.range.end),
+    start: from,
+    end: from + end - start
   };
 }
 
@@ -621,13 +784,13 @@ export function runCommand(command: MawyCommand, state: EditState): EditState {
 
   switch (command) {
     case 'bold':
-      return toggleWrap(state, '**');
+      return toggleWrap(state, command, '**');
     case 'italic':
-      return toggleWrap(state, '_');
+      return toggleWrap(state, command, '_');
     case 'strikethrough':
-      return toggleWrap(state, '~~');
+      return toggleWrap(state, command, '~~');
     case 'code':
-      return toggleWrap(state, '`');
+      return toggleWrap(state, command, '`');
     case 'link':
       return insertLink(state, false);
     case 'image':
@@ -737,15 +900,20 @@ function activeIn(command: MawyCommand, state: EditState): boolean {
 
   const everyLine = (pattern: RegExp): boolean => everyLineIs(state, pattern);
 
+  // Inside a run of it, read out of the parse, where the characters beside the
+  // selection said nothing. See `formattedRun`.
+  const formatted = (marker: string): boolean =>
+    wrapped(marker) || formattedRun(state.value, state.start, state.end, command) !== null;
+
   switch (command) {
     case 'bold':
-      return wrapped('**');
+      return formatted('**');
     case 'italic':
-      return wrapped('_');
+      return formatted('_');
     case 'strikethrough':
-      return wrapped('~~');
+      return formatted('~~');
     case 'code':
-      return wrapped('`');
+      return formatted('`');
     case 'heading1':
       return everyLine(/^[ \t]*# /);
     case 'heading2':

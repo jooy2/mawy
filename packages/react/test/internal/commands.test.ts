@@ -83,6 +83,40 @@ describe('wrapping', () => {
 
     expect(show(runCommand('bold', once))).toBe('one «two» three');
   });
+
+  it('puts the markers around the words and not the spaces either side of them', () => {
+    // `** two**` is two asterisks and a word: a run cannot open before a space.
+    expect(run('bold', 'one« two »three')).toBe('one **«two»** three');
+    expect(run('strikethrough', 'one «two »three')).toBe('one ~~«two»~~ three');
+  });
+
+  it('writes italic with `*` beside a letter, where `_` is not emphasis', () => {
+    expect(run('italic', 'one«two»three')).toBe('one*«two»*three');
+    expect(run('italic', 'one «two» three')).toBe('one _«two»_ three');
+  });
+
+  it('takes the run a caret is among the words of off whole', () => {
+    // A caret was given a pair of markers of its own, which in a code span is
+    // a second span in the middle of the first.
+    expect(run('code', 'Say `co|de` here')).toBe('Say co|de here');
+    expect(run('bold', 'Say **bo|ld** here')).toBe('Say bo|ld here');
+    expect(run('italic', '*it|al*')).toBe('it|al');
+    expect(run('strikethrough', '~~|gone~~')).toBe('|gone');
+  });
+
+  it('takes the formatting off what is selected of a run, and leaves the rest', () => {
+    expect(run('bold', 'x **bold «text»** y')).toBe('x **bold** «text» y');
+    expect(run('bold', '**bo«l»d**')).toBe('**bo**«l»**d**');
+    expect(run('italic', '_hel«l»o_')).toBe('*hel*«l»*o*');
+    expect(run('bold', '**«bold»**')).toBe('«bold»');
+  });
+
+  it('is on wherever the selection is inside a run of it', () => {
+    expect(commandActive('bold', at('A **bo«ld wo»rd** here'))).toBe(true);
+    expect(commandActive('italic', at('*a «b» c*'))).toBe(true);
+    expect(commandActive('code', at('`co|de`'))).toBe(true);
+    expect(commandActive('bold', at('A «bold» **word**'))).toBe(false);
+  });
 });
 
 describe('links', () => {

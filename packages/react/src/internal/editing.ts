@@ -1994,7 +1994,10 @@ export function marksAt(value: string, offset: number): Set<MawyCommand> {
  * A command already in force where the caret is turns off the same way. At
  * the end of the run the words go after its closing marker; at the start,
  * before its opening one; in the middle the run is closed in front of them and
- * opened again after, which is the same `**x**` read the other way round.
+ * opened again after, which is the same `**x**` read the other way round. A
+ * button pressed in the middle of a run takes the run off rather than holding
+ * it (see `formattedRun`), so a press no longer holds anything there; the
+ * middle is still answered, for a hold that arrives there some other way.
  *
  * Italic is written with `*` where a letter is either side, since `_` inside a
  * word is not emphasis to CommonMark. `null` where nothing is held.

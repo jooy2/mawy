@@ -358,12 +358,32 @@ EditState toggleHeading(EditState state, int depth) {
 /// Both sides of "already wrapped" are checked: the markers may be inside the
 /// selection, because the reader selected them, or outside it, because they
 /// double-tapped the word between them. Only the second is ever thought of.
-EditState _toggleWrap(EditState state, String marker) {
+///
+/// Inside a run of the same formatting it comes off instead, which is what the
+/// button being drawn pressed there promises. A caret among the run's words
+/// takes the whole run off. Some of its words selected take the formatting off
+/// those and leave the rest in it, as two runs either side; the whole of them
+/// selected takes it off all of them. A caret was given a pair of markers of
+/// its own, and in a code span that is a second span in the middle of the
+/// first. See [formattedRun].
+///
+/// Put on, the markers go around the words and not around the spaces either
+/// side of them: a run of formatting cannot open before a space or close after
+/// one, so `** bold**` is two asterisks and a word. Italic is written with `*`
+/// where a letter or a digit is beside it, because `_` inside a word is not
+/// emphasis. It is the React package's `toggleWrap`, and the parity check
+/// compares the two.
+EditState _toggleWrap(EditState state, MawyCommand command, String marker) {
   final String value = state.value;
   final int start = state.start;
   final int end = state.end;
   final String selected = value.substring(start, end);
   final int width = marker.length;
+  final MawyRun? run = formattedRun(value, start, end, command);
+
+  if (run != null && !(start == run.range.start && end == run.range.end)) {
+    return _unwrapped(value, start, end, run);
+  }
 
   if (selected.length >= width * 2 && selected.startsWith(marker) && selected.endsWith(marker)) {
     final String inner = selected.substring(width, selected.length - width);
@@ -383,12 +403,180 @@ EditState _toggleWrap(EditState state, String marker) {
     );
   }
 
+  final String words = selected.trim();
+  final int from = words.isEmpty ? start : start + (selected.length - selected.trimLeft().length);
+  final int to = words.isEmpty ? end : from + words.length;
+  final String mark =
+      marker == '_' &&
+          (_wordy.hasMatch(_slice(value, from - 1, from)) ||
+              _wordy.hasMatch(_slice(value, to, to + 1)))
+      ? '*'
+      : marker;
+
   return EditState(
-    value.substring(0, start) + marker + selected + marker + value.substring(end),
+    value.substring(0, from) + mark + value.substring(from, to) + mark + value.substring(to),
     // An empty selection leaves the caret between the two markers, ready to
     // type; a real one stays around the words it was around.
-    start + width,
-    end + width,
+    from + width,
+    to + width,
+  );
+}
+
+/// A letter or a digit, which `_` beside it is a character of the word rather
+/// than emphasis.
+final RegExp _wordy = RegExp(r'[\p{L}\p{N}]', unicode: true);
+
+/// A run of one kind of formatting: where it is written, and where its words
+/// are.
+class MawyRun {
+  /// Creates a run.
+  const MawyRun(this.range, this.start, this.end);
+
+  /// Where it is written, markers and all.
+  final MdRange range;
+
+  /// Where its words start.
+  final int start;
+
+  /// Where its words end.
+  final int end;
+}
+
+/// Whether a node is the one a wrapping command writes.
+bool _writes(MawyCommand command, MdNode node) => switch (command) {
+  MawyCommand.bold => node is MdStrong,
+  MawyCommand.italic => node is MdEmphasis,
+  MawyCommand.strikethrough => node is MdDelete,
+  MawyCommand.code => node is MdInlineCode,
+  _ => false,
+};
+
+/// Everything a node holds, of every kind of node that holds anything.
+List<MdNode> _held(MdNode node) => switch (node) {
+  MdRoot() => node.children,
+  MdHeading() => node.children,
+  MdParagraph() => node.children,
+  MdBlockquote() => node.children,
+  MdList() => node.children,
+  MdListItem() => node.children,
+  MdTable() => node.children,
+  MdTableRow() => node.children,
+  MdTableCell() => node.children,
+  MdDefinitionList() => node.children,
+  MdDefinitionTerm() => node.children,
+  MdDefinitionDescription() => node.children,
+  MdFootnoteDefinition() => node.children,
+  MdEmphasis() => node.children,
+  MdStrong() => node.children,
+  MdDelete() => node.children,
+  MdLink() => node.children,
+  MdContainerDirective() => node.children,
+  MdLeafDirective() => node.children,
+  MdTextDirective() => node.children,
+  _ => const <MdNode>[],
+};
+
+/// The innermost run of a command's formatting whose words hold the selection,
+/// or `null`.
+///
+/// A caret anywhere among the words or at either end of them; a selection
+/// inside them, or the run itself with its markers. Read out of the parse
+/// rather than off the characters beside the selection, which said a bold word
+/// was bold only where the selection ended exactly at its markers.
+///
+/// Where the words start is counted off the markers in front of them, which is
+/// the run of the same character the node opens with: two for bold, one for
+/// italic, and all of them for strikethrough and code, whose runs can be
+/// longer. It is the React package's `formattedRun`.
+MawyRun? formattedRun(String value, int start, int end, MawyCommand command) {
+  if (!_wraps.contains(command) || !RegExp('[*_~`]').hasMatch(value)) {
+    return null;
+  }
+
+  final MdDocument document = documentOf(value);
+  MawyRun? found;
+
+  void walk(List<MdNode> nodes) {
+    for (final MdNode node in nodes) {
+      if (start < node.range.start || end > node.range.end) {
+        continue;
+      }
+
+      if (_writes(command, node)) {
+        final String character = value[node.range.start];
+        int width = 0;
+
+        while (width < (node.range.end - node.range.start) / 2 &&
+            value[node.range.start + width] == character &&
+            (node is! MdStrong || width < 2) &&
+            (node is! MdEmphasis || width < 1)) {
+          width += 1;
+        }
+
+        final MawyRun run = MawyRun(node.range, node.range.start + width, node.range.end - width);
+
+        if ((start >= run.start && end <= run.end) ||
+            (start == node.range.start && end == node.range.end)) {
+          found = run;
+        }
+      }
+
+      walk(_held(node));
+    }
+  }
+
+  walk(<MdNode>[...document.root.children, ...document.footnotes]);
+
+  return found;
+}
+
+/// The commands that wrap the words they are run over.
+const Set<MawyCommand> _wraps = <MawyCommand>{
+  MawyCommand.bold,
+  MawyCommand.italic,
+  MawyCommand.strikethrough,
+  MawyCommand.code,
+};
+
+/// A run's formatting taken off what is selected of it: off the whole run for a
+/// caret or for all of its words, and off the words selected otherwise, with
+/// the rest left formatted either side. See [_toggleWrap].
+EditState _unwrapped(String value, int start, int end, MawyRun run) {
+  final String opening = value.substring(run.range.start, run.start);
+  final String closing = value.substring(run.end, run.range.end);
+
+  if (start == end || (start == run.start && end == run.end)) {
+    final String words = value.substring(run.start, run.end);
+    int at(int place) =>
+        math.min(math.max(place - opening.length, run.range.start), run.range.start + words.length);
+
+    return EditState(
+      value.substring(0, run.range.start) + words + value.substring(run.range.end),
+      at(start),
+      at(end),
+    );
+  }
+
+  // `_` beside a letter is not emphasis, and the two halves now have one.
+  final String open = opening.replaceAll('_', '*');
+  final String close = closing.replaceAll('_', '*');
+  final String before = value.substring(run.start, start);
+  final String after = value.substring(end, run.end);
+  final String head = before.trimRight();
+  final String tail = after.trimLeft();
+  final String left = (head.isNotEmpty ? open + head + close : '') + before.substring(head.length);
+  final String right =
+      after.substring(0, after.length - tail.length) + (tail.isNotEmpty ? open + tail + close : '');
+  final int from = run.range.start + left.length;
+
+  return EditState(
+    value.substring(0, run.range.start) +
+        left +
+        value.substring(start, end) +
+        right +
+        value.substring(run.range.end),
+    from,
+    from + end - start,
   );
 }
 
@@ -674,10 +862,10 @@ EditState runCommand(MawyCommand command, EditState state) {
   }
 
   return switch (command) {
-    MawyCommand.bold => _toggleWrap(state, '**'),
-    MawyCommand.italic => _toggleWrap(state, '_'),
-    MawyCommand.strikethrough => _toggleWrap(state, '~~'),
-    MawyCommand.code => _toggleWrap(state, '`'),
+    MawyCommand.bold => _toggleWrap(state, command, '**'),
+    MawyCommand.italic => _toggleWrap(state, command, '_'),
+    MawyCommand.strikethrough => _toggleWrap(state, command, '~~'),
+    MawyCommand.code => _toggleWrap(state, command, '`'),
     MawyCommand.link => _insertLink(state, image: false),
     MawyCommand.image => _insertLink(state, image: true),
     MawyCommand.heading1 => toggleHeading(state, 1),
@@ -763,11 +951,16 @@ bool _activeIn(MawyCommand command, EditState state) {
 
   bool everyLine(RegExp pattern) => _everyLineIs(state, pattern);
 
+  // Inside a run of it, read out of the parse, where the characters beside the
+  // selection said nothing. See [formattedRun].
+  bool formatted(String marker) =>
+      wrapped(marker) || formattedRun(state.value, state.start, state.end, command) != null;
+
   return switch (command) {
-    MawyCommand.bold => wrapped('**'),
-    MawyCommand.italic => wrapped('_'),
-    MawyCommand.strikethrough => wrapped('~~'),
-    MawyCommand.code => wrapped('`'),
+    MawyCommand.bold => formatted('**'),
+    MawyCommand.italic => formatted('_'),
+    MawyCommand.strikethrough => formatted('~~'),
+    MawyCommand.code => formatted('`'),
     MawyCommand.heading1 => everyLine(RegExp(r'^[ \t]*# ')),
     MawyCommand.heading2 => everyLine(RegExp(r'^[ \t]*## ')),
     MawyCommand.heading3 => everyLine(RegExp(r'^[ \t]*### ')),

@@ -35,6 +35,7 @@ import {
   commandActive,
   crowdedBy,
   fencedAt,
+  formattedRun,
   tableAlignAt,
   tableOfSize,
   tableRangeAt,
@@ -1449,6 +1450,19 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       }
 
       if (showDocument && before.start === before.end && wraps(name)) {
+        // Among the words of a run of it, the run comes off whole, as it does
+        // on the source; held off for words not typed yet, the button came up
+        // and the word under the caret stayed formatted. At either end of the
+        // run, where somebody typing formatted words stops, it is held off for
+        // what comes next. See `formattedRun`.
+        const inside = formattedRun(before.value, before.start, before.end, name);
+
+        if (inside && inside.start < before.start && before.start < inside.end) {
+          run(before, runCommand(name, before));
+
+          return;
+        }
+
         setHolding({
           value: before.value,
           at: before.start,

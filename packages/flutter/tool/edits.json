@@ -493,5 +493,40 @@
   "one\n\ntwo",
   3,
   3
+ ],
+ [
+  "Say **bold** here",
+  7,
+  7
+ ],
+ [
+  "x **bold text** y",
+  8,
+  12
+ ],
+ [
+  "foo bar baz",
+  3,
+  8
+ ],
+ [
+  "foobarbaz",
+  3,
+  6
+ ],
+ [
+  "Say `code` here",
+  6,
+  6
+ ],
+ [
+  "_hello_",
+  3,
+  4
+ ],
+ [
+  "[**link**](u) and ~~gone~~",
+  21,
+  21
  ]
 ]
