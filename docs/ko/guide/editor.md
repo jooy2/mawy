@@ -543,7 +543,7 @@ final List<String> unused = stored.where((String url) => !used.contains(url)).to
 
 ## 찾기
 
-`Mod`+`F`가 원문 위에 찾기 바를 열고, 툴바의 `find` 버튼도 같은 일을 합니다. `Enter`는 다음 결과로, `Shift`+`Enter`는 이전 결과로 가고, `Escape`는 바를 닫고 포커스를 문서에 돌려줍니다.
+`Mod`+`F`가 원문 위에 찾기 바를 열고, 툴바의 `find` 버튼도 같은 일을 합니다. 바가 열려 있는 동안 버튼은 눌린 모습이고, 한 번 더 누르면 바가 닫힙니다. `Enter`는 다음 결과로, `Shift`+`Enter`는 이전 결과로 가고, `Escape`는 바를 닫고 포커스를 문서에 돌려줍니다.
 
 ::: fw react
 

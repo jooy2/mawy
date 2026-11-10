@@ -1239,7 +1239,9 @@ class _MawyEditorState extends State<MawyEditor> {
           headingLevels: _headingLevels,
           onHeading: _heading,
           finding: _finding && showSource,
-          onFind: showSource ? _openFind : null,
+          // The button is pressed while the bar is open, and a press on a
+          // pressed button is the way back out of what it turned on.
+          onFind: showSource ? (_finding ? _closeFind : _openFind) : null,
           onOpen: widget.readOnly ? null : widget.onOpen,
         ),
       if (_finding && showSource)

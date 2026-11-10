@@ -3429,7 +3429,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           editable={editable}
           inTable={caretInTable}
           inCode={caretInCode}
-          onFind={showSource || showDocument ? openFind : undefined}
+          // The button is pressed while the bar is open, and a press on a
+          // pressed button is the way back out of what it turned on.
+          onFind={showSource || showDocument ? (finding ? closeFind : openFind) : undefined}
           finding={finding && (showSource || showDocument)}
           onOpen={readOnly ? undefined : openFile}
           onPickImage={onUploadImage ? pickImage : undefined}

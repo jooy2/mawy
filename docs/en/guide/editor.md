@@ -543,7 +543,7 @@ This section applies to the React package only. Here the application opens files
 
 ## Finding
 
-`Mod`+`F` opens the find bar over the source, and the toolbar's `find` button does the same thing. `Enter` goes to the next match, `Shift`+`Enter` to the one before, and `Escape` closes the bar and gives the focus back to the document.
+`Mod`+`F` opens the find bar over the source, and the toolbar's `find` button does the same thing; the button is drawn pressed while the bar is open, and pressed again it closes it. `Enter` goes to the next match, `Shift`+`Enter` to the one before, and `Escape` closes the bar and gives the focus back to the document.
 
 ::: fw react
 

@@ -1857,6 +1857,21 @@ describe('finding', () => {
     );
   });
 
+  it('closes from the toolbar button that opened it', async () => {
+    const screen = await render(
+      <MawyEditor defaultValue="one two one" modes={['plain']} style={WIDE} />
+    );
+    const button = () => screen.getByRole('button', { name: 'Find' }).element();
+
+    await userEvent.click(button());
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-find')).not.toBeNull());
+    expect(button()).toHaveAttribute('aria-pressed', 'true');
+
+    // Pressed while the bar is open, which is how it is turned back off.
+    await userEvent.click(button());
+    await vi.waitFor(() => expect(screen.container.querySelector('.mawy-find')).toBeNull());
+  });
+
   it('reads the query as a regular expression when switched to, and says when it is not one', async () => {
     const onChange = vi.fn();
     const screen = await render(

@@ -360,7 +360,9 @@
 }
 
 /* A tip that would hang off the end of the bar is hung from its own end
- * instead. The last two controls are the ones near enough the edge to.
+ * instead. The last two controls are the ones near enough the edge to, and the
+ * last two of each row of the find bar, which reaches the same edge: the name
+ * of its close button was cut off by it.
  *
  * The same is true of the start, and was not said: the editor's bar opens with
  * the surface switch against the editor's own edge, and the name of the first
@@ -378,7 +380,8 @@
 .mawy-root .mawy-toolbar-controls > *:last-child[data-mawy-tip]::after,
 .mawy-root .mawy-toolbar-controls > *:last-child [data-mawy-tip]::after,
 .mawy-root .mawy-toolbar-group > *:nth-last-child(-n + 2)[data-mawy-tip]::after,
-.mawy-root .mawy-toolbar-group > *:nth-last-child(-n + 2) [data-mawy-tip]::after {
+.mawy-root .mawy-toolbar-group > *:nth-last-child(-n + 2) [data-mawy-tip]::after,
+.mawy-root .mawy-find-row > *:nth-last-child(-n + 2)[data-mawy-tip]::after {
   left: auto;
   right: auto;
   inset-inline-end: 0;
@@ -423,6 +426,15 @@
 .mawy-root .mawy-button[data-mawy-pressed='true'],
 .mawy-root .mawy-button[aria-pressed='true'] {
   background: var(--mawy-accent-soft);
+  color: var(--mawy-accent);
+}
+
+/* Still pressed with the pointer on it. The hover above is the more specific of
+ * the two, so a toggle that was on was drawn off for as long as the pointer that
+ * had just turned it on stayed there, and was only seen to be on once it left.
+ * A little deeper than at rest, so the pointer still has something to say. */
+.mawy-root .mawy-button:is([data-mawy-pressed='true'], [aria-pressed='true']):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--mawy-accent) 14%, var(--mawy-accent-soft));
   color: var(--mawy-accent);
 }
 

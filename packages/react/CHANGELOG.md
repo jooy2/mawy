@@ -26,11 +26,17 @@
 
 - **`Shift`+`Enter` on a line with nothing on it yet writes a backslash.** Pressed twice in a row, the second press wrote two spaces on a line of their own, which is a blank line: the paragraph ended there, every press after it wrote another blank line, and the caret, on a line no paragraph held, was drawn at the top of the paragraph and under it by turns. A backslash at the end of a line is the other hard break CommonMark has and the one that can stand alone, so the key now makes as many empty lines as it is pressed, and `wysiwyg` draws the last of them as an empty line while the caret is under it. Left at the end of a paragraph with nothing after it, a backslash is drawn as a `\` by this library and every other renderer, where two spaces would be nothing.
 
+- **The toolbar's find button closes the find bar it opened.** It was drawn pressed while the bar was open and opened it again when pressed.
+
 - **The icon set this package draws is `lucide-react` 1.70 or newer.** It was 1.48 or newer. Every icon the editor and the viewer use is the same drawing in both versions, so nothing on the page changes. An application that holds its own `lucide-react` below 1.70 gets a second copy of it rather than sharing one, until it raises its own.
 
 ### Fixed
 
 - **`Mod`+`A` and `Delete` did nothing to a block written so far as its marker.** With the caret in a `# `, `- ` or `> ` on `wysiwyg`, a select-all collapsed to a caret at the start and the key after it had nothing to delete. The caret is put back after what is drawn under it changes, and that was asked whether anything had changed by comparing two objects that were never the same, then put back as a caret. It compares where they are now, and puts a selection back whole.
+
+- **A toggle on the toolbar or the find bar looked off while the pointer was on it.** The hover was the more specific of the two rules, so a button that had just been turned on was seen to be on only once the pointer left. It is drawn pressed under the pointer, a little deeper than at rest.
+
+- **The names of the find bar's last buttons were cut off at the edge of the editor.** They are hung from the button's own end, as the toolbar's last buttons are.
 
 - **An empty heading moved the document under it when the caret went into it and out of it on `wysiwyg`.** A heading written so far as `# ` is drawn as its marker while the caret is in it, and that was drawn as a paragraph, which is a different height from the empty heading drawn once the caret left; the document under it jumped by the difference with every press. The marker is drawn in the heading's own element and type now, and an empty heading is as tall as one line of its own type, so the two are the same height, and typing the heading's first letter no longer moves anything either. An empty quotation `> ` did the same the other way round, and is drawn a line tall now.
 

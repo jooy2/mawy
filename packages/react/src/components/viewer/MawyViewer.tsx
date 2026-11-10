@@ -1053,7 +1053,9 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
         onColorSchemeChange={setScheme}
         outlineOpen={outlineOpen}
         onOutlineToggle={() => setOutlineOpen((was) => !was)}
-        onFind={hasDocument ? openFind : undefined}
+        // The button is pressed while the bar is open, and a press on a pressed
+        // button is the way back out of what it turned on.
+        onFind={hasDocument ? (finding ? () => setFinding(false) : openFind) : undefined}
         finding={finding}
         raw={raw}
         onRawToggle={() => setRaw((was) => !was)}

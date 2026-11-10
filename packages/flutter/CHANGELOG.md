@@ -24,6 +24,8 @@
 
 - **`Shift`+`Enter` on a line with nothing on it yet writes a backslash.** Pressed twice in a row, the second press wrote two spaces on a line of their own, which is a blank line, and the paragraph ended there. A backslash at the end of a line is the other hard break CommonMark has and the one that can stand alone, so the key now makes as many empty lines as it is pressed. Left at the end of a paragraph with nothing after it, a backslash is drawn as a `\` by the preview and every other renderer, where two spaces would be nothing. It is the React package's `hardBreak`, and the parity check compares the two.
 
+- **The toolbar's find button closes the find bar it opened**, in the editor and in the viewer. It was drawn pressed while the bar was open and did nothing more when pressed.
+
 
 ## 1.9.0 (2026-11-02)
 

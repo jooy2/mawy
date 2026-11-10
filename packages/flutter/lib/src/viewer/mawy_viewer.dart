@@ -971,7 +971,9 @@ class _MawyViewerState extends State<MawyViewer>
             WidgetsBinding.instance.addPostFrameCallback((Duration _) => _measureActive());
           },
           finding: _finding,
-          onFind: document.root.children.isEmpty ? null : _openFind,
+          // The button is pressed while the bar is open, and a press on a
+          // pressed button is the way back out of what it turned on.
+          onFind: document.root.children.isEmpty ? null : (_finding ? _closeFind : _openFind),
           raw: _raw,
           onRawToggle: () => setState(() => _raw = !_raw),
           copyState: copyState,
