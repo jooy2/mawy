@@ -38,6 +38,7 @@ import {
   keptList,
   runCommand,
   runTableCommand,
+  steppedOver,
   tableAlignAt,
   tableOfSize,
   tableSpanAt,
@@ -277,6 +278,8 @@ const edits = JSON.parse(
   // which both packages have to answer the same way or the same document is
   // writable in one of them and not in the other.
   out.crowdedBy = crowdedBy({ value, caret: start });
+  // And where the caret goes instead, for a space and for an `Enter`.
+  out.steppedOver = [steppedOver(state, ' '), steppedOver(state, '\n')];
 
   const broken = hardBreak(state);
 

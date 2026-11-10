@@ -47,6 +47,7 @@ import {
   indent,
   runCommand,
   runTableCommand,
+  steppedOver,
   type EditState,
   type MawyCommand,
   type MawyCrowding,
@@ -2646,6 +2647,25 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
     [addImages, readOnly, run, stateNow]
   );
 
+  /**
+   * A space or an `Enter` the source refuses: the caret over the character in
+   * front of it where there is one, and the rule said out loud where there is
+   * not. See `steppedOver`.
+   */
+  const stepOrRefuse = (state: EditState, typed: string, crowding: MawyCrowding) => {
+    const field = source.current;
+    const step = field ? steppedOver(state, typed) : null;
+
+    if (field && step !== null) {
+      field.setSelectionRange(step, step);
+      readSelection();
+
+      return;
+    }
+
+    refuse(crowding, state.start);
+  };
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented || readOnly) {
       return;
@@ -2878,7 +2898,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
      * drawn document drew one and the same document said two different things
      * about itself. The drawn surface answers this in `beforeinput`; here the
      * key is the answer, because a textarea has no such event to refuse. Not
-     * under a modifier, which makes it a shortcut. See `crowdedBy`.
+     * under a modifier, which makes it a shortcut. In front of a space the
+     * caret steps over it instead. See `crowdedBy` and `steppedOver`.
      */
     if (event.key === ' ' && !showDocument && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const crowding = crowdedBy({
@@ -2888,7 +2909,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
       if (crowding) {
         event.preventDefault();
-        refuse(crowding, state.start);
+        stepOrRefuse(state, ' ', crowding);
       }
 
       return;
@@ -2939,7 +2960,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
       // A second blank line, refused the way a second space is. One line ending
       // is a line, two are the blank line that separates two blocks, and a
       // third is an empty paragraph nothing on either surface can show the
-      // height of. See `crowdedBy`.
+      // height of. At the end of a line with a blank line under it the caret
+      // goes down a line instead. See `crowdedBy` and `steppedOver`.
       if (!showDocument) {
         const after = next ?? {
           value: `${state.value.slice(0, state.start)}\n${state.value.slice(state.end)}`,
@@ -2949,7 +2971,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
 
         if (crowding) {
           event.preventDefault();
-          refuse(crowding, state.start);
+          stepOrRefuse(state, '\n', crowding);
 
           return;
         }

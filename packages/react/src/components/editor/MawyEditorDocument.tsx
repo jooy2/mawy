@@ -52,6 +52,7 @@ import {
   openedAt,
   overSpaces,
   reachedBlock,
+  stepDown,
   toggledTask,
   trailingBreak,
   typedOver,
@@ -786,23 +787,39 @@ export const MawyEditorDocument = React.forwardRef<HTMLElement, MawyEditorDocume
          * Only those two keys: `Shift`+`Enter` writes the two spaces a hard
          * break is made of, and a paste is left exactly as it came. See
          * `crowdedBy`.
+         *
+         * Before either is refused, a caret in front of what the key would
+         * write steps over it: into the empty paragraph under the line, down
+         * out of an empty paragraph, past a space. Only the press with nothing
+         * left to step over is refused. See `stepDown` and `overSpaces`.
          */
         const anchor = element.ownerDocument.getSelection();
         const block = blockAt(element, anchor?.anchorNode ?? element);
+        const collapsed = Boolean(anchor?.isCollapsed && anchor.anchorNode);
+        const below =
+          input.inputType === 'insertParagraph' && collapsed && anchor?.anchorNode
+            ? stepDown(element, anchor.anchorNode, anchor.anchorOffset, now.value, aim.current)
+            : null;
+
+        if (below !== null) {
+          now.onEdit({ value: now.value, caret: below });
+
+          return;
+        }
+
         const crowding: MawyCrowding | null =
           input.inputType === 'insertParagraph'
             ? (block?.tagName === 'P' && !block.firstChild && block.parentElement === element) ||
-              (anchor?.isCollapsed &&
-                anchor.anchorNode &&
+              (collapsed &&
+                anchor?.anchorNode &&
                 blankAbove(element, anchor.anchorNode, anchor.anchorOffset))
               ? 'break'
               : null
             : input.inputType === 'insertText' && input.data === ' '
               ? crowdedBy({ value: edit.value, caret: edit.caret })
               : null;
-
-        // Crowded by a space nobody can see. See `overSpaces`.
-        const over = crowding === 'space' ? overSpaces(now.value, edit.caret - 1) : null;
+        const over =
+          crowding === 'space' && collapsed ? overSpaces(now.value, edit.caret - 1) : null;
 
         if (crowding && !over) {
           now.onCrowded(crowding);

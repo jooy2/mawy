@@ -10,6 +10,7 @@ import {
   keptList,
   runCommand,
   runTableCommand,
+  steppedOver,
   tableAlignAt,
   tableOfSize,
   type EditState,
@@ -889,6 +890,25 @@ describe('one space and one blank line', () => {
   it('leaves a table alone, whose cells the editor sets off with spaces itself', () => {
     expect(after('| a |  |\n| --- | --- |')).toBe(null);
     expect(after('| a | b |\n| --- | --- |\n| one  |  | b |')).toBe(null);
+  });
+
+  it('steps the caret over the character in front of it rather than refusing', () => {
+    expect(steppedOver(at('one| two'), ' ')).toBe(4);
+    // Past the space, nothing is left to step over and the press is refused.
+    expect(steppedOver(at('one |two'), ' ')).toBe(null);
+    expect(steppedOver(at('one  |'), ' ')).toBe(null);
+
+    // Down a run of blank lines a line at a time, and no further than the last.
+    expect(steppedOver(at('one|\n\ntwo'), '\n')).toBe(4);
+    expect(steppedOver(at('one\n|\ntwo'), '\n')).toBe(5);
+    expect(steppedOver(at('one\n\n|two'), '\n')).toBe(null);
+    expect(steppedOver(at('one\n\n|'), '\n')).toBe(null);
+  });
+
+  it('steps over only the character the key writes, and only for a caret', () => {
+    expect(steppedOver(at('one|\n\ntwo'), ' ')).toBe(null);
+    expect(steppedOver(at('one| two'), '\n')).toBe(null);
+    expect(steppedOver(at('on«e» two'), ' ')).toBe(null);
   });
 });
 

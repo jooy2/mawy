@@ -2196,7 +2196,8 @@ enum MawyCrowding {
 /// things about itself, with nothing on either side to say which of them the
 /// file held. The answer is not to draw the characters — that would mean
 /// drawing whitespace the parser throws away — but to refuse the keystroke that
-/// writes them, and to say so.
+/// writes them, and to say so. A keystroke in front of the character it would
+/// write moves the caret past it instead; see [steppedOver].
 ///
 /// Two line endings in a row are the blank line two blocks are separated by, so
 /// that is as long as a run of them may be; a third is a second blank line, and
@@ -2225,6 +2226,34 @@ MawyCrowding? crowdedBy(String value, int caret) {
   }
 
   return _literalAt(value, caret) ? null : MawyCrowding.space;
+}
+
+/// Where the caret goes in place of a space or an `Enter` that [crowdedBy]
+/// refuses, or `null` where the keystroke is refused and said out loud.
+///
+/// A key pressed with the caret in front of the very character it would write —
+/// a space in front of a space, `Enter` at the end of a line with a blank line
+/// under it — is read as a press for the far side of that character, which is
+/// where a second one would have put the caret anyway. So the caret steps over
+/// it, and only a press with nothing of the kind left in front of it is refused.
+/// `Enter` walks a caret down a run of blank lines a line at a time and is
+/// refused on the last of them; a second space after the one a run may have is
+/// refused the same way.
+///
+/// Only for a caret. A selection is replaced by what is typed, and stepping past
+/// a character would leave what was selected in place.
+///
+/// It is the React package's `steppedOver`, and the parity check compares the
+/// two.
+int? steppedOver(EditState state, String typed) {
+  final int start = state.start;
+
+  return start == state.end &&
+          (typed == ' ' || typed == '\n') &&
+          start < state.value.length &&
+          state.value[start] == typed
+      ? start + 1
+      : null;
 }
 
 /// The run of one character a place is inside, from where it starts to where it

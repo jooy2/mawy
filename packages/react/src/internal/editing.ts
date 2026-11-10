@@ -2185,6 +2185,16 @@ function atStartOf(block: HTMLElement, node: Node, offset: number): boolean {
   return !range.toString() && !range.cloneContents().querySelector('img, br, hr');
 }
 
+/** Whether nothing at all is drawn between a place in a block and the end of it. */
+function atEndOf(block: HTMLElement, node: Node, offset: number): boolean {
+  const range = block.ownerDocument.createRange();
+
+  range.selectNodeContents(block);
+  range.setStart(node, offset);
+
+  return !range.toString() && !range.cloneContents().querySelector('img, br, hr');
+}
+
 /**
  * A selection that reaches the very start of a later block and stops, which is
  * what a triple press leaves in Chromium and WebKit, and `Shift` with an arrow.
@@ -2645,6 +2655,75 @@ export function blankAbove(root: HTMLElement, node: Node, offset: number): boole
 }
 
 /**
+ * Where `Enter` puts the caret instead of writing a second empty paragraph in a
+ * row, or `null` where the press is answered as before.
+ *
+ * At the end of a paragraph or a heading with an empty paragraph drawn straight
+ * under it, the caret goes down into that paragraph rather than writing another
+ * above it. In an empty paragraph it goes down to the start of the block under
+ * it. A press in front of the blank line it would write is read as a press for
+ * the far side of that line, which is how the source answers it too, so a run
+ * of empty paragraphs is walked down one at a time. Under the last block there
+ * is nowhere to go, and there the press is refused. See `steppedOver`.
+ *
+ * A place in the document rather than a node, so that the caret is put down
+ * the way any other edit puts it, scrolled to included.
+ */
+export function stepDown(
+  root: HTMLElement,
+  node: Node,
+  offset: number,
+  value: string,
+  aim: MawyAim | null
+): number | null {
+  const top = topOf(root, node);
+
+  if (!top || blockAt(root, node) !== top) {
+    return null;
+  }
+
+  if (emptyAt(top) !== null) {
+    for (let next = top.nextElementSibling; next; next = next.nextElementSibling) {
+      const place = firstPlaceIn(next);
+
+      if (place) {
+        return documentAt(root, place.node, place.offset, value, aim);
+      }
+    }
+
+    return null;
+  }
+
+  return /^(?:P|H[1-6])$/.test(top.tagName) && atEndOf(top, node, offset)
+    ? emptyAt(top.nextElementSibling)
+    : null;
+}
+
+/**
+ * Where a caret arriving at a block from above is put: in front of its first
+ * character, or inside the block itself where it has none, such as an empty
+ * paragraph or a paragraph holding a picture. `null` for a block that holds no
+ * caret, such as a divider or drawn HTML, which a caret moving down passes.
+ */
+function firstPlaceIn(element: Element): { node: Node; offset: number } | null {
+  if (element.closest(INERT)) {
+    return null;
+  }
+
+  const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+
+  for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+    if ((text as Text).data && !text.parentElement?.closest(INERT)) {
+      return { node: text, offset: 0 };
+    }
+  }
+
+  const block = element.matches(BLOCKS) ? element : element.querySelector(BLOCKS);
+
+  return block ? { node: block, offset: 0 } : null;
+}
+
+/**
  * Whether a space typed at a place would be drawn.
  *
  * Inside a code block and in markup written out as its characters every
@@ -2668,21 +2747,22 @@ function spaceDrawn(value: string, at: number, block: HTMLElement | null): boole
 const NOTE_OPENING = /^\[\^[^\]\n]+\]:[ \t]*$/;
 
 /**
- * A space typed in front of spaces the page does not draw, where a line ends.
+ * A space typed in front of a space, which steps the caret over it rather than
+ * being refused. The source answers the same press the same way; see
+ * `steppedOver`.
  *
- * `crowdedBy` reads the file, and the file has a space there that nobody can
- * see: the caret at the end of a line goes in front of a space written at the
- * end of it, because in front of it is all the page has. So a space typed at
- * the end of what looks like a line with no space on it was refused for being
- * the second. The caret steps past the one that is there, which is what typing
- * it would have looked like.
+ * The space may be one the page does not draw. `crowdedBy` reads the file, and
+ * a space written at the end of a line is in the file and nowhere on the page:
+ * the caret at the end of the line goes in front of it, because in front of it
+ * is all the page has. Stepping past it is what typing it would have looked
+ * like.
  *
  * The two spaces of a hard break are the line's way of ending, and stepping in
  * among them would leave one, which is not a break. There a space is written,
  * so what is typed next is in front of the break rather than taking it apart.
  *
- * `null` where the space after the caret is one the page draws, and the refusal
- * is right: there is a space in the way and the reader can see it.
+ * `null` where there is no space after the caret, and the refusal stands: the
+ * press after a step is the one that is refused.
  */
 export function overSpaces(value: string, at: number): MawyEdit | null {
   let to = at;
@@ -2691,11 +2771,13 @@ export function overSpaces(value: string, at: number): MawyEdit | null {
     to += 1;
   }
 
-  if (to === at || value[at - 1] === ' ' || (to < value.length && value[to] !== '\n')) {
+  if (to === at) {
     return null;
   }
 
-  return to - at > 1 && value[to] === '\n' ? splice(value, at, at, ' ') : { value, caret: at + 1 };
+  return to - at > 1 && value[at - 1] !== ' ' && value[to] === '\n'
+    ? splice(value, at, at, ' ')
+    : { value, caret: at + 1 };
 }
 
 /**

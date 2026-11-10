@@ -1440,6 +1440,39 @@ describe('the toolbar and the keyboard', () => {
     expect(said()).toBe('Only one blank line in a row.');
   });
 
+  it('steps over the space and the blank line in front of the caret on the source', async () => {
+    const screen = await render(<MawyEditor defaultValue={'one two\n\nthree'} modes={['plain']} />);
+    const input = sourceOf(screen);
+    const said = () => screen.container.querySelector('.mawy-notice')?.textContent;
+
+    input.focus();
+    input.setSelectionRange(3, 3);
+    await userEvent.keyboard(' ');
+
+    // Over the space rather than refused, which is where a second one would
+    // have put the caret. See `steppedOver`.
+    await vi.waitFor(() => expect(input.selectionStart).toBe(4));
+    expect(input.value).toBe('one two\n\nthree');
+    expect(said()).toBeUndefined();
+
+    // With nothing left in front of it to step over, the next is refused.
+    await userEvent.keyboard(' ');
+    await vi.waitFor(() => expect(said()).toBe('Only one space in a row.'));
+    expect(input.value).toBe('one two\n\nthree');
+
+    // Down the blank line a line at a time, and refused on the line under it.
+    input.setSelectionRange(7, 7);
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(input.selectionStart).toBe(8));
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(input.selectionStart).toBe(9));
+    expect(input.value).toBe('one two\n\nthree');
+
+    await userEvent.keyboard('{Enter}');
+    await vi.waitFor(() => expect(said()).toBe('Only one blank line in a row.'));
+    expect(input.value).toBe('one two\n\nthree');
+  });
+
   it('keeps the spaces and the blank lines a code block is written with', async () => {
     const screen = await render(<MawyEditor defaultValue={'```\ncode\n```'} modes={['plain']} />);
     const input = sourceOf(screen);
@@ -3081,6 +3114,54 @@ describe('the document surface', () => {
     await userEvent.keyboard('x');
     await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('Hello\n\nx'));
     expect(drawn()).toEqual(['Hello', 'x']);
+  });
+
+  it('steps down into an empty paragraph and out of it on Enter, rather than writing another', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue={'One\n\n\n\nTwo'} mode="wysiwyg" onChange={onChange} />
+    );
+    const body = bodyOf(screen);
+    const drawn = () => [...body.children].map((block) => block.textContent);
+
+    expect(drawn()).toEqual(['One', '', 'Two']);
+
+    // At the end of a paragraph with an empty one under it, into that one. The
+    // next letter is typed there, and nothing was written for the press.
+    put(body, 'One', 3);
+    await userEvent.keyboard('{Enter}x');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One\n\nx\n\nTwo'));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(screen.container.querySelector('.mawy-notice')).toBeNull();
+
+    await userEvent.keyboard('{Backspace}');
+    await vi.waitFor(() => expect(drawn()).toEqual(['One', '', 'Two']));
+
+    // In the empty paragraph, down to the start of the block under it.
+    put(body, '', 0);
+    await userEvent.keyboard('{Enter}y');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One\n\n\n\nyTwo'));
+    expect(screen.container.querySelector('.mawy-notice')).toBeNull();
+  });
+
+  it('steps over a space on the drawn document before refusing the next', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor defaultValue="One two" mode="wysiwyg" onChange={onChange} />
+    );
+
+    put(bodyOf(screen), 'One two', 3);
+    await userEvent.keyboard(' ');
+    await new Promise((done) => setTimeout(done, 30));
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.container.querySelector('.mawy-notice')).toBeNull();
+
+    await userEvent.keyboard(' x');
+    await vi.waitFor(() => expect(onChange).toHaveBeenLastCalledWith('One xtwo'));
+    expect(screen.container.querySelector('.mawy-notice')?.textContent).toBe(
+      'Only one space in a row.'
+    );
   });
 
   it('takes an empty paragraph out with Backspace and Delete, one at a time', async () => {

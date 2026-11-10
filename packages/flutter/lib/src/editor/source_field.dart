@@ -556,7 +556,8 @@ const Map<ShortcutActivator, Intent> _shortcuts = <ShortcutActivator, Intent>{
 /// Only one character landing where the caret is is looked at, so a paste, a
 /// replacement and a document handed to the editor keep whatever whitespace
 /// they came with; a composition is left to finish first. See [crowdedBy] for
-/// the rule and for why it is one.
+/// the rule and for why it is one, and [steppedOver] for the press in front of
+/// the character it would write, which moves the caret instead.
 /// A list's shape, kept as the field is typed into.
 ///
 /// A line of words straight under a list item is that item's lazy continuation
@@ -704,6 +705,17 @@ class _OneOfEach extends TextInputFormatter {
 
     if (crowding == null) {
       return after;
+    }
+
+    // In front of the character the key would write, the caret steps over it
+    // rather than being refused. See [steppedOver].
+    final int? step = steppedOver(EditState(before.text, caret - 1, caret - 1), typed);
+
+    if (step != null) {
+      return before.copyWith(
+        selection: TextSelection.collapsed(offset: step),
+        composing: TextRange.empty,
+      );
     }
 
     onCrowded(crowding);

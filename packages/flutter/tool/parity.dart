@@ -455,6 +455,8 @@ List<Object?> _edits() {
     out['crowdedBy'] = crowding == null
         ? null
         : (crowding == MawyCrowding.space ? 'space' : 'break');
+    // And where the caret goes instead, for a space and for an `Enter`.
+    out['steppedOver'] = <Object?>[steppedOver(state, ' '), steppedOver(state, '\n')];
 
     final EditState broken = hardBreak(state);
 

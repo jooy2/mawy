@@ -16,6 +16,8 @@
 
 ### Changed
 
+- **A space or an `Enter` in front of the character it would write moves the caret past that character instead of being refused.** A second space in a row and a second blank line are still not written, but the press that would have written one with the caret in front of a space, or at the end of a line with a blank line under it, was refused and said so, though the caret was one character from where the press meant it to be. Now the caret steps over the space, and `Enter` walks down a run of blank lines a line at a time; only a press with nothing left to step over is refused. On `wysiwyg`, `Enter` at the end of a paragraph or a heading with an empty paragraph under it goes into that paragraph rather than writing a second one, and `Enter` in an empty paragraph goes down to the start of the block under it. It is still refused in an empty paragraph under the last block.
+
 - **The icon set this package draws is `lucide-react` 1.70 or newer.** It was 1.48 or newer. Every icon the editor and the viewer use is the same drawing in both versions, so nothing on the page changes. An application that holds its own `lucide-react` below 1.70 gets a second copy of it rather than sharing one, until it raises its own.
 
 ### Fixed

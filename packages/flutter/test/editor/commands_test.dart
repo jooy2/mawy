@@ -10,6 +10,7 @@ import 'package:mawy/src/editor/commands.dart'
         headingActive,
         keptList,
         runTableCommand,
+        steppedOver,
         tableAlignAt,
         tableOfSize;
 
@@ -693,6 +694,25 @@ void main() {
       expect(after('```\ncode\n\n\n|\n```'), isNull);
       expect(after('<div>\n  a  |b\n</div>'), isNull);
       expect(after('| a |  |\n| --- | --- |'), isNull);
+    });
+
+    test('steps the caret over the character in front of it rather than refusing', () {
+      expect(steppedOver(at('one| two'), ' '), 4);
+      // Past the space, nothing is left to step over and the press is refused.
+      expect(steppedOver(at('one |two'), ' '), isNull);
+      expect(steppedOver(at('one  |'), ' '), isNull);
+
+      // Down a run of blank lines a line at a time, and no further than the last.
+      expect(steppedOver(at('one|\n\ntwo'), '\n'), 4);
+      expect(steppedOver(at('one\n|\ntwo'), '\n'), 5);
+      expect(steppedOver(at('one\n\n|two'), '\n'), isNull);
+      expect(steppedOver(at('one\n\n|'), '\n'), isNull);
+    });
+
+    test('steps over only the character the key writes, and only for a caret', () {
+      expect(steppedOver(at('one|\n\ntwo'), ' '), isNull);
+      expect(steppedOver(at('one| two'), '\n'), isNull);
+      expect(steppedOver(at('on«e» two'), ' '), isNull);
     });
   });
 

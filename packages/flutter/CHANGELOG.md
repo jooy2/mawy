@@ -11,6 +11,10 @@
 ### Added
 
 - **A control of the application's own can wrap the selection.** `MawyEditorHandle` gained `wrap(before, after)`, which writes the two around the selection as one change, leaves the same words selected between them and puts the focus in the source; with nothing selected it writes both at the caret and leaves the caret between them. A button for an inline format the toolbar does not have, such as `:kbd[…]`, could only replace the selection with `insert`, which meant knowing what was selected. It does nothing in `preview`, while the editor is read only, or when both halves are empty. The React package's handle does the same.
+### Changed
+
+- **A space or an `Enter` in front of the character it would write moves the caret past that character instead of being refused.** A second space in a row and a second blank line are still not written, but the press that would have written one with the caret in front of a space, or at the end of a line with a blank line under it, was refused and said so, though the caret was one character from where the press meant it to be. Now the caret steps over the space, and `Enter` walks down a run of blank lines a line at a time; only a press with nothing left to step over is refused. A soft keyboard's space and line ending are read the same way. The React package does the same, and the parity check compares the two.
+
 
 ## 1.9.0 (2026-11-02)
 

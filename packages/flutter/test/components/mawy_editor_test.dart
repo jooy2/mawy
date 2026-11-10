@@ -2280,6 +2280,84 @@ void main() {
       expect(find.text('Only one blank line in a row.'), findsNothing);
     });
 
+    testWidgets('steps over the space and the blank line in front of the caret', (
+      WidgetTester tester,
+    ) async {
+      final List<String> seen = <String>[];
+
+      await tester.pumpWidget(
+        host(
+          MawyEditor(
+            defaultValue: 'one two\n\nthree',
+            mode: MawyEditorMode.plain,
+            status: const <MawyEditorStatusItem>[],
+            onChange: seen.add,
+          ),
+        ),
+      );
+
+      final EditableText field = tester.widget(_sourceField);
+
+      field.focusNode.requestFocus();
+      await tester.pump();
+      await tester.showKeyboard(_sourceField);
+
+      /// One character typed where the caret is, the way the platform sends it.
+      Future<void> type(String character) async {
+        final TextEditingValue was = field.controller.value;
+        final int at = was.selection.baseOffset;
+
+        tester.testTextInput.updateEditingValue(
+          TextEditingValue(
+            text: was.text.substring(0, at) + character + was.text.substring(at),
+            selection: TextSelection.collapsed(offset: at + 1),
+          ),
+        );
+        await tester.pump();
+      }
+
+      field.controller.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pump();
+
+      // Over the space rather than refused, which is where a second one would
+      // have put the caret. See `steppedOver`.
+      await type(' ');
+
+      expect(field.controller.text, 'one two\n\nthree');
+      expect(field.controller.selection.baseOffset, 4);
+      expect(find.text('Only one space in a row.'), findsNothing);
+
+      // With nothing left in front of it to step over, the next is refused. The
+      // word is placed under the caret a frame later.
+      await type(' ');
+      await tester.pump();
+
+      expect(field.controller.text, 'one two\n\nthree');
+      expect(find.text('Only one space in a row.'), findsOneWidget);
+
+      // Down the blank line a line at a time, and refused on the line under it.
+      field.controller.selection = const TextSelection.collapsed(offset: 7);
+      await tester.pump();
+      await type('\n');
+
+      expect(field.controller.selection.baseOffset, 8);
+
+      await type('\n');
+
+      expect(field.controller.selection.baseOffset, 9);
+      expect(field.controller.text, 'one two\n\nthree');
+
+      await type('\n');
+      await tester.pump();
+
+      expect(field.controller.text, 'one two\n\nthree');
+      expect(find.text('Only one blank line in a row.'), findsOneWidget);
+      expect(seen, isEmpty);
+
+      await tester.pump(const Duration(milliseconds: 1900));
+      await tester.pumpAndSettle();
+    });
+
     /// The way out of the middle of a list. `Enter` gives the marker up, and
     /// between two items there is nowhere to put the blank line that would part
     /// the caret from them, so the first letter typed there writes it. See
