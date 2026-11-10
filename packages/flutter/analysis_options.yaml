@@ -31,3 +31,4 @@ analyzer:
     avoid_relative_lib_imports: error
   exclude:
     - example/build/**
+    - build/**

@@ -11,3 +11,7 @@ linter:
     - prefer_single_quotes
     - directives_ordering
     - use_super_parameters
+analyzer:
+  exclude:
+    - build/**
+    - web/**
