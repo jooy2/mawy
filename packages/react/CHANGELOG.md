@@ -14,6 +14,10 @@
 
 - **A control of the application's own can wrap the selection.** `MawyEditorHandle` gained `wrap(before, after)`, which writes the two around the selection as one step to undo and leaves the same words selected, or writes both at the caret and leaves the caret between them. A button for an inline format the toolbar does not have, such as `:kbd[…]`, had to read `selectionStart` off the textarea or the page's own selection, and on `wysiwyg` that is the drawn words rather than the Markdown under them. `wrap` reads the selection of whichever surface is showing. It does nothing in `preview` or while the editor is read-only, as `insert` does.
 
+### Changed
+
+- **The icon set this package draws is `lucide-react` 1.70 or newer.** It was 1.48 or newer. Every icon the editor and the viewer use is the same drawing in both versions, so nothing on the page changes. An application that holds its own `lucide-react` below 1.70 gets a second copy of it rather than sharing one, until it raises its own.
+
 ### Fixed
 
 - **A document with no link in it could not be scrolled from the keyboard.** The viewer's scrolling pane was out of the tab order, so a keyboard had nothing in it to put the focus on, and axe reported `scrollable-region-focusable`. The pane is a tab stop now, a region named after the file or "Document", with a focus ring when it is reached by `Tab`. The same pane is the editor's preview on `split` and `preview`. The empty state stays out of the tab order, because it has its own button and nothing to scroll.
