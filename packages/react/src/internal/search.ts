@@ -6,11 +6,12 @@
  * arithmetic, and a test that has to mount an editor to ask it is a test nobody
  * writes the awkward half of.
  *
- * Plain text, never a regular expression. That is a decision rather than a
- * missing feature: an editor whose find box quietly compiles `(` into a syntax
- * error is one a writer cannot trust with a document, and a Markdown document
- * is full of `*`, `[`, `.` and `+`. What is here instead is the case-sensitive
- * switch, which is the option people actually reach for.
+ * Plain text unless a regular expression is asked for. An editor whose find box
+ * quietly compiled `(` into a syntax error would be one a writer could not trust
+ * with a document, and a Markdown document is full of `*`, `[`, `.` and `+`; so
+ * the box is plain text, and a pattern is something switched on. A pattern
+ * that is not one finds nothing, and the bar says so. `search.dart` reads the
+ * same patterns the same way: Dart's regular expressions are JavaScript's.
  */
 
 /** Where one match sits in the document. */
@@ -75,9 +76,18 @@ function fold(text: string): string {
  * found, so `aa` in `aaaa` is two rather than three. Which is what makes
  * replacing all of them one pass rather than a fixed point.
  */
-export function findMatches(value: string, query: string, matchCase: boolean): MawyMatch[] {
+export function findMatches(
+  value: string,
+  query: string,
+  matchCase: boolean,
+  regex = false
+): MawyMatch[] {
   if (!query) {
     return [];
+  }
+
+  if (regex) {
+    return patternMatches(value, query, matchCase).map(({ start, end }) => ({ start, end }));
   }
 
   const haystack = matchCase ? value : fold(value);
@@ -95,6 +105,148 @@ export function findMatches(value: string, query: string, matchCase: boolean): M
     out.push({ start: found, end: found + needle.length });
     at = found + needle.length;
   }
+}
+
+/**
+ * A query read as a regular expression, or `null` where it is not one.
+ *
+ * Over the whole document with `^` and `$` at the ends of its lines, which is
+ * what somebody looking for a line that starts with something means. Without
+ * the Unicode switch, which turns a lone `{` or an escaped `-` into an error, and
+ * a find box is somewhere a pattern is typed a character at a time.
+ */
+export function patternOf(query: string, matchCase: boolean): RegExp | null {
+  try {
+    return new RegExp(query, matchCase ? 'gm' : 'gim');
+  } catch {
+    return null;
+  }
+}
+
+/** Whether a query asked to be read as a pattern is not one. */
+export function invalidPattern(query: string, regex: boolean): boolean {
+  return regex && query !== '' && patternOf(query, true) === null;
+}
+
+/**
+ * Every match of a pattern, and what it captured.
+ *
+ * A match of nothing at all is passed over: `a*` matches nothing between every
+ * two letters, and a match that cannot be drawn or replaced is a count that
+ * means nothing. The search goes on from the next character.
+ */
+function patternMatches(
+  value: string,
+  query: string,
+  matchCase: boolean
+): Array<MawyMatch & { found: RegExpExecArray }> {
+  const pattern = patternOf(query, matchCase);
+  const out: Array<MawyMatch & { found: RegExpExecArray }> = [];
+
+  if (!pattern) {
+    return out;
+  }
+
+  for (let found = pattern.exec(value); found; found = pattern.exec(value)) {
+    if (!found[0]) {
+      pattern.lastIndex = found.index + 1;
+      continue;
+    }
+
+    out.push({ start: found.index, end: found.index + found[0].length, found });
+  }
+
+  return out;
+}
+
+/**
+ * A replacement with what a match captured written into it: `$&` is the whole
+ * match, `$1` to `$99` a numbered group, `$<name>` a named one and `$$` a dollar
+ * sign. A number past the groups there are is the characters it is, and so is
+ * any other `$`.
+ */
+function expand(template: string, found: RegExpExecArray): string {
+  const groups = found.length - 1;
+  let out = '';
+
+  for (let at = 0; at < template.length; at += 1) {
+    const character = template[at];
+
+    if (character !== '$' || at + 1 >= template.length) {
+      out += character;
+      continue;
+    }
+
+    const next = template[at + 1];
+
+    if (next === '$') {
+      out += '$';
+      at += 1;
+      continue;
+    }
+
+    if (next === '&') {
+      out += found[0];
+      at += 1;
+      continue;
+    }
+
+    if (next === '<' && found.groups) {
+      const close = template.indexOf('>', at + 2);
+
+      if (close !== -1) {
+        out += found.groups[template.slice(at + 2, close)] ?? '';
+        at = close;
+        continue;
+      }
+    }
+
+    const two = Number.parseInt(template.slice(at + 1, at + 3), 10);
+    const one = Number.parseInt(next, 10);
+
+    if (/^\d\d$/.test(template.slice(at + 1, at + 3)) && two >= 1 && two <= groups) {
+      out += found[two] ?? '';
+      at += 2;
+      continue;
+    }
+
+    if (/^\d$/.test(next) && one >= 1 && one <= groups) {
+      out += found[one] ?? '';
+      at += 1;
+      continue;
+    }
+
+    out += character;
+  }
+
+  return out;
+}
+
+/**
+ * What one match of a pattern is replaced with, with what it captured written
+ * in. The pattern is read again at the match, since a match is only where it is
+ * and not what it captured. See `expand`.
+ */
+export function replacementFor(
+  value: string,
+  match: MawyMatch,
+  query: string,
+  replacement: string,
+  matchCase: boolean
+): string {
+  const pattern = patternOf(query, matchCase);
+
+  if (!pattern) {
+    return replacement;
+  }
+
+  const anchored = new RegExp(pattern.source, `${pattern.flags.replace('g', '')}y`);
+
+  anchored.lastIndex = match.start;
+
+  const found = anchored.exec(value);
+
+  return found ? expand(replacement, found) : replacement;
 }
 
 /**
@@ -151,9 +303,12 @@ export function replaceAll(
   value: string,
   query: string,
   replacement: string,
-  matchCase: boolean
+  matchCase: boolean,
+  regex = false
 ): { value: string; count: number } {
-  const matches = findMatches(value, query, matchCase);
+  const matches = regex
+    ? patternMatches(value, query, matchCase)
+    : findMatches(value, query, matchCase);
 
   if (matches.length === 0) {
     return { value, count: 0 };
@@ -163,7 +318,9 @@ export function replaceAll(
   let at = 0;
 
   for (const match of matches) {
-    out += value.slice(at, match.start) + replacement;
+    out +=
+      value.slice(at, match.start) +
+      ('found' in match ? expand(replacement, match.found as RegExpExecArray) : replacement);
     at = match.end;
   }
 

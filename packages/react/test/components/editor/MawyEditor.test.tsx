@@ -1857,6 +1857,37 @@ describe('finding', () => {
     );
   });
 
+  it('reads the query as a regular expression when switched to, and says when it is not one', async () => {
+    const onChange = vi.fn();
+    const screen = await render(
+      <MawyEditor
+        defaultValue="On 2024-01-02 and 2025-12-31."
+        modes={['plain']}
+        onChange={onChange}
+        style={WIDE}
+      />
+    );
+    const count = () => screen.container.querySelector('.mawy-find-count')?.textContent;
+
+    await open(screen);
+    type(findField(screen), '(\\d{4})-(\\d\\d)-(\\d\\d)');
+    await vi.waitFor(() => expect(count()).toBe('No matches'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Regular expression' }));
+    await vi.waitFor(() => expect(count()).toBe('1 of 2'));
+
+    // What a match captured is written into its replacement.
+    type(screen.container.querySelectorAll('.mawy-find-input')[1] as HTMLInputElement, '$3/$2/$1');
+    await userEvent.click(screen.getByRole('button', { name: 'Replace all' }));
+    await vi.waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith('On 02/01/2024 and 31/12/2025.')
+    );
+
+    // A pattern half typed is not one, and finds nothing rather than failing.
+    type(findField(screen), '(');
+    await vi.waitFor(() => expect(count()).toBe('Invalid pattern'));
+  });
+
   it('opens on the shortcut, takes the focus, and counts what it found', async () => {
     const screen = await render(<MawyEditor defaultValue="one two one" modes={['plain']} />);
 

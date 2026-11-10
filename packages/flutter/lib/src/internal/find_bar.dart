@@ -16,6 +16,7 @@ library;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:mawy/src/editor/search.dart';
 import 'package:mawy/src/internal/i18n.dart';
 import 'package:mawy/src/internal/toolbar.dart';
 import 'package:mawy/src/theme/tokens.dart';
@@ -31,6 +32,8 @@ class MawyFindBar extends StatefulWidget {
     required this.onQueryChange,
     required this.matchCase,
     required this.onMatchCaseChange,
+    required this.regex,
+    required this.onRegexChange,
     required this.total,
     required this.current,
     required this.onStep,
@@ -75,6 +78,12 @@ class MawyFindBar extends StatefulWidget {
 
   /// Called when the switch is pressed.
   final ValueChanged<bool> onMatchCaseChange;
+
+  /// Whether the query is read as a regular expression. See `patternOf`.
+  final bool regex;
+
+  /// Called when that switch is pressed.
+  final ValueChanged<bool> onRegexChange;
 
   /// How many matches there are.
   final int total;
@@ -191,6 +200,11 @@ class _MawyFindBarState extends State<MawyFindBar> {
   }
 
   String get _count {
+    // Asked to be a pattern and not one, which is said in place of the count.
+    if (invalidPattern(widget.query, regex: widget.regex)) {
+      return widget.strings.findInvalid;
+    }
+
     if (widget.query.isEmpty) {
       return '';
     }
@@ -283,6 +297,13 @@ class _MawyFindBarState extends State<MawyFindBar> {
                     tokens: tokens,
                     pressed: widget.matchCase,
                     onPressed: () => widget.onMatchCaseChange(!widget.matchCase),
+                  ),
+                  MawyToolbarButton(
+                    icon: LucideIcons.regex,
+                    label: strings.findRegex,
+                    tokens: tokens,
+                    pressed: widget.regex,
+                    onPressed: () => widget.onRegexChange(!widget.regex),
                   ),
                   MawyToolbarButton(
                     icon: LucideIcons.chevronUp,

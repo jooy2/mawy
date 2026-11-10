@@ -16,10 +16,12 @@ order: 5
 ::: fw flutter
 
 ```dart
-List<MawyMatch> findMatches(String value, String query, bool matchCase);
+List<MawyMatch> findMatches(String value, String query, bool matchCase, {bool regex = false});
 int matchFrom(List<MawyMatch> matches, int caret, {required bool forwards});
 MawyReplaced replaceMatch(String value, MawyMatch match, String replacement);
-MawyReplacedAll replaceAll(String value, String query, String replacement, bool matchCase);
+MawyReplacedAll replaceAll(String value, String query, String replacement, bool matchCase, {bool regex = false});
+String replacementFor(String value, MawyMatch match, String query, String replacement, bool matchCase);
+bool invalidPattern(String query, {required bool regex});
 ```
 
 문자열을 다루는 순수 함수입니다. 겹치는 일치에 "모두 바꾸기"가 무엇을 하는지는 산술에 관한 물음인데, 그것을 물으려고 에디터를 올려야 하는 테스트는 까다로운 절반을 아무도 쓰지 않는 테스트입니다. `src/internal/search.ts`를 함수 하나하나까지 Dart로 옮긴 것이고, `tool/parity.dart`가 둘을 비교합니다.
@@ -34,6 +36,6 @@ MawyReplacedAll replaceAll(String value, String query, String replacement, bool 
 
 `replaceAll`은 `replaceMatch`를 반복하지 않고 한 번에 처리하는데, 속도 때문이 아닙니다. `a`를 `aa`로 한 번에 하나씩 바꾸면 바꿔 놓은 것을 다시 찾아 또 바꾸기를 끝없이 반복합니다. 검색 대상은 손대기 전의 문서입니다.
 
-**정규식이 아니라 언제나 평문입니다.** 빠진 기능이 아니라 결정입니다. 찾기 상자가 `(`를 조용히 문법 오류로 컴파일하는 에디터는 글 쓰는 사람이 문서를 맡길 수 없는 에디터이고, 마크다운 문서에는 `*`, `[`, `.`, `+`가 가득합니다. 대신 있는 것이 대소문자 구분 스위치이고, 사람들이 실제로 찾는 옵션이 그것입니다.
+**`regex`를 켜기 전에는 평문입니다.** 찾기 상자가 `(`를 조용히 문법 오류로 컴파일하는 에디터는 글 쓰는 사람이 문서를 맡길 수 없는 에디터이고, 마크다운 문서에는 `*`, `[`, `.`, `+`가 가득합니다. 그래서 정규식은 켜야 쓰는 것입니다. `regex`를 켜면 질의는 Dart 정규식이고, JavaScript 정규식과 똑같이 읽히며, `^`와 `$`는 줄마다의 처음과 끝입니다. 아무것도 아닌 것에 일치하면 건너뛰고, 정규식이 아닌 질의는 아무것도 찾지 않습니다. 그 여부는 `invalidPattern`이 알려 줍니다. `replaceAll`은 일치마다 잡은 것을 바꿀 글에 넣습니다. `$&`는 일치 전체, `$1`부터 `$99`는 번호 붙은 그룹, `$<name>`은 이름 붙은 그룹, `$$`는 달러 기호입니다. `replacementFor`는 일치 하나의 그 바꿀 글이고, `replaceMatch`에 넘기면 됩니다.
 
 :::

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { findMatches, matchFrom, replaceAll, replaceMatch } from '../../src/internal/search.js';
+import {
+  findMatches,
+  invalidPattern,
+  matchFrom,
+  replaceAll,
+  replaceMatch,
+  replacementFor
+} from '../../src/internal/search.js';
 
 /**
  * Finding and replacing, as arithmetic on a string.
@@ -117,5 +124,44 @@ describe('replacing', () => {
       value: 'İstanbul and two',
       count: 1
     });
+  });
+});
+
+describe('a regular expression', () => {
+  const value = 'Date 2024-01-02 and 2025-12-31.\nnext line';
+
+  it('finds what the pattern matches, only when asked to read it as one', () => {
+    expect(findMatches(value, '\\d{4}', true, true)).toEqual([
+      { start: 5, end: 9 },
+      { start: 20, end: 24 }
+    ]);
+    expect(findMatches(value, '\\d{4}', true)).toEqual([]);
+    // Each line its own for `^` and `$`, and the case left out when asked.
+    expect(findMatches(value, '^NEXT', false, true)).toEqual([{ start: 32, end: 36 }]);
+  });
+
+  it('passes over a match of nothing, and finds nothing for a pattern that is not one', () => {
+    expect(findMatches('aaa', 'b*', true, true)).toEqual([]);
+    expect(findMatches('one (two)', '(', true, true)).toEqual([]);
+    expect(invalidPattern('(', true)).toBe(true);
+    expect(invalidPattern('(', false)).toBe(false);
+    expect(invalidPattern('', true)).toBe(false);
+  });
+
+  it('writes what each match captured into its replacement', () => {
+    expect(replaceAll(value, '(\\d{4})-(\\d\\d)-(\\d\\d)', '$3/$2/$1', true, true)).toEqual({
+      value: 'Date 02/01/2024 and 31/12/2025.\nnext line',
+      count: 2
+    });
+    expect(replaceAll('Ada', '(?<who>\\w+)', '<$<who>> [$&] $$ $9', true, true).value).toBe(
+      '<Ada> [Ada] $ $9'
+    );
+
+    const [, second] = findMatches(value, '(\\d{4})', true, true);
+
+    expect(replacementFor(value, second, '(\\d{4})', 'y$1', true)).toBe('y2025');
+    expect(replaceMatch(value, second, 'y2025').value).toBe(
+      'Date 2024-01-02 and y2025-12-31.\nnext line'
+    );
   });
 });

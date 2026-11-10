@@ -97,16 +97,22 @@ class MawyFindDrawing {
 
 const MawyFindDrawing _drawnAsItIs = MawyFindDrawing(source: '');
 
+/// How a query is read: with its case or without, and as words or as a pattern.
+typedef _QueryRead = ({bool matchCase, bool regex});
+
 /// Every match in what [blocks] draw, numbered in reading order.
 MawyFound findInDocument(
   List<MdBlock> blocks,
   String query,
   bool matchCase, {
   MawyFindDrawing drawing = _drawnAsItIs,
+  bool regex = false,
 }) {
   if (query.isEmpty) {
     return MawyFound.nothing();
   }
+
+  final _QueryRead how = (matchCase: matchCase, regex: regex);
 
   final Map<MdInline, List<MawyDocumentMatch>> at =
       Map<MdInline, List<MawyDocumentMatch>>.identity();
@@ -119,7 +125,7 @@ MawyFound findInDocument(
   for (int index = 0; index < blocks.length; index += 1) {
     final int before = seen;
 
-    seen = _searchBlocks(<MdBlock>[blocks[index]], query, matchCase, drawing, at, seen);
+    seen = _searchBlocks(<MdBlock>[blocks[index]], query, how, drawing, at, seen);
 
     for (int match = before; match < seen; match += 1) {
       inBlock.add(index);
@@ -133,38 +139,38 @@ MawyFound findInDocument(
 int _searchBlocks(
   List<MdBlock> blocks,
   String query,
-  bool matchCase,
+  _QueryRead how,
   MawyFindDrawing drawing,
   Map<MdInline, List<MawyDocumentMatch>> into,
   int seen,
 ) {
   for (final MdBlock block in blocks) {
     if (block is MdHeading) {
-      seen = _searchInline(block.children, query, matchCase, drawing, into, seen);
+      seen = _searchInline(block.children, query, how, drawing, into, seen);
     } else if (block is MdParagraph) {
-      seen = _searchInline(block.children, query, matchCase, drawing, into, seen);
+      seen = _searchInline(block.children, query, how, drawing, into, seen);
     } else if (block is MdBlockquote) {
-      seen = _searchBlocks(block.children, query, matchCase, drawing, into, seen);
+      seen = _searchBlocks(block.children, query, how, drawing, into, seen);
     } else if (block is MdContainerDirective) {
-      seen = _searchBlocks(block.children, query, matchCase, drawing, into, seen);
+      seen = _searchBlocks(block.children, query, how, drawing, into, seen);
     } else if (block is MdLeafDirective) {
-      seen = _searchInline(block.children, query, matchCase, drawing, into, seen);
+      seen = _searchInline(block.children, query, how, drawing, into, seen);
     } else if (block is MdList) {
       for (final MdListItem item in block.children) {
-        seen = _searchBlocks(item.children, query, matchCase, drawing, into, seen);
+        seen = _searchBlocks(item.children, query, how, drawing, into, seen);
       }
     } else if (block is MdTable) {
       for (final MdTableRow row in block.children) {
         for (final MdTableCell cell in row.children) {
-          seen = _searchInline(cell.children, query, matchCase, drawing, into, seen);
+          seen = _searchInline(cell.children, query, how, drawing, into, seen);
         }
       }
     } else if (block is MdDefinitionList) {
       for (final MdNode entry in block.children) {
         if (entry is MdDefinitionTerm) {
-          seen = _searchInline(entry.children, query, matchCase, drawing, into, seen);
+          seen = _searchInline(entry.children, query, how, drawing, into, seen);
         } else if (entry is MdDefinitionDescription) {
-          seen = _searchBlocks(entry.children, query, matchCase, drawing, into, seen);
+          seen = _searchBlocks(entry.children, query, how, drawing, into, seen);
         }
       }
     }
@@ -181,36 +187,36 @@ int _searchBlocks(
 int _searchInline(
   List<MdInline> nodes,
   String query,
-  bool matchCase,
+  _QueryRead how,
   MawyFindDrawing drawing,
   Map<MdInline, List<MawyDocumentMatch>> into,
   int seen,
 ) {
   for (final MdInline node in nodes) {
     if (node is MdText) {
-      seen = _searchRun(node, node.value, query, matchCase, into, seen);
+      seen = _searchRun(node, node.value, query, how, into, seen);
     } else if (node is MdInlineCode) {
-      seen = _searchRun(node, node.value, query, matchCase, into, seen);
+      seen = _searchRun(node, node.value, query, how, into, seen);
     } else if (node is MdLink) {
       if (drawing.links == MawyLinkPolicy.source) {
-        seen = _searchRun(node, _sourceOf(node, drawing), query, matchCase, into, seen);
+        seen = _searchRun(node, _sourceOf(node, drawing), query, how, into, seen);
       } else if (drawing.links != MawyLinkPolicy.hide) {
-        seen = _searchInline(node.children, query, matchCase, drawing, into, seen);
+        seen = _searchInline(node.children, query, how, drawing, into, seen);
       }
     } else if (node is MdImage) {
       if (drawing.images == MawyImagePolicy.source) {
-        seen = _searchRun(node, _sourceOf(node, drawing), query, matchCase, into, seen);
+        seen = _searchRun(node, _sourceOf(node, drawing), query, how, into, seen);
       } else if (drawing.images == MawyImagePolicy.text) {
-        seen = _searchRun(node, node.alt, query, matchCase, into, seen);
+        seen = _searchRun(node, node.alt, query, how, into, seen);
       }
     } else if (node is MdEmphasis) {
-      seen = _searchInline(node.children, query, matchCase, drawing, into, seen);
+      seen = _searchInline(node.children, query, how, drawing, into, seen);
     } else if (node is MdStrong) {
-      seen = _searchInline(node.children, query, matchCase, drawing, into, seen);
+      seen = _searchInline(node.children, query, how, drawing, into, seen);
     } else if (node is MdDelete) {
-      seen = _searchInline(node.children, query, matchCase, drawing, into, seen);
+      seen = _searchInline(node.children, query, how, drawing, into, seen);
     } else if (node is MdTextDirective) {
-      seen = _searchInline(node.children, query, matchCase, drawing, into, seen);
+      seen = _searchInline(node.children, query, how, drawing, into, seen);
     }
 
     // A picture drawn as a picture, a footnote's number, a piece of raw inline
@@ -230,11 +236,11 @@ int _searchRun(
   MdInline node,
   String value,
   String query,
-  bool matchCase,
+  _QueryRead how,
   Map<MdInline, List<MawyDocumentMatch>> into,
   int seen,
 ) {
-  final List<MawyMatch> matches = findMatches(value, query, matchCase);
+  final List<MawyMatch> matches = findMatches(value, query, how.matchCase, regex: how.regex);
 
   if (matches.isEmpty) {
     return seen;

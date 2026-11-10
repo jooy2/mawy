@@ -44,7 +44,13 @@ import {
   tableSpanAt,
   toggleHeading
 } from '../src/internal/commands.ts';
-import { findMatches, matchFrom, replaceAll, replaceMatch } from '../src/internal/search.ts';
+import {
+  findMatches,
+  matchFrom,
+  replaceAll,
+  replaceMatch,
+  replacementFor
+} from '../src/internal/search.ts';
 import {
   caretAt,
   countBytes,
@@ -306,14 +312,20 @@ const edits = JSON.parse(
  */
 const searches = JSON.parse(
   readFileSync(resolve(rootDir, 'packages/flutter/tool/searches.json'), 'utf8')
-).map(([value, query, matchCase, caret, replacement]) => {
-  const matches = findMatches(value, query, matchCase);
+).map(([value, query, matchCase, caret, replacement, regex = false]) => {
+  const matches = findMatches(value, query, matchCase, regex);
   const first = matches[0];
-  const replaced = first ? replaceMatch(value, first, replacement) : null;
-  const all = replaceAll(value, query, replacement, matchCase);
+  const replaced = first
+    ? replaceMatch(
+        value,
+        first,
+        regex ? replacementFor(value, first, query, replacement, matchCase) : replacement
+      )
+    : null;
+  const all = replaceAll(value, query, replacement, matchCase, regex);
 
   return {
-    input: [value, query, matchCase, caret, replacement],
+    input: [value, query, matchCase, caret, replacement, regex],
     matches: matches.map((match) => [match.start, match.end]),
     forwards: matchFrom(matches, caret, true),
     backwards: matchFrom(matches, caret, false),
@@ -420,8 +432,14 @@ const finds = JSON.parse(
 const found = corpus().map((document) => {
   const blocks = parseMarkdown(document).root.children;
 
-  return finds.map(([query, matchCase, links, images]) => {
-    const answer = findInDocument(blocks, query, matchCase, { source: document, links, images });
+  return finds.map(([query, matchCase, links, images, regex = false]) => {
+    const answer = findInDocument(
+      blocks,
+      query,
+      matchCase,
+      { source: document, links, images },
+      regex
+    );
 
     return [
       answer.total,

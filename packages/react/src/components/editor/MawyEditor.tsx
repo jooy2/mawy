@@ -117,7 +117,14 @@ import { measureAnchors, previewScrollFor, type MawyScrollAnchor } from '../../i
 import { MawyViewer } from '../viewer/index.js';
 import { DEFAULT_EDITOR_TOOLBAR, MawyEditorToolbar } from './MawyEditorToolbar.js';
 import { FindBar } from '../../internal/find.js';
-import { findMatches, matchFrom, replaceAll, replaceMatch } from '../../internal/search.js';
+import {
+  findMatches,
+  invalidPattern,
+  matchFrom,
+  replaceAll,
+  replaceMatch,
+  replacementFor
+} from '../../internal/search.js';
 import { drawnMatches, paintMatches, rangeFor, unpaintMatches } from '../../internal/drawnFind.js';
 import {
   MAWY_ACCEPT,
@@ -735,6 +742,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
   const [query, setQuery] = React.useState('');
   const [replacement, setReplacement] = React.useState('');
   const [matchCase, setMatchCase] = React.useState(false);
+  /** Whether the find bar reads its query as a regular expression. See `patternOf`. */
+  const [regex, setRegex] = React.useState(false);
   const tips = useDismissableTips();
   /** What the editor is saying about an upload, under the document. */
   const [note, setNote] = React.useState<{ text: string; failed: boolean } | null>(null);
@@ -3177,8 +3186,8 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
    * ------------------------------------------------------------------ */
 
   const searched = React.useMemo(
-    () => (finding ? findMatches(text, query, matchCase) : []),
-    [finding, text, query, matchCase]
+    () => (finding ? findMatches(text, query, matchCase, regex) : []),
+    [finding, text, query, matchCase, regex]
   );
   /**
    * What the find bar counts and steps through. On the drawn document, only
@@ -3441,6 +3450,9 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
           onReplacementChange={setReplacement}
           matchCase={matchCase}
           onMatchCaseChange={setMatchCase}
+          regex={regex}
+          onRegexChange={setRegex}
+          invalid={invalidPattern(query, regex)}
           total={matches.length}
           current={currentMatch}
           onStep={step}
@@ -3451,7 +3463,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               return;
             }
 
-            const next = replaceMatch(text, match, replacement);
+            const next = replaceMatch(
+              text,
+              match,
+              regex ? replacementFor(text, match, query, replacement, matchCase) : replacement
+            );
 
             // Written without a selection put on the page, which on the drawn
             // document would take the focus from the replacement being typed.
@@ -3480,7 +3496,11 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               let at = 0;
 
               for (const match of matches) {
-                out += text.slice(at, match.start) + replacement;
+                out +=
+                  text.slice(at, match.start) +
+                  (regex
+                    ? replacementFor(text, match, query, replacement, matchCase)
+                    : replacement);
                 at = match.end;
               }
 
@@ -3493,7 +3513,7 @@ export const MawyEditor = React.forwardRef<HTMLDivElement, MawyEditorProps>(func
               return;
             }
 
-            const next = replaceAll(text, query, replacement, matchCase);
+            const next = replaceAll(text, query, replacement, matchCase, regex);
 
             if (next.count) {
               apply(

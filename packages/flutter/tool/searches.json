@@ -117,5 +117,61 @@
   true,
   1,
   "O"
+ ],
+ [
+  "Date 2024-01-02 and 2025-12-31.",
+  "(\\d{4})-(\\d\\d)-(\\d\\d)",
+  true,
+  0,
+  "$3/$2/$1",
+  true
+ ],
+ [
+  "Name: Ada\nname: Grace",
+  "^name: (?<who>\\w+)$",
+  false,
+  12,
+  "<$<who>> $$ $& $9",
+  true
+ ],
+ [
+  "aaa",
+  "b*",
+  true,
+  0,
+  "x",
+  true
+ ],
+ [
+  "one (two)",
+  "(",
+  true,
+  0,
+  "x",
+  true
+ ],
+ [
+  "İstanbul ıi Σσς",
+  "i",
+  false,
+  0,
+  "_",
+  true
+ ],
+ [
+  "a.b.c",
+  ".",
+  true,
+  2,
+  "-",
+  false
+ ],
+ [
+  "a.b.c",
+  "\\.",
+  true,
+  2,
+  "-",
+  true
  ]
 ]

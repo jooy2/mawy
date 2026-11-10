@@ -8,6 +8,7 @@ import {
   CloseIcon,
   NextMatchIcon,
   PreviousMatchIcon,
+  RegexIcon,
   ReplaceAllIcon,
   ReplaceIcon
 } from './icons.js';
@@ -17,6 +18,11 @@ export interface FindBarProps {
   onQueryChange: (query: string) => void;
   matchCase: boolean;
   onMatchCaseChange: (matchCase: boolean) => void;
+  /** Whether the query is read as a regular expression. */
+  regex: boolean;
+  onRegexChange: (regex: boolean) => void;
+  /** Whether it is asked to be one and is not, which is said in place of the count. */
+  invalid?: boolean;
   /** How many matches there are, and which one is being stepped through. */
   total: number;
   current: number;
@@ -59,6 +65,9 @@ export function FindBar({
   onReplacementChange,
   matchCase,
   onMatchCaseChange,
+  regex,
+  onRegexChange,
+  invalid,
   total,
   current,
   onStep,
@@ -78,11 +87,13 @@ export function FindBar({
     field.current?.select();
   }, []);
 
-  const count = query
-    ? total === 0
-      ? strings.findNoMatches
-      : fill(strings.findMatches, { N: String(current + 1), T: String(total) })
-    : '';
+  const count = invalid
+    ? strings.findInvalid
+    : query
+      ? total === 0
+        ? strings.findNoMatches
+        : fill(strings.findMatches, { N: String(current + 1), T: String(total) })
+      : '';
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter') {
@@ -131,6 +142,13 @@ export function FindBar({
           pressed={matchCase}
           aria-pressed={matchCase}
           onClick={() => onMatchCaseChange(!matchCase)}
+        />
+        <IconButton
+          label={strings.findRegex}
+          icon={<RegexIcon className="mawy-icon" aria-hidden="true" />}
+          pressed={regex}
+          aria-pressed={regex}
+          onClick={() => onRegexChange(!regex)}
         />
         <IconButton
           label={strings.findPrevious}

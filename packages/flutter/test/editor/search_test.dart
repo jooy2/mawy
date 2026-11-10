@@ -156,4 +156,52 @@ void main() {
       expect(replaced.count, 1);
     });
   });
+
+  group('a regular expression', () {
+    const String value = 'Date 2024-01-02 and 2025-12-31.\nnext line';
+
+    List<List<int>> spans(List<MawyMatch> matches) =>
+        matches.map((MawyMatch match) => <int>[match.start, match.end]).toList();
+
+    test('finds what the pattern matches, only when asked to read it as one', () {
+      expect(spans(findMatches(value, r'\d{4}', true, regex: true)), <List<int>>[
+        <int>[5, 9],
+        <int>[20, 24],
+      ]);
+      expect(findMatches(value, r'\d{4}', true), isEmpty);
+      // Each line its own for `^` and `$`, and the case left out when asked.
+      expect(spans(findMatches(value, '^NEXT', false, regex: true)), <List<int>>[
+        <int>[32, 36],
+      ]);
+    });
+
+    test('passes over a match of nothing, and finds nothing for a pattern that is not one', () {
+      expect(findMatches('aaa', 'b*', true, regex: true), isEmpty);
+      expect(findMatches('one (two)', '(', true, regex: true), isEmpty);
+      expect(invalidPattern('(', regex: true), isTrue);
+      expect(invalidPattern('(', regex: false), isFalse);
+      expect(invalidPattern('', regex: true), isFalse);
+    });
+
+    test('writes what each match captured into its replacement', () {
+      final MawyReplacedAll dates = replaceAll(
+        value,
+        r'(\d{4})-(\d\d)-(\d\d)',
+        r'$3/$2/$1',
+        true,
+        regex: true,
+      );
+
+      expect(dates.value, 'Date 02/01/2024 and 31/12/2025.\nnext line');
+      expect(dates.count, 2);
+      expect(
+        replaceAll('Ada', r'(?<who>\w+)', r'<$<who>> [$&] $$ $9', true, regex: true).value,
+        r'<Ada> [Ada] $ $9',
+      );
+
+      final MawyMatch second = findMatches(value, r'(\d{4})', true, regex: true)[1];
+
+      expect(replacementFor(value, second, r'(\d{4})', r'y$1', true), 'y2025');
+    });
+  });
 }

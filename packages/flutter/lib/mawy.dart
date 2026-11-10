@@ -38,7 +38,16 @@ export 'src/editor/mawy_editor.dart'
         kMawyEditorStatus,
         kMawyEditorToolbar;
 export 'src/editor/search.dart'
-    show MawyMatch, MawyReplaced, MawyReplacedAll, findMatches, matchFrom, replaceAll, replaceMatch;
+    show
+        MawyMatch,
+        MawyReplaced,
+        MawyReplacedAll,
+        findMatches,
+        invalidPattern,
+        matchFrom,
+        replaceAll,
+        replaceMatch,
+        replacementFor;
 export 'src/highlight.dart' show kMawyHighlightLanguages, mawyHighlighter;
 export 'src/internal/i18n.dart' show MawyStrings;
 export 'src/markdown/ast.dart';

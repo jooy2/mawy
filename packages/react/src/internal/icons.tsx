@@ -70,6 +70,7 @@ export {
   Upload as UploadIcon,
   X as CloseIcon,
   CaseSensitive as CaseSensitiveIcon,
+  Regex as RegexIcon,
   Eraser as ClearCellsIcon,
   ExternalLink as OpenLinkIcon,
   Unlink as UnlinkIcon,

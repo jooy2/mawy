@@ -502,6 +502,10 @@ class _MawyEditorState extends State<MawyEditor> {
   String _replacement = '';
   bool _matchCase = false;
 
+  /// Whether the find bar reads its query as a regular expression. See
+  /// [patternOf].
+  bool _regex = false;
+
   /// The preview, kept as the same widget while nothing it draws from changes.
   ///
   /// A caret that only moved is still a rebuild here — the status bar counts
@@ -1005,7 +1009,7 @@ class _MawyEditorState extends State<MawyEditor> {
    * ------------------------------------------------------------------ */
 
   List<MawyMatch> get _matches =>
-      _finding ? findMatches(_value, _query, _matchCase) : const <MawyMatch>[];
+      _finding ? findMatches(_value, _query, _matchCase, regex: _regex) : const <MawyMatch>[];
 
   /// Where the caret is, for the purpose of finding.
   ///
@@ -1078,7 +1082,11 @@ class _MawyEditorState extends State<MawyEditor> {
       return;
     }
 
-    final MawyReplaced after = replaceMatch(_value, matches[at], _replacement);
+    final MawyReplaced after = replaceMatch(
+      _value,
+      matches[at],
+      _regex ? replacementFor(_value, matches[at], _query, _replacement, _matchCase) : _replacement,
+    );
 
     _controller.value = TextEditingValue(
       text: after.value,
@@ -1095,7 +1103,13 @@ class _MawyEditorState extends State<MawyEditor> {
       return;
     }
 
-    final MawyReplacedAll after = replaceAll(_value, _query, _replacement, _matchCase);
+    final MawyReplacedAll after = replaceAll(
+      _value,
+      _query,
+      _replacement,
+      _matchCase,
+      regex: _regex,
+    );
 
     if (after.count == 0) {
       return;
@@ -1240,6 +1254,8 @@ class _MawyEditorState extends State<MawyEditor> {
           onReplacementChange: (String value) => setState(() => _replacement = value),
           matchCase: _matchCase,
           onMatchCaseChange: (bool on) => setState(() => _matchCase = on),
+          regex: _regex,
+          onRegexChange: (bool on) => setState(() => _regex = on),
           total: matches.length,
           current: _currentMatch(matches),
           onStep: (bool forwards) => _step(matches, forwards: forwards),

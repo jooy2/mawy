@@ -6,11 +6,13 @@
 /// nobody writes the awkward half of. It is `src/internal/search.ts` in Dart,
 /// function for function, and `tool/parity.dart` diffs the two.
 ///
-/// Plain text, never a regular expression. That is a decision rather than a
-/// missing feature: an editor whose find box quietly compiles `(` into a syntax
-/// error is one a writer cannot trust with a document, and a Markdown document
-/// is full of `*`, `[`, `.` and `+`. What is here instead is the case-sensitive
-/// switch, which is the option people actually reach for.
+/// Plain text unless a regular expression is asked for. An editor whose find
+/// box quietly compiled `(` into a syntax error would be one a writer could not
+/// trust with a document, and a Markdown document is full of `*`, `[`, `.` and
+/// `+`; so the box is plain text, and a pattern is something switched on. A
+/// pattern that is not one finds nothing, and the bar says so. Dart's regular
+/// expressions are JavaScript's, so the React package reads the same patterns
+/// the same way.
 library;
 
 /// Where one match sits in the document.
@@ -117,9 +119,17 @@ String _fold(String text) {
 /// Matches never overlap: the search carries on from the end of the one it just
 /// found, so `aa` in `aaaa` is two rather than three. Which is what makes
 /// replacing all of them one pass rather than a fixed point.
-List<MawyMatch> findMatches(String value, String query, bool matchCase) {
+List<MawyMatch> findMatches(String value, String query, bool matchCase, {bool regex = false}) {
   if (query.isEmpty) {
     return <MawyMatch>[];
+  }
+
+  if (regex) {
+    return _patternMatches(
+      value,
+      query,
+      matchCase,
+    ).map((RegExpMatch found) => MawyMatch(found.start, found.end)).toList();
   }
 
   final String haystack = matchCase ? value : _fold(value);
@@ -137,6 +147,123 @@ List<MawyMatch> findMatches(String value, String query, bool matchCase) {
     out.add(MawyMatch(found, found + needle.length));
     at = found + needle.length;
   }
+}
+
+/// A query read as a regular expression, or `null` where it is not one.
+///
+/// Over the whole document with `^` and `$` at the ends of its lines, which is
+/// what somebody looking for a line that starts with something means. Without
+/// the Unicode switch, which turns a lone `{` or an escaped `-` into an error,
+/// and a find box is somewhere a pattern is typed a character at a time.
+RegExp? patternOf(String query, bool matchCase) {
+  try {
+    return RegExp(query, multiLine: true, caseSensitive: matchCase);
+  } on FormatException {
+    return null;
+  }
+}
+
+/// Whether a query asked to be read as a pattern is not one.
+bool invalidPattern(String query, {required bool regex}) =>
+    regex && query.isNotEmpty && patternOf(query, true) == null;
+
+/// Every match of a pattern, and what it captured.
+///
+/// A match of nothing at all is passed over: `a*` matches nothing between every
+/// two letters, and a match that cannot be drawn or replaced is a count that
+/// means nothing. The search goes on from the next character.
+List<RegExpMatch> _patternMatches(String value, String query, bool matchCase) {
+  final RegExp? pattern = patternOf(query, matchCase);
+
+  if (pattern == null) {
+    return <RegExpMatch>[];
+  }
+
+  return pattern.allMatches(value).where((RegExpMatch found) => found.end > found.start).toList();
+}
+
+/// A replacement with what a match captured written into it: `$&` is the whole
+/// match, `$1` to `$99` a numbered group, `$<name>` a named one and `$$` a
+/// dollar sign. A number past the groups there are is the characters it is, and
+/// so is any other `$`.
+String _expand(String template, RegExpMatch found) {
+  final int groups = found.groupCount;
+  final List<String> names = found.groupNames.toList();
+  final StringBuffer out = StringBuffer();
+  final RegExp twoDigits = RegExp(r'^\d\d$');
+  final RegExp oneDigit = RegExp(r'^\d$');
+
+  for (int at = 0; at < template.length; at += 1) {
+    final String character = template[at];
+
+    if (character != r'$' || at + 1 >= template.length) {
+      out.write(character);
+      continue;
+    }
+
+    final String next = template[at + 1];
+
+    if (next == r'$') {
+      out.write(r'$');
+      at += 1;
+      continue;
+    }
+
+    if (next == '&') {
+      out.write(found[0]);
+      at += 1;
+      continue;
+    }
+
+    if (next == '<' && names.isNotEmpty) {
+      final int close = template.indexOf('>', at + 2);
+
+      if (close != -1) {
+        final String name = template.substring(at + 2, close);
+
+        out.write(names.contains(name) ? found.namedGroup(name) ?? '' : '');
+        at = close;
+        continue;
+      }
+    }
+
+    final String pair = template.substring(
+      at + 1,
+      at + 3 > template.length ? template.length : at + 3,
+    );
+
+    if (twoDigits.hasMatch(pair) && int.parse(pair) >= 1 && int.parse(pair) <= groups) {
+      out.write(found.group(int.parse(pair)) ?? '');
+      at += 2;
+      continue;
+    }
+
+    if (oneDigit.hasMatch(next) && int.parse(next) >= 1 && int.parse(next) <= groups) {
+      out.write(found.group(int.parse(next)) ?? '');
+      at += 1;
+      continue;
+    }
+
+    out.write(character);
+  }
+
+  return out.toString();
+}
+
+/// What one match of a pattern is replaced with, with what it captured written
+/// in. The pattern is read again at the match, since a match is only where it
+/// is and not what it captured. See [_expand].
+String replacementFor(
+  String value,
+  MawyMatch match,
+  String query,
+  String replacement,
+  bool matchCase,
+) {
+  final RegExp? pattern = patternOf(query, matchCase);
+  final RegExpMatch? found = pattern?.matchAsPrefix(value, match.start) as RegExpMatch?;
+
+  return found == null ? replacement : _expand(replacement, found);
 }
 
 /// Which match to go to from where the caret is.
@@ -181,8 +308,19 @@ MawyReplaced replaceMatch(String value, MawyMatch match, String replacement) {
 /// One pass rather than a loop over [replaceMatch], and not for speed:
 /// replacing `a` with `aa` a match at a time would find the replacement and
 /// replace that too, for ever. What is searched is the document as it was.
-MawyReplacedAll replaceAll(String value, String query, String replacement, bool matchCase) {
-  final List<MawyMatch> matches = findMatches(value, query, matchCase);
+MawyReplacedAll replaceAll(
+  String value,
+  String query,
+  String replacement,
+  bool matchCase, {
+  bool regex = false,
+}) {
+  final List<RegExpMatch> found = regex
+      ? _patternMatches(value, query, matchCase)
+      : const <RegExpMatch>[];
+  final List<MawyMatch> matches = regex
+      ? found.map((RegExpMatch each) => MawyMatch(each.start, each.end)).toList()
+      : findMatches(value, query, matchCase);
 
   if (matches.isEmpty) {
     return MawyReplacedAll(value, 0);
@@ -191,10 +329,12 @@ MawyReplacedAll replaceAll(String value, String query, String replacement, bool 
   final StringBuffer out = StringBuffer();
   int at = 0;
 
-  for (final MawyMatch match in matches) {
+  for (int index = 0; index < matches.length; index += 1) {
+    final MawyMatch match = matches[index];
+
     out
       ..write(value.substring(at, match.start))
-      ..write(replacement);
+      ..write(regex ? _expand(replacement, found[index]) : replacement);
     at = match.end;
   }
 

@@ -134,11 +134,13 @@ final class MawyStrings {
     required this.find,
     required this.replace,
     required this.findMatchCase,
+    required this.findRegex,
     required this.findPrevious,
     required this.findNext,
     required this.findClose,
     required this.findMatches,
     required this.findNoMatches,
+    required this.findInvalid,
     required this.replaceOne,
     required this.replaceAll,
     required this.alertNote,
@@ -445,6 +447,9 @@ final class MawyStrings {
   /// Whether `Foo` finds `foo`.
   final String findMatchCase;
 
+  /// Whether the query is read as a regular expression.
+  final String findRegex;
+
   /// Backwards.
   final String findPrevious;
 
@@ -459,6 +464,9 @@ final class MawyStrings {
 
   /// When there are none.
   final String findNoMatches;
+
+  /// In place of the count, while the query is not a regular expression.
+  final String findInvalid;
 
   /// Replace the one the caret is on.
   final String replaceOne;
@@ -579,11 +587,13 @@ final class MawyStrings {
     String? find,
     String? replace,
     String? findMatchCase,
+    String? findRegex,
     String? findPrevious,
     String? findNext,
     String? findClose,
     String? findMatches,
     String? findNoMatches,
+    String? findInvalid,
     String? replaceOne,
     String? replaceAll,
     String? alertNote,
@@ -689,11 +699,13 @@ final class MawyStrings {
       find: find ?? this.find,
       replace: replace ?? this.replace,
       findMatchCase: findMatchCase ?? this.findMatchCase,
+      findRegex: findRegex ?? this.findRegex,
       findPrevious: findPrevious ?? this.findPrevious,
       findNext: findNext ?? this.findNext,
       findClose: findClose ?? this.findClose,
       findMatches: findMatches ?? this.findMatches,
       findNoMatches: findNoMatches ?? this.findNoMatches,
+      findInvalid: findInvalid ?? this.findInvalid,
       replaceOne: replaceOne ?? this.replaceOne,
       replaceAll: replaceAll ?? this.replaceAll,
       alertNote: alertNote ?? this.alertNote,
@@ -805,11 +817,13 @@ final class MawyStrings {
       other.find == find &&
       other.replace == replace &&
       other.findMatchCase == findMatchCase &&
+      other.findRegex == findRegex &&
       other.findPrevious == findPrevious &&
       other.findNext == findNext &&
       other.findClose == findClose &&
       other.findMatches == findMatches &&
       other.findNoMatches == findNoMatches &&
+      other.findInvalid == findInvalid &&
       other.replaceOne == replaceOne &&
       other.replaceAll == replaceAll &&
       other.alertNote == alertNote &&
@@ -916,11 +930,13 @@ final class MawyStrings {
     find,
     replace,
     findMatchCase,
+    findRegex,
     findPrevious,
     findNext,
     findClose,
     findMatches,
     findNoMatches,
+    findInvalid,
     replaceOne,
     replaceAll,
     alertNote,
@@ -1028,11 +1044,13 @@ const MawyStrings _en = MawyStrings._(
   find: 'Find',
   replace: 'Replace',
   findMatchCase: 'Match case',
+  findRegex: 'Regular expression',
   findPrevious: 'Previous match',
   findNext: 'Next match',
   findClose: 'Close find',
   findMatches: '%N of %T',
   findNoMatches: 'No matches',
+  findInvalid: 'Invalid pattern',
   replaceOne: 'Replace',
   replaceAll: 'Replace all',
   alertNote: 'Note',
@@ -1139,11 +1157,13 @@ const MawyStrings _ko = MawyStrings._(
   find: '찾기',
   replace: '바꾸기',
   findMatchCase: '대소문자 구분',
+  findRegex: '정규식',
   findPrevious: '이전 결과',
   findNext: '다음 결과',
   findClose: '찾기 닫기',
   findMatches: '%T개 중 %N번째',
   findNoMatches: '결과 없음',
+  findInvalid: '잘못된 정규식',
   replaceOne: '바꾸기',
   replaceAll: '모두 바꾸기',
   alertNote: '참고',

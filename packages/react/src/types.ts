@@ -369,12 +369,16 @@ export interface MawyStrings {
   find: string;
   replace: string;
   findMatchCase: string;
+  /** The find bar's switch that reads the query as a regular expression. */
+  findRegex: string;
   findPrevious: string;
   findNext: string;
   findClose: string;
   /** `%N` is the match the caret is on, counted from one, and `%T` how many there are. */
   findMatches: string;
   findNoMatches: string;
+  /** Said in place of the count while the query is not a regular expression. */
+  findInvalid: string;
   replaceOne: string;
   replaceAll: string;
   openFile: string;

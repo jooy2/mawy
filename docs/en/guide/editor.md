@@ -561,7 +561,7 @@ The arithmetic under it matches the React package function for function: `findMa
 
 Whatever was selected is already in the box when it opens, as long as it was on one line. That is nearly always what somebody is about to look for.
 
-**Plain text, never a regular expression.** A Markdown document is full of `*`, `[`, `.` and `+`, and reading those as a pattern turns a single `(` into a syntax error. There is a case-sensitivity switch instead, which is the one people reach for.
+**Plain text unless a regular expression is switched on.** A Markdown document is full of `*`, `[`, `.` and `+`, and reading those as a pattern would turn a single `(` into a syntax error, so the box is plain text with a case-sensitivity switch beside it. The switch after that reads the query as a regular expression, JavaScript's in both packages, with `^` and `$` at the ends of each line. A pattern that is not one yet, such as a `(` half typed, finds nothing and the count says `Invalid pattern`. A match of nothing at all, such as `a*` between two letters, is passed over. A replacement can write in what a match captured: `$&` is the whole match, `$1` to `$99` a numbered group, `$<name>` a named one and `$$` a dollar sign.
 
 Replace and replace all are on the second row. Replace all is one pass over the document as it was, so replacing `a` with `aa` replaces each `a` once and never finds its own replacement.
 

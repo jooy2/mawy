@@ -498,15 +498,23 @@ List<Object?> _searches() {
     final bool matchCase = each[2]! as bool;
     final int caret = each[3]! as int;
     final String replacement = each[4]! as String;
+    // Read as a regular expression, where a sixth says so.
+    final bool regex = each.length > 5 && each[5]! as bool;
 
-    final List<MawyMatch> matches = findMatches(value, query, matchCase);
+    final List<MawyMatch> matches = findMatches(value, query, matchCase, regex: regex);
     final MawyReplaced? replaced = matches.isEmpty
         ? null
-        : replaceMatch(value, matches.first, replacement);
-    final MawyReplacedAll all = replaceAll(value, query, replacement, matchCase);
+        : replaceMatch(
+            value,
+            matches.first,
+            regex
+                ? replacementFor(value, matches.first, query, replacement, matchCase)
+                : replacement,
+          );
+    final MawyReplacedAll all = replaceAll(value, query, replacement, matchCase, regex: regex);
 
     return <String, Object?>{
-      'input': <Object?>[value, query, matchCase, caret, replacement],
+      'input': <Object?>[value, query, matchCase, caret, replacement, regex],
       'matches': matches.map((MawyMatch match) => <int>[match.start, match.end]).toList(),
       'forwards': matchFrom(matches, caret, forwards: true),
       'backwards': matchFrom(matches, caret, forwards: false),
@@ -648,6 +656,7 @@ List<Object?> _found() {
               ? MawyImagePolicy.values.byName(pair[3]! as String)
               : MawyImagePolicy.show,
         ),
+        regex: pair.length > 4 && pair[4]! as bool,
       );
 
       return <Object?>[

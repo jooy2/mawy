@@ -41,6 +41,7 @@ import { MAWY_ACCEPT, acceptsFile, readTextFile } from '../../internal/files.js'
 import { DEFAULT_TOOLBAR, MawyViewerToolbar } from './MawyViewerToolbar.js';
 import { MawyViewerEmpty } from './MawyViewerEmpty.js';
 import { MawyViewerOutline } from './MawyViewerOutline.js';
+import { invalidPattern } from '../../internal/search.js';
 
 export interface MawyViewerProps extends Omit<
   React.ComponentPropsWithoutRef<'div'>,
@@ -503,6 +504,8 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const [finding, setFinding] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [matchCase, setMatchCase] = React.useState(false);
+  /** Whether the find bar reads its query as a regular expression. See `patternOf`. */
+  const [regex, setRegex] = React.useState(false);
   const [at, setAt] = React.useState(0);
   const [activeHeading, setActiveHeading] = React.useState<string | null>(null);
   const [copyState, copy] = useCopy();
@@ -563,9 +566,15 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
   const found = React.useMemo(
     () =>
       finding
-        ? findInDocument(document_.root.children, query, matchCase, { source: text, links, images })
+        ? findInDocument(
+            document_.root.children,
+            query,
+            matchCase,
+            { source: text, links, images },
+            regex
+          )
         : NOTHING_FOUND,
-    [finding, document_, query, matchCase, text, links, images]
+    [finding, document_, query, matchCase, regex, text, links, images]
   );
   /** The one being stepped through, kept inside a count that may have shrunk. */
   const currentMatch = found.total ? Math.min(at, found.total - 1) : -1;
@@ -642,7 +651,7 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
 
   // A new query starts at the first match rather than at wherever the last one
   // left off, which is somewhere in a document nobody is looking at any more.
-  React.useEffect(() => setAt(0), [query, matchCase]);
+  React.useEffect(() => setAt(0), [query, matchCase, regex]);
 
   const step = React.useCallback(
     (forwards: boolean) => {
@@ -1062,6 +1071,9 @@ export const MawyViewer = React.forwardRef<HTMLDivElement, MawyViewerProps>(func
         onQueryChange={setQuery}
         matchCase={matchCase}
         onMatchCaseChange={setMatchCase}
+        regex={regex}
+        onRegexChange={setRegex}
+        invalid={invalidPattern(query, regex)}
         total={found.total}
         current={currentMatch}
         onStep={step}

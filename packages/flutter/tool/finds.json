@@ -10,5 +10,8 @@
  ["example", false, "source", "source"],
  ["the", false, "text", "text"],
  ["https", false, "source", "hide"],
- ["a", false, "show", "text"]
+ ["a", false, "show", "text"],
+ ["M\\w+y", false, "show", "show", true],
+ ["^#+ ", false, "show", "show", true],
+ ["(unclosed", false, "show", "show", true]
 ]

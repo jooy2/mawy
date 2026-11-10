@@ -394,6 +394,10 @@ class _MawyViewerState extends State<MawyViewer>
   bool _raw = false;
   String _query = '';
   bool _matchCase = false;
+
+  /// Whether the find bar reads its query as a regular expression. See
+  /// `patternOf`.
+  bool _regex = false;
   int _at = 0;
 
   /// Whether the toolbar was given a find button, which is what decides
@@ -606,6 +610,7 @@ class _MawyViewerState extends State<MawyViewer>
   MawyFound? _found;
   String? _foundQuery;
   bool? _foundMatchCase;
+  bool? _foundRegex;
   MdDocument? _foundDocument;
   MawyLinkPolicy? _foundLinks;
   MawyImagePolicy? _foundImages;
@@ -624,6 +629,7 @@ class _MawyViewerState extends State<MawyViewer>
     if (_found == null ||
         _foundQuery != _query ||
         _foundMatchCase != _matchCase ||
+        _foundRegex != _regex ||
         !identical(_foundDocument, document) ||
         _foundLinks != widget.links ||
         _foundImages != widget.images) {
@@ -632,9 +638,11 @@ class _MawyViewerState extends State<MawyViewer>
         _query,
         _matchCase,
         drawing: MawyFindDrawing(source: widget.value, links: widget.links, images: widget.images),
+        regex: _regex,
       );
       _foundQuery = _query;
       _foundMatchCase = _matchCase;
+      _foundRegex = _regex;
       _foundDocument = document;
       _foundLinks = widget.links;
       _foundImages = widget.images;
@@ -980,6 +988,11 @@ class _MawyViewerState extends State<MawyViewer>
           matchCase: _matchCase,
           onMatchCaseChange: (bool next) => setState(() {
             _matchCase = next;
+            _at = 0;
+          }),
+          regex: _regex,
+          onRegexChange: (bool next) => setState(() {
+            _regex = next;
             _at = 0;
           }),
           total: found.total,

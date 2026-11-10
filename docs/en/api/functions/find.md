@@ -16,10 +16,12 @@ The find bar is the viewer's and the editor's own — [`'find'`](../types/viewer
 ::: fw flutter
 
 ```dart
-List<MawyMatch> findMatches(String value, String query, bool matchCase);
+List<MawyMatch> findMatches(String value, String query, bool matchCase, {bool regex = false});
 int matchFrom(List<MawyMatch> matches, int caret, {required bool forwards});
 MawyReplaced replaceMatch(String value, MawyMatch match, String replacement);
-MawyReplacedAll replaceAll(String value, String query, String replacement, bool matchCase);
+MawyReplacedAll replaceAll(String value, String query, String replacement, bool matchCase, {bool regex = false});
+String replacementFor(String value, MawyMatch match, String query, String replacement, bool matchCase);
+bool invalidPattern(String query, {required bool regex});
 ```
 
 Pure functions over strings. What "replace all" does to overlapping matches is a question about arithmetic, and a test that has to mount an editor to ask it is a test nobody writes the awkward half of. It is `src/internal/search.ts` in Dart, function for function, and `tool/parity.dart` diffs the two.
@@ -34,6 +36,6 @@ Pure functions over strings. What "replace all" does to overlapping matches is a
 
 `replaceAll` works in one pass rather than looping over `replaceMatch`, and not for speed: replacing `a` with `aa` a match at a time would find the replacement and replace that too, for ever. What is searched is the document as it was.
 
-**Plain text, never a regular expression.** That is a decision rather than a missing feature: an editor whose find box quietly compiles `(` into a syntax error is one a writer cannot trust with a document, and a Markdown document is full of `*`, `[`, `.` and `+`. What is here instead is the case-sensitive switch, which is the option people actually reach for.
+**Plain text unless `regex` is set.** An editor whose find box quietly compiled `(` into a syntax error would be one a writer could not trust with a document, and a Markdown document is full of `*`, `[`, `.` and `+`, so a pattern is something switched on. With `regex`, the query is a Dart regular expression, which reads the same as JavaScript's, with `^` and `$` at the ends of each line; a match of nothing at all is passed over, and a query that is not a pattern finds nothing, which `invalidPattern` says. `replaceAll` writes what each match captured into the replacement — `$&` the whole match, `$1` to `$99` a numbered group, `$<name>` a named one and `$$` a dollar sign — and `replacementFor` is that replacement for one match, to hand to `replaceMatch`.
 
 :::
