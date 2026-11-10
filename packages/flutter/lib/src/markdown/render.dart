@@ -12,6 +12,7 @@
 library;
 
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -690,13 +691,37 @@ class _ImageState extends State<_Image> {
       return builder(buildContext, MawyImage(url: _url, alt: node.alt, title: node.title));
     }
 
-    // The alt text, or the address where the author wrote none. The same thing
-    // a browser draws for a picture it cannot fetch, and the reason there is no
-    // hook for it: an application that wants to draw something else has
-    // [imageBuilder], which is handed the picture before anything is requested.
-    Widget refused(BuildContext _, Object _, StackTrace? _) => Text(
-      node.alt.isEmpty ? _url : node.alt,
-      style: context.body.copyWith(color: context.tokens.foregroundSubtle),
+    // The alt text, or the address where the author wrote none, in a box of its
+    // own with the icon for a missing picture. Drawn as words alone, in the
+    // type of the words around it, it read in a sentence as more of the
+    // sentence. The React package draws the same box. There is no hook for it:
+    // an application that wants to draw something else has [imageBuilder],
+    // which is handed the picture before anything is requested.
+    Widget refused(BuildContext _, Object _, StackTrace? _) => CustomPaint(
+      painter: _DashedFrame(
+        color: context.tokens.borderStrong,
+        fill: context.tokens.backgroundSunken,
+        radius: MawyRadius.medium,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(LucideIcons.imageOff, size: 15, color: context.tokens.foregroundSubtle),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                node.alt.isEmpty ? _url : node.alt,
+                style: context.body.copyWith(
+                  color: context.tokens.foregroundSubtle,
+                  fontSize: (context.body.fontSize ?? 16) * 0.85,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
 
     return ClipRRect(
@@ -737,6 +762,41 @@ class _ImageState extends State<_Image> {
       ),
     );
   }
+}
+
+/// The frame a picture that could not be fetched is drawn in: dashed, round
+/// at the corners and filled, the way the React package's stylesheet draws it.
+/// A [BoxDecoration] has no dashed border.
+class _DashedFrame extends CustomPainter {
+  const _DashedFrame({required this.color, required this.fill, required this.radius});
+
+  final Color color;
+  final Color fill;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final RRect frame = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(0.5),
+      Radius.circular(radius),
+    );
+    final Paint line = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    canvas.drawRRect(frame, Paint()..color = fill);
+
+    for (final ui.PathMetric metric in (Path()..addRRect(frame)).computeMetrics()) {
+      for (double at = 0; at < metric.length; at += 7) {
+        canvas.drawPath(metric.extractPath(at, math.min(at + 4, metric.length)), line);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedFrame old) =>
+      old.color != color || old.fill != fill || old.radius != radius;
 }
 
 /* -------------------------------------------------------------------------

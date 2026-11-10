@@ -1605,6 +1605,19 @@
   border-radius: var(--mawy-radius-md);
 }
 
+/*
+ * A picture that could not be fetched, which is drawn as a picture of an icon
+ * and its description (see `Picture`) and framed here in the palette's own
+ * colours, so that in a sentence it reads as a picture that is missing rather
+ * than as more of the sentence.
+ */
+.mawy-root .mawy-md-image[data-mawy-broken] {
+  border: 1px dashed var(--mawy-border-strong);
+  background: var(--mawy-bg-sunken);
+  vertical-align: middle;
+  aspect-ratio: auto;
+}
+
 .mawy-root .mawy-md-rule {
   height: 1px;
   margin: 2.2em 0;

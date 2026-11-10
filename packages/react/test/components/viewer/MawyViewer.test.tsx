@@ -553,6 +553,20 @@ describe('images', () => {
     expect(image.getAttribute('title')).toBe('Mine');
   });
 
+  it('draws a picture that could not be fetched as a box with its description', async () => {
+    const screen = await render(
+      <MawyViewer value={'Before ![a missing map](/no-such-picture.png) after.'} />
+    );
+    const image = () => screen.container.querySelector('img') as HTMLImageElement;
+
+    await vi.waitFor(() => expect(image()).toHaveAttribute('data-mawy-broken'));
+    // Still the picture it was, named the same, with the address it was given
+    // kept beside the one drawn in its place. See `Picture`.
+    expect(image().getAttribute('alt')).toBe('a missing map');
+    expect(image().getAttribute('data-mawy-src')).toBe('/no-such-picture.png');
+    expect(decodeURIComponent(image().getAttribute('src') ?? '')).toContain('a missing map');
+  });
+
   it('hands the picture over where the application says how to draw one', async () => {
     const asked: { src: string; alt: string; title: string | null; first: boolean }[] = [];
     const Mine = (props: { src: string; alt: string; title: string | null; first: boolean }) => {

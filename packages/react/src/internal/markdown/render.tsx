@@ -353,6 +353,108 @@ function marked(node: MdInline, value: string, context: RenderContext): React.Re
   return out;
 }
 
+/**
+ * A picture the browser fetches, drawn as a box of its own once it could not
+ * be.
+ *
+ * A picture that failed was drawn by the browser as its description beside a
+ * small broken icon, in the same type as the words around it, so that in a
+ * sentence it read as more of the sentence — and each browser drew it its own
+ * way, one of them with no description at all. In its place is a picture this
+ * library draws: an icon and the description, in a frame the stylesheet gives
+ * it. See `standIn`.
+ *
+ * Still the `<img>` it was, so that everything that finds a picture on the
+ * page — the editor pressing, selecting and copying one, a caret stepping past
+ * one — finds this one too. The address it was given is kept beside it, for
+ * the copy, and an address mended in its bar is fetched again.
+ */
+function Picture(props: React.ComponentPropsWithoutRef<'img'>): React.ReactElement {
+  const [broken, setBroken] = React.useState<string | null>(null);
+  const address = typeof props.src === 'string' ? props.src : '';
+  const failed = broken !== null && broken === address;
+  const shown = React.useMemo(
+    () => (failed ? standIn(props.alt ?? '') : null),
+    [failed, props.alt]
+  );
+
+  return (
+    <img
+      {...props}
+      src={shown ?? props.src}
+      data-mawy-broken={failed ? '' : undefined}
+      data-mawy-src={failed ? address : undefined}
+      onError={() => {
+        if (!failed) {
+          setBroken(address);
+        }
+      }}
+    />
+  );
+}
+
+/** The type a stand-in's description is drawn in, which a picture can reach. */
+const STAND_IN_FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+
+/** The icon a stand-in is drawn with: Lucide's `image-off`, as the toolbar draws its icons. */
+const STAND_IN_ICON =
+  '<line x1="2" x2="22" y1="2" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/>' +
+  '<line x1="13.5" x2="6" y1="13.5" y2="21"/><line x1="18" x2="21" y1="12" y2="15"/>' +
+  '<path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59"/>' +
+  '<path d="M21 15V5a2 2 0 0 0-2-2H9"/>';
+
+/**
+ * The picture drawn in place of one that could not be fetched, as an address
+ * an `<img>` can be given.
+ *
+ * A picture rather than words beside one, because the words would be text on
+ * the page that is not in the document, and every place on the page this
+ * library reads back as a place in the document would have them to step
+ * around. In a grey that reads on either palette, since a token cannot reach
+ * inside a picture, and in the system's own type, which is the only one a
+ * picture can draw in; it is measured in that type, so the box is as wide as
+ * the words. A description too long for a line is cut short with an ellipsis.
+ */
+function standIn(alt: string): string {
+  const size = 13;
+  const room = 360;
+  const measure = measurer(size);
+  let label = alt.replace(/\s+/g, ' ').trim();
+
+  if (measure(label) > room) {
+    while (label && measure(`${label}…`) > room) {
+      label = label.slice(0, -1);
+    }
+
+    label = `${label.trimEnd()}…`;
+  }
+
+  const width = Math.ceil(label ? 34 + measure(label) + 10 : 34);
+  const text = label.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="30" viewBox="0 0 ${width} 30">` +
+    `<g transform="translate(10 8) scale(0.583)" fill="none" stroke="#8a8f98" stroke-width="2" ` +
+    `stroke-linecap="round" stroke-linejoin="round">${STAND_IN_ICON}</g>` +
+    (text
+      ? `<text x="34" y="19.5" fill="#8a8f98" font-size="${size}" font-family="${STAND_IN_FONT.replace(/"/g, "'")}">${text}</text>`
+      : '') +
+    '</svg>';
+
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+/** How wide a run of words is in the stand-in's type, measured where there is a canvas. */
+function measurer(size: number): (text: string) => number {
+  const context =
+    typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
+
+  if (context) {
+    context.font = `${size}px ${STAND_IN_FONT}`;
+  }
+
+  return (text) => (context ? context.measureText(text).width : text.length * size * 0.6);
+}
+
 /** Whether a node is inside the run being shown as its own source. */
 function revealed(node: { range: MdRange }, context: RenderContext): boolean {
   const at = context.reveal;
@@ -882,7 +984,7 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
           // that would have been made anyway, made sooner. An application that
           // knows better draws its own pictures through `image`, which is told
           // which one this is.
-          <img
+          <Picture
             key={index}
             className="mawy-md-image"
             src={resolved(context, node.url, 'image')}
@@ -894,7 +996,7 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
             {...origin(node, context)}
           />
         ) : (
-          <img
+          <Picture
             key={index}
             className="mawy-md-image"
             src={resolved(context, node.url, 'image')}

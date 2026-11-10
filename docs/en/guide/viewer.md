@@ -874,6 +874,8 @@ The document's line height and letter spacing are declared on the text itself, n
 
 The box is reserved before the image arrives, and `--mawy-doc-image-fit` is `contain`, so a picture of a different shape is letter-boxed rather than cut. Unset is the default, and then no box is reserved. Writing the dimensions in the document itself is the other approach. The way that means the same thing wherever the file is read is HTML, `<img src="…" width="800" height="600">`, which is drawn under `sanitize` in the browser and on a server, and which GitHub draws as well. A Markdown syntax for it, such as `![alt](url =800x600)`, is not something this parser reads: CommonMark and GitHub both read that run as text rather than as a picture, so a document written that way would lose its pictures everywhere but here.
 
+**A picture that could not be fetched is drawn as a box with its description in it.** A browser draws a broken picture as its description in the type of the words around it, with a small icon in some browsers and none in others, so in a sentence it reads as more of the sentence. In its place this library draws the icon for a missing picture and the description in a dashed frame of the palette's own colours, the same in every browser and in the Flutter package. It is still the `<img>` it was, named by the same description, so a screen reader says the same thing and the editor still selects, copies and edits it; its bar is where a wrong address is mended. In the React package the description is drawn in the system's type, because it is a picture the library makes and a picture cannot reach the page's fonts.
+
 :::
 
 ::: fw flutter

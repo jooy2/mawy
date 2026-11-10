@@ -26,6 +26,8 @@
 
 - **`Shift`+`Enter` on a line with nothing on it yet writes a backslash.** Pressed twice in a row, the second press wrote two spaces on a line of their own, which is a blank line: the paragraph ended there, every press after it wrote another blank line, and the caret, on a line no paragraph held, was drawn at the top of the paragraph and under it by turns. A backslash at the end of a line is the other hard break CommonMark has and the one that can stand alone, so the key now makes as many empty lines as it is pressed, and `wysiwyg` draws the last of them as an empty line while the caret is under it. Left at the end of a paragraph with nothing after it, a backslash is drawn as a `\` by this library and every other renderer, where two spaces would be nothing.
 
+- **A picture that could not be fetched is drawn as a box with its description in it.** The browser drew it as its description in the type of the words around it, with a small icon in some browsers and none in WebKit, so in a sentence it read as more of the sentence. It is drawn now as an icon and the description in a dashed frame of the palette's colours, the same in every browser. It is still the `<img>` it was, with the same `alt`, and the address it was given is kept on it as `data-mawy-src` for a copy.
+
 - **The toolbar's find button closes the find bar it opened.** It was drawn pressed while the bar was open and opened it again when pressed.
 
 - **The icon set this package draws is `lucide-react` 1.70 or newer.** It was 1.48 or newer. Every icon the editor and the viewer use is the same drawing in both versions, so nothing on the page changes. An application that holds its own `lucide-react` below 1.70 gets a second copy of it rather than sharing one, until it raises its own.

@@ -1638,6 +1638,26 @@ void main() {
       expect(find.text('a cat'), findsNothing);
     });
 
+    testWidgets('draws a picture that could not be decoded as a box with its description', (
+      WidgetTester tester,
+    ) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          host(
+            const MawyViewer(value: 'Before ![a missing map](data:image/png;base64,AAAA) after.'),
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+
+      // The description and the icon for a missing picture, framed, rather than
+      // words that read as more of the sentence. The React package draws the
+      // same box.
+      expect(find.text('a missing map'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.imageOff), findsOneWidget);
+    });
+
     /// A picture the line has to make room for, rather than the one transparent
     /// pixel the tests around this one carry: 96 logical pixels square, which
     /// is more than three lines of body text, so a line that did not grow
