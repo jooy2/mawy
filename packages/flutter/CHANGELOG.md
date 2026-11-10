@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.10.0 (2026-11-10)
+
 ### Breaking changes
 
 - **`lucide_icons_flutter` is `^4.0.2`.** It bundles Lucide 1.67 and splits each weight into a library of its own, which is what stops a debug build for the web overflowing its stack. An application that depends on it as well raises its own constraint to `^4.0.2`. A regular icon such as `LucideIcons.bold` is where it was; a weighted one moved, so `LucideIcons.bold300` is `LucideIcons300.bold` from `lucide_icons_300.dart`. The fonts are about 0.3 MB more in a web build. The lowest Flutter this package supports is still 3.32.
