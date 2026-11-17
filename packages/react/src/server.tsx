@@ -27,6 +27,11 @@
  *   page with nothing behind it is a lie. An application that wants them wants
  *   `MawyViewer`.
  * - **No copy button on a code block**, for the same reason.
+ * - **No stand-in for a picture that could not be fetched.** `MawyViewer` draws
+ *   one as a box with its description in it, once the browser has said the
+ *   fetch failed, and remembering that is state. Here a picture is a plain
+ *   `<img>` with the same attributes, and one that fails is drawn the way the
+ *   browser draws a broken picture.
  * - **`html="sanitize"` draws most markup as characters.** Sanitising needs a
  *   DOM to parse with and a server has none — which is what `MawyViewer` does
  *   on a server too, except that there the elements arrive on the render after.

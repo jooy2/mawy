@@ -12,11 +12,13 @@
  * an application can restyle any part of a document without the library
  * exposing a render prop for it.
  *
- * No `'use client'` here, and that is the point rather than an omission: this
- * file is reached by `mawy-react/server`, and a module that declares itself a
- * client is one a bundler ships to a browser. The two pieces of a document
- * that hold state are in `live.tsx`, which does declare it, and they arrive
+ * No `'use client'` here, and no hook, and that is the point rather than an
+ * omission: this file is reached by `mawy-react/server`, a module that
+ * declares itself a client is one a bundler ships to a browser, and a hook
+ * called from a React Server Component throws. The pieces of a document that
+ * hold state are in `live.tsx`, which does declare it, and they arrive
  * through `RenderContext.live` from whoever is drawing on a page.
+ * `test/package/server.test.tsx` fails on a hook anywhere `server.tsx` reaches.
  */
 
 import * as React from 'react';
@@ -111,19 +113,21 @@ export interface RenderContext {
   resolveUrl?: MawyUrlResolver;
 
   /**
-   * The two pieces of a document that can hold state, where there is a page
-   * for them to hold it on.
+   * The pieces of a document that can hold state, where there is a page for
+   * them to hold it on.
    *
    * A code block has a copy button and waits for a highlighter that answers
    * with a promise; raw HTML under `sanitize` becomes elements on the render
-   * after the first, because sanitising wants a DOM the server has not got.
-   * Both are hooks, and hooks are a client.
+   * after the first, because sanitising wants a DOM the server has not got; a
+   * picture that could not be fetched is drawn as a stand-in, once the browser
+   * has said so. All three are hooks, and hooks are a client.
    *
    * So they are handed in rather than reached for. `MawyViewer` and
    * `MawyEditor` pass `LIVE` from `markdown/live.tsx`; `mawy-react/server`
    * passes nothing and gets the same document drawn still — no copy button, no
-   * second render to wait for. The point of that is what is *not* imported: a
-   * server module that reached a `'use client'` one would ship it.
+   * second render to wait for, a plain `<img>` for a picture. The point of that
+   * is what is *not* imported: a server module that reached a `'use client'`
+   * one would ship it, and one that called a hook would throw.
    */
   live?: {
     code: React.ComponentType<{ block: MdCode; context: RenderContext }>;
@@ -134,6 +138,7 @@ export interface RenderContext {
       marks?: MawyMarks;
       reveal?: boolean;
     }>;
+    picture: React.ComponentType<React.ComponentPropsWithoutRef<'img'>>;
   };
   /**
    * The document's footnotes, by label, so a `[^a]` in the middle of a sentence
@@ -351,111 +356,6 @@ function marked(node: MdInline, value: string, context: RenderContext): React.Re
   }
 
   return out;
-}
-
-/**
- * A picture the browser fetches, drawn as a box of its own once it could not
- * be.
- *
- * A picture that failed was drawn by the browser as its description beside a
- * small broken icon, in the same type as the words around it, so that in a
- * sentence it read as more of the sentence — and each browser drew it its own
- * way, one of them with no description at all. In its place is a picture this
- * library draws: an icon and the description, in a frame the stylesheet gives
- * it. See `standIn`.
- *
- * Still the `<img>` it was, so that everything that finds a picture on the
- * page — the editor pressing, selecting and copying one, a caret stepping past
- * one — finds this one too, and with the `src` it was given, which is what an
- * application reading the page and the editor's copy both ask it for. The
- * stand-in is drawn through `srcset`, which a browser draws in preference to
- * `src`: put in `src`, it took the address's place, and a 404 that came back
- * before anything had read the address left nothing to read it from. An
- * address mended in its bar takes the stand-in off and is fetched again.
- */
-function Picture(props: React.ComponentPropsWithoutRef<'img'>): React.ReactElement {
-  const [broken, setBroken] = React.useState<string | null>(null);
-  const address = typeof props.src === 'string' ? props.src : '';
-  const failed = broken !== null && broken === address;
-  const shown = React.useMemo(
-    () => (failed ? standIn(props.alt ?? '') : null),
-    [failed, props.alt]
-  );
-
-  return (
-    <img
-      {...props}
-      srcSet={shown ?? props.srcSet}
-      data-mawy-broken={failed ? '' : undefined}
-      onError={() => {
-        if (!failed) {
-          setBroken(address);
-        }
-      }}
-    />
-  );
-}
-
-/** The type a stand-in's description is drawn in, which a picture can reach. */
-const STAND_IN_FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-
-/** The icon a stand-in is drawn with: Lucide's `image-off`, as the toolbar draws its icons. */
-const STAND_IN_ICON =
-  '<line x1="2" x2="22" y1="2" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/>' +
-  '<line x1="13.5" x2="6" y1="13.5" y2="21"/><line x1="18" x2="21" y1="12" y2="15"/>' +
-  '<path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59"/>' +
-  '<path d="M21 15V5a2 2 0 0 0-2-2H9"/>';
-
-/**
- * The picture drawn in place of one that could not be fetched, as an address
- * an `<img>` can be given.
- *
- * A picture rather than words beside one, because the words would be text on
- * the page that is not in the document, and every place on the page this
- * library reads back as a place in the document would have them to step
- * around. In a grey that reads on either palette, since a token cannot reach
- * inside a picture, and in the system's own type, which is the only one a
- * picture can draw in; it is measured in that type, so the box is as wide as
- * the words. A description too long for a line is cut short with an ellipsis.
- */
-function standIn(alt: string): string {
-  const size = 13;
-  const room = 360;
-  const measure = measurer(size);
-  let label = alt.replace(/\s+/g, ' ').trim();
-
-  if (measure(label) > room) {
-    while (label && measure(`${label}…`) > room) {
-      label = label.slice(0, -1);
-    }
-
-    label = `${label.trimEnd()}…`;
-  }
-
-  const width = Math.ceil(label ? 34 + measure(label) + 10 : 34);
-  const text = label.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="30" viewBox="0 0 ${width} 30">` +
-    `<g transform="translate(10 8) scale(0.583)" fill="none" stroke="#8a8f98" stroke-width="2" ` +
-    `stroke-linecap="round" stroke-linejoin="round">${STAND_IN_ICON}</g>` +
-    (text
-      ? `<text x="34" y="19.5" fill="#8a8f98" font-size="${size}" font-family="${STAND_IN_FONT.replace(/"/g, "'")}">${text}</text>`
-      : '') +
-    '</svg>';
-
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
-/** How wide a run of words is in the stand-in's type, measured where there is a canvas. */
-function measurer(size: number): (text: string) => number {
-  const context =
-    typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
-
-  if (context) {
-    context.font = `${size}px ${STAND_IN_FONT}`;
-  }
-
-  return (text) => (context ? context.measureText(text).width : text.length * size * 0.6);
 }
 
 /** Whether a node is inside the run being shown as its own source. */
@@ -953,7 +853,12 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
         );
       }
 
-      case 'image':
+      case 'image': {
+        // A plain `<img>` without `live`. The stand-in for a picture that could
+        // not be fetched is state, and a React Server Component has none to
+        // keep it in. See `RenderContext.live`.
+        const Picture = context.live?.picture ?? 'img';
+
         return revealed(node, context) || context.images === 'source' ? (
           sourceOf(node, index, context)
         ) : context.images === 'hide' ? (
@@ -1010,6 +915,7 @@ function renderRun(nodes: MdInline[], context: RenderContext, first = 0): React.
             {...origin(node, context)}
           />
         );
+      }
 
       case 'break':
         return <br key={index} {...origin(node, context)} />;

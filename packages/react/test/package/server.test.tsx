@@ -1,9 +1,11 @@
+import * as React from 'react';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MawyDocument, type MawyDocumentProps } from '../../src/server.js';
+import { MawyDocument, parseMarkdown, type MawyDocumentProps } from '../../src/server.js';
 import { MawyViewer, type MawyViewerProps } from '../../src/index.js';
 import { mawyHighlighter } from '../../src/highlight.js';
-import { sources } from '../support/sources';
+import * as icons from '../../src/internal/icons.js';
+import { sources, withoutComments } from '../support/sources';
 // For the one question here that is about layout rather than markup: how wide
 // the document is in a page's column.
 import '../../src/styles.css';
@@ -446,38 +448,239 @@ describe('a document rendered on a server', () => {
    * a server is that none of it has to be.
    */
   it('reaches nothing that says it is for a client', () => {
-    const seen = new Set<string>();
-    const walk = (path: string) => {
-      if (seen.has(path)) {
-        return;
-      }
-
-      seen.add(path);
-
-      for (const match of sources[path].matchAll(/from\s+'(\.[^']+)'/g)) {
-        const to = `${path.replace(/\/[^/]+$/, '')}/${match[1]}`
-          .replace(/\/\.\//g, '/')
-          .replace(/[^/]+\/\.\.\//g, '')
-          .replace(/\.js$/, '');
-
-        for (const candidate of [`${to}.ts`, `${to}.tsx`]) {
-          if (sources[candidate]) {
-            walk(candidate);
-          }
-        }
-      }
-    };
-
-    walk('src/server.tsx');
-
     // The directive rather than the words: half the files here talk *about*
     // `'use client'` in a comment, and a comment ships nothing.
     const declared = (source: string) =>
       /^(?:\s|\/\/[^\n]*|\/\*[\s\S]*?\*\/)*'use client'/.test(source);
 
-    expect([...seen].filter((path) => declared(sources[path]))).toEqual([]);
+    expect([...reachedFromServer()].filter((path) => declared(sources[path]))).toEqual([]);
+  });
+
+  /**
+   * A hook in a React Server Component throws, and `renderToStaticMarkup`,
+   * which every other test here draws with, is a renderer that has hooks. So
+   * 1.10.0 drew every picture through a `useState`, passed all of them, and
+   * threw as a React Server Component on the first `![](…)` it met.
+   *
+   * Read from the source, so that a hook on a branch no document below
+   * reaches is found as well. A `<` after the name is a call too, with type
+   * arguments: `React.useState<string | null>(null)` is how that one was
+   * written.
+   */
+  it('calls no hook anywhere it reaches', () => {
+    const calls = [...reachedFromServer()].flatMap((path) =>
+      [...withoutComments(sources[path]).matchAll(/\buse(?:[A-Z]\w*)?\s*[(<]/g)].map(
+        ([call]) => `${path}: ${call}`
+      )
+    );
+
+    expect(calls).toEqual([]);
+  });
+
+  /**
+   * The same promise, drawn rather than read: every kind of node there is, under
+   * every policy that changes what a node is drawn as, unwrapped the way a
+   * server-component renderer unwraps a tree.
+   */
+  it('draws every kind of node without a hook', () => {
+    const parsed = parseMarkdown(EVERY_NODE);
+    const kinds = kindsIn([parsed.root, ...parsed.footnotes]);
+    // Every `type` the tree can have, so that a kind of node added to the
+    // parser is one this document has to grow to contain.
+    const missing = [...sources['src/internal/markdown/ast.ts'].matchAll(/\btype: '(\w+)'/g)]
+      .map(([, kind]) => kind)
+      .filter((kind) => !kinds.has(kind));
+
+    expect(missing).toEqual([]);
+
+    for (const html of ['escape', 'sanitize', 'raw'] as const) {
+      for (const images of ['show', 'text', 'source', 'hide'] as const) {
+        const tags = drawnWithoutHooks(
+          <MawyDocument
+            value={EVERY_NODE}
+            html={html}
+            images={images}
+            highlight={mawyHighlighter}
+          />
+        );
+
+        // Not a walk that stopped early: every picture was reached, and drawn
+        // as the element it is.
+        expect(tags.filter((tag) => tag === 'img').length, `${html}, ${images}`).toBe(
+          images === 'show' ? kinds.get('image') : 0
+        );
+      }
+    }
+  });
+
+  it('draws a picture as the `<img>` the viewer draws, without the stand-in', () => {
+    const html = renderToStaticMarkup(
+      <MawyDocument value={'![A cat](/cat.png "Tabby")\n\n![A dog](/dog.png)'} />
+    );
+
+    expect(html).toContain(
+      '<img class="mawy-md-image" src="/cat.png" alt="A cat" title="Tabby" loading="eager" fetchPriority="high" decoding="async"/>'
+    );
+    expect(html).toContain(
+      '<img class="mawy-md-image" src="/dog.png" alt="A dog" loading="lazy" decoding="async"/>'
+    );
+    // Nothing on this page could answer the browser's `error`, so nothing
+    // offers to.
+    expect(html).not.toContain('srcset');
+    expect(html).not.toContain('data-mawy-broken');
   });
 });
+
+/**
+ * Every file of ours that `src/server.tsx` reaches through its imports, type
+ * imports included.
+ */
+const reachedFromServer = (): Set<string> => {
+  const seen = new Set<string>();
+  const walk = (path: string) => {
+    if (seen.has(path)) {
+      return;
+    }
+
+    seen.add(path);
+
+    for (const match of sources[path].matchAll(/from\s+'(\.[^']+)'/g)) {
+      const to = `${path.replace(/\/[^/]+$/, '')}/${match[1]}`
+        .replace(/\/\.\//g, '/')
+        .replace(/[^/]+\/\.\.\//g, '')
+        .replace(/\.js$/, '');
+
+      for (const candidate of [`${to}.ts`, `${to}.tsx`]) {
+        if (sources[candidate]) {
+          walk(candidate);
+        }
+      }
+    }
+  };
+
+  walk('src/server.tsx');
+
+  return seen;
+};
+
+/** A document with every kind of node in it, the footnotes included. */
+const EVERY_NODE = [
+  '---',
+  'title: Every kind of node',
+  '---',
+  '',
+  '# A heading with *emphasis*, **strong**, ~~deleted~~ and `code`',
+  '',
+  'A link to [an example](https://example.com "Title") and <https://example.com>,',
+  'a picture ![A cat](/cat.png "Tabby") and another ![A dog](/dog.png), a hard\\',
+  'break, a footnote[^note], <b>inline markup</b> and a :kbd[directive].',
+  '',
+  '> A quotation.',
+  '',
+  ...['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].flatMap((kind) => [
+    `> [!${kind}]`,
+    '> An alert.',
+    ''
+  ]),
+  '- A bullet',
+  '  - nested',
+  '- [x] A task',
+  '',
+  '1. One',
+  '2. Two',
+  '',
+  '| Left | Right |',
+  '| :--- | ----: |',
+  '| ![In a cell](/cell.png) | a<br>b |',
+  '| - dig<br>  - [ ] deeper | `x` |',
+  '',
+  '```ts',
+  'const a = 1;',
+  '```',
+  '',
+  '***',
+  '',
+  '<div>Raw HTML</div>',
+  '',
+  '::leaf[A leaf]',
+  '',
+  ':::container',
+  'Inside a container.',
+  ':::',
+  '',
+  'Term',
+  ': Definition',
+  '',
+  '[^note]: The note, with ![a picture](/note.png).'
+].join('\n');
+
+/** How many of each kind of node a tree holds. */
+const kindsIn = (
+  nodes: readonly unknown[],
+  into: Map<string, number> = new Map()
+): Map<string, number> => {
+  for (const node of nodes) {
+    const { type, children } = node as { type: string; children?: unknown };
+
+    into.set(type, (into.get(type) ?? 0) + 1);
+
+    if (Array.isArray(children)) {
+      kindsIn(children, into);
+    }
+  }
+
+  return into;
+};
+
+/**
+ * Every glyph this package draws. Each is a component of `lucide-react`, whose
+ * every module says `'use client'`, so a server-component bundler hands it to
+ * the browser to draw and never calls it on the server.
+ */
+const CLIENT_REFERENCES = new Set<unknown>(Object.values(icons));
+
+/**
+ * The tag of every element a tree draws, found the way a React Server
+ * Component renderer finds them: each component called once, as a function.
+ *
+ * Under the `react-server` condition React has no `useState` to call, and
+ * that is not something a test can get from `renderToStaticMarkup` — a
+ * renderer, with hooks — or from that condition itself, where `react-dom/server`
+ * refuses to load at all. Called with no render in progress, every hook React
+ * has throws, which is the stricter of the two and what `server.tsx` promises:
+ * no hooks at all.
+ */
+const drawnWithoutHooks = (tree: React.ReactNode): string[] => {
+  const tags: string[] = [];
+  const visit = (node: React.ReactNode): void => {
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+
+    // Words, numbers, and the `null` and `false` of a branch not taken.
+    if (!React.isValidElement(node)) {
+      return;
+    }
+
+    const { type, props } = node as React.ReactElement<{ children?: React.ReactNode }>;
+
+    if (typeof type === 'string') {
+      tags.push(type);
+      visit(props.children);
+    } else if (type === React.Fragment) {
+      visit(props.children);
+    } else if (typeof type === 'function') {
+      visit((type as (props: unknown) => React.ReactNode)(props));
+    } else if (!CLIENT_REFERENCES.has(type)) {
+      throw new Error(`Nothing here knows how to draw ${String(type)}.`);
+    }
+  };
+
+  visit(tree);
+
+  return tags;
+};
 
 /**
  * The drawing, in a page's column.
