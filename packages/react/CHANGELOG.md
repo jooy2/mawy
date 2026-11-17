@@ -4,6 +4,8 @@
 
 ## vNext
 
+## 1.10.1 (2026-11-17)
+
 ### Fixed
 
 - **`mawy-react/server` no longer throws on a document with a Markdown image.** 1.10.0 drew every picture through a component with state, so that one that could not be fetched could be drawn as a box with its description in it, and a React Server Component cannot render one: a Next.js App Router page with `MawyDocument` and an `![](…)` in its document failed with `useState only works in Client Components`. `MawyDocument` draws a plain `<img>` with the same attributes again, and a picture that fails there is drawn the way the browser draws a broken one, since nothing on a page drawn once can answer its `error`. `MawyViewer` and `MawyEditor` still draw the box.
