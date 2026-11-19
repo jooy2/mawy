@@ -1,21 +1,26 @@
 /**
- * The icons an alert is drawn with, written out as plain elements.
+ * The icons a drawn document needs, written out rather than imported.
  *
  * Every other glyph this package draws comes from `lucide-react`, through
- * `icons.tsx`. These five cannot, because a document drawn by
- * `mawy-react/server` draws them too, and every module of `lucide-react` says
- * `'use client'`: a React Server Component that put a `NoteIcon` beside an
- * alert handed the icon to the browser, so Lucide's `Icon`, its context and the
- * drawings went down with the page and were hydrated there — the JavaScript
- * that entry point exists to leave out. Here they are an `<svg>` and the
- * shapes inside it, the markup Lucide writes for the same icon, drawn the same
- * way by the viewer, the editor and the server.
+ * `icons.tsx`. These cannot, for two reasons:
  *
- * Two copies of a drawing drift, which is what `icons.tsx` is there to stop,
- * so `test/package/server.test.tsx` holds each of these to the `lucide-react`
- * icon the alert's bar shows for the same kind. A release of Lucide that
- * redraws one fails there, and the shapes are copied again from
- * `lucide-react/dist/esm/icons`.
+ * - **The five alert icons** are drawn by `mawy-react/server` too, and every
+ *   module of `lucide-react` says `'use client'`. A React Server Component that
+ *   put a `NoteIcon` beside an alert handed the icon to the browser, so
+ *   Lucide's `Icon`, its context and the drawings went down with the page and
+ *   were hydrated there — the JavaScript that entry point exists to leave out.
+ *   Here each is an `<svg>` and the shapes inside it, the markup Lucide writes
+ *   for the same icon. The viewer, the editor and the server draw an alert with
+ *   them, and the alert's bar draws its kinds with them, so there is one copy
+ *   of each in the package rather than this one and Lucide's.
+ * - **`image-off`** is drawn inside the stand-in for a picture that could not
+ *   be fetched, which is a picture written as a string, and a component cannot
+ *   be put in a string.
+ *
+ * A copy drifts from what it was copied from, so
+ * `test/internal/markdown/glyphs.test.tsx` holds each of these to the Lucide
+ * icon of the same name. A release of Lucide that redraws one fails there, and
+ * the shapes are copied again from `lucide-react/dist/esm/icons`.
  *
  * The drawings are Lucide's, from the icons named beside each one below. Four
  * of them are derived from the Feather project, so both of their notices
@@ -143,3 +148,14 @@ export function alertIcon(kind: MdAlertKind): React.ReactElement {
     </svg>
   );
 }
+
+/**
+ * The shapes the stand-in for a picture that could not be fetched is drawn
+ * with: Lucide's `image-off`, written as markup, since the stand-in is an SVG
+ * made into an address. See `standIn` in `live.tsx`.
+ */
+export const STAND_IN_ICON =
+  '<line x1="2" x2="22" y1="2" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/>' +
+  '<line x1="13.5" x2="6" y1="13.5" y2="21"/><line x1="18" x2="21" y1="12" y2="15"/>' +
+  '<path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59"/>' +
+  '<path d="M21 15V5a2 2 0 0 0-2-2H9"/>';

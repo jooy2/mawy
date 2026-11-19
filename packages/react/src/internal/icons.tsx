@@ -8,10 +8,10 @@
  * an editor whose toolbar and whose menu disagree about a glyph is an editor
  * with two vocabularies.
  *
- * The five alert icons are here for the alert's bar and drawn a second time in
- * `markdown/glyphs.tsx` for the alert itself, because a document drawn on a
- * server cannot import this file without shipping Lucide to the browser. A test
- * holds the two copies to the same drawing.
+ * The five alert icons are not here. They are in `markdown/glyphs.tsx`, written
+ * out, because a document drawn on a server cannot import this file without
+ * shipping Lucide to the browser, and the alert's bar draws its kinds with the
+ * same ones so that the package has one copy of each.
  *
  * Nothing in this file is re-exported from `src/index.ts`. An application that
  * wants Lucide has Lucide; what it gets from Mawy is a viewer, and the shape of
@@ -56,19 +56,14 @@ export {
   TextQuote as QuoteIcon,
   Check as CheckIcon,
   ChevronDown as ChevronDownIcon,
-  CircleAlert as ImportantIcon,
   Copy as CopyIcon,
   FileText as DocumentIcon,
   FolderOpen as OpenFileIcon,
-  Info as NoteIcon,
-  Lightbulb as TipIcon,
   ListTree as OutlineIcon,
   Moon as DarkIcon,
-  OctagonAlert as CautionIcon,
   StretchHorizontal as MeasureIcon,
   Sun as LightIcon,
   SunMoon as SystemThemeIcon,
-  TriangleAlert as WarningIcon,
   Type as FontFamilyIcon,
   UnfoldHorizontal as LetterSpacingIcon,
   UnfoldVertical as LineHeightIcon,

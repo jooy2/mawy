@@ -4,7 +4,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MawyDocument, parseMarkdown, type MawyDocumentProps } from '../../src/server.js';
 import { MawyViewer, type MawyViewerProps } from '../../src/index.js';
 import { mawyHighlighter } from '../../src/highlight.js';
-import * as icons from '../../src/internal/icons.js';
 import { isBare, packageOf, sources, specifiersIn, withoutComments } from '../support/sources';
 // For the one question here that is about layout rather than markup: how wide
 // the document is in a page's column.
@@ -471,35 +470,6 @@ describe('a document rendered on a server', () => {
     );
 
     expect([...packages]).toEqual(['react']);
-  });
-
-  /**
-   * The alert's icons are written out here rather than imported from Lucide,
-   * which makes them a copy, and a copy drifts. Each is held to the icon the
-   * alert's bar shows for the same kind: the same markup, but for the class
-   * names Lucide adds.
-   */
-  it("draws each alert's icon as the drawing Lucide has for it", () => {
-    const lucide = {
-      note: icons.NoteIcon,
-      tip: icons.TipIcon,
-      important: icons.ImportantIcon,
-      warning: icons.WarningIcon,
-      caution: icons.CautionIcon
-    };
-    const withoutClass = (markup: string) => markup.replace(/ class="[^"]*"/, '');
-
-    for (const [kind, Icon] of Object.entries(lucide)) {
-      const html = renderToStaticMarkup(
-        <MawyDocument value={`> [!${kind.toUpperCase()}]\n> Words.`} />
-      );
-      const drawn = /<svg[\s\S]*?<\/svg>/.exec(html)?.[0] ?? '';
-
-      expect(drawn, kind).toContain('class="mawy-icon"');
-      expect(withoutClass(drawn), kind).toBe(
-        withoutClass(renderToStaticMarkup(<Icon className="mawy-icon" aria-hidden="true" />))
-      );
-    }
   });
 
   /**

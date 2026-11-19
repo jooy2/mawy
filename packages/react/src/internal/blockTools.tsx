@@ -21,19 +21,9 @@ import * as React from 'react';
 import type { MawyEdit } from './editing.js';
 import { Choice, IconButton, Menu } from './controls.js';
 import type { MawyStrings } from './i18n.js';
-import {
-  CautionIcon,
-  CheckIcon,
-  CodeBlockIcon,
-  ImportantIcon,
-  NoteIcon,
-  OpenLinkIcon,
-  RemoveIcon,
-  TipIcon,
-  UnlinkIcon,
-  WarningIcon
-} from './icons.js';
+import { CheckIcon, CodeBlockIcon, OpenLinkIcon, RemoveIcon, UnlinkIcon } from './icons.js';
 import type { MdAlertKind, MdRange } from './markdown/ast.js';
+import { alertIcon } from './markdown/glyphs.js';
 import { safeUrl } from './markdown/url.js';
 import {
   alertWritten,
@@ -111,12 +101,13 @@ const LANGUAGES = [
   'yaml'
 ];
 
-const ALERTS: readonly { kind: MdAlertKind; label: keyof MawyStrings; icon: typeof NoteIcon }[] = [
-  { kind: 'note', label: 'alertNote', icon: NoteIcon },
-  { kind: 'tip', label: 'alertTip', icon: TipIcon },
-  { kind: 'important', label: 'alertImportant', icon: ImportantIcon },
-  { kind: 'warning', label: 'alertWarning', icon: WarningIcon },
-  { kind: 'caution', label: 'alertCaution', icon: CautionIcon }
+// Each kind's icon is the one the alert itself is drawn with. See `glyphs.tsx`.
+const ALERTS: readonly { kind: MdAlertKind; label: keyof MawyStrings }[] = [
+  { kind: 'note', label: 'alertNote' },
+  { kind: 'tip', label: 'alertTip' },
+  { kind: 'important', label: 'alertImportant' },
+  { kind: 'warning', label: 'alertWarning' },
+  { kind: 'caution', label: 'alertCaution' }
 ];
 
 /**
@@ -220,7 +211,7 @@ function AlertTools({
         <IconButton
           key={each.kind}
           label={strings[each.label]}
-          icon={<each.icon className="mawy-icon" aria-hidden="true" />}
+          icon={alertIcon(each.kind)}
           pressed={target.alert === each.kind}
           aria-pressed={target.alert === each.kind}
           onClick={() => onEdit(alertWritten(value, target.range, each.kind, caret), value, false)}

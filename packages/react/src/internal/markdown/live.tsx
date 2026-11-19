@@ -20,6 +20,7 @@ import * as React from 'react';
 import type { MawyCodeToken, MawyHighlighter } from '../../types.js';
 import type { MdCode } from './ast.js';
 import { sanitizeHtml } from './html.js';
+import { STAND_IN_ICON } from './glyphs.js';
 import { CheckIcon, CopyIcon } from '../icons.js';
 import { useCopy } from '../clipboard.js';
 import {
@@ -263,13 +264,6 @@ function Picture(props: React.ComponentPropsWithoutRef<'img'>): React.ReactEleme
 
 /** The type a stand-in's description is drawn in, which a picture can reach. */
 const STAND_IN_FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-
-/** The icon a stand-in is drawn with: Lucide's `image-off`, as the toolbar draws its icons. */
-const STAND_IN_ICON =
-  '<line x1="2" x2="22" y1="2" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/>' +
-  '<line x1="13.5" x2="6" y1="13.5" y2="21"/><line x1="18" x2="21" y1="12" y2="15"/>' +
-  '<path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59"/>' +
-  '<path d="M21 15V5a2 2 0 0 0-2-2H9"/>';
 
 /**
  * The picture drawn in place of one that could not be fetched, as an address
