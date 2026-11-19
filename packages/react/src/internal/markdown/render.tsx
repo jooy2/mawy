@@ -55,7 +55,7 @@ import { toPlainText } from './inline.js';
 import { isRelativeUrl, safeImageUrl } from './url.js';
 import type { MawyFound } from './find.js';
 import type { MawyStrings } from '../i18n.js';
-import { CautionIcon, ImportantIcon, NoteIcon, TipIcon, WarningIcon } from '../icons.js';
+import { alertIcon } from './glyphs.js';
 
 /**
  * Where an element was written, ready to be spread onto it. See `origin`.
@@ -1171,14 +1171,6 @@ export function drawnHtml(
  * Code
  * ---------------------------------------------------------------------- */
 
-const ALERT_ICONS = {
-  note: NoteIcon,
-  tip: TipIcon,
-  important: ImportantIcon,
-  warning: WarningIcon,
-  caution: CautionIcon
-};
-
 /** The kinds a token is allowed to be. Anything else is drawn as plain text. */
 const CODE_TOKEN_KINDS = new Set<string>([
   'comment',
@@ -1806,7 +1798,6 @@ export function renderBlocks(
           );
         }
 
-        const Icon = ALERT_ICONS[block.alert];
         const label =
           context.strings[
             `alert${block.alert[0].toUpperCase()}${block.alert.slice(1)}` as keyof MawyStrings
@@ -1828,7 +1819,7 @@ export function renderBlocks(
               className="mawy-md-alert-label"
               contentEditable={context.editing ? false : undefined}
             >
-              <Icon className="mawy-icon" aria-hidden="true" />
+              {alertIcon(block.alert)}
               {label}
             </p>
             {renderBlocks(block.children, context)}

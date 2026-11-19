@@ -8,6 +8,11 @@
  * an editor whose toolbar and whose menu disagree about a glyph is an editor
  * with two vocabularies.
  *
+ * The five alert icons are here for the alert's bar and drawn a second time in
+ * `markdown/glyphs.tsx` for the alert itself, because a document drawn on a
+ * server cannot import this file without shipping Lucide to the browser. A test
+ * holds the two copies to the same drawing.
+ *
  * Nothing in this file is re-exported from `src/index.ts`. An application that
  * wants Lucide has Lucide; what it gets from Mawy is a viewer, and the shape of
  * the icon on a toolbar button is not part of that contract.

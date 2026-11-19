@@ -5,7 +5,7 @@ import { MawyDocument, parseMarkdown, type MawyDocumentProps } from '../../src/s
 import { MawyViewer, type MawyViewerProps } from '../../src/index.js';
 import { mawyHighlighter } from '../../src/highlight.js';
 import * as icons from '../../src/internal/icons.js';
-import { sources, withoutComments } from '../support/sources';
+import { isBare, packageOf, sources, specifiersIn, withoutComments } from '../support/sources';
 // For the one question here that is about layout rather than markup: how wide
 // the document is in a page's column.
 import '../../src/styles.css';
@@ -457,6 +457,52 @@ describe('a document rendered on a server', () => {
   });
 
   /**
+   * The same rule, for files that are not ours. Every module of `lucide-react`
+   * says `'use client'`, so reaching it put the alert icons, and Lucide's `Icon`
+   * with them, on the browser's side of a page drawn on a server — and the test
+   * above, which reads only this package's files, passed. React is the one
+   * package a server component is drawn with.
+   */
+  it('imports no package but React', () => {
+    const packages = new Set(
+      [...reachedFromServer()].flatMap((path) =>
+        specifiersIn(sources[path]).filter(isBare).map(packageOf)
+      )
+    );
+
+    expect([...packages]).toEqual(['react']);
+  });
+
+  /**
+   * The alert's icons are written out here rather than imported from Lucide,
+   * which makes them a copy, and a copy drifts. Each is held to the icon the
+   * alert's bar shows for the same kind: the same markup, but for the class
+   * names Lucide adds.
+   */
+  it("draws each alert's icon as the drawing Lucide has for it", () => {
+    const lucide = {
+      note: icons.NoteIcon,
+      tip: icons.TipIcon,
+      important: icons.ImportantIcon,
+      warning: icons.WarningIcon,
+      caution: icons.CautionIcon
+    };
+    const withoutClass = (markup: string) => markup.replace(/ class="[^"]*"/, '');
+
+    for (const [kind, Icon] of Object.entries(lucide)) {
+      const html = renderToStaticMarkup(
+        <MawyDocument value={`> [!${kind.toUpperCase()}]\n> Words.`} />
+      );
+      const drawn = /<svg[\s\S]*?<\/svg>/.exec(html)?.[0] ?? '';
+
+      expect(drawn, kind).toContain('class="mawy-icon"');
+      expect(withoutClass(drawn), kind).toBe(
+        withoutClass(renderToStaticMarkup(<Icon className="mawy-icon" aria-hidden="true" />))
+      );
+    }
+  });
+
+  /**
    * A hook in a React Server Component throws, and `renderToStaticMarkup`,
    * which every other test here draws with, is a renderer that has hooks. So
    * 1.10.0 drew every picture through a `useState`, passed all of them, and
@@ -633,13 +679,6 @@ const kindsIn = (
 };
 
 /**
- * Every glyph this package draws. Each is a component of `lucide-react`, whose
- * every module says `'use client'`, so a server-component bundler hands it to
- * the browser to draw and never calls it on the server.
- */
-const CLIENT_REFERENCES = new Set<unknown>(Object.values(icons));
-
-/**
  * The tag of every element a tree draws, found the way a React Server
  * Component renderer finds them: each component called once, as a function.
  *
@@ -649,6 +688,11 @@ const CLIENT_REFERENCES = new Set<unknown>(Object.values(icons));
  * refuses to load at all. Called with no render in progress, every hook React
  * has throws, which is the stricter of the two and what `server.tsx` promises:
  * no hooks at all.
+ *
+ * Anything that is not an element or a function fails the walk: a
+ * `forwardRef`, a context, a component from another package. The last of them
+ * on this path were Lucide's icons, which a server-component bundler hands to
+ * the browser to draw.
  */
 const drawnWithoutHooks = (tree: React.ReactNode): string[] => {
   const tags: string[] = [];
@@ -672,7 +716,7 @@ const drawnWithoutHooks = (tree: React.ReactNode): string[] => {
       visit(props.children);
     } else if (typeof type === 'function') {
       visit((type as (props: unknown) => React.ReactNode)(props));
-    } else if (!CLIENT_REFERENCES.has(type)) {
+    } else {
       throw new Error(`Nothing here knows how to draw ${String(type)}.`);
     }
   };

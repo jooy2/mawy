@@ -4,6 +4,10 @@
 
 ## vNext
 
+### Fixed
+
+- **An alert drawn by `mawy-react/server` no longer sends `lucide-react` to the browser.** Its icon was a `lucide-react` component, and every module of that package says `'use client'`, so a React Server Component handed the icon to the browser to draw: a page with a `> [!NOTE]` in its document downloaded Lucide's `Icon` and the alert icons, and hydrated them. The icons are drawn as plain `<svg>` elements now, the same drawings, in `MawyViewer` and `MawyEditor` as well. They no longer carry Lucide's `lucide` and `lucide-*` class names; `mawy-icon` is still there.
+
 ## 1.10.1 (2026-11-17)
 
 ### Fixed
